@@ -39,8 +39,20 @@ define go-install
 	@rm -f $(STAMPS)/$(2)-* && touch $@
 endef
 
+# golangci-lint: the official release binary, checked against the release
+# checksums (building it from source takes longer than the CI job timeout).
+GOLANGCI_LINT_URL := https://github.com/golangci/golangci-lint/releases/download/$(GOLANGCI_LINT_VERSION)
 $(STAMPS)/golangci-lint-$(GOLANGCI_LINT_VERSION):
-	$(call go-install,github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION),golangci-lint)
+	@mkdir -p $(BIN) $(STAMPS)
+	v=$(GOLANGCI_LINT_VERSION:v%=%); pkg=golangci-lint-$$v-$$(go env GOOS)-$$(go env GOARCH); \
+	tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
+	curl -fsSL -o "$$tmp/$$pkg.tar.gz" "$(GOLANGCI_LINT_URL)/$$pkg.tar.gz"; \
+	curl -fsSL -o "$$tmp/sums.txt" "$(GOLANGCI_LINT_URL)/golangci-lint-$$v-checksums.txt"; \
+	sum=sha256sum; command -v sha256sum >/dev/null || sum="shasum -a 256"; \
+	(cd "$$tmp" && grep " $$pkg.tar.gz\$$" sums.txt | $$sum -c -); \
+	tar -xzf "$$tmp/$$pkg.tar.gz" -C "$$tmp"; \
+	install -m 0755 "$$tmp/$$pkg/golangci-lint" $(GOLANGCI_LINT)
+	@rm -f $(STAMPS)/golangci-lint-* && touch $@
 $(STAMPS)/goose-$(GOOSE_VERSION):
 	$(call go-install,github.com/pressly/goose/v3/cmd/goose@$(GOOSE_VERSION),goose)
 $(STAMPS)/govulncheck-$(GOVULNCHECK_VERSION):
