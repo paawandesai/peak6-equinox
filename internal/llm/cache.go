@@ -9,8 +9,6 @@ import (
 	"sync"
 	"unicode"
 
-	"golang.org/x/text/unicode/norm"
-
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
 )
 
@@ -39,7 +37,7 @@ func CacheKey(a, b canonical.Instrument, promptVersion, modelID string) string {
 // collapsed to one space and the ends trimmed. It is not truncated, so two
 // texts that differ only after the prompt cap still get different keys.
 func NormalizeText(s string) string {
-	fields := strings.FieldsFunc(strings.ToLower(stripRunes(norm.NFKC.String(s))), unicode.IsSpace)
+	fields := strings.FieldsFunc(strings.ToLower(clean(s)), unicode.IsSpace)
 	return strings.Join(fields, " ")
 }
 

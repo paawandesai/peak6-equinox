@@ -116,10 +116,26 @@ func formatTime(t time.Time) string {
 // to one character and angle-bracket look-alikes removed (so no data can form
 // a delimiter), then a cap of MaxFieldChars characters.
 func Sanitize(s string) string {
-	return truncateRunes(stripRunes(norm.NFKC.String(s)), MaxFieldChars)
+	return truncateRunes(clean(s), MaxFieldChars)
 }
 
-// stripRunes is the character filter shared by Sanitize and NormalizeText.
+// clean applies NFKC and stripRunes until the text is stable (removing a
+// control character can let a base letter and a combining mark compose, and
+// NFKC can turn a full-width bracket into a delimiter character), so the
+// result is idempotent. Each pass only removes or composes characters, so it
+// converges in two or three passes; the bound is a safety net.
+func clean(s string) string {
+	for range 4 {
+		next := stripRunes(norm.NFKC.String(s))
+		if next == s {
+			break
+		}
+		s = next
+	}
+	return s
+}
+
+// stripRunes is the character filter applied by clean (Sanitize and NormalizeText).
 func stripRunes(s string) string {
 	var sb strings.Builder
 	sb.Grow(len(s))

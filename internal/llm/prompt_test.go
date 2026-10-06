@@ -101,6 +101,10 @@ func TestSanitizeProperty(t *testing.T) {
 			rapid.String(),
 			rapid.StringMatching(`([<>«»\x00-\x1f\x7f\x{200b}-\x{200f}\x{202a}-\x{202e}\x{feff}a-z ]{0,64})`),
 			rapid.StringOf(rapid.RuneFrom([]rune{'<', '>', '\u2028', '＜', '＞', '\u200B', '\u202E', 'a', '\n', '\t', ' '})),
+			// Bases, combining marks, compatibility forms and removable characters
+			// interleaved: removing a character can let a pair compose (the CI
+			// counterexample was "A\x00\u0300").
+			rapid.StringOf(rapid.RuneFrom([]rune{'A', 'e', '\u0300', '\u0301', '\u0327', '\x00', '\u200D', '«', '»', 'Ａ', '①', 'À', 'ﬁ', '\u0344', 'Ḋ', '\u0323'})),
 		).Draw(t, "in")
 		out := Sanitize(in)
 		if strings.Contains(out, "<<") || strings.Contains(out, ">>") {
