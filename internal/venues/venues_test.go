@@ -83,7 +83,7 @@ func TestLoadUniverseRepoFiles(t *testing.T) {
 	}
 	p := us.For(canonical.VenuePolymarket)
 	wantP := map[canonical.Category][]string{
-		canonical.CategoryCrypto: {"crypto"}, canonical.CategoryFed: {"fed-rates"}, canonical.CategoryPolitics: nil,
+		canonical.CategoryCrypto: {"bitcoin", "ethereum"}, canonical.CategoryFed: {"fed-rates"}, canonical.CategoryPolitics: nil,
 	}
 	for c, want := range wantP {
 		sel, ok := p.Categories[c]
