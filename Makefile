@@ -1,5 +1,4 @@
 # Equinox command interface. See CLAUDE.md § Commands.
-# Only M1-02 adds targets here (deploy, deploy-staging).
 
 # Tool versions (Tier 1; logged in docs/log.md). Bump here only.
 GOLANGCI_LINT_VERSION := v2.14.0
@@ -61,7 +60,7 @@ $(STAMPS)/gitleaks-$(GITLEAKS_VERSION):
 	$(call go-install,github.com/zricethezav/gitleaks/v8@$(GITLEAKS_VERSION),gitleaks)
 
 .PHONY: help setup db-up db-down migrate seed dev dev-fixtures test test-security e2e \
-        cover lint typecheck scan secrets vuln check llm-eval-live
+        cover lint typecheck scan secrets vuln check llm-eval-live deploy deploy-staging
 
 help: ## List targets
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-15s %s\n", $$1, $$2}'
@@ -119,3 +118,33 @@ check: typecheck lint test cover scan ## Everything CI runs; use before every pu
 llm-eval-live: ## Live LLM eval (manual, admin only, never CI)
 	@if [ -d internal/llm ]; then go test -tags llmlive ./internal/llm/...; \
 	else echo "llm-eval-live: not implemented yet (ticket M1-11)"; fi
+
+# Cloud Run deploys (M1-02, D-033). Resources come from scripts/gcp-bootstrap.sh.
+GCP_PROJECT ?= peak6-equinox-510816
+GCP_REGION  ?= us-central1
+SERVICE      := equinox
+RUN_SA       := equinox-run@$(GCP_PROJECT).iam.gserviceaccount.com
+SQL_INSTANCE := $(GCP_PROJECT):$(GCP_REGION):equinox-pg
+IMAGE        := $(GCP_REGION)-docker.pkg.dev/$(GCP_PROJECT)/equinox/$(SERVICE)
+DEPLOY_FLAGS := --project=$(GCP_PROJECT) --region=$(GCP_REGION) --source=. --image=$(IMAGE) \
+                --service-account=$(RUN_SA) --add-cloudsql-instances=$(SQL_INSTANCE) \
+                --allow-unauthenticated --max-instances=2 --quiet
+APP_SECRETS  := ADMIN_PASSWORD=equinox-admin-password:latest
+# The Anthropic key secret starts with no version (scripts/gcp-bootstrap.sh);
+# it is mounted only once the human has added the real key.
+ANTHROPIC_SECRET = $$(gcloud secrets versions list equinox-anthropic-key --project=$(GCP_PROJECT) \
+                   --filter=state=enabled --limit=1 --format='value(name)' 2>/dev/null | grep -q . \
+                   && echo ,ANTHROPIC_API_KEY=equinox-anthropic-key:latest)
+
+# deploy also moves traffic back to the latest revision: a --no-traffic
+# staging deploy pins traffic to a fixed revision, and later deploys keep that pin.
+deploy: ## Deploy prod to Cloud Run (needs gcloud credentials)
+	gcloud run deploy $(SERVICE) $(DEPLOY_FLAGS) \
+	  --set-env-vars=APP_ENV=prod,LLM_ENABLED=false,ADMIN_USER=admin \
+	  --set-secrets=DATABASE_URL=equinox-database-url:latest,$(APP_SECRETS)$(ANTHROPIC_SECRET)
+	gcloud run services update-traffic $(SERVICE) --project=$(GCP_PROJECT) --region=$(GCP_REGION) --to-latest --quiet
+
+deploy-staging: ## Deploy a no-traffic revision tagged staging (needs gcloud credentials)
+	gcloud run deploy $(SERVICE) $(DEPLOY_FLAGS) --tag=staging --no-traffic \
+	  --set-env-vars=APP_ENV=staging,LLM_ENABLED=false,ADMIN_USER=admin \
+	  --set-secrets=DATABASE_URL=equinox-staging-database-url:latest,$(APP_SECRETS)$(ANTHROPIC_SECRET)

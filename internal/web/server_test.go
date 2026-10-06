@@ -10,33 +10,40 @@ import (
 	"testing"
 )
 
+// healthPaths are the liveness routes: /healthz, plus /health for Cloud Run (D-052).
+var healthPaths = []string{"/healthz", "/health"}
+
 func TestHealthzOK(t *testing.T) {
 	h := New(Config{}, Deps{}).Handler()
-	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/healthz", nil))
+	for _, path := range healthPaths {
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
 
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200", rec.Code)
-	}
-	if ct := rec.Header().Get("Content-Type"); ct != "application/json" {
-		t.Errorf("Content-Type = %q, want application/json", ct)
-	}
-	var body map[string]string
-	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
-		t.Fatalf("decoding body %q: %v", rec.Body.String(), err)
-	}
-	if len(body) != 1 || body["status"] != "ok" {
-		t.Errorf("body = %v, want {\"status\":\"ok\"}", body)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%s status = %d, want 200", path, rec.Code)
+		}
+		if ct := rec.Header().Get("Content-Type"); ct != "application/json" {
+			t.Errorf("%s Content-Type = %q, want application/json", path, ct)
+		}
+		var body map[string]string
+		if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+			t.Fatalf("%s decoding body %q: %v", path, rec.Body.String(), err)
+		}
+		if len(body) != 1 || body["status"] != "ok" {
+			t.Errorf("%s body = %v, want {\"status\":\"ok\"}", path, body)
+		}
 	}
 }
 
 func TestHealthzRejectsNonGET(t *testing.T) {
 	h := New(Config{}, Deps{}).Handler()
-	for _, m := range []string{http.MethodPost, http.MethodPut, http.MethodDelete} {
-		rec := httptest.NewRecorder()
-		h.ServeHTTP(rec, httptest.NewRequest(m, "/healthz", nil))
-		if rec.Code != http.StatusMethodNotAllowed {
-			t.Errorf("%s /healthz status = %d, want 405", m, rec.Code)
+	for _, path := range healthPaths {
+		for _, m := range []string{http.MethodPost, http.MethodPut, http.MethodDelete} {
+			rec := httptest.NewRecorder()
+			h.ServeHTTP(rec, httptest.NewRequest(m, path, nil))
+			if rec.Code != http.StatusMethodNotAllowed {
+				t.Errorf("%s %s status = %d, want 405", m, path, rec.Code)
+			}
 		}
 	}
 }

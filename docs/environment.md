@@ -34,7 +34,7 @@ Venue base URLs are overridden in tests to point at `httptest` fixture servers.
 
 ## Where real secrets live
 
-- **Prod and staging:** GCP Secret Manager in `peak6-equinox-510816`. The secrets `equinox-database-url`, `equinox-admin-password` and `equinox-anthropic-key` are mounted as env on Cloud Run by `make deploy`. Only the human creates or rotates them, using `scripts/gcp-bootstrap.sh`.
+- **Prod and staging:** GCP Secret Manager in `peak6-equinox-510816`. The secrets `equinox-database-url` (`equinox-staging-database-url` for staging), `equinox-admin-password` and `equinox-anthropic-key` are mounted as env on Cloud Run by `make deploy` and `make deploy-staging`. The Anthropic key is mounted only once it has a version (D-053). Only the human creates or rotates them, using `scripts/gcp-bootstrap.sh`.
 - **Local:** `.env`, which is gitignored and never committed.
 - **CI:** none. CI uses the Postgres service with throwaway credentials and never needs real secrets.
 - **Spend limits:** the human sets a monthly limit in the Anthropic console and a $50 GCP budget alert, both manual steps listed in `scripts/gcp-bootstrap.sh`.
