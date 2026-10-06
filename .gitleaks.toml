@@ -1,0 +1,17 @@
+# gitleaks config: the default rules, plus an allowlist for the placeholder
+# values in .env.example only. Version pinned in the Makefile and .gitlab-ci.yml.
+title = "equinox"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Placeholder values in .env.example (local-only, never real secrets)"
+condition = "AND"
+paths = ['''^\.env\.example$''']
+regexTarget = "line"
+regexes = [
+  '''^ADMIN_PASSWORD=change-me-local-only-0+$''',
+  '''^DATABASE_URL(_TEST)?=postgres://equinox:equinox@localhost:5432/equinox(_test)?\?sslmode=disable$''',
+  '''^ANTHROPIC_API_KEY=$''',
+]

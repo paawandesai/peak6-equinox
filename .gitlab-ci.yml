@@ -1,0 +1,123 @@
+# Equinox CI (D-047). Every MR pipeline and every main pipeline runs all gates;
+# scheduled pipelines run only log-freshness. Go image = go.mod toolchain version.
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+stages:
+  - check
+
+variables:
+  # Keep module and build caches inside the project dir so GitLab can cache them.
+  GOPATH: $CI_PROJECT_DIR/.go
+  GOCACHE: $CI_PROJECT_DIR/.cache/go-build
+  GOTOOLCHAIN: local
+  GOFLAGS: -mod=readonly
+
+default:
+  image: golang:1.27.1
+  interruptible: true
+
+.go:
+  stage: check
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"
+  cache:
+    key:
+      files: [go.sum, Makefile]
+    paths:
+      - .go/pkg/mod/
+      - .cache/go-build/
+      - bin/
+  needs: []
+
+# Throwaway CI-only Postgres (docs/environment.md: CI never uses real secrets).
+.postgres:
+  services:
+    - name: postgres:16
+      alias: postgres
+  variables:
+    POSTGRES_USER: equinox
+    POSTGRES_PASSWORD: equinox
+    POSTGRES_DB: equinox_test
+    DATABASE_URL: postgres://equinox:equinox@postgres:5432/equinox_test?sslmode=disable
+    DATABASE_URL_TEST: postgres://equinox:equinox@postgres:5432/equinox_test?sslmode=disable
+
+typecheck:
+  extends: .go
+  script:
+    - make typecheck
+
+lint:
+  extends: .go
+  script:
+    - make lint
+
+test:
+  extends: [.go, .postgres]
+  script:
+    - make test
+
+security-tests:
+  extends: [.go, .postgres]
+  script:
+    - make test-security
+
+coverage:
+  extends: [.go, .postgres]
+  script:
+    - make cover
+  coverage: '/coverage: (\d+\.\d+)% of/'
+  artifacts:
+    when: always
+    paths: [coverage.out]
+    expire_in: 1 week
+
+e2e:
+  extends: [.go, .postgres]
+  script:
+    - make e2e
+
+vuln:
+  extends: .go
+  script:
+    - make vuln
+
+gitleaks:
+  stage: check
+  image:
+    name: zricethezav/gitleaks:v8.30.1
+    entrypoint: [""]
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"
+  variables:
+    GIT_DEPTH: "0"
+  needs: []
+  script:
+    - git config --global --add safe.directory "$CI_PROJECT_DIR"
+    - gitleaks git --redact --verbose --no-banner --config .gitleaks.toml .
+
+guard-human-files:
+  stage: check
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  variables:
+    GIT_DEPTH: "0"
+  needs: []
+  script:
+    - bash scripts/guard-human-files.sh
+
+log-freshness:
+  stage: check
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+  variables:
+    GIT_DEPTH: "0"
+  needs: []
+  script:
+    - bash scripts/check-log-fresh.sh

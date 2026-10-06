@@ -1,0 +1,14 @@
+# Local secrets: never commit (AB-06). .env.example is the tracked template.
+.env
+.env.*
+!.env.example
+*.local
+
+# Build and tool output
+bin/
+coverage.out
+*.test
+
+# CI caches (GOPATH/GOCACHE inside the project dir)
+.go/
+.cache/

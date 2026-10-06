@@ -1,0 +1,68 @@
+// Package web serves the Equinox HTTP interface: public pages, admin routes
+// and the health check.
+//
+// Routes are split across files so tickets can own them separately:
+// public.go (public pages), admin.go (/admin/*) and middleware_*.go.
+package web
+
+import (
+	"encoding/json"
+	"log/slog"
+	"net/http"
+)
+
+// Config holds the settings the web layer needs.
+type Config struct {
+	AppEnv                string
+	AdminUser             string
+	AdminPassword         string
+	PublicRateLimitPerMin int
+}
+
+// Deps holds the collaborators the web layer uses.
+type Deps struct {
+	Logger *slog.Logger
+}
+
+// Server owns the HTTP routes. Create it with New.
+type Server struct {
+	cfg  Config
+	deps Deps
+	log  *slog.Logger
+}
+
+// New returns a Server. A nil Logger is replaced with one that discards output.
+func New(cfg Config, deps Deps) *Server {
+	logger := deps.Logger
+	if logger == nil {
+		logger = slog.New(slog.DiscardHandler)
+	}
+	return &Server{cfg: cfg, deps: deps, log: logger}
+}
+
+// Handler returns the root handler with all routes and middleware applied.
+func (s *Server) Handler() http.Handler {
+	return securityHeaders(s.routes())
+}
+
+func (s *Server) routes() *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /healthz", s.handleHealthz)
+	s.publicRoutes(mux)
+	s.adminRoutes(mux)
+	return mux
+}
+
+// handleHealthz reports liveness. It needs no database connection.
+func (s *Server) handleHealthz(w http.ResponseWriter, _ *http.Request) {
+	s.writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (s *Server) writeJSON(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(status)
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		s.log.Error("writing json response", "err", err)
+	}
+}

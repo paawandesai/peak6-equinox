@@ -1,0 +1,24 @@
+# Local Postgres for development and tests. Start with `make db-up`.
+# Throwaway local credentials only (docs/environment.md); never used outside localhost.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: equinox
+      POSTGRES_PASSWORD: equinox
+      POSTGRES_DB: equinox
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - ./scripts/db-init.sql:/docker-entrypoint-initdb.d/10-db-init.sql:ro
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # TCP check: the init-phase server listens on the socket only, so this
+      # passes once both databases exist and the real server is up.
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "equinox", "-d", "equinox_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  pgdata:
