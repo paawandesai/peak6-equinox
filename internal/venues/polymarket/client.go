@@ -94,7 +94,8 @@ func (c *client) do(ctx context.Context, rawURL, endpoint string) (raw venues.Ra
 	req.Header.Set("Accept", "application/json")
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return venues.RawResponse{}, ctx.Err() == nil, fmt.Errorf("GET %s: %w", endpoint, err)
+		retry := ctx.Err() == nil && !errors.Is(err, errRedirectRefused)
+		return venues.RawResponse{}, retry, fmt.Errorf("GET %s: %w", endpoint, err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 	body, err := io.ReadAll(io.LimitReader(resp.Body, c.maxBodyBytes+1))

@@ -33,7 +33,7 @@ const (
 
 // upOrDownTagID is Gamma's "up-or-down" tag (verified 2026-10-06). Those
 // events are 5-minute to daily "Up"/"Down" markets, which are not YES/NO
-// binaries; excluding them server-side keeps each sweep small (D-056).
+// binaries; excluding them server-side keeps each sweep small (D-057).
 const upOrDownTagID = "102127"
 
 // Options configures an Adapter.
@@ -41,6 +41,8 @@ type Options struct {
 	GammaURL string // POLYMARKET_GAMMA_URL
 	ClobURL  string // POLYMARKET_CLOB_URL
 	// HTTPClient is used if set; otherwise a client with Timeout is built.
+	// Either way, redirects that leave the API host are refused unless the
+	// supplied client sets its own CheckRedirect.
 	HTTPClient   *http.Client
 	Timeout      time.Duration // HTTP_TIMEOUT_SECONDS
 	MaxBodyBytes int64         // MAX_BODY_BYTES
@@ -89,12 +91,18 @@ func New(opts Options) (*Adapter, error) {
 	if opts.Now == nil {
 		opts.Now = time.Now
 	}
-	hc := opts.HTTPClient
-	if hc == nil {
+	var hc *http.Client
+	if opts.HTTPClient != nil {
+		c := *opts.HTTPClient // copy, so the caller's client is not modified
+		hc = &c
+	} else {
 		if opts.Timeout <= 0 {
 			return nil, errors.New("polymarket: Timeout must be positive")
 		}
 		hc = &http.Client{Timeout: opts.Timeout}
+	}
+	if hc.CheckRedirect == nil {
+		hc.CheckRedirect = sameHostRedirect
 	}
 	retries := opts.Retries
 	switch {
@@ -117,6 +125,25 @@ func New(opts Options) (*Adapter, error) {
 		concurrency: orDefault(opts.Concurrency, DefaultConcurrency),
 		logger:      logger,
 	}, nil
+}
+
+// errRedirectRefused marks a redirect to another origin; it is not retried.
+var errRedirectRefused = errors.New("redirect to another origin refused")
+
+// maxRedirects caps same-host redirects per request.
+const maxRedirects = 3
+
+// sameHostRedirect refuses redirects that leave the original API host, so a
+// hostile or compromised response cannot send the adapter to another server
+// while RawResponse.Endpoint still names the Polymarket path (AB-02).
+func sameHostRedirect(req *http.Request, via []*http.Request) error {
+	if len(via) >= maxRedirects {
+		return fmt.Errorf("stopped after %d redirects", maxRedirects)
+	}
+	if req.URL.Host != via[0].URL.Host || req.URL.Scheme != via[0].URL.Scheme {
+		return fmt.Errorf("%w: %q", errRedirectRefused, truncate(req.URL.Scheme+"://"+req.URL.Host, 80))
+	}
+	return nil
 }
 
 func orDefault[T int | time.Duration](v, def T) T {

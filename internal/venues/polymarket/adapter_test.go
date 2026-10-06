@@ -598,3 +598,46 @@ func TestFetchSettled(t *testing.T) {
 		}
 	}
 }
+
+func TestSameHostRedirectFollowed(t *testing.T) {
+	gamma := func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/events" {
+			http.Redirect(w, r, "/v2/events?"+r.URL.RawQuery, http.StatusFound) //nolint:gosec // test server redirecting on purpose
+			return
+		}
+		serveEvents(event("e", market(nil)))(w, r)
+	}
+	a := stubAdapter(t, gamma, nil, nil)
+	ins, _, err := a.FetchInstruments(context.Background(), fedUniverse())
+	if err != nil || len(ins) != 1 {
+		t.Fatalf("ins = %d err = %v; a same-host redirect should be followed", len(ins), err)
+	}
+}
+
+func TestRedirectLoopStopped(t *testing.T) {
+	var hits atomic.Int64
+	gamma := func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		http.Redirect(w, r, r.URL.String(), http.StatusFound) //nolint:gosec // test server redirect loop on purpose
+	}
+	a := stubAdapter(t, gamma, nil, func(o *Options) { o.Retries = -1 })
+	if _, _, err := a.FetchInstruments(context.Background(), fedUniverse()); err == nil || hits.Load() != maxRedirects {
+		t.Fatalf("err = %v hits = %d", err, hits.Load())
+	}
+}
+
+func TestRedirectGuardOnSuppliedClient(t *testing.T) {
+	supplied := &http.Client{Timeout: time.Second}
+	a, err := New(Options{GammaURL: "https://g", ClobURL: "https://c", HTTPClient: supplied, MaxBodyBytes: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a.gamma.http.CheckRedirect == nil || supplied.CheckRedirect != nil {
+		t.Error("guard not applied to a copy of the supplied client")
+	}
+	own := func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	a, _ = New(Options{GammaURL: "https://g", ClobURL: "https://c", HTTPClient: &http.Client{CheckRedirect: own}, MaxBodyBytes: 1})
+	if a.gamma.http.CheckRedirect == nil || fmt.Sprintf("%p", a.gamma.http.CheckRedirect) != fmt.Sprintf("%p", own) {
+		t.Error("a supplied CheckRedirect was replaced")
+	}
+}

@@ -261,3 +261,43 @@ func TestAB02_PolymarketServerErrorIsAnError(t *testing.T) {
 		t.Fatalf("err = %v raws = %+v", err, raws)
 	}
 }
+
+// TestAB02_PolymarketOffHostRedirect: a Gamma or CLOB response that redirects
+// to another origin is refused without contacting it or retrying, so data can
+// never be attributed to a Polymarket endpoint it did not come from.
+func TestAB02_PolymarketOffHostRedirect(t *testing.T) {
+	var evilHits, apiHits atomic.Int64
+	evil := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		evilHits.Add(1)
+		_, _ = io.WriteString(w, `[{"slug":"evil","markets":[`+ab02PolyGoodMarket+`]}]`)
+	}))
+	t.Cleanup(evil.Close)
+	redirect := func(w http.ResponseWriter, r *http.Request) {
+		apiHits.Add(1)
+		http.Redirect(w, r, evil.URL+r.URL.RequestURI(), http.StatusFound) //nolint:gosec // the hostile redirect under test
+	}
+	gs, cs := httptest.NewServer(http.HandlerFunc(redirect)), httptest.NewServer(http.HandlerFunc(redirect))
+	t.Cleanup(gs.Close)
+	t.Cleanup(cs.Close)
+	a, err := polymarket.New(polymarket.Options{
+		GammaURL: gs.URL, ClobURL: cs.URL, Timeout: 5 * time.Second, MaxBodyBytes: ab02PolyMaxBody,
+		Backoff: time.Millisecond, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ins, _, err := a.FetchInstruments(context.Background(), ab02PolyUniverse)
+	if err == nil || !strings.Contains(err.Error(), "redirect to another origin refused") || len(ins) != 0 {
+		t.Fatalf("instruments = %+v err = %v, want the redirect refused", ins, err)
+	}
+	quotes, _, err := a.FetchQuotes(context.Background(), []canonical.Instrument{{ID: "polymarket:111"}})
+	if err == nil || len(quotes) != 1 || len(quotes[0].YesBids) != 0 || !quotes[0].Quality.Has(canonical.QualityNoBook) {
+		t.Fatalf("quotes = %+v err = %v, want no_book and an error", quotes, err)
+	}
+	if evilHits.Load() != 0 {
+		t.Errorf("the off-host server was contacted %d times", evilHits.Load())
+	}
+	if apiHits.Load() != 2 {
+		t.Errorf("API hit %d times, want 2 (one per request, no retries)", apiHits.Load())
+	}
+}
