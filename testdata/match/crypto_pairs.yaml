@@ -1,0 +1,420 @@
+# Crypto threshold pairs for the M1-07 matcher (internal/match/pairs_test.go).
+#
+# Each pair is run through normalize.Normalize and match.Compare. `expect` is
+# the required type; `vetoes` lists veto codes that must be present; `blocked`
+# names the blocking field for unrelated pairs. Every pair with an id starting
+# "V-" is an adversarial near-miss and must be non-equivalent (NFR-06: zero
+# false positives). Pairs starting "EQ-" are true equivalents and must match.
+#
+# Text marked "real" is recorded venue text from testdata/fixtures (Kalshi,
+# 2026-10-06) and M1-05's Polymarket fixtures. Text marked "synthetic" is
+# written in one venue's style but with the other venue's resolution source,
+# because in the recorded data Kalshi always resolves on CF Benchmarks and
+# Polymarket on Binance, so no recorded cross-venue crypto pair is equivalent
+# under D-017 (same source). V-24 shows what the recorded pairs give.
+
+texts:
+  kalshi_btc_rules: &kalshi_btc_rules >-
+    If the simple average of the sixty seconds of CF Benchmarks' Bitcoin Real-Time Index (BRTI)
+    before 6 PM EDT is above 76599.99 at 6 PM EDT on Oct 6, 2026, then the market resolves to Yes.
+
+
+    Not all cryptocurrency price data is the same. While checking a source like Google or Coinbase
+    may help guide your decision, the price used to determine this market is based on CF Benchmarks'
+    corresponding Real Time Index (RTI). At the last minute before expiration, 60 RTI prices are
+    collected. The official and final value is the average of these prices.
+  kalshi_eth_rules: &kalshi_eth_rules >-
+    If the simple average of the sixty seconds of CF Benchmarks' Ethereum Real-Time Index (ERTI)
+    before 5 PM EDT is above 1899.99 at 5 PM EDT on Oct 7, 2026, then the market resolves to Yes.
+  kalshi_btc_oct7_rules: &kalshi_btc_oct7_rules >-
+    If the simple average of the sixty seconds of CF Benchmarks' Bitcoin Real-Time Index (BRTI)
+    before 5 PM EDT is above 75999.99 at 5 PM EDT on Oct 7, 2026, then the market resolves to Yes.
+  # synthetic: Polymarket phrasing, CF Benchmarks source
+  poly_cf_btc_rules: &poly_cf_btc_rules >-
+    This market will resolve to "Yes" if the simple average of the sixty seconds of the CF Benchmarks
+    Bitcoin Real-Time Index (BRTI) before 6:00 PM ET on the date specified in the title is higher than
+    the price specified in the title. Otherwise, this market will resolve to "No".
+    The resolution source for this market is CF Benchmarks, specifically the BRTI.
+  poly_cf_eth_rules: &poly_cf_eth_rules >-
+    This market will resolve to "Yes" if the simple average of the sixty seconds of the CF Benchmarks
+    Ethereum Real-Time Index (ERTI) before 5:00 PM ET on the date specified in the title is higher than
+    the price specified in the title. Otherwise, this market will resolve to "No".
+    The resolution source for this market is CF Benchmarks, specifically the ERTI.
+  # real Polymarket text
+  poly_above_rules: &poly_above_rules >-
+    This market will resolve to "Yes" if the Binance 1 minute candle for BTC/USDT closing at 12:00 in
+    the ET timezone (noon) on the date specified in the title has a final "Close" price higher than the
+    price specified in the title. Otherwise, this market will resolve to "No".
+
+
+    The resolution source for this market is Binance, specifically the BTC/USDT "Close" prices currently
+    available at https://www.binance.com/en/trade/BTC_USDT with "1m" and "Candles" selected on the top bar.
+
+
+    Please note that this market is about the price according to Binance BTC/USDT, not according to
+    other exchanges or trading pairs.
+  poly_hit_rules: &poly_hit_rules >-
+    This market will immediately resolve to "Yes" if any Binance 1 minute candle for Bitcoin (BTC/USDT)
+    has a final "High" price equal to or greater than the price specified in the title by 11:59PM ET on
+    the date specified in the title. Otherwise, this market will resolve to "No."
+
+
+    The resolution source for this market is Binance, specifically the BTC/USDT "High" prices available
+    at https://www.binance.com/en/trade/BTC_USDT, with the chart settings on "1m" for one-minute
+    candles selected on the top bar.
+
+base:
+  kalshi_btc: &kalshi_btc
+    venue: kalshi
+    market_id: KXBTCD-26OCT0618-T76599.99
+    close: 2026-10-06T22:00:00Z
+    title: "Bitcoin price on Oct 6, 2026? — $76,600 or above"
+    rules: *kalshi_btc_rules
+  poly_cf_btc: &poly_cf_btc
+    venue: polymarket
+    market_id: "1001"
+    close: 2026-10-06T22:00:00Z
+    title: "Will the price of Bitcoin be above $76,599.99 on October 6?"
+    rules: *poly_cf_btc_rules
+
+pairs:
+  # ---- true equivalents -------------------------------------------------
+  - id: EQ-01
+    name: real Kalshi BTC ladder vs synthetic Polymarket on CF Benchmarks BRTI, same instant
+    expect: equivalent
+    a: *kalshi_btc
+    b: *poly_cf_btc
+  - id: EQ-02
+    name: real Kalshi ETH ladder vs synthetic Polymarket on CF Benchmarks ERTI
+    expect: equivalent
+    a:
+      venue: kalshi
+      market_id: KXETHD-26OCT0717-T1899.99
+      close: 2026-10-07T21:00:00Z
+      title: "Ethereum price at Oct 7, 2026 at 5pm EDT? — $1,900 or above"
+      rules: *kalshi_eth_rules
+    b:
+      venue: polymarket
+      market_id: "1002"
+      close: 2026-10-07T21:00:00Z
+      title: "Will the price of Ethereum be above $1,899.99 on October 7?"
+      rules: *poly_cf_eth_rules
+  - id: EQ-03
+    name: synthetic Kalshi on Binance noon close vs real Polymarket above market
+    expect: equivalent
+    a:
+      venue: kalshi
+      market_id: KXBTCBIN-26OCT0712-T74000
+      close: 2026-10-07T16:00:00Z
+      title: "Bitcoin price on Oct 7, 2026? — above $74,000"
+      rules: >-
+        If the final Close price of the Binance 1 minute candle for BTC/USDT closing at 12:00 PM EDT on
+        Oct 7, 2026 is higher than 74000, then the market resolves to Yes.
+    b:
+      venue: polymarket
+      market_id: "1003"
+      close: 2026-10-07T16:00:00Z
+      title: "Will the price of Bitcoin be above $74,000 on October 7?"
+      rules: *poly_above_rules
+  - id: EQ-04
+    name: real Polymarket hit market vs synthetic Kalshi touch market on Binance high
+    expect: equivalent
+    a:
+      venue: polymarket
+      market_id: "1004"
+      close: 2027-01-01T05:00:00Z
+      title: "Will Bitcoin hit $150k by December 31, 2026?"
+      rules: *poly_hit_rules
+    b:
+      venue: kalshi
+      market_id: KXBTCMAX-26DEC31-T150000
+      close: 2027-01-01T05:00:00Z
+      title: "Bitcoin to reach $150,000 by Dec 31, 2026? — $150,000 or above"
+      rules: >-
+        If any Binance 1 minute candle for BTC/USDT has a final High price at or above 150000 at any
+        time before 11:59 PM EST on Dec 31, 2026, then the market resolves to Yes.
+
+  # ---- veto suite: adversarial near-misses, all non-equivalent ---------
+  - id: V-01
+    name: threshold off by $1
+    expect: related
+    vetoes: [threshold_mismatch]
+    a: *kalshi_btc
+    b:
+      <<: *poly_cf_btc
+      title: "Will the price of Bitcoin be above $76,600.99 on October 6?"
+  - id: V-02
+    name: gt vs gte ("higher than" vs "equal to or higher than")
+    expect: related
+    vetoes: [comparator_mismatch]
+    a: *kalshi_btc
+    b:
+      <<: *poly_cf_btc
+      rules: >-
+        This market will resolve to "Yes" if the CF Benchmarks Bitcoin Real-Time Index (BRTI) at 6:00 PM ET
+        on the date specified in the title is equal to or higher than the price specified in the title.
+        The resolution source for this market is CF Benchmarks.
+  - id: V-03
+    name: deadline one day apart (exactly 24 h is not within 24 h)
+    expect: related
+    vetoes: [deadline_gap]
+    a: *kalshi_btc
+    b:
+      <<: *poly_cf_btc
+      close: 2026-10-07T22:00:00Z
+      title: "Will the price of Bitcoin be above $76,599.99 on October 7?"
+  - id: V-04
+    name: ET midnight vs UTC midnight on the same date
+    expect: related
+    vetoes: [deadline_mismatch]
+    a:
+      venue: kalshi
+      market_id: KXBTCD-26DEC3123-T99999.99
+      close: 2027-01-01T04:59:00Z
+      title: "Bitcoin price on Dec 31, 2026? — $100,000 or above"
+      rules: >-
+        If the simple average of the sixty seconds of CF Benchmarks' Bitcoin Real-Time Index (BRTI) before
+        11:59 PM EST is above 99999.99 at 11:59 PM EST on Dec 31, 2026, then the market resolves to Yes.
+    b:
+      venue: polymarket
+      market_id: "2004"
+      close: 2026-12-31T23:59:00Z
+      title: "Will the price of Bitcoin be above $99,999.99 on December 31, 2026?"
+      rules: >-
+        This market will resolve to "Yes" if the CF Benchmarks Bitcoin Real-Time Index (BRTI) at 11:59 PM UTC
+        on the date specified in the title is higher than the price specified in the title.
+        The resolution source for this market is CF Benchmarks.
+  - id: V-05
+    name: BTC vs ETH
+    expect: unrelated
+    blocked: subject
+    a: *kalshi_btc
+    b:
+      <<: *poly_cf_btc
+      title: "Will the price of Ethereum be above $76,599.99 on October 6?"
+  - id: V-06
+    name: different index source (Binance vs CF Benchmarks), everything else equal
+    expect: related
+    vetoes: [source_mismatch]
+    a: *kalshi_btc
+    b:
+      <<: *poly_cf_btc
+      rules: >-
+        This market will resolve to "Yes" if the Binance 1 minute candle for BTC/USDT closing at 6:00 PM ET on the
+        date specified in the title has a final "Close" price higher than the price specified in the title.
+        The resolution source for this market is Binance, specifically the BTC/USDT "Close" prices.
+  - id: V-07
+    name: above vs below
+    expect: related
+    vetoes: [comparator_mismatch]
+    a: *kalshi_btc
+    b:
+      <<: *poly_cf_btc
+      title: "Will the price of Bitcoin be below $76,599.99 on October 6?"
+      rules: >-
+        This market will resolve to "Yes" if the CF Benchmarks Bitcoin Real-Time Index (BRTI) at 6:00 PM ET on the
+        date specified in the title is lower than the price specified in the title.
+        The resolution source for this market is CF Benchmarks.
+  - id: V-08
+    name: "$76k is not $76,599.99"
+    expect: related
+    vetoes: [threshold_mismatch]
+    a: *kalshi_btc
+    b:
+      <<: *poly_cf_btc
+      title: "Will the price of Bitcoin be above $76k on October 6?"
+  - id: V-09
+    name: resolution source not stated (unknown blocks equivalence)
+    expect: related
+    vetoes: [source_unknown]
+    a: *kalshi_btc
+    b:
+      <<: *poly_cf_btc
+      rules: >-
+        This market will resolve to "Yes" if the Bitcoin price at 6:00 PM ET on the date specified in the title
+        is higher than the price specified in the title. Otherwise, this market will resolve to "No".
+  - id: V-10
+    name: comparator not stated
+    expect: related
+    vetoes: [comparator_unknown, threshold_unknown]
+    a: *kalshi_btc
+    b:
+      <<: *poly_cf_btc
+      title: "Bitcoin price on October 6?"
+      rules: >-
+        This market will resolve according to the CF Benchmarks Bitcoin Real-Time Index (BRTI) at 6:00 PM ET on
+        the date specified in the title. The resolution source for this market is CF Benchmarks.
+  - id: V-11
+    name: rules defer to the title but the title has no amount
+    expect: related
+    vetoes: [comparator_unknown, threshold_unknown]
+    a: *kalshi_btc
+    b:
+      <<: *poly_cf_btc
+      title: "Will the price of Bitcoin be above the strike on October 6?"
+  - id: V-12
+    name: no time stated, deadline defaulted to a later close time
+    expect: related
+    vetoes: [deadline_mismatch]
+    a: *kalshi_btc
+    b:
+      <<: *poly_cf_btc
+      close: 2026-10-06T23:00:00Z
+      rules: >-
+        This market will resolve to "Yes" if the CF Benchmarks Bitcoin Real-Time Index (BRTI) on the date
+        specified in the title is higher than the price specified in the title.
+        The resolution source for this market is CF Benchmarks.
+  - id: V-13
+    name: negated proposition (polarity)
+    expect: related
+    vetoes: [polarity_mismatch]
+    a: *kalshi_btc
+    b:
+      <<: *poly_cf_btc
+      title: "Will the price of Bitcoin not be above $76,599.99 on October 6?"
+      rules: >-
+        This market will resolve to "Yes" if the CF Benchmarks Bitcoin Real-Time Index (BRTI) at 6:00 PM ET on the
+        date specified in the title is not higher than the price specified in the title.
+        The resolution source for this market is CF Benchmarks.
+  - id: V-14
+    name: touch market vs close-at-time market (metric)
+    expect: related
+    vetoes: [metric_mismatch]
+    a: *kalshi_btc
+    b:
+      <<: *poly_cf_btc
+      title: "Will Bitcoin hit $76,599.99 by October 6?"
+      rules: >-
+        This market will immediately resolve to "Yes" if any CF Benchmarks Bitcoin Real-Time Index (BRTI) reading
+        before 6:00 PM ET on the date specified in the title has a final "High" price higher than the price
+        specified in the title. The resolution source for this market is CF Benchmarks.
+  - id: V-15
+    name: subject not stated
+    expect: unrelated
+    blocked: subject
+    a: *kalshi_btc
+    b:
+      <<: *poly_cf_btc
+      title: "Will the price be above $76,599.99 on October 6?"
+  - id: V-16
+    name: deadlines two weeks apart (outside the blocking window)
+    expect: unrelated
+    blocked: deadline
+    a: *kalshi_btc
+    b:
+      <<: *poly_cf_btc
+      close: 2026-10-20T22:00:00Z
+      title: "Will the price of Bitcoin be above $76,599.99 on October 20?"
+  - id: V-17
+    name: different category
+    expect: unrelated
+    blocked: category
+    a: *kalshi_btc
+    b:
+      <<: *poly_cf_btc
+      category: fed
+  - id: V-18
+    name: same clock reading, ET vs UTC
+    expect: related
+    vetoes: [deadline_mismatch]
+    a: *kalshi_btc
+    b:
+      <<: *poly_cf_btc
+      close: 2026-10-06T18:00:00Z
+      rules: >-
+        This market will resolve to "Yes" if the CF Benchmarks Bitcoin Real-Time Index (BRTI) at 6:00 PM UTC on the
+        date specified in the title is higher than the price specified in the title.
+        The resolution source for this market is CF Benchmarks.
+  - id: V-19
+    name: "'at or above' vs 'above'"
+    expect: related
+    vetoes: [comparator_mismatch]
+    a: *kalshi_btc
+    b:
+      <<: *poly_cf_btc
+      rules: >-
+        This market will resolve to "Yes" if the CF Benchmarks Bitcoin Real-Time Index (BRTI) at 6:00 PM ET on the
+        date specified in the title is at or above the price specified in the title.
+        The resolution source for this market is CF Benchmarks.
+  - id: V-20
+    name: range bucket vs threshold
+    expect: related
+    vetoes: [comparator_mismatch]
+    a: *kalshi_btc
+    b:
+      <<: *poly_cf_btc
+      title: "Will the price of Bitcoin be between $76,599.99 and $80,000 on October 6?"
+      rules: >-
+        This market will resolve according to the CF Benchmarks Bitcoin Real-Time Index (BRTI) at 6:00 PM ET on
+        the date specified in the title. The resolution source for this market is CF Benchmarks.
+  - id: V-21
+    name: one cent apart ($76,600.00 vs 76599.99), the real Kalshi-vs-Polymarket strike convention
+    expect: related
+    vetoes: [threshold_mismatch]
+    a: *kalshi_btc
+    b:
+      <<: *poly_cf_btc
+      title: "Will the price of Bitcoin be above $76,600.00 on October 6?"
+  - id: V-22
+    name: same provider, different index (BRTI vs ERTI)
+    expect: related
+    vetoes: [source_mismatch]
+    a: *kalshi_btc
+    b:
+      <<: *poly_cf_btc
+      rules: >-
+        This market will resolve to "Yes" if the CF Benchmarks Ethereum Real-Time Index (ERTI) at 6:00 PM ET on the
+        date specified in the title is higher than the price specified in the title.
+        The resolution source for this market is CF Benchmarks.
+  - id: V-23
+    name: deadline one day earlier
+    expect: related
+    vetoes: [deadline_gap]
+    a: *kalshi_btc
+    b:
+      <<: *poly_cf_btc
+      close: 2026-10-05T22:00:00Z
+      title: "Will the price of Bitcoin be above $76,599.99 on October 5?"
+  - id: V-24
+    name: recorded Kalshi 5 PM ladder vs recorded Polymarket noon market, same day and strike label
+    expect: related
+    vetoes: [threshold_mismatch, deadline_mismatch, source_mismatch]
+    a:
+      venue: kalshi
+      market_id: KXBTCD-26OCT0717-T75999.99
+      close: 2026-10-07T21:00:00Z
+      title: "Bitcoin price on Oct 7, 2026? — $76,000 or above"
+      rules: *kalshi_btc_oct7_rules
+    b:
+      venue: polymarket
+      market_id: "2024"
+      close: 2026-10-07T16:00:00Z
+      title: "Will the price of Bitcoin be above $76,000 on October 7?"
+      rules: *poly_above_rules
+  - id: V-25
+    name: rules state two conditions (ambiguous is unknown)
+    expect: related
+    vetoes: [comparator_unknown]
+    a: *kalshi_btc
+    b:
+      <<: *poly_cf_btc
+      rules: >-
+        This market will resolve to "Yes" if the BRTI at 6:00 PM ET on the date specified in the title is higher
+        than the price specified in the title, or if it is above 90000 at that time.
+        The resolution source for this market is CF Benchmarks.
+  - id: V-26
+    name: both sides unknown on every field but subject
+    expect: related
+    vetoes: [metric_unknown, comparator_unknown, threshold_unknown, source_unknown, polarity_unresolved]
+    a:
+      venue: kalshi
+      market_id: KXBTCX-1
+      close: 2026-10-06T22:00:00Z
+      title: "Bitcoin on Oct 6, 2026?"
+      rules: ""
+    b:
+      venue: polymarket
+      market_id: "2026"
+      close: 2026-10-06T22:00:00Z
+      title: "Bitcoin on October 6?"
+      rules: ""
