@@ -19,7 +19,7 @@ const pairsFile = "../../testdata/match/crypto_pairs.yaml"
 
 type pairSide struct {
 	Venue    canonical.Venue    `yaml:"venue"`
-	Key      string             `yaml:"key"`
+	Key      string             `yaml:"market_id"`
 	Category canonical.Category `yaml:"category"`
 	Close    time.Time          `yaml:"close"`
 	Title    string             `yaml:"title"`
