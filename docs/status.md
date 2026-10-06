@@ -1,7 +1,7 @@
 <!-- OWNER: operator. -->
 # Status
 
-_Last updated: 2026-10-06 by operator (M1-01 merged; issues M1-02..12 created; log-freshness schedule #18; M1-02/M1-03 starting)._
+_Last updated: 2026-10-06 by operator (M1-02 merged; M1-03 MR !5 open; runner maint ~15:30 CT logged; runner policy noted)._
 
 ## Current milestone
 
@@ -11,11 +11,11 @@ M1: thin end-to-end slice, deployed (target Wed 2026-10-07). See [plan.md](plan.
 
 - Kickoff pack committed.
 - M1-01: Scaffold the repo and the GitLab CI pipeline — MR !1 merged as 69149a6 (closes #1).
+- M1-02: Dockerfile, GCP bootstrap, and a live health endpoint — MR !4 merged as 2e8aee2 (closes #2); live URL https://equinox-o5hdimw5rq-uc.a.run.app.
 
 ## In progress
 
-- M1-02: Dockerfile, GCP bootstrap, and a live health endpoint
-- M1-03: Canonical types, Postgres schema and migrations, universe config
+- M1-03: Canonical types, Postgres schema and migrations, universe config — MR !5 open (head pipeline after runner maint).
 
 ## Blocked
 
