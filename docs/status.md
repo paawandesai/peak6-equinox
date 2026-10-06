@@ -1,7 +1,7 @@
 <!-- OWNER: operator. -->
 # Status
 
-_Last updated: 2026-10-06 by kickoff._
+_Last updated: 2026-10-06 by operator (Q-1 answered; M1-01 starting)._
 
 ## Current milestone
 
@@ -13,7 +13,7 @@ M1: thin end-to-end slice, deployed (target Wed 2026-10-07). See [plan.md](plan.
 
 ## In progress
 
-None yet. The next step is to spawn M1-01.
+- M1-01: Scaffold the repo and the GitLab CI pipeline
 
 ## Blocked
 
@@ -29,7 +29,7 @@ None.
 
 | # | From | Question | Options | Recommendation |
 |---|---|---|---|---|
-| Q-1 | kickoff | Does the operator host have `gcloud` authenticated with Owner or Editor on `peak6-equinox-510816`? M1-02 and M1-12 need it to run `scripts/gcp-bootstrap.sh` and `make deploy`. | a) yes; b) the human runs those scripts | a, so the loop isn't blocked |
+| Q-1 | kickoff | Does the operator host have `gcloud` authenticated with Owner or Editor on `peak6-equinox-510816`? M1-02 and M1-12 need it to run `scripts/gcp-bootstrap.sh` and `make deploy`. | a) yes; b) the human runs those scripts | **Answered 2026-10-06: (a) yes.** Operator host `gcloud` is logged in as paawankdesai@gmail.com with ADC; project `peak6-equinox-510816` describes ACTIVE. Exact IAM role (Owner vs Editor) not re-checked this turn; bootstrap will surface permission gaps as Tier 3 if they appear. |
 | Q-2 | kickoff | Human setup steps before M1-01 merges: create the GitLab label `human-approved`, and a daily pipeline schedule on `main` | n/a | Do both right after the kickoff commit |
 | Q-3 | kickoff | Human setup steps after M1-02: put the real Anthropic key in the `equinox-anthropic-key` secret, set the Anthropic console spend limit, and set a $50 GCP budget alert | n/a | Before M3 |
 
