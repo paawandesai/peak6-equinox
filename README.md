@@ -14,14 +14,17 @@ _URL added in M1-02._
 
 ## Quickstart (local)
 
-Requires Go (the version is in `go.mod`), Docker and Make.
+Requires Go 1.21 or newer (`go.mod` pins the toolchain, which Go downloads automatically), Docker with Compose, and Make.
 
 ```bash
-cp .env.example .env      # set ADMIN_PASSWORD
+cp .env.example .env      # set ADMIN_PASSWORD (at least 24 characters)
 make setup && make db-up && make migrate
 make seed                 # loads an offline fixture round
-make dev                  # http://localhost:8080
+make dev                  # http://localhost:8080 (health check: /healthz)
+make check                # typecheck + lint + test + cover + scan, before every push
 ```
+
+Until their tickets land, `make migrate` and `make seed` print "not implemented yet (ticket Mx-yy)" and exit 0. `make db-down` stops Postgres. Run `make help` to list all targets.
 
 Full environment details are in [docs/environment.md](docs/environment.md).
 

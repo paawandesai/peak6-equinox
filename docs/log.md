@@ -7,3 +7,5 @@ Add one line per action, newest at the bottom: `YYYY-MM-DD HH:MM UTC · actor ·
 2026-10-06 18:13 UTC · operator · Committed and pushed kickoff pack to main (chore: kickoff pack). · 6f77532
 2026-10-06 18:13 UTC · operator · Confirmed gcloud Owner on peak6-equinox-510816 (Q-1 = a). · status.md
 2026-10-06 18:14 UTC · operator · Created GitLab labels M1 + human-approved; main already protected; spawned AO session peak6-equinox-2 for M1-01 (issue #1). · issue#1
+2026-10-06 18:40 UTC · M1-01 worker · Tier 1: pinned tools in the Makefile at their latest releases: golangci-lint v2.14.0, goose v3.28.0, govulncheck v1.8.0, gitleaks v8.30.1 (CI image zricethezav/gitleaks:v8.30.1). · Makefile, .gitlab-ci.yml
+2026-10-06 18:40 UTC · M1-01 worker · Tier 2: pinned Go 1.27.1 (D-050); Tier 1: planned-subcommand stubs (D-051). · decisions.md
