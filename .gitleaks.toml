@@ -15,3 +15,10 @@ regexes = [
   '''^DATABASE_URL(_TEST)?=postgres://equinox:equinox@localhost:5432/equinox(_test)?\?sslmode=disable$''',
   '''^ANTHROPIC_API_KEY=$''',
 ]
+
+[[allowlists]]
+description = "Venue market keys (Kalshi tickers) in the matcher fixture are not API keys; the field was named `key` in commit 0f54cd2 (M1-07)"
+condition = "AND"
+paths = ['''^testdata/match/crypto_pairs\.yaml$''']
+regexTarget = "line"
+regexes = ['''^\s*(key|market_id): KX[A-Z0-9.-]+$''']
