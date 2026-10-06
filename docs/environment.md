@@ -30,7 +30,7 @@
 | `LLM_MAX_OUTPUT_TOKENS` | Per-call output cap | no | `400` |
 | `LOG_LEVEL` | `debug`, `info`, `warn`, or `error` | no | `info` |
 
-Venue base URLs are overridden in tests to point at `httptest` fixture servers.
+Venue base URLs are overridden in tests to point at `httptest` fixture servers. For offline development, `make dev-fixtures` serves the recorded fixtures on port 8090; point the app at it with `KALSHI_BASE_URL=http://127.0.0.1:8090/kalshi`, `POLYMARKET_GAMMA_URL=http://127.0.0.1:8090/polymarket/gamma` and `POLYMARKET_CLOB_URL=http://127.0.0.1:8090/polymarket/clob` (the command prints these). `make seed` does the same in-process, so it needs no running fixture server.
 
 ## Where real secrets live
 

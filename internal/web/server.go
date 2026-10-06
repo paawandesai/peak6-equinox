@@ -9,6 +9,9 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"time"
+
+	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/store"
 )
 
 // Config holds the settings the web layer needs.
@@ -19,16 +22,23 @@ type Config struct {
 	PublicRateLimitPerMin int
 }
 
-// Deps holds the collaborators the web layer uses.
+// Deps holds the collaborators the web layer uses. Store and Ingester may be
+// nil (the health check needs neither); admin routes then report that.
 type Deps struct {
-	Logger *slog.Logger
+	Logger   *slog.Logger
+	Store    *store.Store
+	Ingester Ingester
+	// Now overrides the clock (tests). It must return UTC.
+	Now func() time.Time
 }
 
 // Server owns the HTTP routes. Create it with New.
 type Server struct {
-	cfg  Config
-	deps Deps
-	log  *slog.Logger
+	cfg        Config
+	deps       Deps
+	log        *slog.Logger
+	limiter    *failureLimiter
+	trustProxy bool // read the client IP from X-Forwarded-For (behind Cloud Run)
 }
 
 // New returns a Server. A nil Logger is replaced with one that discards output.
@@ -37,8 +47,17 @@ func New(cfg Config, deps Deps) *Server {
 	if logger == nil {
 		logger = slog.New(slog.DiscardHandler)
 	}
-	return &Server{cfg: cfg, deps: deps, log: logger}
+	if deps.Now == nil {
+		deps.Now = func() time.Time { return time.Now().UTC() }
+	}
+	return &Server{
+		cfg: cfg, deps: deps, log: logger,
+		limiter:    newFailureLimiter(deps.Now),
+		trustProxy: cfg.AppEnv == "staging" || cfg.AppEnv == "prod",
+	}
 }
+
+func (s *Server) now() time.Time { return s.deps.Now() }
 
 // Handler returns the root handler with all routes and middleware applied.
 func (s *Server) Handler() http.Handler {
