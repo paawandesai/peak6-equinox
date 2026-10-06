@@ -1,7 +1,7 @@
 <!-- OWNER: operator. -->
 # Status
 
-_Last updated: 2026-10-06 by operator (M1-03/04/05/08 merged; M1-11 MR !9 changes_requested + conflict after !10; M1-07 in progress)._
+_Last updated: 2026-10-06 by operator (M1-03/04/05/08/11 merged; M1-07 MR !12 in review; M1-06 MR !13 open)._
 
 ## Current milestone
 
@@ -16,11 +16,12 @@ M1: thin end-to-end slice, deployed (target Wed 2026-10-07). See [plan.md](plan.
 - M1-04: Kalshi adapter — merged as cb320c9 (closes #4).
 - M1-05: Polymarket adapter — merged as d96b5cd (closes #5).
 - M1-08: Fees and router v0 — MR !10 merged as 058ac21 (closes #8); pipeline 39326 green; Cursor approved.
+- M1-11: LLM safety harness — MR !9 merged as 0677004 (closes #9); pipeline 39366 green; Cursor approved after review fixes.
 
 ## In progress
 
-- M1-07: Crypto-threshold normaliser and rules matcher v0 — worker peak6-equinox-7 active (no MR yet).
-- M1-11: LLM safety harness — MR !9 open; pipeline 39330 green; Cursor **changes_requested** (`checkNesting` brace-in-string false positive); now conflicts with main after !10 merge. Worker peak6-equinox-9 active.
+- M1-07: Crypto-threshold normaliser and rules matcher v0 — MR !12 open; gitleaks fixture false positives fixed (market_id rename + scoped allowlist, D-060); Cursor review running.
+- M1-06: Collector, ingest/seed/fixture-server, admin ingest — MR !13 open; worker peak6-equinox-10 merging main for the gitleaks allowlist.
 
 ## Blocked
 
