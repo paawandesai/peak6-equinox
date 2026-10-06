@@ -1,0 +1,11 @@
+# Polymarket universe: which Gamma tag slugs the Polymarket adapter fetches, per category.
+# Values are verified by M1-05 (Polymarket adapter) against the live public API;
+# any correction is a Tier 1 change logged in docs/decisions.md.
+# politics is filled in M2.
+categories:
+  crypto:
+    tag_slugs: [crypto]
+  fed:
+    tag_slugs: [fed-rates]
+  politics:
+    tag_slugs: []

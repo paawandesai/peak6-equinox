@@ -24,7 +24,7 @@ make dev                  # http://localhost:8080 (health check: /healthz)
 make check                # typecheck + lint + test + cover + scan, before every push
 ```
 
-Until their tickets land, `make migrate` and `make seed` print "not implemented yet (ticket Mx-yy)" and exit 0. `make db-down` stops Postgres. Run `make help` to list all targets.
+Until its ticket lands, `make seed` prints "not implemented yet (ticket Mx-yy)" and exit 0. `make db-down` stops Postgres. Run `make help` to list all targets.
 
 Full environment details are in [docs/environment.md](docs/environment.md).
 
