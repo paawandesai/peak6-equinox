@@ -8,7 +8,7 @@
 //
 // Precedence: the rules text is the binding document, so every field is read
 // from the rules first and from the title only when the rules do not state it
-// (D-058). Venue text is hostile input (AB-07): the extractors use bounded
+// (D-059). Venue text is hostile input (AB-07): the extractors use bounded
 // regular expressions, never panic, and never execute or interpret the text.
 //
 // M1 supports the crypto category only; fed and politics follow in M2 and
