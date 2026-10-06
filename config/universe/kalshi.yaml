@@ -1,0 +1,11 @@
+# Kalshi universe: which series the Kalshi adapter fetches, per category.
+# Values are verified by M1-04 (Kalshi adapter) against the live public API;
+# any correction is a Tier 1 change logged in docs/decisions.md.
+# politics is filled in M2.
+categories:
+  crypto:
+    series: [KXBTCD, KXETHD]
+  fed:
+    series: [KXFED]
+  politics:
+    series: []
