@@ -450,9 +450,11 @@ func TestRunRefusesRoundHeldByAnotherProcess(t *testing.T) {
 		t.Errorf("Run after the other process released = %+v, %v", res, err)
 	}
 	// The lock is released after the round, so the next round proceeds.
-	if _, acquired, _ := st.TryLockIngest(ctx); !acquired {
-		t.Error("ingest lock still held after Run returned")
+	unlock, acquired, err = st.TryLockIngest(ctx)
+	if err != nil || !acquired {
+		t.Fatalf("ingest lock still held after Run returned: %v %v", acquired, err)
 	}
+	unlock()
 }
 
 func TestRunCancelledContextStillFinishesRound(t *testing.T) {
@@ -462,6 +464,8 @@ func TestRunCancelledContextStillFinishesRound(t *testing.T) {
 	// Cancel after the round row exists: the fake ignores ctx, so the stores fail.
 	k.block = make(chan struct{})
 	k.ignoreCtx = true
+	stop := make(chan struct{})
+	t.Cleanup(func() { close(stop) })
 	go func() {
 		for {
 			if id, running := c.Running(); running && id > 0 {
@@ -469,7 +473,11 @@ func TestRunCancelledContextStillFinishesRound(t *testing.T) {
 				close(k.block)
 				return
 			}
-			time.Sleep(time.Millisecond)
+			select {
+			case <-stop:
+				return
+			case <-time.After(time.Millisecond):
+			}
 		}
 	}()
 	res, err := c.Run(cctx)
