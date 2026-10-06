@@ -9,13 +9,13 @@ import (
 
 // DeadlineTolerance is the generic deadline tolerance (D-019: deadlines more
 // than 24 h apart are a hard veto). "Within 24 h" is read strictly, so two
-// daily markets exactly one day apart are never equivalent (D-059).
+// daily markets exactly one day apart are never equivalent (D-060).
 const DeadlineTolerance = 24 * time.Hour
 
 // exactDeadlineCategories lists categories whose deadline is the measurement
 // instant itself (a price read at 5 PM is a different bet from one read at
 // noon), so equivalence needs identical deadlines rather than the generic
-// tolerance (D-059). This is stricter than D-019, never looser.
+// tolerance (D-060). This is stricter than D-019, never looser.
 var exactDeadlineCategories = map[canonical.Category]bool{canonical.CategoryCrypto: true}
 
 // Veto codes. A *_mismatch code means both sides are known and differ; a

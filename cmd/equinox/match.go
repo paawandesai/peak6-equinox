@@ -29,7 +29,7 @@ func init() { register("match", runMatch) }
 //
 // Without --round it uses the current round (pinned, else the latest finished
 // one). Every pair in the same category is compared; equivalent-tier results
-// and near-miss related results are stored and logged (D-060). --store-all
+// and near-miss related results are stored and logged (D-061). --store-all
 // stores and logs every non-unrelated result instead.
 func runMatch(ctx context.Context, args []string, stdout io.Writer) error {
 	fs := flag.NewFlagSet("match", flag.ContinueOnError)
@@ -61,7 +61,7 @@ func runMatch(ctx context.Context, args []string, stdout io.Writer) error {
 }
 
 // nearMissRelative is how close two known thresholds must be (relative to the
-// larger) for a related pair to count as a near miss worth storing (D-060).
+// larger) for a related pair to count as a near miss worth storing (D-061).
 var nearMissRelative = decimal.RequireFromString("0.001")
 
 // matchSummary is what one match run did.
@@ -221,7 +221,7 @@ func crossVenuePairs(instruments []canonical.Instrument) []pair {
 
 // nearMiss reports whether a related pair is close enough to be worth a human
 // look: the thresholds are known and equal, or within nearMissRelative of each
-// other (D-060). Ladder neighbours one strike apart are not near misses.
+// other (D-061). Ladder neighbours one strike apart are not near misses.
 func nearMiss(rel canonical.Relationship) bool {
 	for _, d := range rel.Diff {
 		if d.Field != "threshold" {

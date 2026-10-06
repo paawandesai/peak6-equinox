@@ -11,7 +11,7 @@ import (
 
 // Crypto threshold markets: "BTC above $X at time T on date D, per source S".
 //
-// Field sources (D-059):
+// Field sources (D-060):
 //   - subject: the asset named in the title; several assets (ETH/BTC) is unknown.
 //   - metric: "price" (the price at the deadline instant), "price_high" or
 //     "price_low" (the extreme over the window, for "hit"/"reach"/"dip to"
@@ -226,7 +226,7 @@ func cryptoCondition(t *canonical.Terms, q *canonical.Quality, srcs []source) {
 }
 
 // cryptoDeadline sets Deadline and DeadlineTZ. Without a complete, consistent
-// date + time + zone the close time is used and flagged (D-059).
+// date + time + zone the close time is used and flagged (D-060).
 func cryptoDeadline(t *canonical.Terms, q *canonical.Quality, closeTime time.Time, srcs []source) {
 	date, dateOK, dateAmbiguous := firstStated(srcs, datesIn, calendarDate.key)
 	clk, clockOK, clockAmbiguous := firstStated(srcs, clocksIn, clock.key)
