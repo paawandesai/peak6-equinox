@@ -31,6 +31,7 @@ None.
 | D-056 | M1-04: Kalshi endpoint facts corrected in architecture.md (book shape, statuses, `min_close_ts` for settled, 429 pacing). Tier 2 shared-file update. | 2026-10-06 |
 | D-057 | M1-05: Polymarket endpoint facts corrected in architecture.md (paging, `up-or-down` exclusion, settled by `endDate` desc, book shape); crypto universe narrowed to `bitcoin` + `ethereum` tags. Tier 2 shared-file update. | 2026-10-06 |
 | D-059 | M1-07: crypto normaliser rules; deadline veto refined to be **stricter** than D-019: "within 24 h" read strictly, and for `crypto` any deadline difference is a veto because the deadline is the measurement instant. Required by the ticket's veto suite ("1 day apart", "ET vs UTC midnight"). Tier 2, touches a veto rule; see Q-4. | 2026-10-06 |
+| D-060 (7) | M1-07: `.gitleaks.toml` allowlist for the matcher fixture's venue market keys (`market_id`/`key: KX…` in `testdata/match/crypto_pairs.yaml` only). Tier 2 CI-gate config change; the rest of D-060 is Tier 1. | 2026-10-06 |
 
 ## Open questions
 
