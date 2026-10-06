@@ -40,4 +40,4 @@ _Filled in as milestones ship:_
 
 - `docs/equivalence.md` (M2)
 - `docs/routing.md` (M3)
-- `docs/ai-usage.md` (M1 onward)
+- `docs/ai-usage.md` (created in M1-11; completed in M1-12)
