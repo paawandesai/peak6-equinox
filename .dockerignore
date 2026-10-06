@@ -1,0 +1,13 @@
+# Keep the build context small and free of secrets (AB-06).
+# The Dockerfile copies only go.mod, go.sum, cmd/ and internal/.
+.git
+.env
+.env.*
+*.local
+bin/
+.go/
+.cache/
+coverage.out
+*.test
+docs/
+tests/

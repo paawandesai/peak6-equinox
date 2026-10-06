@@ -1,0 +1,13 @@
+# Files not uploaded by `gcloud run deploy --source .` (make deploy).
+# Without this file gcloud falls back to .gitignore; keep secrets out (AB-06).
+.gcloudignore
+.git
+.gitignore
+.env
+.env.*
+*.local
+bin/
+.go/
+.cache/
+coverage.out
+*.test

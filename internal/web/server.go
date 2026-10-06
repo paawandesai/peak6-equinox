@@ -48,6 +48,9 @@ func (s *Server) Handler() http.Handler {
 func (s *Server) routes() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", s.handleHealthz)
+	// Cloud Run's front end reserves paths ending in "z" on *.run.app, so
+	// /healthz never reaches the app there; /health is the deployed alias (D-052).
+	mux.HandleFunc("GET /health", s.handleHealthz)
 	s.publicRoutes(mux)
 	s.adminRoutes(mux)
 	return mux
