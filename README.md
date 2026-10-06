@@ -10,7 +10,7 @@ Cross-venue prediction-market aggregation and routing **simulation**, built for 
 
 ## Live demo
 
-_URL added in M1-02._
+https://equinox-o5hdimw5rq-uc.a.run.app (health check: [/health](https://equinox-o5hdimw5rq-uc.a.run.app/health); Cloud Run reserves `/healthz`, see D-052)
 
 ## Quickstart (local)
 

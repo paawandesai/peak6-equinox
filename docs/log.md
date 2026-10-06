@@ -13,3 +13,4 @@ Add one line per action, newest at the bottom: `YYYY-MM-DD HH:MM UTC · actor ·
 2026-10-06 19:32 UTC · operator · Merged M1-01 MR !1 to main (CI green + Cursor approved). · 69149a6 closes #1
 2026-10-06 19:33 UTC · operator · Closed issue #1; creating remaining M1 GitLab issues; starting M1-02 and M1-03. · tickets/M1.md
 2026-10-06 19:33 UTC · operator · Created GitLab issues #2–#12 (M1-02…M1-12) with label M1; daily log-freshness pipeline schedule id 18 on main (0 6 * * * UTC). · issues#2-12 schedule#18
+2026-10-06 19:55 UTC · M1-02 worker · Ran scripts/gcp-bootstrap.sh (APIs, AR repo equinox, Cloud SQL equinox-pg db-f1-micro, SA equinox-run, secrets) and make deploy / make deploy-staging; live URL https://equinox-o5hdimw5rq-uc.a.run.app. Tier 2: /health alias (D-052); Tier 1: deploy details (D-053). · decisions.md, README.md
