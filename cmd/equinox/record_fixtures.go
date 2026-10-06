@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/collector"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/config"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/venues"
 )
@@ -94,9 +95,9 @@ func recordVenue(ctx context.Context, a venues.Adapter, u venues.Universe, opts 
 	}
 	ins, raws, err := a.FetchInstruments(ctx, u)
 	save("instruments", raws, err)
-	if len(ins) > opts.maxBooks {
-		ins = ins[:opts.maxBooks]
-	}
+	// Record the books a collector round would quote first (M1-06), so the
+	// fixture round has books for the instruments it fetches.
+	ins = collector.SelectForQuotes(ins, opts.maxBooks, now)
 	if len(ins) > 0 {
 		_, raws, err = a.FetchQuotes(ctx, ins)
 		save("quotes", raws, err)

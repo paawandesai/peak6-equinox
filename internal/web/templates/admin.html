@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Equinox admin</title>
+</head>
+<body>
+  <h1>Equinox admin</h1>
+  <p>Environment: <strong>{{.AppEnv}}</strong>. Page time (UTC): {{.Now}}.
+  {{if .DBError}}Database: <strong>{{.DBError}}</strong>.{{else}}Database size: <strong>{{.DBSize}}</strong>.{{end}}</p>
+
+  {{if .Message}}<p><em>{{.Message}}</em></p>{{end}}
+
+  <h2>Ingest</h2>
+  {{if .RunningID}}
+    <p>Round <strong>{{.RunningID}}</strong> is running now.</p>
+  {{end}}
+  {{if .IngestReady}}
+  <form method="post" action="/admin/ingest">
+    <button type="submit"{{if .RunningID}} disabled{{end}}>Run one fetch round now</button>
+    <span>Fetches both venues and stores a new round. Cloud Scheduler does the same every 5 minutes.</span>
+  </form>
+  {{else}}
+    <p>Ingest is not configured on this server.</p>
+  {{end}}
+
+  <h2>Last {{len .Rounds}} rounds</h2>
+  {{if not .Rounds}}
+    <p>No rounds yet. Run <code>equinox seed</code> or <code>equinox ingest</code>, or press the button above.</p>
+  {{else}}
+  <table border="1" cellpadding="4">
+    <thead>
+      <tr><th>Round</th><th>Started (UTC)</th><th>Duration</th><th>Status</th><th>Venue</th><th>OK</th><th>Instruments</th><th>Quotes</th><th>Venue time</th><th>Error</th></tr>
+    </thead>
+    <tbody>
+    {{range .Rounds}}
+      {{$r := .}}
+      {{if not .Venues}}
+      <tr><td>{{$r.ID}}{{if $r.Pinned}} (pinned){{end}}</td><td>{{$r.Started}}</td><td>{{$r.Duration}}</td><td>{{$r.Status}}</td><td colspan="6"></td></tr>
+      {{end}}
+      {{range $i, $v := .Venues}}
+      <tr>
+        {{if eq $i 0}}<td rowspan="{{len $r.Venues}}">{{$r.ID}}{{if $r.Pinned}} (pinned){{end}}</td><td rowspan="{{len $r.Venues}}">{{$r.Started}}</td><td rowspan="{{len $r.Venues}}">{{$r.Duration}}</td><td rowspan="{{len $r.Venues}}">{{$r.Status}}</td>{{end}}
+        <td>{{$v.Venue}}</td><td>{{if $v.OK}}yes{{else}}no{{end}}</td><td>{{$v.Instruments}}</td><td>{{$v.Quotes}}</td><td>{{$v.Duration}}</td><td>{{$v.Error}}</td>
+      </tr>
+      {{end}}
+    {{end}}
+    </tbody>
+  </table>
+  {{end}}
+</body>
+</html>
