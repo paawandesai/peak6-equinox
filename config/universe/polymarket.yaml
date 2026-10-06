@@ -1,10 +1,12 @@
 # Polymarket universe: which Gamma tag slugs the Polymarket adapter fetches, per category.
-# Values are verified by M1-05 (Polymarket adapter) against the live public API;
+# Values are verified by M1-05 (Polymarket adapter) against the live public API on 2026-10-06;
 # any correction is a Tier 1 change logged in docs/decisions.md.
+# crypto uses bitcoin + ethereum (the Kalshi KXBTCD/KXETHD counterparts), not the broad
+# "crypto" tag, which returns ~2,100 events and ~30 MB per sweep (D-056).
 # politics is filled in M2.
 categories:
   crypto:
-    tag_slugs: [crypto]
+    tag_slugs: [bitcoin, ethereum]
   fed:
     tag_slugs: [fed-rates]
   politics:
