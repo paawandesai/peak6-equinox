@@ -12,3 +12,4 @@ Add one line per action, newest at the bottom: `YYYY-MM-DD HH:MM UTC · actor ·
 2026-10-06 19:31 UTC · Cursor reviewer · Approved M1-01 MR !1 (READY TO MERGE) on 95bb806. · MR!1
 2026-10-06 19:32 UTC · operator · Merged M1-01 MR !1 to main (CI green + Cursor approved). · 69149a6 closes #1
 2026-10-06 19:33 UTC · operator · Closed issue #1; creating remaining M1 GitLab issues; starting M1-02 and M1-03. · tickets/M1.md
+2026-10-06 19:33 UTC · operator · Created GitLab issues #2–#12 (M1-02…M1-12) with label M1; daily log-freshness pipeline schedule id 18 on main (0 6 * * * UTC). · issues#2-12 schedule#18
