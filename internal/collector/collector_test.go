@@ -426,6 +426,35 @@ func TestRunRefusesConcurrentRounds(t *testing.T) {
 	}
 }
 
+// Another process (a second Cloud Run instance) holding the database lock
+// is refused too, and no round row is created for the refused attempt.
+func TestRunRefusesRoundHeldByAnotherProcess(t *testing.T) {
+	k := okAdapter(canonical.VenueKalshi, 1)
+	c, st := newCollector(t, Options{}, k)
+	unlock, acquired, err := st.TryLockIngest(ctx)
+	if err != nil || !acquired {
+		t.Fatalf("taking the ingest lock: %v %v", acquired, err)
+	}
+	if _, err := c.Run(ctx); !errors.Is(err, ErrRoundInProgress) {
+		t.Errorf("Run while another process holds the lock = %v, want ErrRoundInProgress", err)
+	}
+	if rounds, _ := st.ListRounds(ctx, 10); len(rounds) != 0 {
+		t.Errorf("a refused attempt created %d round row(s)", len(rounds))
+	}
+	if _, running := c.Running(); running {
+		t.Error("collector marked running after a refused attempt")
+	}
+	unlock()
+	res, err := c.Run(ctx)
+	if err != nil || res.Status != store.RoundOK {
+		t.Errorf("Run after the other process released = %+v, %v", res, err)
+	}
+	// The lock is released after the round, so the next round proceeds.
+	if _, acquired, _ := st.TryLockIngest(ctx); !acquired {
+		t.Error("ingest lock still held after Run returned")
+	}
+}
+
 func TestRunCancelledContextStillFinishesRound(t *testing.T) {
 	k := okAdapter(canonical.VenueKalshi, 2)
 	c, st := newCollector(t, Options{}, k)

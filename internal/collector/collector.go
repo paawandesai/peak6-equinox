@@ -138,7 +138,8 @@ func (c *Collector) Running() (int64, bool) {
 }
 
 // Run executes one round. It returns ErrRoundInProgress if another round is
-// running. A venue failing is recorded in the result, not returned as an
+// running, in this process or in any other process sharing the database (a
+// Postgres advisory lock is held for the whole round). A venue failing is recorded in the result, not returned as an
 // error; the error is for infrastructure failures (the round row could not be
 // created or finished). The Result is filled in as far as the run got.
 func (c *Collector) Run(ctx context.Context) (Result, error) {
@@ -146,6 +147,17 @@ func (c *Collector) Run(ctx context.Context) (Result, error) {
 		return Result{}, ErrRoundInProgress
 	}
 	defer c.release()
+	// The database lock is what actually serialises rounds: other processes
+	// (a second Cloud Run instance) share it, while the in-process guard above
+	// only adds the running round's ID for the 409 response.
+	unlock, acquired, err := c.store.TryLockIngest(ctx)
+	if err != nil {
+		return Result{}, fmt.Errorf("starting fetch round: %w", err)
+	}
+	if !acquired {
+		return Result{}, ErrRoundInProgress
+	}
+	defer unlock()
 
 	startedAt := c.opts.Now()
 	round, err := c.store.CreateRound(ctx, startedAt)

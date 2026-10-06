@@ -15,6 +15,7 @@ import (
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/collector"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/config"
+	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/normalize"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/store"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/venues"
 )
@@ -54,9 +55,8 @@ func newLogger(cfg config.Config) *slog.Logger {
 	return slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: cfg.LogLevel, ReplaceAttr: utcTime}))
 }
 
-// buildCollector wires the registered adapters, the universe files and the
-// store into a collector. M1-07's normalize.Extract is wired here once it
-// lands (collector.Options.Normalize); until then terms stay unknown.
+// buildCollector wires the registered adapters, the universe files, the
+// normaliser (M1-07) and the store into a collector.
 func buildCollector(cfg config.Config, logger *slog.Logger, st *store.Store, maxQuotes int) (*collector.Collector, error) {
 	reg, err := buildRegistry(cfg, logger)
 	if err != nil {
@@ -72,7 +72,9 @@ func buildCollector(cfg config.Config, logger *slog.Logger, st *store.Store, max
 	if maxQuotes == 0 {
 		maxQuotes = collector.DefaultMaxQuotesPerVenue
 	}
-	return collector.New(st, reg, universes, collector.Options{MaxQuotesPerVenue: maxQuotes, Logger: logger})
+	return collector.New(st, reg, universes, collector.Options{
+		MaxQuotesPerVenue: maxQuotes, Normalize: normalize.Normalize, Logger: logger,
+	})
 }
 
 // runRound opens the database, runs one round and prints its summary.

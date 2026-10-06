@@ -66,6 +66,10 @@ func TestSeedLoadsFixtureRound(t *testing.T) {
 	if logs, _ := st.ListLog(ctx, store.LogFilter{Kind: store.LogIngest}); len(logs) != 1 {
 		t.Errorf("ingest log entries = %d", len(logs))
 	}
+	// The normaliser (M1-07) ran on every stored instrument.
+	if in, err := st.GetInstrument(ctx, "kalshi:KXBTCD-26OCT0618-T76599.99"); err != nil || in.Terms.Subject == canonical.Unknown || in.Terms.Threshold == nil {
+		t.Errorf("normalised terms = %+v (%v)", in.Terms, err)
+	}
 	if raws, _ := st.ListRawResponses(ctx, round.ID); len(raws) < 40 {
 		t.Errorf("raw responses = %d", len(raws))
 	}
