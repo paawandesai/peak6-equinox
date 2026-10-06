@@ -161,16 +161,30 @@ func stripFence(s string) string {
 }
 
 // checkNesting refuses deeply nested payloads before the decoder sees them.
+// Brackets inside JSON strings (an evidence quote may legitimately contain
+// "{" or "[") are skipped, with backslash escapes honoured so an escaped quote
+// does not end the string early.
 func checkNesting(s string) error {
-	depth := 0
+	depth, inString, escaped := 0, false, false
 	for _, r := range s {
-		switch r {
-		case '{', '[':
+		switch {
+		case inString:
+			switch {
+			case escaped:
+				escaped = false
+			case r == '\\':
+				escaped = true
+			case r == '"':
+				inString = false
+			}
+		case r == '"':
+			inString = true
+		case r == '{' || r == '[':
 			depth++
 			if depth > maxResponseNestingDepth {
 				return fmt.Errorf("response nests deeper than %d levels", maxResponseNestingDepth)
 			}
-		case '}', ']':
+		case r == '}' || r == ']':
 			depth--
 		}
 	}

@@ -40,6 +40,9 @@ func TestDecodeAccepts(t *testing.T) {
 		"bare fence":         "```\n{\"relationship\":\"related\",\"confidence\":0.25}\n```",
 		"whitespace":         "\n  {\"relationship\":\"related\",\"confidence\":0.25}  \n",
 		"multiline evidence": `{"relationship":"related","confidence":0.5,"evidence":["line one\nline two\ttabbed"]}`,
+		// Brackets inside quotes are text, not nesting (reviewer finding on MR !9).
+		"brackets in evidence":        `{"relationship":"related","confidence":0.5,"evidence":["resolves per {\"rules\":[[[[[[[[[1]]]]]]]]]} [[[[[[[[[[","{{{{{{{{{{{{{{{{{{{{"]}`,
+		"escaped quote then brackets": `{"relationship":"related","confidence":0.5,"differing_fields":["a\\"],"evidence":["say \"[[[[[[[[[[\" here"]}`,
 	}
 	for name, raw := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -84,6 +87,8 @@ func TestDecodeRejects(t *testing.T) {
 		"long field":          {`{"relationship":"related","confidence":0.5,"differing_fields":["` + strings.Repeat("f", 65) + `"]}`, "short printable"},
 		"newline field":       {`{"relationship":"related","confidence":0.5,"differing_fields":["a\nb"]}`, "short printable"},
 		"nested":              {strings.Repeat("[", 50) + strings.Repeat("]", 50), "nests deeper"},
+		"nested after string": {`{"relationship":"related","confidence":0.5,"evidence":["x"],"differing_fields":` + strings.Repeat("[", 20) + strings.Repeat("]", 20) + `}`, "nests deeper"},
+		"unterminated string": {`{"relationship":"related","confidence":0.5,"evidence":["open`, "not the verdict schema"},
 		"huge":                {ExpandPayload("@huge"), "at most 16384"},
 		"fence only":          {"``````", "not the verdict schema"},
 		"wrong type":          {`{"relationship":["equivalent"],"confidence":0.5}`, "not the verdict schema"},
@@ -105,6 +110,7 @@ func FuzzDecode(f *testing.F) {
 	for _, seed := range []string{
 		`{"relationship":"related","confidence":0.5}`, `{"relationship":"equivalent","confidence":1,"evidence":["x"]}`,
 		"```json\n{}\n```", "[[[[", `{"confidence":"1"}`, "", strings.Repeat("{", 100),
+		`{"relationship":"related","confidence":0.5,"evidence":["{[\"]}"]}`,
 	} {
 		f.Add(seed)
 	}
