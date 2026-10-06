@@ -1,7 +1,7 @@
 <!-- OWNER: operator. -->
 # Status
 
-_Last updated: 2026-10-06 by operator (M1-02 merged; M1-03 MR !5 open; runner maint ~15:30 CT logged; runner policy noted)._
+_Last updated: 2026-10-06 by operator (M1-03/04/05/08/11 merged; M1-07 MR !12 in review; M1-06 MR !13 open)._
 
 ## Current milestone
 
@@ -12,10 +12,16 @@ M1: thin end-to-end slice, deployed (target Wed 2026-10-07). See [plan.md](plan.
 - Kickoff pack committed.
 - M1-01: Scaffold the repo and the GitLab CI pipeline — MR !1 merged as 69149a6 (closes #1).
 - M1-02: Dockerfile, GCP bootstrap, and a live health endpoint — MR !4 merged as 2e8aee2 (closes #2); live URL https://equinox-o5hdimw5rq-uc.a.run.app.
+- M1-03: Canonical types, Postgres schema and migrations, universe config — merged as bacb1b1 (closes #3).
+- M1-04: Kalshi adapter — merged as cb320c9 (closes #4).
+- M1-05: Polymarket adapter — merged as d96b5cd (closes #5).
+- M1-08: Fees and router v0 — MR !10 merged as 058ac21 (closes #8); pipeline 39326 green; Cursor approved.
+- M1-11: LLM safety harness — MR !9 merged as 0677004 (closes #9); pipeline 39366 green; Cursor approved after review fixes.
 
 ## In progress
 
-- M1-03: Canonical types, Postgres schema and migrations, universe config — MR !5 open (head pipeline after runner maint).
+- M1-07: Crypto-threshold normaliser and rules matcher v0 — MR !12 open; gitleaks fixture false positives fixed (market_id rename + scoped allowlist, D-060); Cursor review running.
+- M1-06: Collector, ingest/seed/fixture-server, admin ingest — MR !13 open; worker peak6-equinox-10 merging main for the gitleaks allowlist.
 
 ## Blocked
 
