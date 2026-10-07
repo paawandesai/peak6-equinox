@@ -196,6 +196,13 @@ func TestKalshiToInstrument(t *testing.T) {
 	if ins.RulesText != "If above, Yes." || ins.Title != "Fed above 3.25%? — Above 3.25%" {
 		t.Errorf("rules %q title %q", ins.RulesText, ins.Title)
 	}
+	// M3-05: pin FeeSchedule.Verified and Source (Q-8 answered 2026-10-07)
+	if ins.FeeSchedule.Verified != true {
+		t.Errorf("FeeSchedule.Verified = %v, want true (Q-8 answered)", ins.FeeSchedule.Verified)
+	}
+	if ins.FeeSchedule.Source != "https://kalshi.com/docs/kalshi-fee-schedule.pdf" {
+		t.Errorf("FeeSchedule.Source = %q, want PDF URL", ins.FeeSchedule.Source)
+	}
 
 	for name, mod := range map[string]func(*market){
 		"missing ticker": func(m *market) { m.Ticker = "  " },

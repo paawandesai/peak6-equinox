@@ -306,8 +306,14 @@ func settledOutcome(m binaryMarket) (canonical.Outcome, error) {
 // fields. Params carry the venue's numbers verbatim ("rate", "exponent");
 // feesEnabled=false is recorded as rate 0. Unparseable numbers are left out
 // and flagged, so internal/fees treats the fee as unknown.
+// Verified M3-05 2026-10-07 against https://docs.polymarket.com/trading/fees
+// and https://docs.polymarket.com/market-data/market-details#trading-fees.
 func feeSchedule(m gammaMarket, q *canonical.Quality) canonical.FeeSchedule {
-	fs := canonical.FeeSchedule{ID: canonical.FeeSchedulePolymarketV1}
+	fs := canonical.FeeSchedule{
+		ID:       canonical.FeeSchedulePolymarketV1,
+		Verified: true,
+		Source:   "https://docs.polymarket.com/trading/fees",
+	}
 	switch {
 	case m.FeesEnabled != nil && !*m.FeesEnabled:
 		fs.Params = map[string]decimal.Decimal{"rate": decimal.Zero}

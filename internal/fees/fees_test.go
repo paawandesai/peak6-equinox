@@ -126,6 +126,67 @@ func TestPolymarketExponent(t *testing.T) {
 	}
 }
 
+// TestKalshiEdgeCases: M3-05 worked examples for edge cases
+// (0-fee markets, rounding up, symmetric prices), verified against
+// "Fee Schedule for July 2026, 7.7.26 Update" (Q-8).
+func TestKalshiEdgeCases(t *testing.T) {
+	// 0-fee market: multiplier 0 means fee-free series
+	if got := mustCompute(t, kalshi("0"), "0.50", "100"); !got.IsZero() {
+		t.Errorf("0-fee market: fee = %s, want 0", got)
+	}
+	// Rounding up: 0.07 × 1 × 0.50 × 0.50 = 0.0175 (1.75¢) → rounds to next cent = 0.02
+	if got := mustCompute(t, kalshi("0.07"), "0.50", "1"); !got.Equal(d("0.02")) {
+		t.Errorf("round up to cent: fee(1 × 0.50) = %s, want 0.02", got)
+	}
+	// Rounding up from $0.0112: 0.07 × 1 × 0.20 × 0.80 = 0.0112 → rounds to 0.02
+	if got := mustCompute(t, kalshi("0.07"), "0.20", "1"); !got.Equal(d("0.02")) {
+		t.Errorf("round up 0.0112: fee(1 × 0.20) = %s, want 0.02", got)
+	}
+	// Symmetric prices: fee at P and (1 − P) should match
+	feeAt10 := mustCompute(t, kalshi("0.07"), "0.10", "100")
+	feeAt90 := mustCompute(t, kalshi("0.07"), "0.90", "100")
+	if !feeAt10.Equal(feeAt90) {
+		t.Errorf("symmetric: fee(100 × 0.10) = %s != fee(100 × 0.90) = %s", feeAt10, feeAt90)
+	}
+	if !feeAt10.Equal(d("0.63")) {
+		t.Errorf("symmetric prices: fee = %s, want 0.63", feeAt10)
+	}
+}
+
+// TestKalshiOfficialTableExamples: Q-8 worked examples from the official
+// "General Trading Fees Table" in the July 2026 fee schedule.
+func TestKalshiOfficialTableExamples(t *testing.T) {
+	cases := []struct{ price, qty, want string }{
+		{"0.05", "100", "0.34"}, // Table: 100 @ $0.05 → $0.34
+		{"0.50", "100", "1.75"}, // Table: 100 @ $0.50 → $1.75
+		{"0.65", "100", "1.60"}, // Table: 100 @ $0.65 → $1.60
+	}
+	for _, tc := range cases {
+		if got := mustCompute(t, kalshi("0.07"), tc.price, tc.qty); !got.Equal(d(tc.want)) {
+			t.Errorf("official table: fee(%s × %s) = %s, want %s", tc.qty, tc.price, got, tc.want)
+		}
+	}
+}
+
+// TestPolymarketAdditionalWorkedExamples: M3-05 additional worked examples
+// beyond the official 100 shares at 50¢ = $1.75.
+func TestPolymarketAdditionalWorkedExamples(t *testing.T) {
+	// Exponent ≠ 1: quadratic fee curve
+	// 100 × 0.25 × (0.50 × 0.50)^2 = 100 × 0.25 × 0.0625 = 1.5625
+	if got := mustCompute(t, polymarket("0.25", ParamExponent, "2"), "0.50", "100"); !got.Equal(d("1.5625")) {
+		t.Errorf("exponent 2: fee = %s, want 1.5625", got)
+	}
+	// Fee-free market: rate 0
+	if got := mustCompute(t, polymarket("0"), "0.50", "100"); !got.IsZero() {
+		t.Errorf("fee-free market: fee = %s, want 0", got)
+	}
+	// Smallest non-zero fee: 0.00001 USDC
+	// 1 contract × 0.07 × 0.001 × 0.999 ≈ 0.00006993 → rounds to 0.00007
+	if got := mustCompute(t, polymarket("0.07"), "0.001", "1"); !got.Equal(d("0.00007")) {
+		t.Errorf("smallest non-zero fee: fee = %s, want 0.00007", got)
+	}
+}
+
 func TestComputeSellMatchesBuy(t *testing.T) {
 	for _, s := range []canonical.FeeSchedule{kalshi("0.07"), polymarket("0.07")} {
 		buy, err := Compute(s, canonical.SideBuy, d("0.37"), d("250"))

@@ -163,6 +163,13 @@ func TestFetchInstrumentsQueryAndMapping(t *testing.T) {
 	if !in.FeeSchedule.Params["rate"].Equal(decimal.RequireFromString("0.05")) || !in.FeeSchedule.Params["exponent"].Equal(decimal.NewFromInt(1)) {
 		t.Errorf("fee params = %v", in.FeeSchedule.Params)
 	}
+	// M3-05: pin FeeSchedule.Verified and Source
+	if in.FeeSchedule.Verified != true {
+		t.Errorf("FeeSchedule.Verified = %v, want true", in.FeeSchedule.Verified)
+	}
+	if in.FeeSchedule.Source != "https://docs.polymarket.com/trading/fees" {
+		t.Errorf("FeeSchedule.Source = %q, want docs URL", in.FeeSchedule.Source)
+	}
 	if ins[1].VenueEventID != in.VenueEventID {
 		t.Error("markets of one negRisk event must share venue_event_id")
 	}
