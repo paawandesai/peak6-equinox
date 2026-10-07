@@ -23,6 +23,7 @@
 | `SKEW_WARN_SECONDS` | Cross-venue skew warning | no | `5` |
 | `SKEW_MAX_SECONDS` | Cross-venue skew exclusion | no | `30` |
 | `MIN_ROUTE_CONFIDENCE` | Minimum relationship confidence for routing | no | `0.9` |
+| `MIN_BOOK_DEPTH` | Minimum total book depth (contracts) for eligibility | no | `1` |
 | `PUBLIC_RATE_LIMIT_PER_MIN` | Per-IP limit on public routes | no | `60` |
 | `LLM_ENABLED` | Enables the verifier | no (default `false`) | `false` |
 | `ANTHROPIC_API_KEY` | Anthropic key; the verifier is disabled if empty | only if `LLM_ENABLED=true` | `sk-ant-REPLACE_ME` |

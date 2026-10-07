@@ -28,6 +28,14 @@ type Config struct {
 	// EvalSummaryFile is the JSON artifact `equinox eval` writes and /eval
 	// renders (EVAL_SUMMARY_FILE). Empty or missing means "no eval yet".
 	EvalSummaryFile string
+	// StaleAfter is the staleness threshold (STALE_AFTER_SECONDS).
+	StaleAfter time.Duration
+	// SkewWarn is the skew warning threshold (SKEW_WARN_SECONDS).
+	SkewWarn time.Duration
+	// SkewMax is the skew exclusion threshold (SKEW_MAX_SECONDS).
+	SkewMax time.Duration
+	// MinBookDepth is the minimum book depth (MIN_BOOK_DEPTH).
+	MinBookDepth decimal.Decimal
 }
 
 // Deps holds the collaborators the web layer uses. Store and Ingester may be

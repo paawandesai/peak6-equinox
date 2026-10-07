@@ -131,7 +131,16 @@ func runRoute(ctx context.Context, args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	rcfg := route.Config{RoundID: in.round.ID, MinRouteConfidence: cfg.MinRouteConfidence}
+	rcfg := route.Config{
+		RoundID:            in.round.ID,
+		MinRouteConfidence: cfg.MinRouteConfidence,
+		Eligibility: route.EligibilityConfig{
+			StaleAfter:   cfg.StaleAfter,
+			SkewWarn:     cfg.SkewWarn,
+			SkewMax:      cfg.SkewMax,
+			MinBookDepth: cfg.MinBookDepth,
+		},
+	}
 	dec, err := route.Route(o, in.target, in.partners, rcfg, time.Now().UTC())
 	if err != nil {
 		return err

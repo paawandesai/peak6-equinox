@@ -19,7 +19,16 @@ const (
 
 var (
 	t0  = time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC)
-	cfg = Config{RoundID: 7, MinRouteConfidence: d("0.9")}
+	cfg = Config{
+		RoundID:            7,
+		MinRouteConfidence: d("0.9"),
+		Eligibility: EligibilityConfig{
+			StaleAfter:   120 * time.Second,
+			SkewWarn:     5 * time.Second,
+			SkewMax:      30 * time.Second,
+			MinBookDepth: d("1"),
+		},
+	}
 )
 
 // instrument builds a minimal open instrument whose fee schedule follows its

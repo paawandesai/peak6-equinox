@@ -29,6 +29,8 @@ type Config struct {
 	// MinRouteConfidence excludes partners whose relationship confidence is
 	// below it (domain.md rule 3; MIN_ROUTE_CONFIDENCE).
 	MinRouteConfidence decimal.Decimal
+	// Eligibility holds the staleness, skew, and depth thresholds.
+	Eligibility EligibilityConfig
 }
 
 // Leg routes.
@@ -50,6 +52,8 @@ const (
 	ReasonInsufficientDepth     = "insufficient_depth"
 	ReasonLimitNotReachable     = "limit_not_reachable"
 	ReasonFeeUnknown            = "fee_unknown"
+	ReasonStale                 = "stale"
+	ReasonSkew                  = "skew"
 )
 
 // Note values on an Alternative.
@@ -109,12 +113,84 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 		DecidedAt:    now.UTC(),
 	}
 
-	cands := []candidate{{Candidate: target, route: RouteDirect}}
+	cands := []candidate{}
+
+	// Check target eligibility (staleness, missing book, depth).
+	if targetOK, targetExs := IsEligible(target.Quote, now, cfg.Eligibility); !targetOK {
+		for _, ex := range targetExs {
+			d.Exclusions = append(d.Exclusions, canonical.Exclusion{
+				InstrumentID: target.Instrument.ID,
+				Venue:        target.Instrument.Venue,
+				Reason:       ex.Reason,
+				Detail:       ex.Detail,
+			})
+		}
+	} else {
+		cands = append(cands, candidate{Candidate: target, route: RouteDirect})
+	}
+
+	// Check each partner's relationship, eligibility, and skew against target.
 	for _, p := range partners {
 		if ex, ok := partnerExclusion(target, p, cfg); !ok {
 			d.Exclusions = append(d.Exclusions, ex)
 			continue
 		}
+
+		// Eligibility: staleness, missing book, depth.
+		if partnerOK, partnerExs := IsEligible(p.Quote, now, cfg.Eligibility); !partnerOK {
+			for _, ex := range partnerExs {
+				d.Exclusions = append(d.Exclusions, canonical.Exclusion{
+					InstrumentID: p.Instrument.ID,
+					Venue:        p.Instrument.Venue,
+					Reason:       ex.Reason,
+					Detail:       ex.Detail,
+				})
+			}
+			continue
+		}
+
+		// Skew: check time difference against target.
+		if excludeOlder, warnings := Skew(target.Quote, p.Quote, cfg.Eligibility); excludeOlder {
+			older := OlderQuote(target.Quote, p.Quote)
+			if older == p.Instrument.ID {
+				skewSec := int(target.Quote.FetchedAt.Sub(p.Quote.FetchedAt).Seconds())
+				if skewSec < 0 {
+					skewSec = -skewSec
+				}
+				d.Exclusions = append(d.Exclusions, canonical.Exclusion{
+					InstrumentID: p.Instrument.ID,
+					Venue:        p.Instrument.Venue,
+					Reason:       ReasonSkew,
+					Detail:       SkewDetail(skewSec),
+				})
+				continue
+			}
+			// If target is older, exclude it from cands (if it's there) and record.
+			if older == target.Instrument.ID {
+				skewSec := int(p.Quote.FetchedAt.Sub(target.Quote.FetchedAt).Seconds())
+				if skewSec < 0 {
+					skewSec = -skewSec
+				}
+				d.Exclusions = append(d.Exclusions, canonical.Exclusion{
+					InstrumentID: target.Instrument.ID,
+					Venue:        target.Instrument.Venue,
+					Reason:       ReasonSkew,
+					Detail:       SkewDetail(skewSec),
+				})
+				// Remove target from cands if present.
+				newCands := []candidate{}
+				for _, c := range cands {
+					if c.Instrument.ID != target.Instrument.ID {
+						newCands = append(newCands, c)
+					}
+				}
+				cands = newCands
+				continue
+			}
+		} else if len(warnings) > 0 {
+			d.Warnings = append(d.Warnings, warnings...)
+		}
+
 		cands = append(cands, candidate{Candidate: p, route: RouteDirect})
 	}
 

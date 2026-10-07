@@ -122,6 +122,10 @@ func newServerWith(cfg config.Config, logger *slog.Logger, deps web.Deps) *web.S
 		PublicRateLimitPerMin: cfg.PublicRateLimitPerMin,
 		MinRouteConfidence:    cfg.MinRouteConfidence,
 		EvalSummaryFile:       cfg.EvalSummaryFile,
+		StaleAfter:            cfg.StaleAfter,
+		SkewWarn:              cfg.SkewWarn,
+		SkewMax:               cfg.SkewMax,
+		MinBookDepth:          cfg.MinBookDepth,
 	}, deps)
 }
 

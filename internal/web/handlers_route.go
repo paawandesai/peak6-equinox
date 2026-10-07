@@ -236,7 +236,16 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 		s.routeFailure(w, r, http.StatusServiceUnavailable, in.PairID, "the database is unavailable; try again shortly")
 		return
 	}
-	cfg := route.Config{RoundID: rel.RoundID, MinRouteConfidence: s.cfg.MinRouteConfidence}
+	cfg := route.Config{
+		RoundID:            rel.RoundID,
+		MinRouteConfidence: s.cfg.MinRouteConfidence,
+		Eligibility: route.EligibilityConfig{
+			StaleAfter:   s.cfg.StaleAfter,
+			SkewWarn:     s.cfg.SkewWarn,
+			SkewMax:      s.cfg.SkewMax,
+			MinBookDepth: s.cfg.MinBookDepth,
+		},
+	}
 	dec, err := route.Route(in.Order, target, partners, cfg, s.now())
 	if err != nil {
 		// Route only errors on invalid input, which the form checks already
