@@ -1,0 +1,30 @@
+[
+  {
+    "id": "e2e-1",
+    "slug": "e2e-synthetic-bitcoin-above-76599-99-on-october-6-cf-benchmarks",
+    "title": "E2E SYNTHETIC: Bitcoin above $76,599.99 on October 6 (CF Benchmarks BRTI)",
+    "endDate": "2026-10-06T22:00:00Z",
+    "negRisk": false,
+    "negRiskMarketID": null,
+    "markets": [
+      {
+        "id": "e2e-1-1",
+        "question": "Will the price of Bitcoin be above $76,599.99 on October 6?",
+        "description": "This market will resolve to \"Yes\" if the simple average of the sixty seconds of the CF Benchmarks Bitcoin Real-Time Index (BRTI) before 6:00 PM ET on the date specified in the title is higher than the price specified in the title. Otherwise, this market will resolve to \"No\". The resolution source for this market is CF Benchmarks, specifically the BRTI.",
+        "conditionId": "0xe2e0000000000000000000000000000000000000000000000000000000000001",
+        "slug": "e2e-synthetic-will-the-price-of-bitcoin-be-above-76599-99-on-october-6",
+        "endDate": "2026-10-06T22:00:00Z",
+        "closedTime": "",
+        "active": true,
+        "closed": false,
+        "negRisk": false,
+        "outcomes": "[\"Yes\", \"No\"]",
+        "outcomePrices": "[\"0.5\", \"0.5\"]",
+        "clobTokenIds": "[\"900000000000000000000000000000000000000000000000000000000000000000000000000001\", \"900000000000000000000000000000000000000000000000000000000000000000000000000002\"]",
+        "feesEnabled": true,
+        "feeSchedule": {"exponent": 1, "rate": 0.07, "takerOnly": true, "rebateRate": 0.2},
+        "enableOrderBook": true
+      }
+    ]
+  }
+]
