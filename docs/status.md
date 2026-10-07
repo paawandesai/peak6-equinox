@@ -1,15 +1,16 @@
 <!-- OWNER: operator. -->
 # Status
 
-_Last updated: 2026-10-06 ~20:45 CT by operator (M1 complete: all M1-01…M1-12 merged; status catch-up)._
+_Last updated: 2026-10-06 ~21:55 CT by operator (M1 verified HIT WITH CAVEATS; M2 tickets written; wave 1 starting)._
 
 ## Current milestone
 
-**M1 complete** (target Wed 2026-10-07). All twelve tickets merged; issue #12 closed; live deploy + Scheduler collector + E2E smoke on `main`. See [plan.md](plan.md) and [tickets/M1.md](tickets/M1.md).
+**M2 in progress** (target Fri 2026-10-09). Tickets in [tickets/M2.md](tickets/M2.md). Wave 1: M2-01 (Fed normaliser), M2-03 (facts loader).
 
-**Exit criteria:** CI green on `main` (incl. e2e, security, coverage, gitleaks, govulncheck); live URL serves matches from real data; Scheduler collecting. **Caveat (Q-4 / D-060):** no recorded cross-venue crypto pair is `equivalent` under D-017 (Kalshi CF Benchmarks vs Polymarket Binance; different deadlines) — live round 3 has 768 `related`, 0 `equivalent`; the E2E path uses one labelled synthetic equivalent (D-064). Demo shows related near-misses + routing; true live crypto equivalents wait on M2 source-equivalence / facts.
+**M1 verification (2026-10-06 ~21:55 CT):** **HIT WITH CAVEATS.** See operator report in log. Caveats: live round 3 has 0 `equivalent` / 768 `related` (Q-4/D-060 accepted for M1); E2E equivalent path is synthetic (D-064); D-065 still awaiting human veto (Tier 2, non-blocking); live `POST /route` on related pairs correctly refuses (`not_routable`) — chosen-venue VWAP path proven in CI e2e only until live equivalents exist (M2).
 
-**Next:** M2 (equivalence engine, full; target Fri 2026-10-09) — not started; no tickets written yet.
+**Previous:** M1 complete (all M1-01…M1-12 merged).
+
 
 ## Done
 
@@ -29,7 +30,7 @@ _Last updated: 2026-10-06 ~20:45 CT by operator (M1 complete: all M1-01…M1-12 
 
 ## In progress
 
-None.
+- M2 tickets written; wave 1 workers spawning (M2-01, M2-03).
 
 ## Blocked
 
