@@ -529,3 +529,56 @@ func TestRouteProperties(t *testing.T) {
 		}
 	})
 }
+
+func TestRouteEligibilityAndSkew(t *testing.T) {
+	target, partners := scenario()
+	now := t0.Add(150 * time.Second) // 150s after t0
+
+	// Stale target: all quotes fetched at t0 are now 150s old (> 120s threshold).
+	dec, err := Route(buy("10"), target, partners, cfg, now)
+	if err != nil {
+		t.Fatalf("Route: %v", err)
+	}
+	if ex := exclusion(t, dec, kalshiID); ex.Reason != ReasonStale {
+		t.Errorf("stale target exclusion = %+v, want stale", ex)
+	}
+	if ex := exclusion(t, dec, polymarketID); ex.Reason != ReasonStale {
+		t.Errorf("stale partner exclusion = %+v, want stale", ex)
+	}
+
+	// Skewed partner: target fresh, partner 40s old (> 30s SkewMax).
+	freshTarget := target
+	freshTarget.Quote.FetchedAt = now
+	skewedPartner := partners[0]
+	skewedPartner.Quote.FetchedAt = now.Add(-40 * time.Second)
+	dec, err = Route(buy("10"), freshTarget, []canonical.Candidate{skewedPartner}, cfg, now)
+	if err != nil {
+		t.Fatalf("Route: %v", err)
+	}
+	if ex := exclusion(t, dec, polymarketID); ex.Reason != ReasonSkew || !strings.Contains(ex.Detail, "40 s behind") {
+		t.Errorf("skewed partner exclusion = %+v, want skew with 40s detail", ex)
+	}
+
+	// Skew warning: partner 10s old (between 5s SkewWarn and 30s SkewMax).
+	warnPartner := partners[0]
+	warnPartner.Quote.FetchedAt = now.Add(-10 * time.Second)
+	dec, err = Route(buy("10"), freshTarget, []canonical.Candidate{warnPartner}, cfg, now)
+	if err != nil {
+		t.Fatalf("Route: %v", err)
+	}
+	if !strings.Contains(strings.Join(dec.Warnings, " "), "skew_warning") {
+		t.Errorf("warnings = %v, want skew_warning\nexclusions = %+v\nchosen = %+v", dec.Warnings, dec.Exclusions, dec.Chosen)
+	}
+
+	// Shallow book: total depth < MinBookDepth (1 contract).
+	shallow := cand(polymarketID, []canonical.Level{lv("0.49", "0.3")}, []canonical.Level{lv("0.50", "0.4")},
+		rel(kalshiID, polymarketID, canonical.RelEquivalent, "0.97"))
+	shallow.Quote.FetchedAt = now
+	dec, err = Route(buy("10"), freshTarget, []canonical.Candidate{shallow}, cfg, now)
+	if err != nil {
+		t.Fatalf("Route: %v", err)
+	}
+	if ex := exclusion(t, dec, polymarketID); ex.Reason != ReasonInsufficientDepth {
+		t.Errorf("shallow partner exclusion = %+v, want insufficient_depth", ex)
+	}
+}

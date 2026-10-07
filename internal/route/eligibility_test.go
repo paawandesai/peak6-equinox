@@ -458,3 +458,23 @@ func TestOlderQuote(t *testing.T) {
 func dec(s string) decimal.Decimal {
 	return decimal.RequireFromString(s)
 }
+
+func TestSkewWithRouteIntegration(t *testing.T) {
+	now := time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)
+	cfg := EligibilityConfig{
+		SkewWarn: 5 * time.Second,
+		SkewMax:  30 * time.Second,
+	}
+	
+	q1 := canonical.Quote{InstrumentID: "test:1", FetchedAt: now}
+	q2 := canonical.Quote{InstrumentID: "test:2", FetchedAt: now.Add(-10 * time.Second)}
+	
+	exclude, warnings := Skew(q1, q2, cfg)
+	if exclude {
+		t.Errorf("10s skew should not exclude")
+	}
+	if len(warnings) == 0 {
+		t.Errorf("10s skew should warn, got warnings=%v", warnings)
+	}
+	t.Logf("10s skew: exclude=%v, warnings=%v", exclude, warnings)
+}

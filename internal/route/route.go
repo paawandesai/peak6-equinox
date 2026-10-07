@@ -219,7 +219,7 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 	if len(opts) > 0 {
 		d.Chosen = []canonical.Leg{opts[0].leg}
 	}
-	d.Warnings = warnings(o, opts, sz)
+	d.Warnings = append(d.Warnings, warnings(o, opts, sz)...)
 	d.Explanation = explain(d, opts, sz, cfg)
 	return d, nil
 }
