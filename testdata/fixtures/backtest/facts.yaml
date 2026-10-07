@@ -1,0 +1,42 @@
+# Facts in force when the settled markets recorded under testdata/fixtures/**
+# were live (M2-06 settlement back-test, FR-19, NFR-07). Same layout and
+# rules as config/facts.yaml (D-066); loaded by `equinox backtest --fixtures`
+# and by TestBacktestFixtures. Never guess a value: each one is read from the
+# cited source and is cross-checked by the recorded settlements themselves.
+#
+# The recorded Kalshi KXFED ladder and Polymarket "Fed Decision in September?"
+# buckets both resolved on the September 16, 2026 FOMC decision, so the level
+# the change buckets measure against is the one in force BEFORE that meeting.
+facts:
+  # Upper bound of the federal funds target range, in percent, before the
+  # September 15-16, 2026 FOMC decision. The September 16 press release
+  # states the decision raised the range by 1/4 point to 3.75-4.00 %, so the
+  # upper bound it started from was 3.75 %.
+  - id: fed_upper_bound
+    value: "3.75"
+    source: https://www.federalreserve.gov/newsevents/pressreleases/monetary20260916a.htm
+    as_of: 2026-09-15
+    notes: >-
+      Percent. Target range 3.50-3.75 % in force before the September 16, 2026
+      FOMC decision (+25 bps to 3.75-4.00 %, effective September 17, 2026).
+      Historical snapshot for the back-test only; config/facts.yaml carries
+      the live value.
+
+  # The FOMC decision fed_upper_bound precedes: September 16, 2026, the
+  # second day of the September 15-16 meeting on the official calendar.
+  - id: fed_next_meeting
+    value: "2026-09-16"
+    source: https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+    as_of: 2026-09-15
+    notes: >-
+      Calendar date (UTC) of the FOMC decision that fed_upper_bound precedes.
+      Historical snapshot for the back-test only.
+
+  # Grid step of the target range, unchanged from config/facts.yaml.
+  - id: fed_rate_step
+    value: "0.25"
+    source: https://www.federalreserve.gov/monetarypolicy/openmarket.htm
+    as_of: 2026-10-06
+    notes: >-
+      Percentage points. Every target range change since December 2008 is a
+      multiple of 0.25.
