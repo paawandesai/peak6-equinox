@@ -293,8 +293,10 @@ func stageIn(clause string) (string, bool) {
 			continue
 		}
 		neg := stageNegatedRe.MatchString(clause[:loc[0]])
-		if c.stage == StageWinElection && loseRe.MatchString(clause[loc[0]:loc[1]]) {
-			neg = !neg // "loses the election" is "does not win" it
+		// "loses the election", "lose the nomination" and "lost the runoff" are
+		// "does not win" it: a lose word up to and including the stage word flips.
+		if loseRe.MatchString(clause[:loc[1]]) {
+			neg = !neg
 		}
 		return c.stage, neg
 	}

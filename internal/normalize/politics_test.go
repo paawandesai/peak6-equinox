@@ -176,6 +176,9 @@ func TestPoliticsStageAndPolarity(t *testing.T) {
 		{"Will JD Vance lose the 2028 US Presidential Election?", "win_election:us_president:2028", canonical.PolarityNegative},
 		{"Will JD Vance be the 2028 Republican presidential nominee?", "win_nomination:us_president:republican:2028", canonical.PolarityPositive},
 		{"Will JD Vance fail to win the 2028 Republican presidential nomination?", "win_nomination:us_president:republican:2028", canonical.PolarityNegative},
+		{"Will JD Vance lose the 2028 Republican presidential nomination?", "win_nomination:us_president:republican:2028", canonical.PolarityNegative},
+		{"Will JD Vance lose the 2028 U.S. presidential runoff?", "win_runoff:us_president:2028", canonical.PolarityNegative},
+		{"Will JD Vance not lose the 2028 Republican presidential nomination?", "win_nomination:us_president:republican:2028", canonical.PolarityPositive},
 		{"Will JD Vance win the 2028 U.S. presidential runoff?", "win_runoff:us_president:2028", canonical.PolarityPositive},
 		{"Will JD Vance be inaugurated as U.S. President in 2029?", "inaugurated:us_president:2029", canonical.PolarityPositive},
 		{"Will the Republican Party win the 2028 US Presidential Election?", "win_election:us_president:2028", canonical.PolarityPositive},
@@ -258,6 +261,15 @@ func TestPoliticsPairs(t *testing.T) {
 		r := compare(win, nom)
 		if r.Type != canonical.RelRelated || !hasVeto(r, match.VetoMetricMismatch) {
 			t.Errorf("type %s vetoes %+v, want related with metric_mismatch", r.Type, r.Vetoes)
+		}
+	})
+
+	t.Run("lose the nomination is not win the nomination", func(t *testing.T) {
+		win := politics(pmPolID, "Will JD Vance win the 2028 Republican presidential nomination?", "", pmPolClose)
+		lose := politics(pmPolID2, "Will JD Vance lose the 2028 Republican presidential nomination?", "", pmPolClose)
+		r := compare(win, lose)
+		if r.Type == canonical.RelEquivalent || !hasVeto(r, match.VetoPolarityMismatch) {
+			t.Errorf("type %s vetoes %+v, want polarity_mismatch", r.Type, r.Vetoes)
 		}
 	})
 
