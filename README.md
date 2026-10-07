@@ -10,7 +10,12 @@ Cross-venue prediction-market aggregation and routing **simulation**, built for 
 
 ## Live demo
 
-https://equinox-o5hdimw5rq-uc.a.run.app (health check: [/health](https://equinox-o5hdimw5rq-uc.a.run.app/health); Cloud Run reserves `/healthz`, see D-052)
+**https://equinox-o5hdimw5rq-uc.a.run.app** (health check: [/health](https://equinox-o5hdimw5rq-uc.a.run.app/health); Cloud Run reserves `/healthz`, see D-052). Cloud Run + Cloud SQL in `us-central1`; a Cloud Scheduler job runs one fetch round against Kalshi and Polymarket every 5 minutes (D-016). It is a simulation: nothing is ever sent to a venue.
+
+What to click:
+1. [/](https://equinox-o5hdimw5rq-uc.a.run.app/) lists the current round's cross-venue pairs grouped by relationship type, strongest first; pick a pair.
+2. `/pairs/{id}` shows the two contracts side by side with the diff and the vetoes, the touch prices, and a routing form: submit a hypothetical order to see the fee-aware route and its explanation.
+3. `/admin` (basic auth, operator only) lists the collector's recent rounds with per-venue counts and status, and runs a round on demand.
 
 ## Quickstart (local)
 
@@ -24,7 +29,7 @@ make dev                  # http://localhost:8080 (health check: /healthz)
 make check                # typecheck + lint + test + cover + scan, before every push
 ```
 
-Until its ticket lands, `make seed` prints "not implemented yet (ticket Mx-yy)" and exit 0. `make db-down` stops Postgres. Run `make help` to list all targets.
+`make seed` loads the recorded fixture round, so the pages have data offline; `equinox match` then classifies its pairs. `make db-down` stops Postgres. Run `make help` to list all targets.
 
 Full environment details are in [docs/environment.md](docs/environment.md).
 
@@ -40,4 +45,4 @@ _Filled in as milestones ship:_
 
 - `docs/equivalence.md` (M2)
 - `docs/routing.md` (M3)
-- `docs/ai-usage.md` (created in M1-11; completed in M1-12)
+- [docs/ai-usage.md](docs/ai-usage.md) (shipped: runtime LLM use and development AI use)

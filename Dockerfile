@@ -10,6 +10,8 @@ RUN go mod download
 
 COPY cmd ./cmd
 COPY internal ./internal
+# Embedded by internal/store (goose); serve applies them on start-up in prod and staging (M1-12).
+COPY migrations ./migrations
 ARG VERSION=dev
 RUN go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o /out/equinox ./cmd/equinox
 
