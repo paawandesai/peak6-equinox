@@ -17,9 +17,9 @@ type StoreBackend interface {
 
 // PGCache is a VerdictCache backed by the llm_verdicts table.
 type PGCache struct {
-	store          StoreBackend
-	model          string
-	promptVersion  string
+	store         StoreBackend
+	model         string
+	promptVersion string
 }
 
 // NewPGCache creates a Postgres-backed verdict cache.

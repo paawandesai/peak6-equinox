@@ -45,11 +45,11 @@ func NewAnthropicClient(apiKey, model string, maxOutputTokens int) (*AnthropicCl
 
 // anthropicRequest is the JSON request body for the Messages API.
 type anthropicRequest struct {
-	Model       string          `json:"model"`
-	MaxTokens   int             `json:"max_tokens"`
-	Temperature float64         `json:"temperature"`
-	System      string          `json:"system"`
-	Messages    []anthropicMsg  `json:"messages"`
+	Model       string         `json:"model"`
+	MaxTokens   int            `json:"max_tokens"`
+	Temperature float64        `json:"temperature"`
+	System      string         `json:"system"`
+	Messages    []anthropicMsg `json:"messages"`
 }
 
 type anthropicMsg struct {
@@ -59,12 +59,12 @@ type anthropicMsg struct {
 
 // anthropicResponse is the JSON response from the Messages API.
 type anthropicResponse struct {
-	ID      string              `json:"id"`
-	Type    string              `json:"type"`
-	Role    string              `json:"role"`
-	Content []anthropicContent  `json:"content"`
-	Model   string              `json:"model"`
-	Error   *anthropicError     `json:"error,omitempty"`
+	ID      string             `json:"id"`
+	Type    string             `json:"type"`
+	Role    string             `json:"role"`
+	Content []anthropicContent `json:"content"`
+	Model   string             `json:"model"`
+	Error   *anthropicError    `json:"error,omitempty"`
 }
 
 type anthropicContent struct {

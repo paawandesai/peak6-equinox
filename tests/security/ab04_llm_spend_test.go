@@ -59,6 +59,7 @@ func TestAB04_PublicRoutesNeverCallLLM(t *testing.T) {
 
 	// Create a server (AB-04: if a public route calls the LLM, the test would
 	// need to mock it, but public routes must never reach the LLM code path).
+	// nolint:gosec // G101: test uses fake API key, not a real secret
 	srv := web.New(web.Config{
 		AppEnv:             "ci",
 		AdminUser:          adminUser,
@@ -66,7 +67,7 @@ func TestAB04_PublicRoutesNeverCallLLM(t *testing.T) {
 		MinRouteConfidence: decimal.NewFromInt(1),
 	}, web.Deps{
 		Store:           st,
-		AnthropicAPIKey: "sk-ant-FAKE", // key present, but public routes must not use it
+		AnthropicAPIKey: "sk-ant-FAKE",
 		Now:             func() time.Time { return now },
 	})
 
@@ -183,12 +184,12 @@ func testInstrument(id string) canonical.Instrument {
 	deadline := time.Date(2026, 12, 31, 23, 59, 59, 0, time.UTC)
 	threshold := decimal.NewFromInt(100000)
 	return canonical.Instrument{
-		ID:             id,
-		Venue:          canonical.Venue(parts[0]),
-		VenueMarketID:  id,
-		Category:       canonical.CategoryCrypto,
-		Title:          "Test " + id,
-		RulesText:      "Test rules",
+		ID:            id,
+		Venue:         canonical.Venue(parts[0]),
+		VenueMarketID: id,
+		Category:      canonical.CategoryCrypto,
+		Title:         "Test " + id,
+		RulesText:     "Test rules",
 		Terms: canonical.Terms{
 			Subject:          "bitcoin",
 			Metric:           "price_usd",
