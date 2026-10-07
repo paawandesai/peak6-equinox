@@ -21,7 +21,7 @@ type Pair struct {
 
 // bucket is one selection rule. Pairs are grouped by the first bucket that
 // accepts them; a draft takes `weight` pairs per round-robin turn from each
-// bucket, and at most `cap` in total when cap is positive (D-069).
+// bucket, and at most `cap` in total when cap is positive (D-070).
 type bucket struct {
 	name   string
 	why    string
