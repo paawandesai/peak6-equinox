@@ -584,32 +584,77 @@ func TestRouteEligibilityAndSkew(t *testing.T) {
 }
 
 func TestRouteTargetExcludedBySkew(t *testing.T) {
-	// Simpler test: just verify that target skew exclusion is recorded.
 	target, partners := scenario()
 	now := t0.Add(150 * time.Second)
 
-	// Make partner fresh and target old.
-	freshPartner := partners[0]
-	freshPartner.Quote.FetchedAt = now
-	oldTarget := target
-	oldTarget.Quote.FetchedAt = now.Add(-50 * time.Second) // 50s skew > 30s max
+	t.Run("target older by skew", func(t *testing.T) {
+		// Make partner fresh and target old.
+		freshPartner := partners[0]
+		freshPartner.Quote.FetchedAt = now
+		oldTarget := target
+		oldTarget.Quote.FetchedAt = now.Add(-50 * time.Second) // 50s skew > 30s max
 
-	dec, err := Route(buy("10"), oldTarget, []canonical.Candidate{freshPartner}, cfg, now)
-	if err != nil {
-		t.Fatalf("Route: %v", err)
-	}
+		dec, err := Route(buy("10"), oldTarget, []canonical.Candidate{freshPartner}, cfg, now)
+		if err != nil {
+			t.Fatalf("Route: %v", err)
+		}
 
-	// Target should be excluded due to skew.
-	foundSkew := false
-	for _, ex := range dec.Exclusions {
-		if ex.InstrumentID == kalshiID && ex.Reason == ReasonSkew {
-			foundSkew = true
-			if !strings.Contains(ex.Detail, "50 s behind") {
-				t.Errorf("skew detail = %q, want '50 s behind'", ex.Detail)
+		// Target should be excluded due to skew, exactly once.
+		targetExclusionCount := 0
+		for _, ex := range dec.Exclusions {
+			if ex.InstrumentID == kalshiID {
+				targetExclusionCount++
+				if ex.Reason != ReasonSkew {
+					t.Errorf("target exclusion reason = %q, want %q", ex.Reason, ReasonSkew)
+				}
+				if !strings.Contains(ex.Detail, "50 s behind") {
+					t.Errorf("skew detail = %q, want '50 s behind'", ex.Detail)
+				}
 			}
 		}
-	}
-	if !foundSkew {
-		t.Errorf("target not excluded with skew; exclusions = %+v", dec.Exclusions)
-	}
+		if targetExclusionCount != 1 {
+			t.Errorf("target excluded %d times, want exactly 1; exclusions = %+v", targetExclusionCount, dec.Exclusions)
+		}
+
+		// Partner should still be chosen.
+		if len(dec.Chosen) != 1 || dec.Chosen[0].InstrumentID != polymarketID {
+			t.Errorf("partner not chosen; chosen = %+v, want polymarket", dec.Chosen)
+		}
+	})
+
+	t.Run("target stale, partner fresh", func(t *testing.T) {
+		// Target is stale (> 120s), partner is fresh.
+		freshPartner := partners[0]
+		freshPartner.Quote.FetchedAt = now
+		staleTarget := target
+		staleTarget.Quote.FetchedAt = now.Add(-150 * time.Second) // stale, also skewed
+
+		dec, err := Route(buy("10"), staleTarget, []canonical.Candidate{freshPartner}, cfg, now)
+		if err != nil {
+			t.Fatalf("Route: %v", err)
+		}
+
+		// Target should be excluded for staleness, not skew (staleness check comes first).
+		targetExclusionCount := 0
+		foundStale := false
+		for _, ex := range dec.Exclusions {
+			if ex.InstrumentID == kalshiID {
+				targetExclusionCount++
+				if ex.Reason == ReasonStale {
+					foundStale = true
+				}
+			}
+		}
+		if !foundStale {
+			t.Errorf("target not excluded for staleness; exclusions = %+v", dec.Exclusions)
+		}
+		if targetExclusionCount != 1 {
+			t.Errorf("target excluded %d times, want exactly 1; exclusions = %+v", targetExclusionCount, dec.Exclusions)
+		}
+
+		// Partner should still be chosen despite target being ineligible.
+		if len(dec.Chosen) != 1 || dec.Chosen[0].InstrumentID != polymarketID {
+			t.Errorf("partner not chosen; chosen = %+v, want polymarket", dec.Chosen)
+		}
+	})
 }

@@ -114,6 +114,8 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 	}
 
 	cands := []candidate{}
+	targetEligible := false
+	targetExcludedBySkew := false
 
 	// Check target eligibility (staleness, missing book, depth).
 	if targetOK, targetExs := IsEligible(target.Quote, now, cfg.Eligibility); !targetOK {
@@ -126,6 +128,7 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 			})
 		}
 	} else {
+		targetEligible = true
 		cands = append(cands, candidate{Candidate: target, route: RouteDirect})
 	}
 
@@ -149,46 +152,49 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 			continue
 		}
 
-		// Skew: check time difference against target.
-		if excludeOlder, warnings := Skew(target.Quote, p.Quote, cfg.Eligibility); excludeOlder {
-			older := OlderQuote(target.Quote, p.Quote)
-			if older == p.Instrument.ID {
-				skewSec := int(target.Quote.FetchedAt.Sub(p.Quote.FetchedAt).Seconds())
-				if skewSec < 0 {
-					skewSec = -skewSec
-				}
-				d.Exclusions = append(d.Exclusions, canonical.Exclusion{
-					InstrumentID: p.Instrument.ID,
-					Venue:        p.Instrument.Venue,
-					Reason:       ReasonSkew,
-					Detail:       SkewDetail(skewSec),
-				})
-				continue
-			}
-			// If target is older, exclude it from cands (if it's there) and record.
-			if older == target.Instrument.ID {
-				skewSec := int(p.Quote.FetchedAt.Sub(target.Quote.FetchedAt).Seconds())
-				if skewSec < 0 {
-					skewSec = -skewSec
-				}
-				d.Exclusions = append(d.Exclusions, canonical.Exclusion{
-					InstrumentID: target.Instrument.ID,
-					Venue:        target.Instrument.Venue,
-					Reason:       ReasonSkew,
-					Detail:       SkewDetail(skewSec),
-				})
-				// Remove target from cands if present.
-				newCands := []candidate{}
-				for _, c := range cands {
-					if c.Instrument.ID != target.Instrument.ID {
-						newCands = append(newCands, c)
+		// Skew: check time difference against target (only if target was eligible).
+		if targetEligible {
+			if excludeOlder, warnings := Skew(target.Quote, p.Quote, cfg.Eligibility); excludeOlder {
+				older := OlderQuote(target.Quote, p.Quote)
+				if older == p.Instrument.ID {
+					skewSec := int(target.Quote.FetchedAt.Sub(p.Quote.FetchedAt).Seconds())
+					if skewSec < 0 {
+						skewSec = -skewSec
 					}
+					d.Exclusions = append(d.Exclusions, canonical.Exclusion{
+						InstrumentID: p.Instrument.ID,
+						Venue:        p.Instrument.Venue,
+						Reason:       ReasonSkew,
+						Detail:       SkewDetail(skewSec),
+					})
+					continue
 				}
-				cands = newCands
-				continue
+				// If target is older, exclude it from cands and record ONCE.
+				if older == target.Instrument.ID && !targetExcludedBySkew {
+					skewSec := int(p.Quote.FetchedAt.Sub(target.Quote.FetchedAt).Seconds())
+					if skewSec < 0 {
+						skewSec = -skewSec
+					}
+					d.Exclusions = append(d.Exclusions, canonical.Exclusion{
+						InstrumentID: target.Instrument.ID,
+						Venue:        target.Instrument.Venue,
+						Reason:       ReasonSkew,
+						Detail:       SkewDetail(skewSec),
+					})
+					targetExcludedBySkew = true
+					// Remove target from cands.
+					newCands := []candidate{}
+					for _, c := range cands {
+						if c.Instrument.ID != target.Instrument.ID {
+							newCands = append(newCands, c)
+						}
+					}
+					cands = newCands
+				}
+				// Don't continue - partner is still eligible and should be added to cands.
+			} else if len(warnings) > 0 {
+				d.Warnings = append(d.Warnings, warnings...)
 			}
-		} else if len(warnings) > 0 {
-			d.Warnings = append(d.Warnings, warnings...)
 		}
 
 		cands = append(cands, candidate{Candidate: p, route: RouteDirect})
