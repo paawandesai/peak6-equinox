@@ -1,0 +1,126 @@
+{{define "content"}}
+<h1>Pair #{{.ID}}: <span class="type-{{.Type}}">{{.Type}}</span> <small>confidence {{.Confidence}}, {{.Method}}</small></h1>
+<p>{{.TypeLabel}}</p>
+
+<section>
+  <h2>The two contracts</h2>
+  <div class="grid">
+    {{template "instrument" .A}}
+    {{template "instrument" .B}}
+  </div>
+</section>
+
+<section>
+  <h2>Why: the explanation</h2>
+  <p class="explanation">{{.Explanation}}</p>
+  {{if .Vetoes}}
+  <h3>Vetoes ({{len .Vetoes}})</h3>
+  <p>Each veto on its own blocks <em>equivalent</em>.</p>
+  <table>
+    <thead><tr><th>Code</th><th>Term</th><th>Detail</th></tr></thead>
+    <tbody>{{range .Vetoes}}<tr><td><code>{{.Code}}</code></td><td>{{.Field}}</td><td>{{.Detail}}</td></tr>{{end}}</tbody>
+  </table>
+  {{else}}
+  <p>No vetoes.</p>
+  {{end}}
+  {{if .Facts}}
+  <h3>External facts applied</h3>
+  <table>
+    <thead><tr><th>Fact</th><th>Value</th><th>Source</th><th>As of</th></tr></thead>
+    <tbody>{{range .Facts}}<tr><td>{{.Key}}</td><td>{{.Value}}</td><td>{{.Source}}</td><td>{{utc .AsOf}}</td></tr>{{end}}</tbody>
+  </table>
+  {{end}}
+  {{if .BasisRisk}}
+  <h3>Basis risk: {{conf .BasisRisk.Score}}</h3>
+  <ul>{{range .BasisRisk.Components}}<li><strong>{{.Name}}</strong> {{conf .Score}}: {{.Detail}}</li>{{end}}</ul>
+  {{end}}
+</section>
+
+<section>
+  <h2>Contract diff</h2>
+  <p>Every term the normaliser extracted, side by side. <em>unknown</em> means a term could not be parsed on at least one side; it is never guessed.</p>
+  <table class="diff">
+    <thead><tr><th>Term</th><th>A: {{.A.Venue}}</th><th>B: {{.B.Venue}}</th><th>Status</th></tr></thead>
+    <tbody>
+    {{range .Diff}}<tr class="diff-{{.Status}}"><td>{{.Field}}</td><td>{{.A}}</td><td>{{.B}}</td><td>{{.Status}}</td></tr>{{end}}
+    {{if not .Diff}}<tr><td colspan="4">No diff was stored for this pair.</td></tr>{{end}}
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>Current touch in round {{.Round.ID}}</h2>
+  <p>Best YES bid and ask on each venue as fetched in this round. Mid is for display only; routing walks the book.</p>
+  <table>
+    <thead><tr><th>Venue</th><th>Best bid</th><th>Best ask</th><th>Mid</th><th>Levels (bid/ask)</th><th>Fetched (UTC)</th><th>Venue time</th><th>Quality</th></tr></thead>
+    <tbody>
+      {{template "touch" .QuoteA}}
+      {{template "touch" .QuoteB}}
+    </tbody>
+  </table>
+</section>
+
+<section id="route">
+  <h2>Route a hypothetical order</h2>
+  <p>Simulates the order against the target's book and every routable partner in this round, then explains the choice. Nothing is sent to a venue.</p>
+  <form method="post" action="/route" hx-post="/route" hx-target="#route-result" hx-swap="outerHTML">
+    <input type="hidden" name="pair" value="{{.Form.PairID}}">
+    <div class="grid">
+      <label>Target
+        <select name="target">{{range .Form.Targets}}<option value="{{.}}"{{if eq . $.Form.Target}} selected{{end}}>{{.}}</option>{{end}}</select>
+      </label>
+      <label>Side
+        <select name="side"><option value="buy"{{if eq .Form.Side "buy"}} selected{{end}}>buy</option><option value="sell"{{if eq .Form.Side "sell"}} selected{{end}}>sell</option></select>
+      </label>
+      <label>Outcome
+        <select name="outcome"><option value="yes"{{if eq .Form.Outcome "yes"}} selected{{end}}>yes</option><option value="no"{{if eq .Form.Outcome "no"}} selected{{end}}>no</option></select>
+      </label>
+    </div>
+    <div class="grid">
+      <label>Quantity (contracts, 1 to 100,000)
+        <input type="number" name="quantity" min="1" max="100000" step="1" value="{{.Form.Quantity}}" required>
+      </label>
+      <label>Order type
+        <select name="type"><option value="market"{{if eq .Form.Type "market"}} selected{{end}}>market</option><option value="limit"{{if eq .Form.Type "limit"}} selected{{end}}>limit</option></select>
+      </label>
+      <label>Limit price (0 to 1, limit orders only)
+        <input type="number" name="limit" min="0" max="1" step="0.0001" value="{{.Form.Limit}}" placeholder="0.50">
+      </label>
+      <label>Time in force
+        <select name="tif"><option value="IOC"{{if eq .Form.TIF "IOC"}} selected{{end}}>IOC (fill what you can)</option><option value="FOK"{{if eq .Form.TIF "FOK"}} selected{{end}}>FOK (all or nothing)</option></select>
+      </label>
+    </div>
+    <button type="submit">Route it</button>
+  </form>
+  <div id="route-result"></div>
+</section>
+{{end}}
+
+{{define "instrument"}}
+<article>
+  <header><span class="venue">{{.Venue}}</span> <strong>{{.Title}}</strong></header>
+  {{if .Missing}}
+  <p>This instrument is no longer in the store.</p>
+  {{else}}
+  <p><small>ID <code>{{.ID}}</code> · market <code>{{.MarketID}}</code>{{if .EventID}} · event <code>{{.EventID}}</code>{{end}}</small></p>
+  <p><small>{{.Category}} · {{.Status}} · closes {{.Close}}</small></p>
+  <details>
+    <summary>Rules text</summary>
+    <p class="rules">{{.Rules}}</p>
+  </details>
+  {{if .Quality}}<p><small>Quality flags: {{range .Quality}}<code>{{.Flag}}</code> {{end}}</small></p>{{end}}
+  {{end}}
+</article>
+{{end}}
+
+{{define "touch"}}
+<tr>
+  <td><span class="venue">{{.Venue}}</span></td>
+  {{if .Present}}
+  <td>{{.BestBid}}</td><td>{{.BestAsk}}</td><td>{{.Mid}}</td><td>{{.BidLevels}}/{{.AskLevels}}</td><td>{{.FetchedAt}}</td><td>{{.VenueTS}}</td>
+  <td>{{if .Quality}}{{range .Quality}}<code>{{.Flag}}</code> {{end}}{{else}}ok{{end}}</td>
+  {{else}}
+  <td colspan="7">No quote for this instrument in the round.</td>
+  {{end}}
+</tr>
+{{end}}

@@ -1,0 +1,16 @@
+/* Equinox: small additions over Pico.css (classless). No inline styles anywhere
+   (the CSP has no 'unsafe-inline'); every rule lives here. */
+.question { font-size: 1.1rem; margin: 0 0 1rem; color: var(--pico-muted-color); }
+.venue { font-variant: small-caps; font-weight: 600; letter-spacing: 0.02em; }
+table.pairs td, table.diff td { vertical-align: top; }
+.diff-match td:last-child { color: #2e7d32; font-weight: 600; }
+.diff-differ td:last-child { color: #c62828; font-weight: 600; }
+.diff-unknown td:last-child { color: var(--pico-muted-color); font-style: italic; }
+.type-equivalent, .type-equivalent_given_facts { color: #2e7d32; font-weight: 600; }
+.type-complement, .type-implies { color: #1565c0; font-weight: 600; }
+.type-related { color: #ef6c00; font-weight: 600; }
+.type-unrelated { color: var(--pico-muted-color); }
+.explanation { white-space: pre-wrap; }
+.rules { white-space: pre-wrap; max-height: 20rem; overflow: auto; font-size: 0.9rem; }
+.trace { margin-top: 1rem; }
+.trace ul[role="alert"] { color: #c62828; }

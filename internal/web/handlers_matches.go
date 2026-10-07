@@ -1,0 +1,139 @@
+package web
+
+import (
+	"context"
+	"net/http"
+	"sort"
+
+	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
+	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/store"
+)
+
+// maxMatchRows caps how many relationships the matches page lists. The
+// page fetches one more to know whether it was cut (NFR-01).
+const maxMatchRows = 1000
+
+// matchesPage is the data for matches.html.
+type matchesPage struct {
+	page
+	NoRound   bool
+	Groups    []pairGroup
+	Total     int
+	Truncated bool
+}
+
+// pairGroup is every pair of one relationship type, strongest type first.
+type pairGroup struct {
+	Type  string
+	Label string
+	Pairs []pairRow
+}
+
+// pairRow is one relationship as the matches table shows it.
+type pairRow struct {
+	ID         int64
+	A, B       instrumentView
+	Type       string
+	Confidence string
+	Method     string
+	Vetoes     int
+	AsOf       string
+}
+
+// typeLabels say what each relationship type means (domain.md), in one line.
+var typeLabels = map[canonical.RelationshipType]string{
+	canonical.RelEquivalent:           "Same bet: both contracts pay on the same proposition.",
+	canonical.RelEquivalentGivenFacts: "Same bet once a documented external fact is applied.",
+	canonical.RelComplement:           "Opposite sides: YES on one is NO on the other.",
+	canonical.RelImplies:              "One resolving YES forces the other YES.",
+	canonical.RelRelated:              "Near miss: same subject, but a term differs or a veto applies.",
+	canonical.RelUnrelated:            "Compared and found unrelated.",
+}
+
+// handleMatches answers GET /: every pair in the current round (pinned,
+// else the latest ok or partial round), grouped by relationship type (US-01).
+func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
+	st, ok := s.storeOrFail(w)
+	if !ok {
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), dbTimeout)
+	defer cancel()
+
+	data := matchesPage{page: page{
+		Title:    "Matches",
+		Question: "Which Kalshi and Polymarket contracts are the same bet, and how sure is Equinox?",
+		Assets:   pinnedAssets,
+	}}
+	round, err := st.CurrentRound(ctx)
+	switch {
+	case isNotFound(err):
+		data.NoRound = true
+		s.render(w, http.StatusOK, "matches", data)
+		return
+	case err != nil:
+		s.dbError(w, "loading current round", err)
+		return
+	}
+	data.Round = newRoundInfo(round)
+
+	rels, err := st.ListRelationships(ctx, store.RelationshipFilter{RoundID: round.ID, Limit: maxMatchRows + 1})
+	if err != nil {
+		s.dbError(w, "listing relationships", err)
+		return
+	}
+	if len(rels) > maxMatchRows {
+		rels, data.Truncated = rels[:maxMatchRows], true
+	}
+	data.Total = len(rels)
+
+	views, err := loadInstrumentViews(ctx, st, relationshipInstrumentIDs(rels))
+	if err != nil {
+		s.dbError(w, "loading instruments for matches", err)
+		return
+	}
+	data.Groups = groupPairs(rels, views, data.Round.AsOf)
+	s.render(w, http.StatusOK, "matches", data)
+}
+
+// relationshipInstrumentIDs lists every distinct instrument ID in rels.
+func relationshipInstrumentIDs(rels []canonical.Relationship) []string {
+	seen := make(map[string]bool, 2*len(rels))
+	ids := make([]string, 0, 2*len(rels))
+	for _, r := range rels {
+		for _, id := range []string{r.AID, r.BID} {
+			if !seen[id] {
+				seen[id] = true
+				ids = append(ids, id)
+			}
+		}
+	}
+	return ids
+}
+
+// groupPairs buckets rels by type, strongest type first, and orders each
+// bucket by confidence (highest first) then ID so the page is deterministic.
+func groupPairs(rels []canonical.Relationship, views map[string]instrumentView, asOf string) []pairGroup {
+	byType := make(map[canonical.RelationshipType][]pairRow)
+	for _, r := range rels {
+		byType[r.Type] = append(byType[r.Type], pairRow{
+			ID: r.ID, A: views[r.AID], B: views[r.BID], Type: string(r.Type), Confidence: r.Confidence.StringFixed(2),
+			Method: string(r.Method), Vetoes: len(r.Vetoes), AsOf: asOf,
+		})
+	}
+	var groups []pairGroup
+	for _, t := range canonical.RelationshipTypes() {
+		rows := byType[t]
+		if len(rows) == 0 {
+			continue
+		}
+		sort.SliceStable(rows, func(i, j int) bool {
+			if rows[i].Confidence != rows[j].Confidence {
+				return rows[i].Confidence > rows[j].Confidence
+			}
+			return rows[i].ID < rows[j].ID
+		})
+		groups = append(groups, pairGroup{Type: string(t), Label: typeLabels[t], Pairs: rows})
+	}
+	return groups
+}
