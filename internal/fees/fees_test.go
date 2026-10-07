@@ -138,7 +138,7 @@ func TestKalshiEdgeCases(t *testing.T) {
 	if got := mustCompute(t, kalshi("0.07"), "0.50", "1"); !got.Equal(d("0.02")) {
 		t.Errorf("round up to cent: fee(1 × 0.50) = %s, want 0.02", got)
 	}
-	// Rounding up from exactly $0.011: 0.07 × 1 × 0.20 × 0.80 = 0.0112 → rounds to 0.02
+	// Rounding up from $0.0112: 0.07 × 1 × 0.20 × 0.80 = 0.0112 → rounds to 0.02
 	if got := mustCompute(t, kalshi("0.07"), "0.20", "1"); !got.Equal(d("0.02")) {
 		t.Errorf("round up 0.0112: fee(1 × 0.20) = %s, want 0.02", got)
 	}
