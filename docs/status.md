@@ -22,6 +22,7 @@ M1: thin end-to-end slice, deployed (target Wed 2026-10-07). See [plan.md](plan.
 
 - M1-07: Crypto-threshold normaliser and rules matcher v0 — MR !12 open; gitleaks fixture false positives fixed (market_id rename + scoped allowlist, D-061 item 7); Cursor review running.
 - M1-06: Collector, ingest/seed/fixture-server, admin ingest — MR !13 open; worker peak6-equinox-10 merging main for the gitleaks allowlist.
+- M1-10: End-to-end smoke test of the demo path in CI — MR !15 open (worker peak6-equinox-12); `make e2e` green locally; the recorded fixtures give 0 cross-venue equivalents (Q-4), so the test adds one labelled synthetic CF-Benchmarks Polymarket market reachable only from the test (D-064).
 
 ## Blocked
 
