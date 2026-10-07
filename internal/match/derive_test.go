@@ -69,6 +69,8 @@ func TestPropositionAlgebra(t *testing.T) {
 		// membership oracle reported against the algebra; the algebra was right.
 		{"between inside gte sharing the closed low end", prop(t, gte, "2", "", false), prop(t, between, "2", "4", false), false, false, true, false, ""},
 		{"negated gte inside negated eq-like between", prop(t, gte, "2", "", true), prop(t, between, "2", "2", true), false, true, false, false, "not (eq 2)"},
+		{"unbounded gt is not inside a bounded between sharing its low end", prop(t, gt, "1", "", false), prop(t, between, "1", "4", false), false, false, false, false, ""},
+		{"negated between has an upper tail outside lt", prop(t, between, "1", "4", true), prop(t, lt, "2", "", false), false, false, false, false, ""},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -192,15 +194,27 @@ func probePoints(ps ...proposition) []decimal.Decimal {
 	return append(points, bounds[len(bounds)-1].Add(one))
 }
 
+// TestProbePointsCoverEveryRegion pins the probe set for the two reported
+// oracle failures: a point past the highest bound is what separates "gte 2"
+// from "between 2 and 4" and "gt 1" from "between 1 and 4" (an unbounded
+// interval is never inside a bounded one), and a point below the lowest
+// bound covers the mirror image.
 func TestProbePointsCoverEveryRegion(t *testing.T) {
-	a := prop(t, canonical.ComparatorGTE, "2", "", false)
-	b := prop(t, canonical.ComparatorBetween, "2", "4", false)
-	var got []string
-	for _, x := range probePoints(a, b) {
-		got = append(got, x.String())
-	}
-	if want := "1 2 3 4 5"; strings.Join(got, " ") != want {
-		t.Errorf("probePoints = %v, want %s", got, want)
+	for _, tc := range []struct {
+		a, b proposition
+		want string
+	}{
+		{prop(t, canonical.ComparatorGTE, "2", "", false), prop(t, canonical.ComparatorBetween, "2", "4", false), "1 2 3 4 5"},
+		{prop(t, canonical.ComparatorGT, "1", "", false), prop(t, canonical.ComparatorBetween, "1", "4", false), "0 1 2.5 4 5"},
+		{prop(t, canonical.ComparatorLT, "-3", "", true), prop(t, canonical.ComparatorEQ, "-3", "", false), "-4 -3 -2"},
+	} {
+		var got []string
+		for _, x := range probePoints(tc.a, tc.b) {
+			got = append(got, x.String())
+		}
+		if strings.Join(got, " ") != tc.want {
+			t.Errorf("probePoints(%s, %s) = %v, want %s", tc.a, tc.b, got, tc.want)
+		}
 	}
 }
 
