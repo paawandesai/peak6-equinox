@@ -12,6 +12,7 @@ import (
 	"pgregory.net/rapid"
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
+	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/facts"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/match"
 )
 
@@ -225,7 +226,7 @@ func TestPoliticsStageSurvivesInitials(t *testing.T) {
 	}
 	out := Normalize(politics(kxPolID, "Donald J. Trump Jr. 2028?",
 		"If Donald J. Trump Jr. wins and accepts the nomination for the Presidency for the Republican party in 2028, then the market resolves to Yes.", kxNomClose))
-	if out.Terms.Subject != "donald_j_trump_jr" || out.Terms.Metric != "win_nomination:us_president:republican:2028" {
+	if out.Terms.Subject != "donald_trump_jr" || out.Terms.Metric != "win_nomination:us_president:republican:2028" {
 		t.Errorf("subject %q metric %q", out.Terms.Subject, out.Terms.Metric)
 	}
 	got := sentencesOf("If Donald J. Trump Jr. wins the U.S. election. The resolution source is the AP.\n\nOtherwise “No”. Next")
@@ -240,7 +241,7 @@ func TestPoliticsStageSurvivesInitials(t *testing.T) {
 // and the same race on both venues with the same source is equivalent.
 func TestPoliticsPairs(t *testing.T) {
 	compare := func(a, b canonical.Instrument) canonical.Relationship {
-		return match.Compare(Normalize(a), Normalize(b), nil)
+		return match.Compare(Normalize(a), Normalize(b), facts.Set{})
 	}
 	hasVeto := func(r canonical.Relationship, code string) bool {
 		for _, v := range r.Vetoes {
@@ -289,6 +290,24 @@ func TestPoliticsPairs(t *testing.T) {
 		}
 	})
 
+	t.Run("middle initial on one venue only shares the subject", func(t *testing.T) {
+		// Recorded titles and rules: Kalshi KXPRESNOMR-28-DJT and Polymarket's Republican nominee event.
+		kxRules := "If Donald J. Trump wins and accepts the nomination for the Presidency for the Republican party in 2028, then the market resolves to Yes."
+		kx := politics(kxPolID, "Will Donald J. Trump be the nominee for the Presidency for the Republican party?", kxRules, kxNomClose)
+		pm := politics(pmPolID, "Will Donald Trump win the 2028 Republican presidential nomination?", pmNomRepRules, pmPolClose)
+		if a, b := Extract(kx), Extract(pm); a.Subject != "donald_trump" || a.Subject != b.Subject || a.Metric != b.Metric {
+			t.Fatalf("kalshi %s %s vs polymarket %s %s", a.Subject, a.Metric, b.Subject, b.Metric)
+		}
+		r := compare(pm, kx)
+		if r.Type != canonical.RelRelated || len(r.Vetoes) != 1 || !hasVeto(r, match.VetoSourceUnknown) {
+			t.Errorf("type %s vetoes %+v, want related on source_unknown only", r.Type, r.Vetoes)
+		}
+		kx.RulesText += "\n\nThe resolution source for this market is a consensus of official Republican Party sources."
+		if r := compare(pm, kx); r.Type != canonical.RelEquivalent {
+			t.Errorf("with a matching source: type %s vetoes %+v, want equivalent", r.Type, r.Vetoes)
+		}
+	})
+
 	t.Run("same race and source is equivalent", func(t *testing.T) {
 		pm := politics(pmPolID, "Will J.D. Vance win the 2028 Republican presidential nomination?", pmNomRepRules, pmPolClose)
 		kx := politics(kxPolID, "Will J.D. Vance be the nominee for the Presidency for the Republican party?",
@@ -327,6 +346,9 @@ func TestPoliticsSubjectSlug(t *testing.T) {
 		"Beto O'Rourke": "beto_orourke", "Donald Trump Jr.": "donald_trump_jr", "the Democratic Party": "democratic_party",
 		"Democrats": "democratic_party", "Republicans": "republican_party", "GOP": "republican_party", "...": canonical.Unknown,
 		"Will": canonical.Unknown, "Will Hurd": "will_hurd",
+		// Middle initials are dropped so both venues' spellings agree (MR !22 review).
+		"Donald J. Trump": "donald_trump", "Donald J. Trump Jr.": "donald_trump_jr", "Stephen A. Smith": "stephen_smith",
+		"Robert F. Kennedy Jr.": "robert_kennedy_jr", "J. Smith": "j_smith", "J.B. Pritzker": "jb_pritzker",
 	} {
 		if got := subjectSlug(in); got != want {
 			t.Errorf("subjectSlug(%q) = %q, want %q", in, got, want)

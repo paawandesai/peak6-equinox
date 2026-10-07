@@ -209,9 +209,6 @@ func subjectIn(re *regexp.Regexp, text string) string {
 	return subjectSlug(m[1])
 }
 
-// subjectSlug turns a name into a subject: parties map to
-// "<party>_party"; people are lower-cased with dots and apostrophes dropped
-// and other separators turned into underscores ("J.D. Vance" is "jd_vance").
 // notANameWords are capitalised question and sentence openers that the name
 // pattern can capture on their own ("If Will not win ..."). A real first
 // name such as "Will Hurd" keeps its surname and is unaffected.
@@ -220,6 +217,13 @@ var notANameWords = map[string]bool{
 	"what": true, "yes": true, "no": true, "it": true, "they": true, "he": true, "she": true,
 }
 
+// subjectSlug turns a name into a subject: parties map to
+// "<party>_party"; people are lower-cased word by word with dots and
+// apostrophes dropped and words joined with underscores ("J.D. Vance" is
+// "jd_vance", "Ocasio-Cortez" is "ocasio_cortez"). A single-letter middle
+// initial is dropped, because venues write the same person with and without
+// it ("Donald J. Trump" and "Donald Trump" are both "donald_trump"); a
+// leading initial ("J. Smith") is kept so the slug never loses its first word.
 func subjectSlug(name string) string {
 	name = strings.TrimSpace(name)
 	if m := partyNameRe.FindStringSubmatch(name); m != nil {
@@ -230,26 +234,26 @@ func subjectSlug(name string) string {
 			return PartyRepublican + "_party"
 		}
 	}
-	var b strings.Builder
-	underscore := false
-	for _, r := range strings.ToLower(name) {
-		switch r {
-		case '.', '\'', '’':
-			continue
-		case ' ', '-', '\t':
-			underscore = b.Len() > 0
+	var words []string
+	for _, field := range strings.Fields(strings.ToLower(name)) {
+		word := strings.NewReplacer(".", "", "'", "", "’", "").Replace(field)
+		if word == "" {
 			continue
 		}
-		if underscore {
-			b.WriteByte('_')
-			underscore = false
+		if len(words) > 0 && utf8.RuneCountInString(word) == 1 {
+			continue // middle initial
 		}
-		b.WriteRune(r)
+		for _, part := range strings.Split(word, "-") {
+			if part != "" {
+				words = append(words, part)
+			}
+		}
 	}
-	if b.Len() == 0 || notANameWords[b.String()] {
+	slug := strings.Join(words, "_")
+	if slug == "" || notANameWords[slug] {
 		return canonical.Unknown
 	}
-	return b.String()
+	return slug
 }
 
 // politicsStage reads the stage from the rules' first condition clause that
