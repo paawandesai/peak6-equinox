@@ -1,0 +1,28 @@
+# External facts the matcher may apply (FR-10, D-021, D-066). Loaded by
+# internal/facts from FACTS_FILE (default config/facts.yaml).
+#
+# Each fact: id (snake_case, the key shown in a relationship's facts_used),
+# value (a literal string in the unit the notes name; quote numbers so the
+# file text is what is stored), source (absolute http(s) URL the value was
+# read from), as_of (calendar date, UTC, not in the future), notes (optional).
+#
+# Changing a value is a reviewed change to this file: a new fact value gets a
+# new as_of and a new source. Never guess a value; if it is unknown, leave the
+# fact out and the matcher will not apply it.
+facts:
+  # Fed demo fact (docs/plan.md M2, domain.md equivalent_given_facts).
+  # Upper bound of the federal funds target range in percent, as set at the
+  # FOMC meeting of September 15-16, 2026 (raised 1/4 point to 3.75-4.00 %,
+  # effective September 17, 2026). This is the level "prior to the October
+  # 27-28, 2026 meeting" that Polymarket's "Fed Decision in October?" markets
+  # measure changes against, so "increase 25 bps after the October 2026
+  # meeting" is "upper bound above 4.00 % following the Oct 28, 2026 meeting"
+  # (Kalshi KXFED-26OCT-T4.00) given this fact.
+  - id: fed_upper_bound
+    value: "4.00"
+    source: https://www.federalreserve.gov/newsevents/pressreleases/monetary20260916a.htm
+    as_of: 2026-09-16
+    notes: >-
+      Percent. Target range 3.75-4.00 % after the September 16, 2026 FOMC
+      decision (+25 bps, effective September 17, 2026). Valid until the
+      October 28, 2026 decision; update value, source and as_of after it.
