@@ -6,6 +6,7 @@
 package web
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -24,6 +25,9 @@ type Config struct {
 	PublicRateLimitPerMin int
 	// MinRouteConfidence is passed to the router (MIN_ROUTE_CONFIDENCE).
 	MinRouteConfidence decimal.Decimal
+	// EvalSummaryFile is the JSON artifact `equinox eval` writes and /eval
+	// renders (EVAL_SUMMARY_FILE). Empty or missing means "no eval yet".
+	EvalSummaryFile string
 }
 
 // Deps holds the collaborators the web layer uses. Store and Ingester may be
@@ -34,6 +38,9 @@ type Deps struct {
 	Ingester Ingester
 	// Now overrides the clock (tests). It must return UTC.
 	Now func() time.Time
+	// DBSize overrides the database-size query behind the AB-15 growth alert
+	// (tests inject a size). Nil means ask the Store.
+	DBSize func(ctx context.Context) (int64, error)
 }
 
 // Server owns the HTTP routes. Create it with New.

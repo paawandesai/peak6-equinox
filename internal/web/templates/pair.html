@@ -1,6 +1,10 @@
 {{define "content"}}
 <h1>Pair #{{.ID}}: <span class="type-{{.Type}}">{{.Type}}</span> <small>confidence {{.Confidence}}, {{.Method}}</small></h1>
-<p>{{.TypeLabel}}</p>
+<p>{{.TypeLabel}}{{if .NearMiss}} This pair is a <a href="/near-misses">near miss</a>: {{if .Vetoes}}a hard veto fired{{else}}no veto fired, but the external fact consulted did not close the gap{{end}}.{{end}}</p>
+<details class="types">
+  <summary>The full set of relationship types</summary>
+  <ul>{{range .Types}}<li class="type-{{.Type}}">{{.Type}}{{if .Routable}} (routable){{end}}: <span class="plain">{{.Label}}</span></li>{{end}}</ul>
+</details>
 
 <section>
   <h2>The two contracts</h2>
@@ -23,16 +27,33 @@
   {{else}}
   <p>No vetoes.</p>
   {{end}}
+  <h3>External facts {{if .Facts}}consulted ({{len .Facts}}){{else}}consulted{{end}}</h3>
   {{if .Facts}}
-  <h3>External facts applied</h3>
-  <table>
+  <p>Each fact is reviewed data from <code>config/facts.yaml</code> (FR-10). For <em>equivalent_given_facts</em> the verdict rests on them; for a <em>related</em> verdict they are the facts that were tried and did not close the gap.</p>
+  <table class="facts">
     <thead><tr><th>Fact</th><th>Value</th><th>Source</th><th>As of</th></tr></thead>
-    <tbody>{{range .Facts}}<tr><td>{{.Key}}</td><td>{{.Value}}</td><td>{{.Source}}</td><td>{{utc .AsOf}}</td></tr>{{end}}</tbody>
+    <tbody>{{range .Facts}}<tr><td><code>{{.Key}}</code></td><td>{{.Value}}</td><td>{{with httpURL .Source}}<a href="{{.}}" rel="noopener noreferrer">{{.}}</a>{{else}}{{.Source}}{{end}}</td><td>{{utc .AsOf}}</td></tr>{{end}}</tbody>
   </table>
+  {{else}}
+  <p>None: this verdict rests on the contract terms alone.</p>
   {{end}}
+  <h3>Basis risk{{if .BasisRisk}}: {{conf .BasisRisk.Score}}{{end}}</h3>
   {{if .BasisRisk}}
-  <h3>Basis risk: {{conf .BasisRisk.Score}}</h3>
-  <ul>{{range .BasisRisk.Components}}<li><strong>{{.Name}}</strong> {{conf .Score}}: {{.Detail}}</li>{{end}}</ul>
+  <p>The residual chance that the two contracts settle differently even though they are matched, as a score in [0,1] built from documented components (FR-11). The router charges it as a per-contract penalty.</p>
+  <table class="basis">
+    <thead><tr><th>Component</th><th>Score</th><th>Detail</th></tr></thead>
+    <tbody>{{range .BasisRisk.Components}}<tr><td><code>{{.Name}}</code></td><td>{{conf .Score}}</td><td>{{.Detail}}</td></tr>{{end}}</tbody>
+  </table>
+  {{else}}
+  <p>Not scored for this pair. Basis risk is computed for routable and implication verdicts by matcher v1 (pairs matched earlier have none stored); <em>related</em> and <em>unrelated</em> pairs are never scored.</p>
+  {{end}}
+  {{if .LogEntries}}
+  <h3>Decision-log entries for this pair</h3>
+  <table class="log">
+    <thead><tr><th>When (UTC)</th><th>Kind</th><th>Summary</th></tr></thead>
+    <tbody>{{range .LogEntries}}<tr><td><small>{{.At}}</small></td><td><code>{{.Kind}}</code></td><td class="summary">{{.Summary}}</td></tr>{{end}}</tbody>
+  </table>
+  <p><a href="/log">Full decision log</a></p>
   {{end}}
 </section>
 
@@ -58,6 +79,11 @@
       {{template "touch" .QuoteB}}
     </tbody>
   </table>
+</section>
+
+<section id="history">
+  <h2>Price history</h2>
+  {{template "history" .History}}
 </section>
 
 <section id="route">

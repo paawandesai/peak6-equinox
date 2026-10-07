@@ -1,0 +1,427 @@
+package web
+
+import (
+	"context"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/shopspring/decimal"
+
+	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
+	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/decisionlog"
+	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/store"
+)
+
+// seedMore adds, on top of seedPublic: a second round with quotes for A and
+// B (so the pair has history), decision-log entries for both pairs, one
+// stored routing decision via POST /route, and a related pair with facts but
+// no veto (the December-style near miss).
+func seedMore(t *testing.T, s *Server, st *store.Store, sd seeded) (decisionID, factMissID int64) {
+	t.Helper()
+	ctx := context.Background()
+	dlog := decisionlog.New(st).WithClock(func() time.Time { return seedNow.Add(2 * time.Minute) })
+	for _, id := range []int64{sd.eqID, sd.relID} {
+		rel, err := st.GetRelationship(ctx, id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := dlog.Relationship(ctx, rel); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// A later finished round with another touch on both instruments; the
+	// current round stays the pinned/first one because it is pinned.
+	if err := st.PinRound(ctx, sd.round.ID); err != nil {
+		t.Fatal(err)
+	}
+	later, err := st.CreateRound(ctx, seedNow.Add(5*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, q := range []canonical.Quote{
+		{InstrumentID: seedKalshiA, YesBids: []canonical.Level{{Price: dec("0.50"), Size: dec("200")}}, YesAsks: []canonical.Level{{Price: dec("0.54"), Size: dec("300")}}, FetchedAt: seedNow.Add(5 * time.Minute)},
+		{InstrumentID: seedPolyB, YesAsks: []canonical.Level{{Price: dec("0.51"), Size: dec("50")}}, FetchedAt: seedNow.Add(5 * time.Minute)},
+	} {
+		if err := st.InsertQuote(ctx, later.ID, q); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := st.FinishRound(ctx, later.ID, store.RoundOK, nil, seedNow.Add(6*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	factMissID, err = st.UpsertRelationship(ctx, canonical.Relationship{
+		RoundID: sd.round.ID, AID: seedKalshiC, BID: seedPolyB, Type: canonical.RelRelated, Confidence: dec("0.30"),
+		Method: canonical.MethodRules, Explanation: "The December bucket depends on the October decision; fed_next_meeting did not place it.",
+		FactsUsed: []canonical.FactUse{{Key: "fed_next_meeting", Value: "2026-10-28", Source: "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm", AsOf: seedNow}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := postForm(s.Handler(), "/route", validRouteForm(sd.eqID, seedKalshiA), true)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("POST /route: %d\n%s", rec.Code, rec.Body.String())
+	}
+	decs, err := st.ListRoutingDecisions(ctx, 10)
+	if err != nil || len(decs) != 1 {
+		t.Fatalf("decisions: %v, %d", err, len(decs))
+	}
+	return decs[0].ID, factMissID
+}
+
+func TestNearMissesPage(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+	_, factMissID := seedMore(t, s, st, sd)
+	rec := get(s.Handler(), "/near-misses")
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+	wantContains(t, body,
+		"Which pairs looked like the same bet but were rejected, and by which rule?",
+		"2 near misses, 1 of them stopped by a hard veto",
+		`href="/pairs/`+strconv.FormatInt(sd.relID, 10)+`"`, `href="/pairs/`+strconv.FormatInt(factMissID, 10)+`"`,
+		"<code>subject_mismatch</code> on <em>subject</em>: BTC is not ETH", "Different subject: BTC vs ETH.",
+		"no veto; a fact was consulted but did not apply", seedTitleC,
+	)
+	if strings.Contains(body, seedExplainEq) {
+		t.Error("the equivalent pair must not be listed as a near miss")
+	}
+	if strings.Index(body, "subject_mismatch") > strings.Index(body, "fed_next_meeting did not place it") {
+		t.Error("vetoed pairs should come first")
+	}
+}
+
+func TestNearMissesEmptyStates(t *testing.T) {
+	s, st := newTestServer(t)
+	rec := get(s.Handler(), "/near-misses")
+	wantHTML(t, rec, http.StatusOK)
+	wantContains(t, rec.Body.String(), "No completed fetch round yet")
+	ctx := context.Background()
+	r, err := st.CreateRound(ctx, seedNow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.FinishRound(ctx, r.ID, store.RoundOK, nil, seedNow.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	wantContains(t, get(s.Handler(), "/near-misses").Body.String(), "has no stored near misses")
+	if rec := get(New(Config{}, Deps{}).Handler(), "/near-misses"); rec.Code != http.StatusServiceUnavailable {
+		t.Errorf("without a store: %d", rec.Code)
+	}
+}
+
+func TestNearMissRowsOrdering(t *testing.T) {
+	rels := []canonical.Relationship{
+		{ID: 1, AID: "kalshi:A", BID: "polymarket:B", Confidence: dec("0.9")},
+		{ID: 2, AID: "kalshi:A", BID: "polymarket:C", Confidence: dec("0.5"), Vetoes: []canonical.Veto{{Code: "x"}}},
+		{ID: 3, AID: "kalshi:A", BID: "polymarket:D", Confidence: dec("0.7"), Vetoes: []canonical.Veto{{Code: "y"}}},
+		{ID: 4, AID: "kalshi:A", BID: "polymarket:E", Confidence: dec("0.7"), Vetoes: []canonical.Veto{{Code: "z"}}},
+	}
+	views := map[string]instrumentView{}
+	rows := nearMissRows(rels, views)
+	var order []int64
+	for _, r := range rows {
+		order = append(order, r.ID)
+	}
+	if len(order) != 4 || order[0] != 3 || order[1] != 4 || order[2] != 2 || order[3] != 1 {
+		t.Errorf("order = %v, want [3 4 2 1] (vetoed first, confidence desc, id)", order)
+	}
+}
+
+func TestDecisionLogPage(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+	decisionID, _ := seedMore(t, s, st, sd)
+	rec := get(s.Handler(), "/log")
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+	wantContains(t, body,
+		"What did Equinox decide recently, and why?",
+		`href="/pairs/`+strconv.FormatInt(sd.eqID, 10)+`">pair #`+strconv.FormatInt(sd.eqID, 10)+`</a>`,
+		`href="/decisions/`+strconv.FormatInt(decisionID, 10)+`">decision #`+strconv.FormatInt(decisionID, 10)+`</a>`,
+		"<code>relationship</code>", "<code>routing</code>", "route buy 100 contracts yes on "+seedKalshiA,
+		seedExplainEq, "Latest 3 entries",
+		`<option value="routing">routing decisions</option>`,
+	)
+	// Newest first: the routing decision (now = seedNow+1h) precedes the verdicts.
+	if strings.Index(body, "<code>routing</code>") > strings.Index(body, "<code>relationship</code>") {
+		t.Error("entries are not newest first")
+	}
+	body = get(s.Handler(), "/log?kind=routing").Body.String()
+	wantContains(t, body, "Latest 1 entry", `<option value="routing" selected>`)
+	if strings.Contains(body, "<code>relationship</code>") {
+		t.Error("kind filter did not apply")
+	}
+	wantContains(t, get(s.Handler(), "/log?kind=llm").Body.String(), "No decision-log entries of kind <code>llm</code> yet")
+	if rec := get(s.Handler(), "/log?kind=<script>"); rec.Code != http.StatusNotFound || strings.Contains(rec.Body.String(), "<script>") {
+		t.Errorf("unknown kind: %d; body echoes input: %v", rec.Code, strings.Contains(rec.Body.String(), "<script>"))
+	}
+	if rec := get(New(Config{}, Deps{}).Handler(), "/log"); rec.Code != http.StatusServiceUnavailable {
+		t.Errorf("without a store: %d", rec.Code)
+	}
+}
+
+func TestLogEntryLink(t *testing.T) {
+	cases := []struct {
+		kind       store.LogKind
+		ref        string
+		href, text string
+	}{
+		{store.LogRelationship, "12", "/pairs/12", "pair #12"},
+		{store.LogLLM, "12", "/pairs/12", "pair #12"},
+		{store.LogRouting, "7", "/decisions/7", "decision #7"},
+		{store.LogIngest, "3", "", "round 3"},
+		{store.LogRelationship, "12; DROP", "", ""},
+		{store.LogRouting, "", "", ""},
+		{store.LogKind("other"), "1", "", ""},
+	}
+	for _, c := range cases {
+		href, text := logEntryLink(c.kind, c.ref)
+		if href != c.href || text != c.text {
+			t.Errorf("logEntryLink(%s, %q) = %q, %q; want %q, %q", c.kind, c.ref, href, text, c.href, c.text)
+		}
+	}
+}
+
+func TestDecisionPage(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+	decisionID, _ := seedMore(t, s, st, sd)
+	rec := get(s.Handler(), "/decisions/"+strconv.FormatInt(decisionID, 10))
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+	wantContains(t, body,
+		"Routing decision #"+strconv.FormatInt(decisionID, 10),
+		"What did this simulated order do", "Decision #"+strconv.FormatInt(decisionID, 10),
+		"buy 100 contracts YES, market IOC", "Partners considered: 2", "round "+strconv.FormatInt(sd.round.ID, 10),
+		`href="/log?kind=routing"`, "Chosen route", "Explanation",
+	)
+	for _, raw := range []string{"999999", "abc", "0"} {
+		rec := get(s.Handler(), "/decisions/"+raw)
+		if rec.Code != http.StatusNotFound {
+			t.Errorf("/decisions/%s: %d", raw, rec.Code)
+		}
+		wantContains(t, rec.Body.String(), "No such routing decision")
+	}
+	if rec := get(New(Config{}, Deps{}).Handler(), "/decisions/1"); rec.Code != http.StatusServiceUnavailable {
+		t.Errorf("without a store: %d", rec.Code)
+	}
+}
+
+func TestCountPartners(t *testing.T) {
+	d := canonical.Decision{TargetID: "kalshi:T",
+		Alternatives: []canonical.Alternative{{Legs: []canonical.Leg{{InstrumentID: "kalshi:T"}}}, {Legs: []canonical.Leg{{InstrumentID: "polymarket:P"}}}},
+		Exclusions:   []canonical.Exclusion{{InstrumentID: "polymarket:P"}, {InstrumentID: "polymarket:Q"}}}
+	if got := countPartners(d); got != 2 {
+		t.Errorf("countPartners = %d, want 2 (P and Q; the target is not a partner)", got)
+	}
+	if got := countPartners(canonical.Decision{TargetID: "kalshi:T"}); got != 0 {
+		t.Errorf("countPartners(empty) = %d", got)
+	}
+}
+
+func TestPairPageShowsHistoryFactsBasisAndLog(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+	_, factMissID := seedMore(t, s, st, sd)
+	// Give the equivalent pair facts and basis risk to render.
+	ctx := context.Background()
+	rel, err := st.GetRelationship(ctx, sd.eqID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rel.FactsUsed = []canonical.FactUse{{Key: "fed_upper_bound", Value: "4.00", Source: "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260916a.htm", AsOf: seedNow},
+		{Key: "fed_rate_step", Value: "0.25", Source: "FOMC history, not a URL", AsOf: seedNow}}
+	rel.BasisRisk = &canonical.BasisRisk{Score: dec("0.55"), Components: []canonical.BasisComponent{
+		{Name: "source_difference", Score: dec("0.50"), Detail: "CF Benchmarks vs Binance"},
+		{Name: "fact_dependency", Score: dec("0.05"), Detail: "one fact applied"}}}
+	if _, err := st.UpsertRelationship(ctx, rel); err != nil {
+		t.Fatal(err)
+	}
+	rec := get(s.Handler(), "/pairs/"+strconv.FormatInt(sd.eqID, 10))
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+	wantContains(t, body,
+		// Facts: the URL source is a link, the free-text source is not.
+		"External facts consulted (2)", "<code>fed_upper_bound</code>", `<a href="https://www.federalreserve.gov/newsevents/pressreleases/monetary20260916a.htm" rel="noopener noreferrer">`,
+		"<td>FOMC history, not a URL</td>",
+		// Basis risk components.
+		"Basis risk: 0.55", "<code>source_difference</code></td><td>0.50</td><td>CF Benchmarks vs Binance</td>",
+		// Full type set.
+		"The full set of relationship types", `<li class="type-complement">complement (routable):`, `<li class="type-implies">implies:`,
+		// History: two rounds, four touches; polylines for both series.
+		`<svg class="hist"`, "4 touches across 2 rounds", `<polyline class="hist-mid hist-a"`, `<polyline class="hist-mid hist-b"`, `<circle class="hist-dot hist-a"`,
+		"last mid 0.5200", "last mid 0.4950", "<td>0.5400</td>",
+		// Decision-log entries for this pair.
+		"Decision-log entries for this pair", "equivalent (0.97, rules): "+seedKalshiA,
+	)
+	if strings.Contains(body, "near miss") {
+		t.Error("an equivalent pair is not a near miss")
+	}
+	// The related pair with facts and no veto says so, and shows "Not scored".
+	body = get(s.Handler(), "/pairs/"+strconv.FormatInt(factMissID, 10)).Body.String()
+	wantContains(t, body, `This pair is a <a href="/near-misses">near miss</a>: no veto fired, but the external fact consulted did not close the gap.`,
+		"Not scored for this pair", "<code>fed_next_meeting</code>")
+	// The vetoed related pair.
+	body = get(s.Handler(), "/pairs/"+strconv.FormatInt(sd.relID, 10)).Body.String()
+	wantContains(t, body, "near miss</a>: a hard veto fired.", "None: this verdict rests on the contract terms alone.",
+		// C has no quotes at all; A has two touches.
+		"2 touches across 2 rounds")
+}
+
+func TestBuildHistoryChart(t *testing.T) {
+	const a, b = "kalshi:A", "polymarket:B"
+	if c := buildHistoryChart(a, b, nil); !c.Empty || c.Width != chartWidth {
+		t.Errorf("empty chart = %+v", c)
+	}
+	np := func(s string) decimal.NullDecimal { return decimal.NullDecimal{Decimal: dec(s), Valid: true} }
+	pts := []store.QuotePoint{
+		{RoundID: 1, InstrumentID: a, BestBid: np("0.40"), BestAsk: np("0.60"), Mid: np("0.50"), FetchedAt: seedNow},
+		{RoundID: 1, InstrumentID: b, BestBid: np("0"), BestAsk: np("1"), Mid: np("0.50"), FetchedAt: seedNow},
+		{RoundID: 2, InstrumentID: a, BestAsk: np("0.70"), FetchedAt: seedNow.Add(time.Hour)}, // one-sided: no mid, no bid
+	}
+	c := buildHistoryChart(a, b, pts)
+	if c.Empty || c.Points != 3 || c.Rounds != 2 || c.From != "2026-10-06 17:00:00 UTC" || c.To != "2026-10-06 18:00:00 UTC" {
+		t.Fatalf("chart = %+v", c)
+	}
+	if len(c.Series) != 2 || c.Series[0].Key != "a" || c.Series[1].Key != "b" || c.Series[0].Venue != "kalshi" || c.Series[1].Venue != "polymarket" {
+		t.Fatalf("series = %+v", c.Series)
+	}
+	sa, sb := c.Series[0], c.Series[1]
+	// A: mid only at the first time (x = left edge), ask at both ends.
+	wantMid := "44.0,120.0"
+	if sa.Mid != wantMid || sa.N != 2 || sa.Last != "0.5000" {
+		t.Errorf("A mid = %q (want %q), N = %d, last = %q", sa.Mid, wantMid, sa.N, sa.Last)
+	}
+	if !strings.HasPrefix(sa.Ask, "44.0,98.4 708.0,") || sa.Bid != "44.0,141.6" {
+		t.Errorf("A ask = %q, bid = %q", sa.Ask, sa.Bid)
+	}
+	// B: price 0 sits on the bottom edge and 1 on the top edge of the plot.
+	if sb.Bid != "44.0,228.0" || sb.Ask != "44.0,12.0" || sb.N != 1 {
+		t.Errorf("B bid = %q, ask = %q, N = %d", sb.Bid, sb.Ask, sb.N)
+	}
+	if len(c.YTicks) != 5 || c.YTicks[0].Label != "0.00" || c.YTicks[4].Label != "1.00" || len(c.XTicks) != 2 ||
+		c.XTicks[0].Anchor != "start" || c.XTicks[1].Anchor != "end" || c.XTicks[1].Label != "10-06 18:00 UTC" {
+		t.Errorf("ticks = %+v / %+v", c.YTicks, c.XTicks)
+	}
+	if len(sa.Dots) != 1 || sa.Dots[0] != (chartPt{X: "44.0", Y: "120.0"}) || len(sb.Dots) != 1 {
+		t.Errorf("dots = %+v / %+v", sa.Dots, sb.Dots)
+	}
+	if len(c.Rows) != 3 || c.Rows[1].Mid != "n/a" || c.Rows[1].Ask != "0.7000" || c.Rows[2].Venue != "polymarket" {
+		t.Errorf("rows = %+v", c.Rows)
+	}
+	// A single round is centred and gets one x tick.
+	c = buildHistoryChart(a, b, pts[:2])
+	if c.Rounds != 1 || len(c.XTicks) != 1 || c.XTicks[0].Anchor != "middle" || !strings.HasPrefix(c.Series[0].Mid, "376.0,") {
+		t.Errorf("single-round chart = %+v", c)
+	}
+	// Out-of-range values are clamped, never placed off the plot.
+	if y := yOf(dec("1.5")); y != chartTop {
+		t.Errorf("yOf(1.5) = %v", y)
+	}
+	if y := yOf(dec("-1")); y != chartHeight-chartBottom {
+		t.Errorf("yOf(-1) = %v", y)
+	}
+}
+
+func writeEval(t *testing.T, body string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "eval_summary.json")
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+const sampleEval = `{
+  "generated_at": "2026-10-07T12:00:00Z", "command": "equinox eval --round 3", "round_id": 3,
+  "labels_file": "testdata/golden/labels.yaml", "labels": 40, "method": "rules",
+  "types": [
+    {"type": "equivalent", "support": 12, "tp": 12, "fp": 0, "fn": 1, "precision": "1", "recall": 0.9231},
+    {"type": "complement", "support": 4, "tp": 3, "fp": 1, "fn": 1, "precision": "0.75", "recall": "0.75"},
+    {"type": "implies", "support": 0, "tp": 0, "fp": 0, "fn": 0, "precision": null, "recall": null}
+  ],
+  "notes": ["3 labels skipped: instrument not in round <b>x</b>"]
+}`
+
+func TestEvalPage(t *testing.T) {
+	// No file configured, and a configured file that does not exist.
+	for _, file := range []string{"", filepath.Join(t.TempDir(), "missing.json")} {
+		rec := get(New(Config{EvalSummaryFile: file}, Deps{}).Handler(), "/eval")
+		wantHTML(t, rec, http.StatusOK)
+		wantContains(t, rec.Body.String(), "How accurate is the matcher on human-labelled pairs", "No eval results yet", "0.95")
+	}
+	// A valid artifact.
+	rec := get(New(Config{EvalSummaryFile: writeEval(t, sampleEval)}, Deps{}).Handler(), "/eval")
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+	wantContains(t, body,
+		"Produced <strong>2026-10-07 12:00:00 UTC</strong> by <code>equinox eval --round 3</code> on round <strong>3</strong>: <strong>40</strong> labelled pairs",
+		`id="equivalent-precision"`, "<strong>100.00%</strong>", `<span class="pass">meets the 0.95 target</span>`,
+		`<td class="type-equivalent">equivalent</td>`, "<td>92.31%</td>", "<td>75.00%</td>", "<td>n/a</td>",
+		"Notes from the run", "&lt;b&gt;x&lt;/b&gt;",
+	)
+	if strings.Contains(body, "<b>x</b>") {
+		t.Error("note rendered unescaped")
+	}
+	// Below target.
+	low := strings.Replace(sampleEval, `"precision": "1"`, `"precision": "0.80"`, 1)
+	wantContains(t, get(New(Config{EvalSummaryFile: writeEval(t, low)}, Deps{}).Handler(), "/eval").Body.String(),
+		`<span class="fail">below the 0.95 target</span>`, "<strong>80.00%</strong>")
+	// Undefined precision at equivalent.
+	undef := strings.Replace(sampleEval, `"precision": "1"`, `"precision": null`, 1)
+	wantContains(t, get(New(Config{EvalSummaryFile: writeEval(t, undef)}, Deps{}).Handler(), "/eval").Body.String(),
+		"(undefined: no equivalent predictions)")
+	// Broken artifacts: the page says so without echoing file content.
+	for name, body := range map[string]string{
+		"not json":       `{"generated_at": `,
+		"unknown field":  `{"generated_at": "2026-10-07T12:00:00Z", "bogus": 1}`,
+		"missing stamp":  `{"labels": 3}`,
+		"bad type":       `{"generated_at": "2026-10-07T12:00:00Z", "types": [{"type": "same"}]}`,
+		"bad precision":  `{"generated_at": "2026-10-07T12:00:00Z", "types": [{"type": "equivalent", "precision": "1.5"}]}`,
+		"negative count": `{"generated_at": "2026-10-07T12:00:00Z", "types": [{"type": "equivalent", "tp": -1}]}`,
+		"too large":      `{"generated_at": "2026-10-07T12:00:00Z", "notes": ["` + strings.Repeat("x", maxEvalArtifactBytes) + `"]}`,
+	} {
+		rec := get(New(Config{EvalSummaryFile: writeEval(t, body)}, Deps{}).Handler(), "/eval")
+		wantHTML(t, rec, http.StatusOK)
+		if !strings.Contains(rec.Body.String(), "The eval artifact could not be read") {
+			t.Errorf("%s: page does not report the broken artifact", name)
+		}
+		if strings.Contains(rec.Body.String(), "bogus") || strings.Contains(rec.Body.String(), `"same"`) || strings.Contains(rec.Body.String(), "types[") {
+			t.Errorf("%s: page echoes artifact content", name)
+		}
+	}
+}
+
+func TestFormatPercentAndHTTPURL(t *testing.T) {
+	if got := formatPercent(nil); got != "n/a" {
+		t.Errorf("formatPercent(nil) = %q", got)
+	}
+	d := dec("0.9231")
+	if got := formatPercent(&d); got != "92.31%" {
+		t.Errorf("formatPercent = %q", got)
+	}
+	for raw, want := range map[string]string{
+		"https://www.federalreserve.gov/x": "https://www.federalreserve.gov/x",
+		" http://example.com/a?b=c ":       "http://example.com/a?b=c",
+		"javascript:alert(1)":              "",
+		"ftp://example.com":                "",
+		"federalreserve.gov":               "",
+		"https://":                         "",
+		"":                                 "",
+		"not a url at all":                 "",
+	} {
+		if got := httpURL(raw); got != want {
+			t.Errorf("httpURL(%q) = %q, want %q", raw, got, want)
+		}
+	}
+}
+
+func TestLayoutNavLinksNewPages(t *testing.T) {
+	body := get(New(Config{}, Deps{}).Handler(), "/eval").Body.String()
+	wantContains(t, body, `<a href="/near-misses">Near misses</a>`, `<a href="/log">Decision log</a>`, `<a href="/eval">Eval</a>`)
+}

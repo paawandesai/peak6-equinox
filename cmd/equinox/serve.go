@@ -121,6 +121,7 @@ func newServerWith(cfg config.Config, logger *slog.Logger, deps web.Deps) *web.S
 		AdminPassword:         cfg.AdminPassword,
 		PublicRateLimitPerMin: cfg.PublicRateLimitPerMin,
 		MinRouteConfidence:    cfg.MinRouteConfidence,
+		EvalSummaryFile:       cfg.EvalSummaryFile,
 	}, deps)
 }
 

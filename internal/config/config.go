@@ -26,6 +26,7 @@ const (
 	DefaultPolymarketClobURL     = "https://clob.polymarket.com"
 	DefaultUniverseDir           = "config/universe"
 	DefaultFactsFile             = "config/facts.yaml"
+	DefaultEvalSummaryFile       = "config/eval_summary.json"
 	DefaultHTTPTimeoutSeconds    = 10
 	DefaultMaxBodyBytes          = 10485760
 	DefaultStaleAfterSeconds     = 120
@@ -65,6 +66,7 @@ type Config struct {
 	PolymarketClobURL  string
 	UniverseDir        string
 	FactsFile          string
+	EvalSummaryFile    string
 
 	HTTPTimeout  time.Duration
 	MaxBodyBytes int64
@@ -109,6 +111,7 @@ func Load(lookup LookupFunc) (Config, error) {
 		PolymarketClobURL:  l.httpURL("POLYMARKET_CLOB_URL", DefaultPolymarketClobURL),
 		UniverseDir:        l.optional("UNIVERSE_DIR", DefaultUniverseDir),
 		FactsFile:          l.optional("FACTS_FILE", DefaultFactsFile),
+		EvalSummaryFile:    l.optional("EVAL_SUMMARY_FILE", DefaultEvalSummaryFile),
 
 		HTTPTimeout:  l.seconds("HTTP_TIMEOUT_SECONDS", DefaultHTTPTimeoutSeconds),
 		MaxBodyBytes: int64(l.integer("MAX_BODY_BYTES", DefaultMaxBodyBytes, 1, 1<<31-1)),
@@ -168,6 +171,7 @@ func (c Config) LogValue() slog.Value {
 		slog.String("polymarket_clob_url", c.PolymarketClobURL),
 		slog.String("universe_dir", c.UniverseDir),
 		slog.String("facts_file", c.FactsFile),
+		slog.String("eval_summary_file", c.EvalSummaryFile),
 		slog.Duration("http_timeout", c.HTTPTimeout),
 		slog.Int64("max_body_bytes", c.MaxBodyBytes),
 		slog.Duration("stale_after", c.StaleAfter),

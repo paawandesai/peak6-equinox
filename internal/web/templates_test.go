@@ -26,8 +26,8 @@ func TestTemplatesHaveNoInlineScriptOrStyle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(entries) < 5 {
-		t.Fatalf("found %d templates; expected layout, matches, pair, route, route_result, error", len(entries))
+	if len(entries) < 12 {
+		t.Fatalf("found %d templates; expected layout, matches, near_misses, pair, history, route, route_result, decision, log, eval, error, admin", len(entries))
 	}
 	for _, e := range entries {
 		raw, err := fs.ReadFile(templateFS, "templates/"+e.Name())
@@ -50,7 +50,8 @@ func TestTemplatesHaveNoInlineScriptOrStyle(t *testing.T) {
 			t.Errorf("%s: javascript: URL", e.Name())
 		}
 	}
-	for _, f := range []string{"public.go", "handlers_matches.go", "handlers_pairs.go", "handlers_route.go", "middleware_csp.go"} {
+	for _, f := range []string{"public.go", "handlers_matches.go", "handlers_pairs.go", "handlers_route.go", "middleware_csp.go",
+		"handlers_nearmisses.go", "handlers_log.go", "handlers_eval.go", "history.go", "collector_stats.go", "admin.go"} {
 		src, err := fs.ReadFile(sourceFS(t), f)
 		if err != nil {
 			t.Fatal(err)

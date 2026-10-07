@@ -3,6 +3,7 @@ package web
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"time"
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
@@ -26,8 +27,30 @@ type pairPage struct {
 	Vetoes      []canonical.Veto
 	Facts       []canonical.FactUse
 	BasisRisk   *canonical.BasisRisk
+	NearMiss    bool // a stored related pair: shown with the veto that fired
+	Types       []typeView
+	History     historyChart
+	LogEntries  []logEntryView
 	Form        routeFormView
 }
+
+// typeView is one relationship type for the legend on the pair page.
+type typeView struct {
+	Type     string
+	Label    string
+	Routable bool
+}
+
+func allTypeViews() []typeView {
+	out := make([]typeView, 0, len(canonical.RelationshipTypes()))
+	for _, t := range canonical.RelationshipTypes() {
+		out = append(out, typeView{Type: string(t), Label: typeLabels[t], Routable: t.Routable()})
+	}
+	return out
+}
+
+// maxPairLogEntries caps the decision-log entries shown on a pair page.
+const maxPairLogEntries = 20
 
 // touchView is one venue's current touch in the round, for display only.
 type touchView struct {
@@ -98,7 +121,22 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 		ID: rel.ID, Type: string(rel.Type), TypeLabel: typeLabels[rel.Type], Confidence: rel.Confidence.StringFixed(2),
 		Method: string(rel.Method), Explanation: rel.Explanation, A: views[rel.AID], B: views[rel.BID],
 		Diff: rel.Diff, Vetoes: rel.Vetoes, Facts: rel.FactsUsed, BasisRisk: rel.BasisRisk,
+		NearMiss: rel.Type == canonical.RelRelated, Types: allTypeViews(),
 		Form: defaultRouteForm(rel),
+	}
+	points, err := st.QuoteHistory(ctx, []string{rel.AID, rel.BID}, maxHistoryPt)
+	if err != nil {
+		s.dbError(w, "loading the pair's price history", err)
+		return
+	}
+	data.History = buildHistoryChart(rel.AID, rel.BID, points)
+	entries, err := st.ListLog(ctx, store.LogFilter{Kind: store.LogRelationship, Ref: strconv.FormatInt(rel.ID, 10), Limit: maxPairLogEntries})
+	if err != nil {
+		s.dbError(w, "loading the pair's decision-log entries", err)
+		return
+	}
+	for _, e := range entries {
+		data.LogEntries = append(data.LogEntries, newLogEntryView(e))
 	}
 	for _, q := range []struct {
 		id   string
