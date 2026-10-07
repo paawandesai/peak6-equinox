@@ -206,13 +206,14 @@ func TestExtractCryptoExtractMatchesNormalize(t *testing.T) {
 	}
 }
 
-func TestExtractNonCryptoIsUnknown(t *testing.T) {
-	in := crypto("Will the upper bound of the federal funds rate be above 3.00% following the Fed's Oct 28, 2026 meeting?",
-		"If the upper bound is greater than 3.00% following the Oct 28, 2026 meeting, then the market resolves to Yes.", closeOct6)
-	in.Category = canonical.CategoryFed
+func TestExtractUnregisteredCategoryIsUnknown(t *testing.T) {
+	// politics has no extractor until M2-02; a category without one gets
+	// UnknownTerms and no flags, whatever the text says.
+	in := crypto("Will Bitcoin be above $76,600 on Oct 6, 2026?", kalshiBTCRules, closeOct6)
+	in.Category = canonical.CategoryPolitics
 	out := Normalize(in)
 	if out.Terms != canonical.UnknownTerms() || !out.Quality.OK() {
-		t.Errorf("fed terms = %+v, quality %v; want all unknown and no flags", out.Terms, out.Quality)
+		t.Errorf("politics terms = %+v, quality %v; want all unknown and no flags", out.Terms, out.Quality)
 	}
 }
 
