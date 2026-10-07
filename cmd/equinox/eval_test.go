@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/eval"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/store"
 )
 
@@ -19,34 +20,70 @@ const (
 )
 
 func TestEvalOfflineFromCandidates(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "www", "eval_summary.json")
 	var stdout, stderr bytes.Buffer
-	if code := run(context.Background(), []string{"eval", "--labels", fixtureLabels, "--candidates", fixtureCandidates, "--verbose"}, &stdout, &stderr); code != 0 {
+	if code := run(context.Background(), []string{"eval", "--labels", fixtureLabels, "--candidates", fixtureCandidates, "--verbose", "--out", out}, &stdout, &stderr); code != 0 {
 		t.Fatalf("exit %d: %s", code, stderr.String())
 	}
 	for _, want := range []string{"golden set (rules): 6 labels evaluated, 4 correct (accuracy 0.6667), 1 not evaluated",
 		"equivalent                      2         2    1    1    1    0.5000    0.5000",
 		"BELOW target 0.95 (NFR-06)", "rules+llm: not evaluated (M3)",
-		"not evaluated: kalshi:FX-A7 / polymarket:1007", "MISS label=equivalent rules=related kalshi:FX-A2 / polymarket:1002"} {
+		"not evaluated: kalshi:FX-A7 / polymarket:1007", "MISS label=equivalent rules=related kalshi:FX-A2 / polymarket:1002",
+		"summary written to " + out} {
 		if !strings.Contains(stdout.String(), want) {
 			t.Errorf("stdout lacks %q:\n%s", want, stdout.String())
 		}
 	}
+	// The artifact round-trips through the page's contract.
+	sum, err := eval.LoadSummary(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sum.Labels != 7 || sum.RoundID != 7 || sum.Method != "rules" || sum.LabelsFile != fixtureLabels || sum.GeneratedAt.IsZero() ||
+		!strings.HasPrefix(sum.Command, "equinox eval --labels ") || len(sum.Types) != 6 || sum.Types[0].TP != 1 || sum.Types[0].Precision == nil {
+		t.Errorf("summary = %+v", sum)
+	}
+	// --out= writes nothing.
+	stdout.Reset()
+	if code := run(context.Background(), []string{"eval", "--labels", fixtureLabels, "--candidates", fixtureCandidates, "--out="}, &stdout, &stderr); code != 0 {
+		t.Fatalf("exit %d: %s", code, stderr.String())
+	}
+	if strings.Contains(stdout.String(), "summary written") {
+		t.Errorf("--out= still wrote: %s", stdout.String())
+	}
+	if _, err := os.Stat(defaultSummaryFile); err == nil {
+		t.Errorf("default artifact %s written by tests", defaultSummaryFile)
+	}
 }
 
 func TestEvalEmptyLabels(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "eval_summary.json")
 	var stdout, stderr bytes.Buffer
-	if code := run(context.Background(), []string{"eval", "--labels", starterLabels}, &stdout, &stderr); code != 0 {
+	if code := run(context.Background(), []string{"eval", "--labels", starterLabels, "--out", out}, &stdout, &stderr); code != 0 {
 		t.Fatalf("exit %d: %s", code, stderr.String())
 	}
-	if !strings.Contains(stdout.String(), "has no confirmed labels yet; nothing to evaluate") {
+	if !strings.Contains(stdout.String(), "has no confirmed labels yet; nothing to evaluate") || !strings.Contains(stdout.String(), "summary written to "+out) {
 		t.Errorf("stdout = %s", stdout.String())
 	}
+	// The page still gets an honest artifact: zero labels, every ratio null, a note.
+	sum, err := eval.LoadSummary(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sum.Labels != 0 || len(sum.Types) != 6 || sum.Types[0].Precision != nil || !strings.Contains(strings.Join(sum.Notes, "\n"), "no confirmed labels yet") {
+		t.Errorf("summary = %+v", sum)
+	}
+	// --require-labels fails before anything is written.
+	out2 := filepath.Join(t.TempDir(), "eval_summary.json")
 	stdout.Reset()
-	if code := run(context.Background(), []string{"eval", "--labels", starterLabels, "--require-labels"}, &stdout, &stderr); code != 1 {
+	if code := run(context.Background(), []string{"eval", "--labels", starterLabels, "--require-labels", "--out", out2}, &stdout, &stderr); code != 1 {
 		t.Errorf("exit %d with --require-labels, want 1", code)
 	}
 	if !strings.Contains(stderr.String(), "has no confirmed labels (--require-labels)") || stdout.Len() != 0 {
 		t.Errorf("stderr = %s, stdout = %s", stderr.String(), stdout.String())
+	}
+	if _, err := os.Stat(out2); err == nil {
+		t.Error("artifact written despite --require-labels failure")
 	}
 }
 
@@ -63,6 +100,14 @@ func TestEvalErrors(t *testing.T) {
 	stderr.Reset()
 	if code := run(context.Background(), []string{"eval", "--labels", fixtureLabels, "--candidates", filepath.Join(t.TempDir(), "none.yaml")}, io.Discard, &stderr); code != 1 || !strings.Contains(stderr.String(), "loading candidates") {
 		t.Errorf("missing candidates: exit %d, %s", code, stderr.String())
+	}
+	stderr.Reset()
+	bad := filepath.Join(t.TempDir(), "file")
+	if err := os.WriteFile(bad, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if code := run(context.Background(), []string{"eval", "--labels", fixtureLabels, "--candidates", fixtureCandidates, "--out", filepath.Join(bad, "x.json")}, io.Discard, &stderr); code != 1 || !strings.Contains(stderr.String(), "writing eval summary") {
+		t.Errorf("unwritable out: exit %d, %s", code, stderr.String())
 	}
 }
 
@@ -103,7 +148,8 @@ labels:
 		t.Fatal(err)
 	}
 	var stdout, stderr bytes.Buffer
-	if code := run(context.Background(), []string{"eval", "--labels", labels, "--verbose"}, &stdout, &stderr); code != 0 {
+	out := filepath.Join(t.TempDir(), "eval_summary.json")
+	if code := run(context.Background(), []string{"eval", "--labels", labels, "--verbose", "--out", out}, &stdout, &stderr); code != 0 {
 		t.Fatalf("exit %d: %s", code, stderr.String())
 	}
 	for _, want := range []string{"3 labels evaluated, 2 correct (accuracy 0.6667), 1 not evaluated",
@@ -117,5 +163,13 @@ labels:
 		if !strings.Contains(stdout.String(), want) {
 			t.Errorf("stdout lacks %q:\n%s", want, stdout.String())
 		}
+	}
+	sum, err := eval.LoadSummary(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sum.Labels != 4 || sum.RoundID != 1 || sum.Types[0].Type != "equivalent" || sum.Types[0].Support != 1 || sum.Types[0].TP != 1 ||
+		!strings.Contains(strings.Join(sum.Notes, "\n"), "meets the 0.95 target") || !strings.Contains(strings.Join(sum.Notes, "\n"), "polymarket:9999") {
+		t.Errorf("summary = %+v", sum)
 	}
 }
