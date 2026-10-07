@@ -5,7 +5,7 @@ _Last updated: 2026-10-06 ~21:55 CT by operator (M1 verified HIT WITH CAVEATS; M
 
 ## Current milestone
 
-**M2 in progress** (target Fri 2026-10-09). Tickets in [tickets/M2.md](tickets/M2.md). Wave 1: M2-01 (Fed normaliser), M2-03 (facts loader).
+**M2 in progress** (target Fri 2026-10-09). Tickets in [tickets/M2.md](tickets/M2.md). Wave 1–3 merged (M2-01, M2-03, M2-04); M2-08 docs merged. Open: M2-02 (!22), M2-04-hotfix (!25), M2-05 (!26), M2-06 (worker spawning), M2-07 (!27).
 
 **M1 verification (2026-10-06 ~21:55 CT):** **HIT WITH CAVEATS.** See operator report in log. Caveats: live round 3 has 0 `equivalent` / 768 `related` (Q-4/D-060 accepted for M1); E2E equivalent path is synthetic (D-064); D-065 still awaiting human veto (Tier 2, non-blocking); live `POST /route` on related pairs correctly refuses (`not_routable`) — chosen-venue VWAP path proven in CI e2e only until live equivalents exist (M2).
 
@@ -28,9 +28,18 @@ _Last updated: 2026-10-06 ~21:55 CT by operator (M1 verified HIT WITH CAVEATS; M
 - M1-11: LLM safety harness — MR !9 merged as 0677004 (closes #11).
 - M1-12: Full production deploy with Scheduler collector and AI-usage doc — MR !16 merged as 23c191d (closes #12); revision equinox-00008-b2g; Scheduler `equinox-collect`; round 3 matched + pinned (`equinox pin`).
 
+- M2-01: Fed/macro normaliser — MR !21 merged (closes #13).
+- M2-03: Facts loader + Fed demo facts — MR !20 merged (closes #15).
+- M2-04: Matcher v1 (derived types, Fed facts rule, basis risk) — MR !23 merged (closes #16).
+- M2-08: `docs/equivalence.md` methodology — MR !24 merged as ba0a6c66 (closes #20).
+
 ## In progress
 
-- M2 tickets written; wave 1 workers spawning (M2-01, M2-03).
+- M2-02 politics normaliser — MR !22 (worker peak6-equinox-17); rebase after !24; coverage flake on match oracle.
+- M2-04 follow-up oracle fix — MR !25 (peak6-equinox-22); prefer merge before match-dependent work.
+- M2-05 golden/eval — MR !26 (peak6-equinox-19).
+- M2-06 settlement back-test — worker peak6-equinox-23 spawned (issue #18); deps (M2-04) met.
+- M2-07 web near-misses / log / eval / history / NFR-05 / AB-15 — MR !27 (peak6-equinox-20).
 
 ## Blocked
 
