@@ -166,17 +166,16 @@ const (
 )
 
 // feeSchedule is the Kalshi taker fee (domain.md § Fees).
-// Verified M3-05 2026-10-07 against API documentation and independent sources.
-// The official PDF (https://kalshi.com/docs/kalshi-fee-schedule.pdf) remains
-// behind a bot checkpoint (HTTP 429); the formula and round-up rule are verified
-// against the Kalshi API reference (openapi.yaml) and consistent independent
-// reproductions.
+// Approximate: the official PDF (https://kalshi.com/docs/kalshi-fee-schedule.pdf)
+// is behind a bot checkpoint (HTTP 429), awaiting human PDF read. The formula
+// 0.07 × C × P × (1 − P) rounded up to the next cent is reproduced by multiple
+// independent sources, but unverified first-hand.
 func feeSchedule() canonical.FeeSchedule {
 	return canonical.FeeSchedule{
 		ID:       canonical.FeeScheduleKalshiTakerV1,
 		Params:   map[string]decimal.Decimal{"multiplier": decimal.RequireFromString("0.07")},
-		Verified: true,
-		Source:   "https://docs.kalshi.com/openapi.yaml",
+		Verified: false,
+		Source:   "https://kalshi.com/docs/kalshi-fee-schedule.pdf",
 	}
 }
 

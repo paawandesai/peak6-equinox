@@ -127,7 +127,8 @@ func TestPolymarketExponent(t *testing.T) {
 }
 
 // TestKalshiEdgeCases: M3-05 worked examples for edge cases
-// (0-fee markets, rounding up, symmetric prices).
+// (0-fee markets, rounding up, symmetric prices), hand-verified against
+// the current approximate formula pending human PDF read (Q-8).
 func TestKalshiEdgeCases(t *testing.T) {
 	// 0-fee market: multiplier 0 means fee-free series
 	if got := mustCompute(t, kalshi("0"), "0.50", "100"); !got.IsZero() {
