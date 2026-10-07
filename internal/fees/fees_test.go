@@ -134,9 +134,13 @@ func TestKalshiEdgeCases(t *testing.T) {
 	if got := mustCompute(t, kalshi("0"), "0.50", "100"); !got.IsZero() {
 		t.Errorf("0-fee market: fee = %s, want 0", got)
 	}
-	// Rounding up: 0.011 cents → rounds to next cent = 0.02
+	// Rounding up: 0.07 × 1 × 0.50 × 0.50 = 0.0175 (1.75¢) → rounds to next cent = 0.02
 	if got := mustCompute(t, kalshi("0.07"), "0.50", "1"); !got.Equal(d("0.02")) {
 		t.Errorf("round up to cent: fee(1 × 0.50) = %s, want 0.02", got)
+	}
+	// Rounding up from exactly $0.011: 0.07 × 1 × 0.20 × 0.80 = 0.0112 → rounds to 0.02
+	if got := mustCompute(t, kalshi("0.07"), "0.20", "1"); !got.Equal(d("0.02")) {
+		t.Errorf("round up 0.0112: fee(1 × 0.20) = %s, want 0.02", got)
 	}
 	// Symmetric prices: fee at P and (1 − P) should match
 	feeAt10 := mustCompute(t, kalshi("0.07"), "0.10", "100")
