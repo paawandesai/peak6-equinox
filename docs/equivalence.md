@@ -199,6 +199,29 @@ Read it as: the first line is the universe size; the second is the type histogra
 
 **`equinox backtest`** (M2-06, FR-19, NFR-07) fetches settled markets from both venues (fixture-recorded for tests; live only behind an explicit flag), runs the matcher on settled cross-venue pairs, and lists every `equivalent` or `equivalent_given_facts` pair whose settlements disagree. The gate is **0 mismatches, or each one investigated and logged** as a decision. A mismatch on a pair the matcher called equivalent is the strongest possible evidence that a rule is wrong; an exception can be allowlisted only with a logged reason.
 
+The fixture run of 2026-10-07 (M2-06, `go run ./cmd/equinox backtest --fixtures`; the full per-pair list follows the table on the terminal):
+
+```
+Settlement back-test: 1031 settled instruments (kalshi 411, polymarket 620), 207544 cross-venue pairs compared, 0 rejected records; facts available: fed_next_meeting, fed_rate_step, fed_upper_bound
+Gate (NFR-07): 0 equivalent-tier pairs settled differently — PASS
+
+| Type | Pairs | Checked | Agreed | Disagreed | Allowlisted | Settlement rule |
+|---|---|---|---|---|---|---|
+| equivalent | 0 | 0 | 0 | 0 | 0 | same outcome |
+| equivalent_given_facts | 1 | 1 | 1 | 0 | 0 | same outcome |
+| complement | 1 | 1 | 1 | 0 | 0 | opposite outcomes |
+| implies | 22 | 22 | 22 | 0 | 0 | YES on the forcing side needs YES on the forced side |
+| related | 206486 | – | – | – | – | no payout claim |
+| unrelated | 1034 | – | – | – | – | no payout claim |
+
+- equivalent_given_facts: kalshi:KXFED-26SEP-T4.00 settled no, polymarket:8891…2293 settled no (confidence 0.93; expected same outcome): agreed
+  Will the upper bound of the federal funds rate be above 4.00% following the Fed's Sep 16,… | Will the Fed increase interest rates by 50+ bps after the September 2026 meeting?
+- complement: kalshi:KXFED-26SEP-T3.25 settled yes, polymarket:9718…3603 settled no (confidence 0.91; expected opposite outcomes): agreed
+  Will the upper bound of the federal funds rate be above 3.25% following the Fed's Sep 16,… | Will the Fed decrease interest rates by 50+ bps after the September 2026 meeting?
+```
+
+Read it as: the first line is the sample (every settled market both adapters returned for the recorded universe, after validation), the second is the NFR-07 gate, and the table is the type histogram with, for each type that makes a payout claim, how many verdicts the settlements confirmed or contradicted. `related` and `unrelated` claim nothing and are only counted. Every disagreement is listed under the table with both outcomes and titles; an allowlisted one (an investigated exception, `--allowlist`, which needs a reason and a `D-` entry per pair) is listed separately and does not fail the gate. The exit code is 1 when the gate fails. The sample's one meeting is the September 16, 2026 FOMC decision (Kalshi `KXFED-26SEP` ladder vs Polymarket "Fed Decision in September?"), matched with the facts in force before it (`testdata/fixtures/backtest/facts.yaml`, `fed_upper_bound=3.75`); the crypto pairs (`KXBTCD` vs "Bitcoin above X on October 6, 5PM ET?") resolve on different sources and stay `related`, so the gate says nothing about Q-4 either way. Fetch failures for series or tags with no recorded fixture (ethereum, D-057) are printed as warnings and shrink the sample visibly rather than silently.
+
 **The veto suite** (`go test ./internal/match/... -run TestPairsFromFixtures -v`) is the third number and is already green: every `V-` case in `testdata/match/{crypto,fed}_pairs.yaml` is an adversarial near miss that must be non-equivalent, and the test fails on any `equivalent`-tier verdict for them (NFR-06, "0 veto-suite false positives").
 
 ## 8. Current results
@@ -210,7 +233,7 @@ _As of 2026-10-07, main at the M2-04 merge (`638daf9`)._
 | 0 veto-suite false positives | **met** | 37 `V-` cases (29 crypto, 8 Fed), 0 `equivalent`-tier verdicts; `TestPairsFromFixtures`, `TestPairSuiteSymmetric`, `TestPairSuiteWithoutFacts` pass on `internal/match` |
 | Fixture positives | **met** | 4 `EQ-` crypto equivalents, 1 Fed `EQ-F1` equivalent; `FACT-01` equivalent_given_facts at confidence 0.93; `CMP-01`, `CMP-F1`, `V-13`, `V-F5` complements; `IMP-01/02`, `IMP-F1/F2/F3`, `V-01/02/08/19/21`, `V-F7` implications |
 | Precision ≥ 0.95 at `equivalent` on human-confirmed labels | **pending human labels** | `equinox eval` and `testdata/golden/` are M2-05, not yet merged; no labels have been confirmed. **TODO (M2-05 worker, then human):** paste the `equinox eval` table here once `labels.yaml` is confirmed, and record the label count and date. |
-| 0 back-test mismatches | **pending** | `equinox backtest` is M2-06, not yet merged. **TODO (M2-06 worker):** paste the fixture-set back-test output here, and any investigated exception with its D- number. |
+| 0 back-test mismatches | **met on the fixture set** | `equinox backtest --fixtures` on the 2026-10-06 recording: 1,031 settled instruments (411 Kalshi, 620 Polymarket), 207,544 cross-venue pairs; 0 `equivalent`, 1 `equivalent_given_facts`, 1 `complement`, 22 `implies`, and every one of the 24 checked verdicts agreed with the settlements; 0 allowlisted exceptions. `TestBacktestFixtures` (internal/eval) and `TestBacktestCommandFixtures` (cmd/equinox) pin it; the pasted output is in §7. A `--live` run is operator-only and not yet recorded (D-072). |
 | ≥ 10 true `equivalent` or `complement` pairs across ≥ 2 categories in a live round | **not yet measured** | Live round 3 (D-065): 1,881 instruments, 768 `related`, 0 `equivalent`, matched before M2-04 landed. Needs a Fed-inclusive round re-matched with the M2-04 matcher and the politics normaliser (M2-02). |
 
 Fixture crypto equivalents are necessarily **synthetic in one venue's phrasing** (Polymarket wording on CF Benchmarks, Kalshi wording on Binance), because no recorded cross-venue crypto pair shares a source (D-061 §6; §9 below). The Fed fixtures are recorded text from both venues; `FACT-01`, `CMP-F1` and `IMP-F1` are real pairs.
