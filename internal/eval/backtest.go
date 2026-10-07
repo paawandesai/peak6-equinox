@@ -63,7 +63,7 @@ type Exception struct {
 	AID      string `yaml:"a_id"`
 	BID      string `yaml:"b_id"`
 	Reason   string `yaml:"reason"`
-	Decision string `yaml:"decision"` // docs/decisions.md entry, e.g. "D-070"
+	Decision string `yaml:"decision"` // docs/decisions.md entry, e.g. "D-072"
 }
 
 // Allowlist holds investigated exceptions keyed by the unordered pair.
@@ -94,7 +94,7 @@ func NewAllowlist(entries []Exception) (Allowlist, error) {
 			errs = append(errs, fmt.Errorf("exception %d (%s, %s): reason is required", i, e.AID, e.BID))
 			continue
 		case !decisionID.MatchString(e.Decision):
-			errs = append(errs, fmt.Errorf("exception %d (%s, %s): decision %q must be a docs/decisions.md id such as D-070", i, e.AID, e.BID, e.Decision))
+			errs = append(errs, fmt.Errorf("exception %d (%s, %s): decision %q must be a docs/decisions.md id such as D-072", i, e.AID, e.BID, e.Decision))
 			continue
 		}
 		k := pairKey(e.AID, e.BID)

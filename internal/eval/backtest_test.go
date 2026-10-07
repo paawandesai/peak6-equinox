@@ -93,16 +93,16 @@ func TestBacktestEquivalentMismatchAndAllowlist(t *testing.T) {
 	}
 
 	// The same pair listed the other way round is allowlisted with a reason and a decision.
-	al, err := NewAllowlist([]Exception{{AID: "polymarket:B-76599.99", BID: "kalshi:A-76599.99", Reason: "venue B voided and paid NO by its own rule", Decision: "D-070"}})
+	al, err := NewAllowlist([]Exception{{AID: "polymarket:B-76599.99", BID: "kalshi:A-76599.99", Reason: "venue B voided and paid NO by its own rule", Decision: "D-072"}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	r = Backtest(settled, facts.Set{}, al)
-	if !r.Passed() || len(r.Mismatches(false)) != 0 || len(r.Exceptions()) != 1 || r.Exceptions()[0].Exception.Decision != "D-070" {
+	if !r.Passed() || len(r.Mismatches(false)) != 0 || len(r.Exceptions()) != 1 || r.Exceptions()[0].Exception.Decision != "D-072" {
 		t.Fatalf("allowlist not applied: passed=%v exceptions=%+v", r.Passed(), r.Exceptions())
 	}
 	out = r.String()
-	for _, want := range []string{"PASS", "(1 allowlisted exceptions)", "Allowlisted exceptions:", "allowed by D-070: venue B voided", "| equivalent | 1 | 1 | 0 | 0 | 1 |"} {
+	for _, want := range []string{"PASS", "(1 allowlisted exceptions)", "Allowlisted exceptions:", "allowed by D-072: venue B voided", "| equivalent | 1 | 1 | 0 | 0 | 1 |"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("report lacks %q:\n%s", want, out)
 		}
@@ -192,7 +192,7 @@ func TestAllowlistParse(t *testing.T) {
   - a_id: kalshi:KXFED-26SEP-T4.00
     b_id: polymarket:123
     reason: investigated; venue rule differs on an off-grid move
-    decision: D-070
+    decision: D-072
 `
 	al, err := ParseAllowlist([]byte(good))
 	if err != nil || len(al) != 1 {
@@ -207,12 +207,12 @@ func TestAllowlistParse(t *testing.T) {
 	bad := map[string]string{
 		"missing list":      "other: 1\n",
 		"empty file":        "",
-		"unknown key":       "exceptions:\n  - a_id: kalshi:A\n    b_id: polymarket:B\n    reason: r\n    decision: D-070\n    why: x\n",
-		"missing reason":    "exceptions:\n  - a_id: kalshi:A\n    b_id: polymarket:B\n    reason: '  '\n    decision: D-070\n",
+		"unknown key":       "exceptions:\n  - a_id: kalshi:A\n    b_id: polymarket:B\n    reason: r\n    decision: D-072\n    why: x\n",
+		"missing reason":    "exceptions:\n  - a_id: kalshi:A\n    b_id: polymarket:B\n    reason: '  '\n    decision: D-072\n",
 		"bad decision":      "exceptions:\n  - a_id: kalshi:A\n    b_id: polymarket:B\n    reason: r\n    decision: ticket-7\n",
-		"same id":           "exceptions:\n  - a_id: kalshi:A\n    b_id: kalshi:A\n    reason: r\n    decision: D-070\n",
-		"not instrument id": "exceptions:\n  - a_id: A\n    b_id: polymarket:B\n    reason: r\n    decision: D-070\n",
-		"duplicate pair":    "exceptions:\n  - {a_id: kalshi:A, b_id: polymarket:B, reason: r, decision: D-070}\n  - {a_id: polymarket:B, b_id: kalshi:A, reason: r, decision: D-071}\n",
+		"same id":           "exceptions:\n  - a_id: kalshi:A\n    b_id: kalshi:A\n    reason: r\n    decision: D-072\n",
+		"not instrument id": "exceptions:\n  - a_id: A\n    b_id: polymarket:B\n    reason: r\n    decision: D-072\n",
+		"duplicate pair":    "exceptions:\n  - {a_id: kalshi:A, b_id: polymarket:B, reason: r, decision: D-072}\n  - {a_id: polymarket:B, b_id: kalshi:A, reason: r, decision: D-073}\n",
 	}
 	for name, src := range bad {
 		if _, err := ParseAllowlist([]byte(src)); err == nil {
