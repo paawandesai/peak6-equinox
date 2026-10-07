@@ -12,3 +12,6 @@ coverage.out
 # CI caches (GOPATH/GOCACHE inside the project dir)
 .go/
 .cache/
+
+# Failing-case replay files written by pgregory.net/rapid; a committed one replays forever
+**/testdata/rapid/

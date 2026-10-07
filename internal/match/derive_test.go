@@ -1,6 +1,7 @@
 package match
 
 import (
+	"sort"
 	"strings"
 	"testing"
 
@@ -64,6 +65,12 @@ func TestPropositionAlgebra(t *testing.T) {
 		{"negated inside positive when they cover", prop(t, lt, "3", "", true), prop(t, gt, "2", "", false), false, true, false, false, ""},
 		{"negated not inside positive when a gap remains (but the positive is inside the negated)", prop(t, lt, "3", "", true), prop(t, gt, "4", "", false), false, false, true, false, ""},
 		{"same sets", prop(t, gt, "4", "", false), prop(t, gt, "4", "", false), false, false, false, true, ""},
+		// Regression (M2-04 hotfix): the two counterexamples a too-narrow
+		// membership oracle reported against the algebra; the algebra was right.
+		{"between inside gte sharing the closed low end", prop(t, gte, "2", "", false), prop(t, between, "2", "4", false), false, false, true, false, ""},
+		{"negated gte inside negated eq-like between", prop(t, gte, "2", "", true), prop(t, between, "2", "2", true), false, true, false, false, "not (eq 2)"},
+		{"unbounded gt is not inside a bounded between sharing its low end", prop(t, gt, "1", "", false), prop(t, between, "1", "4", false), false, false, false, false, ""},
+		{"negated between has an upper tail outside lt", prop(t, between, "1", "4", true), prop(t, lt, "2", "", false), false, false, false, false, ""},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -153,24 +160,73 @@ func member(p proposition, x decimal.Decimal) bool {
 	return in != p.negated
 }
 
-// TestPropositionAlgebraAgreesWithMembership: the interval algebra agrees
-// with point-by-point membership on a grid finer than the thresholds, and
-// the relations have the shapes a reader expects (symmetry of complement
-// and equality, antisymmetry of strict containment).
-//
-// The grid must extend beyond every bound genProp can draw (lo in [-3, 3],
-// hi up to lo+3 = 6), with margin on both sides, so that the unbounded tail
-// of a negated interval is sampled too. A grid that stopped at 4 made the
-// oracle call "not (between 1 and 4)" a subset of "lt 2" (CI, M2-08).
-func TestPropositionAlgebraAgreesWithMembership(t *testing.T) {
-	var points []decimal.Decimal
-	for i := -100; i <= 100; i++ {
-		points = append(points, decimal.NewFromInt(int64(i)).Div(decimal.NewFromInt(10)))
+// probePoints returns one value from every region the bounds of ps cut the
+// line into: below the lowest bound, each bound itself, strictly between each
+// pair of neighbouring bounds, and above the highest. Membership in an
+// interval is constant inside each region, so these points decide every set
+// relation between ps exactly, whatever the thresholds are. (A fixed grid
+// did not: a "between" upper bound could lie past its edge, so "gte 2" and
+// "between 2 and 4" looked equal when nothing above 4 was probed.)
+func probePoints(ps ...proposition) []decimal.Decimal {
+	var bounds []decimal.Decimal
+	for _, p := range ps {
+		for _, b := range []*decimal.Decimal{p.iv.lo, p.iv.hi} {
+			if b != nil {
+				bounds = append(bounds, *b)
+			}
+		}
 	}
+	if len(bounds) == 0 {
+		return []decimal.Decimal{decimal.Zero}
+	}
+	sort.Slice(bounds, func(i, j int) bool { return bounds[i].LessThan(bounds[j]) })
+	one, two := decimal.NewFromInt(1), decimal.NewFromInt(2)
+	points := []decimal.Decimal{bounds[0].Sub(one)}
+	for i, b := range bounds {
+		if i > 0 && b.Equal(bounds[i-1]) {
+			continue
+		}
+		if i > 0 {
+			points = append(points, bounds[i-1].Add(b).Div(two))
+		}
+		points = append(points, b)
+	}
+	return append(points, bounds[len(bounds)-1].Add(one))
+}
+
+// TestProbePointsCoverEveryRegion pins the probe set for the two reported
+// oracle failures: a point past the highest bound is what separates "gte 2"
+// from "between 2 and 4" and "gt 1" from "between 1 and 4" (an unbounded
+// interval is never inside a bounded one), and a point below the lowest
+// bound covers the mirror image.
+func TestProbePointsCoverEveryRegion(t *testing.T) {
+	for _, tc := range []struct {
+		a, b proposition
+		want string
+	}{
+		{prop(t, canonical.ComparatorGTE, "2", "", false), prop(t, canonical.ComparatorBetween, "2", "4", false), "1 2 3 4 5"},
+		{prop(t, canonical.ComparatorGT, "1", "", false), prop(t, canonical.ComparatorBetween, "1", "4", false), "0 1 2.5 4 5"},
+		{prop(t, canonical.ComparatorLT, "-3", "", true), prop(t, canonical.ComparatorEQ, "-3", "", false), "-4 -3 -2"},
+	} {
+		var got []string
+		for _, x := range probePoints(tc.a, tc.b) {
+			got = append(got, x.String())
+		}
+		if strings.Join(got, " ") != tc.want {
+			t.Errorf("probePoints(%s, %s) = %v, want %s", tc.a, tc.b, got, tc.want)
+		}
+	}
+}
+
+// TestPropositionAlgebraAgreesWithMembership: the interval algebra agrees
+// with point-by-point membership at a probe in every region the thresholds
+// cut the line into, and the relations have the shapes a reader expects
+// (symmetry of complement and equality, antisymmetry of strict containment).
+func TestPropositionAlgebraAgreesWithMembership(t *testing.T) {
 	rapid.Check(t, func(t *rapid.T) {
 		a, b := genProp(t, "a"), genProp(t, "b")
 		subset, complement, equal := true, true, true
-		for _, x := range points {
+		for _, x := range probePoints(a, b) {
 			ma, mb := member(a, x), member(b, x)
 			subset = subset && (!ma || mb)
 			complement = complement && (ma != mb)
