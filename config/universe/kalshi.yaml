@@ -3,11 +3,12 @@
 # any correction is a Tier 1 change logged in docs/decisions.md.
 # Verified 2026-10-06 by M1-04: KXBTCD, KXETHD and KXFED all return open events
 # (no corrections needed; D-056).
-# politics is filled in M2.
+# politics: verified 2026-10-07 by M2-02 (D-071): the 2028 presidential winner and the two
+# 2028 presidential nominations each return one open event (31, 48 and 39 markets).
 categories:
   crypto:
     series: [KXBTCD, KXETHD]
   fed:
     series: [KXFED]
   politics:
-    series: []
+    series: [KXPRESPERSON, KXPRESNOMD, KXPRESNOMR]

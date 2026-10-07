@@ -108,15 +108,19 @@ func TestFetchInstrumentsFixtures(t *testing.T) {
 		if in.FeeSchedule.ID != canonical.FeeSchedulePolymarketV1 {
 			t.Errorf("%s: fee schedule %q", in.ID, in.FeeSchedule.ID)
 		}
-		if in.CloseTime.IsZero() || in.CloseTime.Location() != time.UTC {
+		// A few recorded politics markets have no endDate; the adapter must flag those.
+		if in.CloseTime.IsZero() && !in.Quality.Has(canonical.QualityMissingField) {
+			t.Errorf("%s: zero close time without a missing_field flag", in.ID)
+		}
+		if !in.CloseTime.IsZero() && in.CloseTime.Location() != time.UTC {
 			t.Errorf("%s: close time %v not UTC", in.ID, in.CloseTime)
 		}
 		if in.Terms.Subject != canonical.Unknown {
 			t.Errorf("%s: adapter must leave terms unknown, got %+v", in.ID, in.Terms)
 		}
 	}
-	if byCat[canonical.CategoryCrypto] == 0 || byCat[canonical.CategoryFed] == 0 {
-		t.Errorf("instruments per category = %v, want crypto and fed", byCat)
+	if byCat[canonical.CategoryCrypto] == 0 || byCat[canonical.CategoryFed] == 0 || byCat[canonical.CategoryPolitics] == 0 {
+		t.Errorf("instruments per category = %v, want crypto, fed and politics", byCat)
 	}
 	if len(raws) < 3 {
 		t.Errorf("got %d raw responses, want one per page", len(raws))

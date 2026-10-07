@@ -109,19 +109,24 @@ func TestKalshiFetchInstrumentsFixtures(t *testing.T) {
 	if err != nil {
 		t.Fatalf("FetchInstruments: %v", err)
 	}
-	// 318 KXBTCD + 390 KXETHD + 247 KXFED markets were recorded, none MVE.
-	if len(ins) != 318+390+247 {
-		t.Errorf("got %d instruments, want %d", len(ins), 318+390+247)
+	// 318 KXBTCD + 390 KXETHD + 247 KXFED markets, and 31 KXPRESPERSON + 48
+	// KXPRESNOMD + 39 KXPRESNOMR (M2-02), were recorded, none MVE.
+	const wantCount = 318 + 390 + 247 + 31 + 48 + 39
+	if len(ins) != wantCount {
+		t.Errorf("got %d instruments, want %d", len(ins), wantCount)
 	}
 	wantEndpoints := []string{
 		"/events?series_ticker=KXBTCD&status=open&with_nested_markets=true&limit=200",
 		"/events?series_ticker=KXETHD&status=open&with_nested_markets=true&limit=200",
 		"/events?series_ticker=KXFED&status=open&with_nested_markets=true&limit=200",
+		"/events?series_ticker=KXPRESPERSON&status=open&with_nested_markets=true&limit=200",
+		"/events?series_ticker=KXPRESNOMD&status=open&with_nested_markets=true&limit=200",
+		"/events?series_ticker=KXPRESNOMR&status=open&with_nested_markets=true&limit=200",
 	}
 	if got := fs.seen(); strings.Join(got, "|") != strings.Join(wantEndpoints, "|") {
 		t.Errorf("requests = %v, want %v", got, wantEndpoints)
 	}
-	if len(raws) != 3 || raws[0].Endpoint != wantEndpoints[0] || raws[0].HTTPStatus != 200 || len(raws[0].Body) == 0 ||
+	if len(raws) != len(wantEndpoints) || raws[0].Endpoint != wantEndpoints[0] || raws[0].HTTPStatus != 200 || len(raws[0].Body) == 0 ||
 		raws[0].Venue != canonical.VenueKalshi || !raws[0].FetchedAt.Equal(fixedNow) {
 		t.Errorf("raws[0] = %+v", raws[0].Endpoint)
 	}

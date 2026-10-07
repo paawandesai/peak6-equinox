@@ -207,13 +207,13 @@ func TestExtractCryptoExtractMatchesNormalize(t *testing.T) {
 }
 
 func TestExtractUnregisteredCategoryIsUnknown(t *testing.T) {
-	// politics has no extractor until M2-02; a category without one gets
-	// UnknownTerms and no flags, whatever the text says.
+	// A category without an extractor gets UnknownTerms and no flags,
+	// whatever the text says (every real category has one since M2-02).
 	in := crypto("Will Bitcoin be above $76,600 on Oct 6, 2026?", kalshiBTCRules, closeOct6)
-	in.Category = canonical.CategoryPolitics
+	in.Category = "unregistered_test"
 	out := Normalize(in)
 	if out.Terms != canonical.UnknownTerms() || !out.Quality.OK() {
-		t.Errorf("politics terms = %+v, quality %v; want all unknown and no flags", out.Terms, out.Quality)
+		t.Errorf("unregistered terms = %+v, quality %v; want all unknown and no flags", out.Terms, out.Quality)
 	}
 }
 
