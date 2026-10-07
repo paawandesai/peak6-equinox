@@ -2,6 +2,7 @@ package web
 
 import (
 	"log/slog"
+	"net"
 	"net/http"
 	"strconv"
 	"sync"
@@ -24,6 +25,7 @@ type publicRateLimiter struct {
 	log            *slog.Logger
 	mu             sync.Mutex
 	byIP           map[string][]time.Time // request times, oldest first
+	lastSweep      time.Time              // last time a full sweep ran
 }
 
 func newPublicRateLimiter(requestsPerMin int, now func() time.Time, log *slog.Logger) *publicRateLimiter {
@@ -59,22 +61,30 @@ func (l *publicRateLimiter) allow(ip string) (ok bool, retryAfter time.Duration)
 	if l.requestsPerMin <= 0 {
 		return true, 0
 	}
+	// Normalize IPv6 to /64 prefix to prevent an attacker with a /64 allocation
+	// from filling the map with distinct IPs (AB-03 bypass mitigation)
+	key := rateLimitKey(ip)
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	now := l.now()
-	times := l.prune(ip, now)
+	times := l.prune(key, now)
 	if len(times) < l.requestsPerMin {
-		// If adding a new IP would exceed the cap, sweep expired entries first
+		// If adding a new key would exceed the cap, sweep expired entries first
+		// (but at most once per minute to avoid O(n) sweeps per request)
 		if len(times) == 0 && len(l.byIP) >= maxRateLimitIPs {
-			l.sweep(now)
-			// If still at cap after sweep, fail open (allow the request) rather
-			// than letting a flood lock out legitimate IPs
+			if l.lastSweep.IsZero() || now.Sub(l.lastSweep) >= time.Minute {
+				l.sweep(now)
+				l.lastSweep = now
+			}
+			// If still at cap after sweep (all entries are active), fail closed
+			// (block the request) to prevent an attacker from bypassing the limit
+			// by filling the map with 10k distinct IPs (AB-03 bypass)
 			if len(l.byIP) >= maxRateLimitIPs {
-				return true, 0
+				return false, time.Minute
 			}
 		}
 		times = append(times, now)
-		l.byIP[ip] = times
+		l.byIP[key] = times
 		return true, 0
 	}
 	return false, times[0].Add(time.Minute).Sub(now)
@@ -82,9 +92,28 @@ func (l *publicRateLimiter) allow(ip string) (ok bool, retryAfter time.Duration)
 
 // sweep drops every IP whose request times have all left the 1-minute window.
 func (l *publicRateLimiter) sweep(now time.Time) {
-	for ip := range l.byIP {
-		l.prune(ip, now)
+	for key := range l.byIP {
+		l.prune(key, now)
 	}
+}
+
+// rateLimitKey normalizes an IP address for rate limiting. IPv4 addresses are
+// used as-is. IPv6 addresses are keyed by their /64 prefix to prevent an
+// attacker with a /64 allocation from bypassing the limit by cycling through
+// 2^64 addresses (standard practice per RFC 6177).
+func rateLimitKey(ip string) string {
+	parsed := net.ParseIP(ip)
+	if parsed == nil {
+		return ip // unparseable, use as-is
+	}
+	// IPv4 (or IPv4-mapped IPv6): use full IP
+	if parsed.To4() != nil {
+		return ip
+	}
+	// IPv6: mask to /64 prefix
+	mask := net.CIDRMask(64, 128)
+	network := parsed.Mask(mask)
+	return network.String()
 }
 
 // redactIP redacts the last octet of an IPv4 address or the last group of an
