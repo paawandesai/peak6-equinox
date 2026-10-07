@@ -1,0 +1,33 @@
+# Golden-set labels: human-confirmed relationship types for real cross-venue
+# pairs (FR-18, NFR-06, D-023). HUMAN-OWNED DATA (Tier 3): only a human adds
+# or changes an entry, after reading both contracts. Tooling never writes this
+# file; `equinox golden draft` proposes pairs in candidates.yaml next to it,
+# and `equinox eval` reads this file to report precision and recall per type.
+#
+# Schema (version 1; unknown keys are rejected):
+#
+#   version: 1
+#   round_id: <int>        the round the pairs were drafted from (provenance)
+#   labels:
+#     - a_id: kalshi:<ticker>                 instrument ids as in candidates.yaml
+#       b_id: polymarket:<yes token id>       (either order is accepted)
+#       label: <type>                         one of: equivalent,
+#                                             equivalent_given_facts, complement,
+#                                             implies, related, unrelated
+#                                             (docs/domain.md defines each)
+#       confirmed_by: <name or handle>        the human who confirmed it; required
+#       confirmed_on: YYYY-MM-DD              calendar date of the confirmation; required
+#       note: <free text, optional>           what decided it, e.g. the fact relied on
+#
+# How to confirm a label: open the pair in candidates.yaml, read both rules
+# texts, and decide the type from the payout logic alone (domain.md business
+# rules: one cent or one hour of difference is not equivalent; an unknown term
+# caps a pair at related). `suggested` in candidates.yaml is the matcher's
+# answer and must not be copied without checking: the point of this file is to
+# catch the matcher being wrong. Copy a_id and b_id exactly. Each pair appears
+# once. Then run `equinox eval` (or `make eval`).
+#
+# This file ships with NO labels: nothing below was invented by tooling.
+version: 1
+round_id: 0
+labels: []
