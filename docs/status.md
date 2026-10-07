@@ -1,19 +1,19 @@
 <!-- OWNER: operator. -->
 # Status
 
-_Last updated: 2026-10-07 ~17:05 UTC by operator (M2 tickets complete; exit verify MISS)._
+_Last updated: 2026-10-07 ~18:15 UTC by operator (M2 code deployed; exit verify MISS)._
 
 ## Current milestone
 
-**M2 exit verification (2026-10-07 ~17:00 UTC):** **MISS.** All M2 code tickets merged; docs/equivalence.md landed; golden/eval machinery + back-test complete. Exit criteria status:
+**M2 exit verification (2026-10-07 ~18:00 UTC):** **MISS.** All M2 code tickets merged and deployed to prod (revision equinox-00010-h9v); docs/equivalence.md landed; golden/eval machinery + back-test complete. Exit criteria status:
   1. Precision ≥0.95 at `equivalent` on human-confirmed labels — **BLOCKED** (testdata/golden/labels.yaml empty; Q-7 human gate).
      - Subpart: 0 veto false positives on the veto suite — **MET** (TestPairsFromFixtures 0 FP on 37 V- cases; documented in equivalence.md §8).
      - Subpart: 0 back-test mismatches on fixture set — **MET** (1031 instruments, 207544 pairs, 24/24 agreed; equivalence.md §7–§8).
-  2. ≥10 true `equivalent` / `complement` across ≥2 categories in a live round — **MISS** (live revision equinox-00009 pinned round 3: 0 equivalent/complement, 768 related; fixture draft: 1 `equivalent_given_facts`, 1 `complement`, both fed-only).
-  3. Fed demo pair + near-miss render correctly live — **MISS** (live URL /near-misses /log /eval all 404; M2 routes not deployed; live is pre-M2 revision equinox-00009-2bk created 2026-10-07T01:34:33Z).
+  2. ≥10 true `equivalent` / `complement` across ≥2 categories in a live round — **MISS** (live revision equinox-00010-h9v pinned round 3: 1 equivalent_given_facts, 1 complement, 25 implies, 851 related = 878 kept; both routable-tier pairs are fed-only, not ≥2 categories).
+  3. Fed demo pair + near-miss render correctly live — **PARTIAL** (M2 routes deployed and 200: /near-misses shows 851 related pairs, /log and /eval render, pair pages show facts/basis/type/history; Fed demo pair `equivalent_given_facts` and `complement` render with diff/vetoes/facts; human verification of correctness pending).
   4. docs/equivalence.md merged — **MET** (MR !24 merged as ba0a6c66).
 
-Next operator action (Tier 2, out of scope for this docs MR): prod redeploy of M2 code (`make deploy`), `equinox match`, `equinox pin`, human review of live round for Q-7 label candidates.
+Next operator action (Tier 2): human verification of Fed demo rendering (criterion 3 correctness), then human review of live round for Q-7 label candidates (criterion 1 unblocked).
 
 **Previous:** M1 verification HIT WITH CAVEATS (2026-10-06 ~21:55 CT).
 
@@ -108,7 +108,7 @@ None.
 | FR-16 | partial (initial schedules) | | NFR-16 | partial (M1 pages) |
 | FR-17 | partial (M2 near-misses persisted + UI) | | NFR-17 | done (M1) |
 | FR-18 | partial (M2 machinery; labels empty) | | | |
-| FR-19 | partial (M2 code + UI via /eval) | | | |
+| FR-19 | partial (M2-06 fixture; live pending) | | | |
 | FR-20 | not started | | | |
 | FR-21 | partial (M2 near-misses/log/eval/history; M1 matches/pair/route) | | | |
 | FR-22 | done (M1) | | | |
