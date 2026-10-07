@@ -84,8 +84,8 @@ func seedPublic(t *testing.T, st *store.Store) seeded {
 		}
 	}
 	quotes := []canonical.Quote{
-		{InstrumentID: seedKalshiA, YesBids: []canonical.Level{{Price: dec("0.48"), Size: dec("200")}}, YesAsks: []canonical.Level{{Price: dec("0.52"), Size: dec("300")}}, FetchedAt: seedNow},
-		{InstrumentID: seedPolyB, YesBids: []canonical.Level{{Price: dec("0.49"), Size: dec("80")}}, YesAsks: []canonical.Level{{Price: dec("0.50"), Size: dec("50")}, {Price: dec("0.53"), Size: dec("100")}}, FetchedAt: seedNow},
+		{InstrumentID: seedKalshiA, YesBids: []canonical.Level{{Price: dec("0.48"), Size: dec("200")}}, YesAsks: []canonical.Level{{Price: dec("0.52"), Size: dec("300")}}, FetchedAt: seedNow.Add(3 * time.Minute)},
+		{InstrumentID: seedPolyB, YesBids: []canonical.Level{{Price: dec("0.49"), Size: dec("80")}}, YesAsks: []canonical.Level{{Price: dec("0.50"), Size: dec("50")}, {Price: dec("0.53"), Size: dec("100")}}, FetchedAt: seedNow.Add(3 * time.Minute)},
 	}
 	for _, q := range quotes {
 		if err := st.InsertQuote(ctx, round.ID, q); err != nil {
@@ -116,8 +116,8 @@ func newTestServer(t *testing.T) (*Server, *store.Store) {
 	t.Helper()
 	st := store.New(tdb.Pool(t))
 	tdb.Reset(t)
-	// Now returns seedNow so quotes are fresh (FetchedAt = seedNow).
-	s := New(Config{MinRouteConfidence: dec("0.9")}, Deps{Store: st, Now: func() time.Time { return seedNow }})
+	// Now at seedNow+3m: quotes fresh (FetchedAt=seedNow+3m), routing newer than relationships (seedNow+2m).
+	s := New(Config{MinRouteConfidence: dec("0.9")}, Deps{Store: st, Now: func() time.Time { return seedNow.Add(3 * time.Minute) }})
 	return s, st
 }
 
@@ -243,7 +243,7 @@ func TestPublicPairPage(t *testing.T) {
 		`<tr class="diff-differ"><td>resolution_source</td><td>CF Benchmarks</td><td>Binance</td><td>differ</td></tr>`,
 		`<tr class="diff-unknown"><td>edge_rules</td>`,
 		// Touch on each venue.
-		"0.4800", "0.5200", "0.5000", "0.4900", "1/2", "2026-10-06 17:00:00 UTC",
+		"0.4800", "0.5200", "0.5000", "0.4900", "1/2", "2026-10-06 17:03:00 UTC",
 		// Route form.
 		`action="/route"`, `hx-post="/route"`, `name="pair" value="`+strconv.FormatInt(sd.eqID, 10)+`"`,
 		`<option value="`+seedKalshiA+`" selected>`, `<option value="`+seedPolyB+`">`,

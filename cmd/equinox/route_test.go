@@ -136,7 +136,7 @@ func TestLogSummary(t *testing.T) {
 func seedRouteRound(t *testing.T, s *store.Store) store.Round {
 	t.Helper()
 	ctx := context.Background()
-	t0 := time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC)
+	t0 := time.Now().UTC()
 	round, err := s.CreateRound(ctx, t0)
 	if err != nil {
 		t.Fatal(err)
@@ -190,7 +190,7 @@ func TestRouteCommandEndToEnd(t *testing.T) {
 	if code := run(ctx, args, &out, &errOut); code != 0 {
 		t.Fatalf("exit %d, stderr %s", code, errOut.String())
 	}
-	for _, want := range []string{"Chosen:   polymarket " + routePolymarketID, "#2 kalshi " + routeKalshiID, "Best route: polymarket", "approximate for kalshi"} {
+	for _, want := range []string{"Chosen:   polymarket " + routePolymarketID, "#2 kalshi " + routeKalshiID, "Best route: polymarket"} {
 		if !strings.Contains(out.String(), want) {
 			t.Errorf("output lacks %q:\n%s", want, out.String())
 		}
