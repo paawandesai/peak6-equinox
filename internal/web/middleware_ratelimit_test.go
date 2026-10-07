@@ -1,6 +1,7 @@
 package web
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -246,5 +247,78 @@ func TestRateLimitProperty_OrderIndependent(t *testing.T) {
 	}
 	if ok, _ := limiter.allow(ip2); ok {
 		t.Error("ip2 request 6: got allowed, want blocked")
+	}
+}
+
+// TestRateLimiter_SizeCapAndSweep: the limiter bounds memory by sweeping
+// expired IPs when the tracked count reaches maxRateLimitIPs.
+func TestRateLimiter_SizeCapAndSweep(t *testing.T) {
+	clock := &fixedClock{t: time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)}
+	limiter := newPublicRateLimiter(60, clock.now, slog.Default())
+
+	// Fill the map to maxRateLimitIPs with distinct IPs, each making 1 request
+	for i := 0; i < maxRateLimitIPs; i++ {
+		ip := fmt.Sprintf("192.0.2.%d", i%256) + fmt.Sprintf(".%d", i/256)
+		limiter.allow(ip)
+	}
+	limiter.mu.Lock()
+	mapSize := len(limiter.byIP)
+	limiter.mu.Unlock()
+	if mapSize != maxRateLimitIPs {
+		t.Fatalf("after filling: map size %d, want %d", mapSize, maxRateLimitIPs)
+	}
+
+	// Advance clock by 61 seconds (all entries expire)
+	clock.t = clock.t.Add(61 * time.Second)
+
+	// A new IP triggers a sweep and gets allowed (fail open)
+	newIP := "203.0.113.99"
+	ok, _ := limiter.allow(newIP)
+	if !ok {
+		t.Error("new IP after sweep: got blocked, want allowed")
+	}
+
+	// The sweep should have cleared expired IPs, leaving only the new one
+	limiter.mu.Lock()
+	mapSize = len(limiter.byIP)
+	limiter.mu.Unlock()
+	if mapSize != 1 {
+		t.Errorf("after sweep: map size %d, want 1 (only the new IP)", mapSize)
+	}
+}
+
+// TestRateLimiter_FailOpen: when the map is still full after a sweep (all IPs
+// still active), the limiter fails open (allows the request) rather than
+// locking out legitimate IPs.
+func TestRateLimiter_FailOpen(t *testing.T) {
+	clock := &fixedClock{t: time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)}
+	limiter := newPublicRateLimiter(60, clock.now, slog.Default())
+
+	// Fill the map to maxRateLimitIPs with distinct IPs, each making 1 request
+	for i := 0; i < maxRateLimitIPs; i++ {
+		ip := fmt.Sprintf("192.0.2.%d", i%256) + fmt.Sprintf(".%d", i/256)
+		limiter.allow(ip)
+	}
+
+	// Advance clock by only 30 seconds (entries NOT expired)
+	clock.t = clock.t.Add(30 * time.Second)
+
+	// A new IP triggers a sweep, but all IPs are still active, so it fails open
+	newIP := "203.0.113.99"
+	ok, _ := limiter.allow(newIP)
+	if !ok {
+		t.Error("new IP when map full (fail open): got blocked, want allowed")
+	}
+
+	// The new IP is allowed but not tracked (map still at cap)
+	limiter.mu.Lock()
+	mapSize := len(limiter.byIP)
+	_, tracked := limiter.byIP[newIP]
+	limiter.mu.Unlock()
+	if mapSize != maxRateLimitIPs {
+		t.Errorf("after fail-open: map size %d, want %d (unchanged)", mapSize, maxRateLimitIPs)
+	}
+	if tracked {
+		t.Error("after fail-open: new IP tracked, want not tracked (fail open)")
 	}
 }

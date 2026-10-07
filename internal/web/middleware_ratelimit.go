@@ -8,6 +8,13 @@ import (
 	"time"
 )
 
+const (
+	// maxRateLimitIPs bounds the public rate limiter's memory. Beyond it, a
+	// sweep runs to evict expired IPs before tracking new ones. Cloud Run's
+	// front end caps request rates, so this is a defense-in-depth limit.
+	maxRateLimitIPs = 10000
+)
+
 // publicRateLimiter limits requests per client IP in a sliding window. Each IP
 // gets requestsPerMin requests per minute (60 s); beyond that, requests get 429
 // until the oldest request leaves the window.
@@ -57,11 +64,27 @@ func (l *publicRateLimiter) allow(ip string) (ok bool, retryAfter time.Duration)
 	now := l.now()
 	times := l.prune(ip, now)
 	if len(times) < l.requestsPerMin {
+		// If adding a new IP would exceed the cap, sweep expired entries first
+		if len(times) == 0 && len(l.byIP) >= maxRateLimitIPs {
+			l.sweep(now)
+			// If still at cap after sweep, fail open (allow the request) rather
+			// than letting a flood lock out legitimate IPs
+			if len(l.byIP) >= maxRateLimitIPs {
+				return true, 0
+			}
+		}
 		times = append(times, now)
 		l.byIP[ip] = times
 		return true, 0
 	}
 	return false, times[0].Add(time.Minute).Sub(now)
+}
+
+// sweep drops every IP whose request times have all left the 1-minute window.
+func (l *publicRateLimiter) sweep(now time.Time) {
+	for ip := range l.byIP {
+		l.prune(ip, now)
+	}
 }
 
 // redactIP redacts the last octet of an IPv4 address or the last group of an
