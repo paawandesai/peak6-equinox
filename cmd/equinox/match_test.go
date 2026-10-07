@@ -15,6 +15,7 @@ import (
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/decisionlog"
+	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/facts"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/store"
 )
 
@@ -85,7 +86,7 @@ func TestMatchRoundStoresAndLogs(t *testing.T) {
 	ctx := context.Background()
 	round := seedMatchRound(t, st, store.RoundOK)
 
-	sum, err := matchRound(ctx, st, round.ID, false, slog.New(slog.DiscardHandler))
+	sum, err := matchRound(ctx, st, round.ID, false, testFacts(t), slog.New(slog.DiscardHandler))
 	if err != nil {
 		t.Fatalf("matchRound: %v", err)
 	}
@@ -93,16 +94,18 @@ func TestMatchRoundStoresAndLogs(t *testing.T) {
 	if sum.Pairs != 8 || sum.Instruments != 7 {
 		t.Errorf("pairs = %d, instruments = %d", sum.Pairs, sum.Instruments)
 	}
-	if sum.ByType[canonical.RelEquivalent] != 1 || sum.ByType[canonical.RelUnrelated] != 2 || sum.ByType[canonical.RelRelated] != 5 {
+	// The next Kalshi strike (76699.99) on the same index and instant as the
+	// CF Polymarket market (76599.99) is an implication (above 76699.99 forces above 76599.99).
+	if sum.ByType[canonical.RelEquivalent] != 1 || sum.ByType[canonical.RelImplies] != 1 || sum.ByType[canonical.RelUnrelated] != 2 || sum.ByType[canonical.RelRelated] != 4 {
 		t.Errorf("by type = %v", sum.ByType)
 	}
-	// Stored: the equivalent pair and the one-cent near miss (76599.99 vs 76600).
-	// The next strike (76699.99) is 0.13% away from both, so it is not a near miss.
-	if sum.Stored != 2 || sum.Logged != 2 || sum.Skipped != 4 {
+	// Stored: the equivalent pair, the implies pair and the one-cent near miss (76599.99 vs 76600).
+	// The next strike (76699.99) vs the Binance markets is 0.13% away, so it is not a near miss.
+	if sum.Stored != 3 || sum.Logged != 3 || sum.Skipped != 3 {
 		t.Errorf("stored %d logged %d skipped %d", sum.Stored, sum.Logged, sum.Skipped)
 	}
 	rels, err := st.ListRelationships(ctx, store.RelationshipFilter{RoundID: round.ID})
-	if err != nil || len(rels) != 2 {
+	if err != nil || len(rels) != 3 {
 		t.Fatalf("relationships = %d, %v", len(rels), err)
 	}
 	for _, r := range rels {
@@ -111,6 +114,15 @@ func TestMatchRoundStoresAndLogs(t *testing.T) {
 		}
 		if r.Type == canonical.RelEquivalent && (r.AID != "kalshi:KXBTCD-26OCT0618-T76599.99" || r.BID != "polymarket:1001") {
 			t.Errorf("equivalent pair = %s / %s", r.AID, r.BID)
+		}
+		if r.Type == canonical.RelImplies && (r.AID != "kalshi:KXBTCD-26OCT0618-T76699.99" || r.BID != "polymarket:1001" || r.BasisRisk == nil) {
+			t.Errorf("implies pair = %s / %s, basis %v", r.AID, r.BID, r.BasisRisk)
+		}
+		if r.Type != canonical.RelRelated && r.BasisRisk == nil {
+			t.Errorf("%s pair stored without basis risk", r.Type)
+		}
+		if r.FactsUsed == nil {
+			t.Errorf("%s pair stored with nil facts_used", r.Type)
 		}
 		if r.Type == canonical.RelRelated && r.BID != "polymarket:1002" {
 			t.Errorf("near miss = %s / %s", r.AID, r.BID)
@@ -125,14 +137,14 @@ func TestMatchRoundStoresAndLogs(t *testing.T) {
 		}
 	}
 	// Running again upserts rather than duplicating.
-	if _, err := matchRound(ctx, st, round.ID, false, slog.New(slog.DiscardHandler)); err != nil {
+	if _, err := matchRound(ctx, st, round.ID, false, testFacts(t), slog.New(slog.DiscardHandler)); err != nil {
 		t.Fatal(err)
 	}
-	if rels, _ = st.ListRelationships(ctx, store.RelationshipFilter{RoundID: round.ID}); len(rels) != 2 {
+	if rels, _ = st.ListRelationships(ctx, store.RelationshipFilter{RoundID: round.ID}); len(rels) != 3 {
 		t.Errorf("second run left %d relationships", len(rels))
 	}
 	text := sum.String()
-	for _, want := range []string{"8 cross-venue pairs", "equivalent 1", "related 5", "unrelated 2", "relationships stored 2"} {
+	for _, want := range []string{"8 cross-venue pairs", "equivalent 1", "equivalent_given_facts 0", "complement 0", "implies 1", "related 4", "unrelated 2", "relationships stored 3"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("summary %q lacks %q", text, want)
 		}
@@ -143,7 +155,7 @@ func TestMatchRoundStoreAll(t *testing.T) {
 	st := store.New(tdb.Pool(t))
 	tdb.Reset(t)
 	round := seedMatchRound(t, st, store.RoundPartial)
-	sum, err := matchRound(context.Background(), st, 0, true, slog.New(slog.DiscardHandler))
+	sum, err := matchRound(context.Background(), st, 0, true, testFacts(t), slog.New(slog.DiscardHandler))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,23 +169,23 @@ func TestMatchRoundErrors(t *testing.T) {
 	tdb.Reset(t)
 	ctx := context.Background()
 	logger := slog.New(slog.DiscardHandler)
-	if _, err := matchRound(ctx, st, 0, false, logger); err == nil || !strings.Contains(err.Error(), "no finished round") {
+	if _, err := matchRound(ctx, st, 0, false, facts.Set{}, logger); err == nil || !strings.Contains(err.Error(), "no finished round") {
 		t.Errorf("empty db: %v", err)
 	}
-	if _, err := matchRound(ctx, st, 999, false, logger); err == nil || !strings.Contains(err.Error(), "not found") {
+	if _, err := matchRound(ctx, st, 999, false, facts.Set{}, logger); err == nil || !strings.Contains(err.Error(), "not found") {
 		t.Errorf("missing round: %v", err)
 	}
 	running, err := st.CreateRound(ctx, matchT0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := matchRound(ctx, st, running.ID, false, logger); err == nil || !strings.Contains(err.Error(), "still running") {
+	if _, err := matchRound(ctx, st, running.ID, false, facts.Set{}, logger); err == nil || !strings.Contains(err.Error(), "still running") {
 		t.Errorf("running round: %v", err)
 	}
 	cancelled, cancel := context.WithCancel(ctx)
 	cancel()
 	round := seedMatchRound(t, st, store.RoundOK)
-	if _, err := matchRound(cancelled, st, round.ID, false, logger); err == nil || !strings.Contains(err.Error(), "context canceled") {
+	if _, err := matchRound(cancelled, st, round.ID, false, facts.Set{}, logger); err == nil || !strings.Contains(err.Error(), "context canceled") {
 		t.Errorf("cancelled: %v", err)
 	}
 }
@@ -183,6 +195,7 @@ func TestMatchCommand(t *testing.T) {
 	tdb.Reset(t)
 	round := seedMatchRound(t, st, store.RoundOK)
 	setAppEnv(t, tdb.DSN(t))
+	t.Setenv("FACTS_FILE", "../../config/facts.yaml")
 
 	var out, errOut bytes.Buffer
 	if code := run(context.Background(), []string{"match"}, &out, &errOut); code != 0 {
@@ -205,6 +218,12 @@ func TestMatchCommand(t *testing.T) {
 			t.Errorf("%v: exit %d, stderr %q; want %d containing %q", tc.args, code, errOut.String(), tc.code, tc.want)
 		}
 	}
+	// The facts file is required: a missing one fails fast (D-066), it is not treated as "no facts".
+	t.Setenv("FACTS_FILE", "../../config/no-such-facts.yaml")
+	errOut.Reset()
+	if code := run(context.Background(), []string{"match"}, io.Discard, &errOut); code != 1 || !strings.Contains(errOut.String(), "facts file") {
+		t.Errorf("missing facts: exit %d, stderr %q", code, errOut.String())
+	}
 	t.Setenv("APP_ENV", "")
 	errOut.Reset()
 	if code := run(context.Background(), []string{"match"}, io.Discard, &errOut); code != 1 || !strings.Contains(errOut.String(), "APP_ENV is required") {
@@ -212,29 +231,14 @@ func TestMatchCommand(t *testing.T) {
 	}
 }
 
-func TestNearMiss(t *testing.T) {
-	rel := func(status canonical.DiffStatus, a, b string) canonical.Relationship {
-		return canonical.Relationship{Diff: []canonical.FieldDiff{{Field: "threshold", A: a, B: b, Status: status}}}
+// testFacts loads the shipped facts file for the match tests.
+func testFacts(t *testing.T) facts.Set {
+	t.Helper()
+	fs, err := facts.Load("../../config/facts.yaml")
+	if err != nil {
+		t.Fatal(err)
 	}
-	cases := []struct {
-		name string
-		rel  canonical.Relationship
-		want bool
-	}{
-		{"equal", rel(canonical.DiffMatch, "76600", "76600"), true},
-		{"one cent", rel(canonical.DiffDiffer, "76599.99", "76600"), true},
-		{"0.1 percent", rel(canonical.DiffDiffer, "100000", "100100"), true},
-		{"next strike", rel(canonical.DiffDiffer, "76599.99", "76699.99"), false},
-		{"unknown", rel(canonical.DiffUnknown, "unknown", "76600"), false},
-		{"garbage", rel(canonical.DiffDiffer, "x", "76600"), false},
-		{"both zero", rel(canonical.DiffDiffer, "0", "0.0"), true},
-		{"no threshold field", canonical.Relationship{}, false},
-	}
-	for _, tc := range cases {
-		if got := nearMiss(tc.rel); got != tc.want {
-			t.Errorf("%s: %v", tc.name, got)
-		}
-	}
+	return fs
 }
 
 func TestCrossVenuePairsOrder(t *testing.T) {

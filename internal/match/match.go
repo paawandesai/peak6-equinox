@@ -1,53 +1,65 @@
 // Package match classifies pairs of instruments into the relationship types
 // of docs/domain.md with deterministic rules (D-003, D-018):
 //
-//	block → hard vetoes → classify + contract diff → explanation
+//	block → hard vetoes → classify (+ facts) → contract diff → basis risk → explanation
 //
 // Precision first (D-020): equivalent is returned only when every vetoed term
-// is known on both sides and equal, and the deadlines are within 24 h (D-019).
-// Any veto, and any unknown on a vetoed field, caps the pair at related. Pairs
-// that fail blocking are unrelated.
+// is known on both sides and equal, and the deadlines are within 24 h (D-019;
+// identical for crypto, D-060). Pairs that fail blocking are unrelated.
 //
-// M1 (v0) returns equivalent, related and unrelated. equivalent_given_facts,
-// complement and implies, and the soft checks and basis risk, follow in M2.
+// When vetoes fire only on the proposition itself (metric, comparator,
+// threshold, polarity) and every other vetoed field is known and equal, the
+// pair may still be one of the derived types (derive.go, facts.go):
 //
-// This package imports only canonical, decimal and the standard library; it
-// knows nothing about venues.
+//	equivalent_given_facts  the same payout once a fact from config/facts.yaml
+//	                        is applied (the Fed level-vs-change rule)
+//	complement              YES on A pays exactly when NO on B pays
+//	implies                 YES on one side forces YES on the other
+//
+// Any unknown on a vetoed field, or a veto on subject, deadline or resolution
+// source, caps the pair at related (business rule 2): facts never override a
+// veto. Every fact consulted is recorded in Relationship.FactsUsed, and every
+// routable verdict carries a basis-risk score (basis.go).
+//
+// This package imports only canonical, facts, decimal and the standard
+// library; it knows nothing about venues (imports_test.go).
 package match
 
 import (
 	"github.com/shopspring/decimal"
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
+	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/facts"
 )
 
-// Facts gives the matcher access to external facts (FR-10, D-021). It is
-// implemented by internal/facts in M2; nil means no facts are available. The
-// crypto rules use no facts.
-type Facts interface {
-	// Lookup returns the fact stored under key, if any.
-	Lookup(key string) (canonical.FactUse, bool)
-}
-
-// Compare classifies the pair (a, b). The result's RoundID is zero: the caller
-// that persists it sets the round it belongs to. Method is always rules; the
-// LLM verifier (M1-11) may later downgrade the result and set rules+llm.
+// Compare classifies the pair (a, b) using the facts in f (architecture.md).
+// The zero facts.Set means no facts are available: the matcher then never
+// returns equivalent_given_facts and says which fact it would have needed.
 //
-// Confidence is the matcher's confidence in the returned type, in [0,1]; the
-// rules are in classify.go.
-func Compare(a, b canonical.Instrument, _ Facts) canonical.Relationship {
+// The result's RoundID is zero: the caller that persists it sets the round it
+// belongs to. Method is always rules; the LLM verifier may later downgrade the
+// result and set rules+llm. Confidence is the matcher's confidence in the
+// returned type, in [0,1]; the rules are in classify.go.
+func Compare(a, b canonical.Instrument, f facts.Set) canonical.Relationship {
 	blocked := block(a, b)
 	vetoes := vetoes(a, b)
-	diff := Diff(a.Terms, b.Terms)
 	rel := canonical.Relationship{
 		AID:       a.ID,
 		BID:       b.ID,
 		Method:    canonical.MethodRules,
-		Diff:      diff,
+		Diff:      Diff(a.Terms, b.Terms),
 		Vetoes:    vetoes,
 		FactsUsed: []canonical.FactUse{},
 	}
-	rel.Type, rel.Confidence, rel.Explanation = classify(a, b, blocked, vetoes)
+	v := classify(a, b, blocked, vetoes, f)
+	rel.Type, rel.Confidence, rel.Explanation = v.typ, v.confidence, v.explanation
+	if len(v.facts) > 0 {
+		rel.FactsUsed = v.facts
+	}
+	if rel.Type.Routable() || rel.Type == canonical.RelImplies {
+		br := basisRisk(a, b, v)
+		rel.BasisRisk = &br
+	}
 	return rel
 }
 

@@ -8,6 +8,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
+	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/facts"
 )
 
 var (
@@ -40,7 +41,7 @@ func pair() (canonical.Instrument, canonical.Instrument) {
 
 func TestCryptoCompareEquivalent(t *testing.T) {
 	a, b := pair()
-	rel := Compare(a, b, nil)
+	rel := Compare(a, b, facts.Set{})
 	if rel.Type != canonical.RelEquivalent || len(rel.Vetoes) != 0 {
 		t.Fatalf("got %s %v", rel.Type, rel.Vetoes)
 	}
@@ -128,7 +129,7 @@ func TestVetoCodesPerField(t *testing.T) {
 			if len(vs) != 1 || vs[0].Code != tc.code || vs[0].Field != tc.field || vs[0].Detail == "" {
 				t.Fatalf("vetoes = %+v, want one %s on %s", vs, tc.code, tc.field)
 			}
-			if rel := Compare(a, b, nil); rel.Type == canonical.RelEquivalent {
+			if rel := Compare(a, b, facts.Set{}); rel.Type == canonical.RelEquivalent {
 				t.Fatalf("still equivalent: %s", rel.Explanation)
 			}
 		})
@@ -210,12 +211,12 @@ func TestBlockReasons(t *testing.T) {
 func TestClassifyUnrelatedConfidence(t *testing.T) {
 	a, b := pair()
 	b.Terms.Subject = "ETH"
-	rel := Compare(a, b, nil)
+	rel := Compare(a, b, facts.Set{})
 	if rel.Type != canonical.RelUnrelated || !rel.Confidence.Equal(confUnrelatedKnown) || !strings.Contains(rel.Explanation, "blocked on subject (BTC vs ETH)") {
 		t.Errorf("known mismatch: %s %s %q", rel.Type, rel.Confidence, rel.Explanation)
 	}
 	b.Terms.Subject = canonical.Unknown
-	rel = Compare(a, b, nil)
+	rel = Compare(a, b, facts.Set{})
 	if rel.Type != canonical.RelUnrelated || !rel.Confidence.Equal(confUnrelatedUnsure) {
 		t.Errorf("unknown subject: %s %s", rel.Type, rel.Confidence)
 	}
@@ -228,15 +229,19 @@ func TestClassifyUnrelatedConfidence(t *testing.T) {
 func TestClassifyRelatedConfidenceAndUncertainty(t *testing.T) {
 	a, b := pair()
 	b.Terms.Threshold = dec("76600")
-	rel := Compare(a, b, nil)
+	b.Terms.Metric = "price_high" // a different measurement: no set algebra applies
+	rel := Compare(a, b, facts.Set{})
 	if rel.Type != canonical.RelRelated || !rel.Confidence.Equal(confRelatedKnown) || strings.Contains(rel.Explanation, "Uncertain") {
 		t.Errorf("known difference: %s %s %q", rel.Type, rel.Confidence, rel.Explanation)
 	}
-	if !strings.Contains(rel.Explanation, "threshold (76599.99 vs 76600)") {
-		t.Errorf("explanation %q does not name the threshold values", rel.Explanation)
+	if !strings.Contains(rel.Explanation, "threshold (76599.99 vs 76600)") || !strings.Contains(rel.Explanation, "metric (price vs price_high)") {
+		t.Errorf("explanation %q does not name the vetoed values", rel.Explanation)
+	}
+	if rel.BasisRisk != nil || len(rel.FactsUsed) != 0 {
+		t.Errorf("related pair has basis risk %+v / facts %v", rel.BasisRisk, rel.FactsUsed)
 	}
 	b.Terms.ResolutionSource = canonical.Unknown
-	rel = Compare(a, b, nil)
+	rel = Compare(a, b, facts.Set{})
 	if rel.Type != canonical.RelRelated || !rel.Confidence.Equal(confUncertain) || !strings.Contains(rel.Explanation, "Uncertain") {
 		t.Errorf("unknown source: %s %s %q", rel.Type, rel.Confidence, rel.Explanation)
 	}
@@ -302,19 +307,18 @@ func TestCompareIgnoresVenue(t *testing.T) {
 	// pair and a cross-venue pair with the same terms give the same verdict.
 	a, b := pair()
 	c := known("kalshi:C", t0)
-	if x, y := Compare(a, b, nil), Compare(a, c, nil); x.Type != y.Type || !x.Confidence.Equal(y.Confidence) {
+	if x, y := Compare(a, b, facts.Set{}), Compare(a, c, facts.Set{}); x.Type != y.Type || !x.Confidence.Equal(y.Confidence) {
 		t.Errorf("venue changed the verdict: %s vs %s", x.Type, y.Type)
 	}
 }
 
-type fakeFacts struct{}
-
-func (fakeFacts) Lookup(string) (canonical.FactUse, bool) { return canonical.FactUse{}, false }
-
-func TestCompareAcceptsFacts(t *testing.T) {
+func TestCompareEmptyFactsUsedIsNotNil(t *testing.T) {
 	a, b := pair()
-	rel := Compare(a, b, fakeFacts{})
+	rel := Compare(a, b, facts.Set{})
 	if rel.Type != canonical.RelEquivalent || len(rel.FactsUsed) != 0 || rel.FactsUsed == nil {
-		t.Errorf("with facts: %s %v", rel.Type, rel.FactsUsed)
+		t.Errorf("no facts: %s %v", rel.Type, rel.FactsUsed)
+	}
+	if rel.BasisRisk == nil || rel.BasisRisk.Score.IsNegative() || rel.BasisRisk.Score.GreaterThan(decimal.NewFromInt(1)) {
+		t.Errorf("basis risk = %+v", rel.BasisRisk)
 	}
 }

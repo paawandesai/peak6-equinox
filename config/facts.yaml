@@ -26,3 +26,32 @@ facts:
       Percent. Target range 3.75-4.00 % after the September 16, 2026 FOMC
       decision (+25 bps, effective September 17, 2026). Valid until the
       October 28, 2026 decision; update value, source and as_of after it.
+
+  # Which FOMC decision fed_upper_bound is the level before (internal/match
+  # facts.go, M2-04). The matcher applies fed_upper_bound only to pairs whose
+  # deadlines sit on this meeting day: a later meeting's change bucket depends
+  # on this meeting's decision and stays `related`. Decision day of the
+  # October 27-28, 2026 meeting per the official calendar. Update together
+  # with fed_upper_bound after each decision.
+  - id: fed_next_meeting
+    value: "2026-10-28"
+    source: https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+    as_of: 2026-10-06
+    notes: >-
+      Calendar date (UTC) of the FOMC decision that fed_upper_bound precedes.
+      The two-day meeting is October 27-28, 2026; the statement is released
+      on the second day.
+
+  # The grid the upper bound moves on, in percentage points (M2-04). Every
+  # change to the target range since December 2008 has been a whole number of
+  # 25 bps steps and the range is 25 bps wide, so a level ladder "above 4.00"
+  # and a change bucket "at least +25 bps" (at or above 4.25) are the same
+  # set of reachable outcomes. The matcher uses it only to close open ends on
+  # the grid; off-grid moves are scored as basis risk (grid_rounding).
+  - id: fed_rate_step
+    value: "0.25"
+    source: https://www.federalreserve.gov/monetarypolicy/openmarket.htm
+    as_of: 2026-10-06
+    notes: >-
+      Percentage points. Read from the "Open Market Operations" history of
+      target range changes; every entry is a multiple of 0.25.

@@ -6,6 +6,12 @@
 # "V-" is an adversarial near-miss and must be non-equivalent (NFR-06: zero
 # false positives). Pairs starting "EQ-" are true equivalents and must match.
 #
+# Pairs starting "CMP-" are true complements and "IMP-" true implications
+# (M2-04). V- pairs whose vetoed difference is only a threshold or comparator
+# on one shared measurement are true implications ("above 76,600.99" forces
+# "above 76,599.99") and say so; they are still never equivalent, and implies
+# is never routed.
+#
 # Text marked "real" is recorded venue text from testdata/fixtures (Kalshi,
 # 2026-10-06) and M1-05's Polymarket fixtures. Text marked "synthetic" is
 # written in one venue's style but with the other venue's resolution source,
@@ -137,7 +143,8 @@ pairs:
   # ---- veto suite: adversarial near-misses, all non-equivalent ---------
   - id: V-01
     name: threshold off by $1
-    expect: related
+    expect: implies
+    explain: ["forces YES on kalshi:KXBTCD-26OCT0618-T76599.99, not the reverse"]
     vetoes: [threshold_mismatch]
     a: *kalshi_btc
     b:
@@ -145,7 +152,8 @@ pairs:
       title: "Will the price of Bitcoin be above $76,600.99 on October 6?"
   - id: V-02
     name: gt vs gte ("higher than" vs "equal to or higher than")
-    expect: related
+    expect: implies
+    explain: ["YES on kalshi:KXBTCD-26OCT0618-T76599.99 forces YES on"]
     vetoes: [comparator_mismatch]
     a: *kalshi_btc
     b:
@@ -217,7 +225,8 @@ pairs:
         The resolution source for this market is CF Benchmarks.
   - id: V-08
     name: "$76k is not $76,599.99"
-    expect: related
+    expect: implies
+    explain: ["YES on kalshi:KXBTCD-26OCT0618-T76599.99 forces YES on"]
     vetoes: [threshold_mismatch]
     a: *kalshi_btc
     b:
@@ -265,9 +274,10 @@ pairs:
         specified in the title is higher than the price specified in the title.
         The resolution source for this market is CF Benchmarks.
   - id: V-13
-    name: negated proposition (polarity)
-    expect: related
+    name: negated proposition (polarity flip on the same threshold is the complement, never equivalent)
+    expect: complement
     vetoes: [polarity_mismatch]
+    explain: ["complement", "not (gt 76599.99)"]
     a: *kalshi_btc
     b:
       <<: *poly_cf_btc
@@ -327,7 +337,8 @@ pairs:
         The resolution source for this market is CF Benchmarks.
   - id: V-19
     name: "'at or above' vs 'above'"
-    expect: related
+    expect: implies
+    explain: ["YES on kalshi:KXBTCD-26OCT0618-T76599.99 forces YES on"]
     vetoes: [comparator_mismatch]
     a: *kalshi_btc
     b:
@@ -349,7 +360,8 @@ pairs:
         the date specified in the title. The resolution source for this market is CF Benchmarks.
   - id: V-21
     name: one cent apart ($76,600.00 vs 76599.99), the real Kalshi-vs-Polymarket strike convention
-    expect: related
+    expect: implies
+    explain: ["forces YES on kalshi:KXBTCD-26OCT0618-T76599.99, not the reverse"]
     vetoes: [threshold_mismatch]
     a: *kalshi_btc
     b:
@@ -418,3 +430,76 @@ pairs:
       close: 2026-10-06T22:00:00Z
       title: "Bitcoin on October 6?"
       rules: ""
+
+  # ---- complement and implies (M2-04) -------------------------------------
+  - id: CMP-01
+    name: "above $76,599.99 vs synthetic 'at or below $76,599.99' on the same index and instant (partition)"
+    expect: complement
+    vetoes: [comparator_mismatch]
+    explain: ["YES on kalshi:KXBTCD-26OCT0618-T76599.99 pays exactly when NO on polymarket:3001", "lte 76599.99"]
+    a: *kalshi_btc
+    b:
+      <<: *poly_cf_btc
+      market_id: "3001"
+      title: "Will the price of Bitcoin be at or below $76,599.99 on October 6?"
+      rules: >-
+        This market will resolve to "Yes" if the simple average of the sixty seconds of the CF Benchmarks
+        Bitcoin Real-Time Index (BRTI) before 6:00 PM ET on the date specified in the title is at or below
+        the price specified in the title. Otherwise, this market will resolve to "No".
+        The resolution source for this market is CF Benchmarks, specifically the BRTI.
+  - id: IMP-01
+    name: "above $77,000 forces above $76,599.99 (B forces A)"
+    expect: implies
+    vetoes: [threshold_mismatch]
+    explain: ["YES on polymarket:3002 forces YES on kalshi:KXBTCD-26OCT0618-T76599.99, not the reverse"]
+    a: *kalshi_btc
+    b:
+      <<: *poly_cf_btc
+      market_id: "3002"
+      title: "Will the price of Bitcoin be above $77,000 on October 6?"
+  - id: IMP-02
+    name: "above $76,599.99 forces above $76,000 (A forces B)"
+    expect: implies
+    vetoes: [threshold_mismatch]
+    explain: ["YES on kalshi:KXBTCD-26OCT0618-T76599.99 forces YES on polymarket:3003, not the reverse"]
+    a: *kalshi_btc
+    b:
+      <<: *poly_cf_btc
+      market_id: "3003"
+      title: "Will the price of Bitcoin be above $76,000 on October 6?"
+  - id: V-27
+    name: polarity flip on a different threshold (not above $77,000 vs above $76,599.99) overlaps both ways
+    expect: related
+    vetoes: [threshold_mismatch, polarity_mismatch]
+    a: *kalshi_btc
+    b:
+      <<: *poly_cf_btc
+      market_id: "3004"
+      title: "Will the price of Bitcoin not be above $77,000 on October 6?"
+      rules: >-
+        This market will resolve to "Yes" if the CF Benchmarks Bitcoin Real-Time Index (BRTI) at 6:00 PM ET on the
+        date specified in the title is not higher than the price specified in the title.
+        The resolution source for this market is CF Benchmarks.
+  - id: V-28
+    name: a partition on a different source (Binance at or below vs CF Benchmarks above) is not a complement
+    expect: related
+    vetoes: [comparator_mismatch, source_mismatch]
+    a: *kalshi_btc
+    b:
+      <<: *poly_cf_btc
+      market_id: "3005"
+      title: "Will the price of Bitcoin be at or below $76,599.99 on October 6?"
+      rules: >-
+        This market will resolve to "Yes" if the Binance 1 minute candle for BTC/USDT closing at 6:00 PM ET on the
+        date specified in the title has a final "Close" price at or below the price specified in the title.
+        The resolution source for this market is Binance, specifically the BTC/USDT "Close" prices.
+  - id: V-29
+    name: implies-shaped thresholds a day apart are only related (deadline veto blocks the inference)
+    expect: related
+    vetoes: [threshold_mismatch, deadline_gap]
+    a: *kalshi_btc
+    b:
+      <<: *poly_cf_btc
+      market_id: "3006"
+      close: 2026-10-07T22:00:00Z
+      title: "Will the price of Bitcoin be above $77,000 on October 7?"
