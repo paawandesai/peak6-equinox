@@ -16,6 +16,7 @@
 | `POLYMARKET_CLOB_URL` | Polymarket order-book API base | no | `https://clob.polymarket.com` |
 | `UNIVERSE_DIR` | Directory with one universe file per venue (series and tags per category) | no | `config/universe` |
 | `FACTS_FILE` | External facts | no | `config/facts.yaml` |
+| `EVAL_SUMMARY_FILE` | JSON summary written by `equinox eval` and shown read-only on `/eval` (absent = "no eval yet") | no | `config/eval_summary.json` |
 | `HTTP_TIMEOUT_SECONDS` | Per-request timeout to venues | no | `10` |
 | `MAX_BODY_BYTES` | Venue response cap | no | `10485760` |
 | `STALE_AFTER_SECONDS` | Quote staleness limit (live) | no | `120` |

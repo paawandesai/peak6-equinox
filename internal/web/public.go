@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -53,14 +54,22 @@ var templateFuncs = template.FuncMap{
 	"price": nullPrice,
 	"utc":   formatUTC,
 	"upper": strings.ToUpper,
+	"pct":   formatPercent,
+	// httpURL returns s only when it is an absolute http(s) URL, else "", so
+	// a template can decide whether a source is safe to turn into a link.
+	"httpURL": httpURL,
 }
 
 // pages are the parsed template sets, one per page, each with the layout.
 var pages = map[string]*template.Template{
-	"matches": parsePage("matches.html"),
-	"pair":    parsePage("pair.html", "route_result.html"),
-	"route":   parsePage("route.html", "route_result.html"),
-	"error":   parsePage("error.html"),
+	"matches":     parsePage("matches.html"),
+	"near_misses": parsePage("near_misses.html"),
+	"pair":        parsePage("pair.html", "route_result.html", "history.html"),
+	"route":       parsePage("route.html", "route_result.html"),
+	"decision":    parsePage("decision.html", "route_result.html"),
+	"log":         parsePage("log.html"),
+	"eval":        parsePage("eval.html"),
+	"error":       parsePage("error.html"),
 }
 
 func parsePage(files ...string) *template.Template {
@@ -75,8 +84,12 @@ func parsePage(files ...string) *template.Template {
 // POST is /route, a simulation whose only write is its own decision (AB-14).
 func (s *Server) publicRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /{$}", s.handleMatches)
+	mux.HandleFunc("GET /near-misses", s.handleNearMisses)
 	mux.HandleFunc("GET /pairs/{id}", s.handlePair)
 	mux.HandleFunc("POST /route", s.handleRoute)
+	mux.HandleFunc("GET /decisions/{id}", s.handleDecision)
+	mux.HandleFunc("GET /log", s.handleLog)
+	mux.HandleFunc("GET /eval", s.handleEval)
 	mux.HandleFunc("GET /static/app.css", s.handleAppCSS)
 }
 
@@ -126,6 +139,26 @@ func formatUTC(t time.Time) string {
 		return "unknown"
 	}
 	return t.UTC().Format("2006-01-02 15:04:05 UTC")
+}
+
+// formatPercent renders a ratio in [0,1] as a percentage with two decimals,
+// or "n/a" for a nil ratio (an undefined metric such as 0/0).
+func formatPercent(d *decimal.Decimal) string {
+	if d == nil {
+		return "n/a"
+	}
+	return d.Mul(decimal.NewFromInt(100)).StringFixed(2) + "%"
+}
+
+// httpURL returns raw when it parses as an absolute http or https URL with a
+// host, else "". Templates use it to link a fact's source only when the
+// source is a web address; anything else renders as text (AB-07).
+func httpURL(raw string) string {
+	u, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return ""
+	}
+	return u.String()
 }
 
 // render executes the named page's layout into a buffer, then writes it, so

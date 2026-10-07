@@ -101,7 +101,9 @@ func checkEscaped(t *testing.T, page, body string, escaped ...string) {
 		if handlerAttrRe.MatchString(tag) {
 			t.Errorf("%s: tag with inline handler: %s", page, tag)
 		}
-		if strings.HasPrefix(lower, "<svg") || strings.HasPrefix(lower, "<img") {
+		// The only legitimate <svg> is the pair page's server-rendered
+		// price-history chart, whose opening tag is fixed template text.
+		if (strings.HasPrefix(lower, "<svg") && !strings.HasPrefix(tag, `<svg class="hist" viewBox="0 0 `)) || strings.HasPrefix(lower, "<img") {
 			t.Errorf("%s: injected tag rendered raw: %s", page, tag)
 		}
 		if strings.Contains(lower, "javascript:") {

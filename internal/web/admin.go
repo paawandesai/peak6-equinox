@@ -68,7 +68,10 @@ type adminPage struct {
 	Now         string
 	AppEnv      string
 	DBSize      string
+	DBThreshold string
+	DBAlert     bool // AB-15: size above dbSizeAlertBytes
 	DBError     string
+	Collector   collectorStats // NFR-05
 	RunningID   int64
 	Rounds      []roundView
 	Message     string
@@ -90,23 +93,31 @@ func (s *Server) handleAdminIndex(w http.ResponseWriter, r *http.Request) {
 	if rid := r.URL.Query().Get("round"); rid != "" {
 		page.Message = "ingest round " + sanitizeID(rid) + " finished; see the table"
 	}
-	if s.deps.Store == nil {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+	switch growth, err := s.checkDBGrowth(ctx); {
+	case errors.Is(err, errNoDBSize):
 		page.DBError = "database not configured"
-	} else {
-		ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
-		defer cancel()
-		if size, err := s.deps.Store.DatabaseSize(ctx); err != nil {
-			s.log.Error("reading database size", "error", err)
-			page.DBError = "database unavailable"
-		} else {
-			page.DBSize = humanBytes(size)
-		}
+	case err != nil:
+		s.log.Error("reading database size", "error", err)
+		page.DBError = "database unavailable"
+	default:
+		page.DBSize, page.DBThreshold, page.DBAlert = growth.Size, growth.Threshold, growth.Breached
+	}
+	page.Collector = collectorSuccess(nil, s.now())
+	if s.deps.Store != nil {
 		rounds, err := s.deps.Store.ListRounds(ctx, adminRounds)
 		if err != nil {
 			s.log.Error("listing rounds", "error", err)
 			page.DBError = "database unavailable"
 		}
 		page.Rounds = roundViews(rounds)
+		recent, err := s.deps.Store.ListRoundsSince(ctx, s.now().Add(-collectorWindow), 0)
+		if err != nil {
+			s.log.Error("listing recent rounds", "error", err)
+			page.DBError = "database unavailable"
+		}
+		page.Collector = collectorSuccess(recent, s.now())
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := adminTmpl.Execute(w, page); err != nil {
@@ -162,6 +173,11 @@ func (s *Server) handleAdminIngest(w http.ResponseWriter, r *http.Request) {
 		s.log.Error("ingest failed", "error", err, "round_id", res.RoundID)
 		s.writeJSON(w, http.StatusInternalServerError, ingestResponse{RoundID: res.RoundID, Status: string(res.Status), Error: "ingest failed; see the server log"})
 		return
+	}
+	// AB-15: every round adds data; measure after each one so the growth
+	// alert fires on the Scheduler's cadence, not only when someone looks.
+	if _, err := s.checkDBGrowth(ctx); err != nil && !errors.Is(err, errNoDBSize) {
+		s.log.Error("checking database growth after ingest", "error", err, "round_id", res.RoundID)
 	}
 	if wantsHTML(r) {
 		http.Redirect(w, r, fmt.Sprintf("/admin?round=%d", res.RoundID), http.StatusSeeOther)

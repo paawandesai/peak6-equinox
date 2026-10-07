@@ -1,0 +1,31 @@
+{{define "content"}}
+<h1>Decision log</h1>
+<p>Every verdict and simulated order Equinox stored, newest first: relationship verdicts from <code>equinox match</code>, routing decisions from the pair pages and <code>equinox route</code>, LLM verifier results (when enabled; never from a public request) and fetch rounds. Each line links to the pair or decision it is about.</p>
+<form method="get" action="/log">
+  <label>Show
+    <select name="kind">
+      <option value=""{{if not .Kind}} selected{{end}}>everything</option>
+      {{range .Kinds}}<option value="{{.Value}}"{{if .Selected}} selected{{end}}>{{.Label}}</option>{{end}}
+    </select>
+  </label>
+  <button type="submit">Filter</button>
+</form>
+{{if not .Entries}}
+<p>No decision-log entries{{if .Kind}} of kind <code>{{.Kind}}</code>{{end}} yet.</p>
+{{else}}
+<p>Latest {{len .Entries}} entr{{if eq (len .Entries) 1}}y{{else}}ies{{end}} (at most {{.Limit}}).</p>
+<table class="log">
+  <thead><tr><th>When (UTC)</th><th>Kind</th><th>About</th><th>Summary</th></tr></thead>
+  <tbody>
+  {{range .Entries}}
+    <tr>
+      <td><small>{{.At}}</small></td>
+      <td><code>{{.Kind}}</code></td>
+      <td>{{if .Link}}<a href="{{.Link}}">{{.LinkLabel}}</a>{{else if .LinkLabel}}{{.LinkLabel}}{{else}}<small>{{.Ref}}</small>{{end}}</td>
+      <td class="summary">{{.Summary}}</td>
+    </tr>
+  {{end}}
+  </tbody>
+</table>
+{{end}}
+{{end}}

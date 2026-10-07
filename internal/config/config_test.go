@@ -45,6 +45,7 @@ func TestLoadDefaults(t *testing.T) {
 		{"PolymarketClobURL", c.PolymarketClobURL, DefaultPolymarketClobURL},
 		{"UniverseDir", c.UniverseDir, "config/universe"},
 		{"FactsFile", c.FactsFile, "config/facts.yaml"},
+		{"EvalSummaryFile", c.EvalSummaryFile, "config/eval_summary.json"},
 		{"HTTPTimeout", c.HTTPTimeout, 10 * time.Second},
 		{"MaxBodyBytes", c.MaxBodyBytes, int64(10485760)},
 		{"StaleAfter", c.StaleAfter, 120 * time.Second},

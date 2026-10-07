@@ -1,0 +1,33 @@
+{{define "history"}}
+{{if .Empty}}
+<p>No stored quotes for either contract yet. Each fetch round adds one point per contract.</p>
+{{else}}
+<p>{{.Points}} touch{{if ne .Points 1}}es{{end}} across {{.Rounds}} round{{if ne .Rounds 1}}s{{end}}, from {{.From}} to {{.To}}. Solid line: mid of the best YES bid and ask; thin lines: best bid and best ask. Prices are per $1 payout on a fixed 0 to 1 axis so both venues share one scale.</p>
+<figure class="history">
+<svg class="hist" viewBox="0 0 {{.Width}} {{.Height}}" width="{{.Width}}" height="{{.Height}}" role="img" aria-labelledby="hist-title">
+  <title id="hist-title">Price history of the two contracts across fetch rounds</title>
+  <rect class="hist-plot" x="{{.X0}}" y="{{.Y0}}" width="{{.PlotW}}" height="{{.PlotH}}"></rect>
+  {{range .YTicks}}<line class="hist-grid" x1="{{$.X0}}" y1="{{.Y}}" x2="{{$.X1}}" y2="{{.Y}}"></line><text class="hist-label" x="{{.X}}" y="{{.Y}}" text-anchor="{{.Anchor}}" dominant-baseline="middle">{{.Label}}</text>{{end}}
+  {{range .XTicks}}<text class="hist-label" x="{{.X}}" y="{{.Y}}" text-anchor="{{.Anchor}}">{{.Label}}</text>{{end}}
+  {{range .Series}}{{$key := .Key}}
+  {{if .Bid}}<polyline class="hist-side hist-{{.Key}}" points="{{.Bid}}"></polyline>{{end}}
+  {{if .Ask}}<polyline class="hist-side hist-{{.Key}}" points="{{.Ask}}"></polyline>{{end}}
+  {{if .Mid}}<polyline class="hist-mid hist-{{.Key}}" points="{{.Mid}}"></polyline>{{end}}
+  {{range .Dots}}<circle class="hist-dot hist-{{$key}}" cx="{{.X}}" cy="{{.Y}}" r="3"></circle>{{end}}
+  {{end}}
+</svg>
+<figcaption>
+  <ul class="hist-legend">
+  {{range .Series}}<li><span class="hist-swatch hist-{{.Key}}"></span> <span class="venue">{{.Venue}}</span> <code>{{.ID}}</code>: {{.N}} point{{if ne .N 1}}s{{end}}, last mid {{.Last}}</li>{{end}}
+  </ul>
+</figcaption>
+</figure>
+<details>
+  <summary>Data points</summary>
+  <table>
+    <thead><tr><th>Fetched (UTC)</th><th>Round</th><th>Venue</th><th>Best bid</th><th>Best ask</th><th>Mid</th></tr></thead>
+    <tbody>{{range .Rows}}<tr><td>{{.At}}</td><td>{{.RoundID}}</td><td><span class="venue">{{.Venue}}</span></td><td>{{.Bid}}</td><td>{{.Ask}}</td><td>{{.Mid}}</td></tr>{{end}}</tbody>
+  </table>
+</details>
+{{end}}
+{{end}}

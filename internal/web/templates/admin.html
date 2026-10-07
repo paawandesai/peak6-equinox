@@ -9,7 +9,11 @@
 <body>
   <h1>Equinox admin</h1>
   <p>Environment: <strong>{{.AppEnv}}</strong>. Page time (UTC): {{.Now}}.
-  {{if .DBError}}Database: <strong>{{.DBError}}</strong>.{{else}}Database size: <strong>{{.DBSize}}</strong>.{{end}}</p>
+  {{if .DBError}}Database: <strong>{{.DBError}}</strong>.{{else}}Database size: <strong>{{.DBSize}}</strong> (alert threshold {{.DBThreshold}}){{if .DBAlert}} <strong>ALERT: database size is above the {{.DBThreshold}} growth threshold (AB-15); an error-level log entry was written. Trim raw responses or raise the disk before the collector fills it.</strong>{{else}}, below the threshold{{end}}.{{end}}</p>
+
+  <h2>Collector success, trailing {{.Collector.Window}} (NFR-05)</h2>
+  <p>Since {{.Collector.Since}}: <strong>{{.Collector.Rate}}</strong> of {{.Collector.Attempts}} expected {{.Collector.Cadence}} ticks succeeded (target {{.Collector.Target}}): <strong>{{if .Collector.Meets}}MEETS TARGET{{else}}BELOW TARGET{{end}}</strong>.
+  ok {{.Collector.OK}}, partial {{.Collector.Partial}}, failed {{.Collector.Failed}}, running {{.Collector.Running}}, missing ticks {{.Collector.Missing}} ({{.Collector.Observed}} rounds observed of {{.Collector.Expected}} scheduled). A partial round (one venue failed) counts as a success; a missing tick counts as a failure.</p>
 
   {{if .Message}}<p><em>{{.Message}}</em></p>{{end}}
 

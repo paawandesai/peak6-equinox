@@ -14,3 +14,22 @@ table.pairs td, table.diff td { vertical-align: top; }
 .rules { white-space: pre-wrap; max-height: 20rem; overflow: auto; font-size: 0.9rem; }
 .trace { margin-top: 1rem; }
 .trace ul[role="alert"] { color: #c62828; }
+.vetoes { margin: 0; padding-left: 1rem; font-size: 0.9rem; }
+.vetoes li { margin: 0; }
+table.log td.summary { font-size: 0.9rem; white-space: pre-wrap; word-break: break-word; }
+.pass { color: #2e7d32; font-weight: 600; }
+.fail { color: #c62828; font-weight: 600; }
+details.types .plain { color: var(--pico-color); font-weight: 400; }
+/* Price-history chart: server-rendered SVG, every colour and stroke here. */
+figure.history { margin: 0 0 1rem; }
+svg.hist { max-width: 100%; height: auto; display: block; }
+.hist-plot { fill: var(--pico-card-background-color, #fff); stroke: var(--pico-muted-border-color, #ccc); }
+.hist-grid { stroke: var(--pico-muted-border-color, #ddd); stroke-dasharray: 2 4; }
+.hist-label { font-size: 11px; fill: var(--pico-muted-color, #666); }
+polyline.hist-mid { fill: none; stroke-width: 2; stroke-linejoin: round; }
+polyline.hist-side { fill: none; stroke-width: 1; opacity: 0.6; }
+polyline.hist-a, circle.hist-a, .hist-swatch.hist-a { stroke: #1565c0; fill: #1565c0; background: #1565c0; }
+polyline.hist-b, circle.hist-b, .hist-swatch.hist-b { stroke: #ef6c00; fill: #ef6c00; background: #ef6c00; }
+polyline.hist-mid, polyline.hist-side { fill: none; }
+.hist-legend { list-style: none; padding: 0; margin: 0.5rem 0 0; font-size: 0.9rem; }
+.hist-swatch { display: inline-block; width: 1.5rem; height: 0.3rem; vertical-align: middle; }

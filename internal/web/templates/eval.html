@@ -1,0 +1,35 @@
+{{define "content"}}
+<h1>Eval: matcher accuracy on labelled pairs</h1>
+<p>Precision and recall per relationship type, computed by <code>equinox eval</code> over the human-confirmed labels in <code>testdata/golden/labels.yaml</code> (rules only; no LLM). The exit bar is precision ≥ {{.Target}} at <em>equivalent</em>: a false "same bet" is the worst failure, so precision counts more than recall. This page only reads the stored summary.</p>
+{{if .Missing}}
+<p><mark>No eval results yet.</mark> Labels are confirmed by a human (Tier 3); once <code>equinox eval</code> has run, its summary appears here.</p>
+{{else if .Broken}}
+<p><mark>{{.Broken}}</mark></p>
+{{else}}{{with .Summary}}
+<p>Produced <strong>{{$.Produced}}</strong>{{if .Command}} by <code>{{.Command}}</code>{{end}}{{if .RoundID}} on round <strong>{{.RoundID}}</strong>{{end}}: <strong>{{.Labels}}</strong> labelled pair{{if ne .Labels 1}}s{{end}}{{if .LabelsFile}} from <code>{{.LabelsFile}}</code>{{end}}{{if .Method}}, method <code>{{.Method}}</code>{{end}}.</p>
+{{end}}
+{{with .Equiv}}
+<p id="equivalent-precision">Precision at <em>equivalent</em>: <strong>{{.Precision}}</strong> {{if not .HasPrec}}(undefined: no equivalent predictions){{else if .MeetsTarget}}<span class="pass">meets the {{$.Target}} target</span>{{else}}<span class="fail">below the {{$.Target}} target</span>{{end}}.</p>
+{{end}}
+{{if .Rows}}
+<table class="eval">
+  <thead><tr><th>Type</th><th>Labelled</th><th>True positives</th><th>False positives</th><th>False negatives</th><th>Precision</th><th>Recall</th></tr></thead>
+  <tbody>
+  {{range .Rows}}
+    <tr>
+      <td class="type-{{.Type}}">{{.Type}}</td>
+      <td>{{.Support}}</td><td>{{.TP}}</td><td>{{.FP}}</td><td>{{.FN}}</td>
+      <td>{{.Precision}}</td><td>{{.Recall}}</td>
+    </tr>
+  {{end}}
+  </tbody>
+</table>
+{{else}}
+<p>The summary has no per-type metrics.</p>
+{{end}}
+{{if .Notes}}
+<h2>Notes from the run</h2>
+<ul>{{range .Notes}}<li>{{.}}</li>{{end}}</ul>
+{{end}}
+{{end}}
+{{end}}
