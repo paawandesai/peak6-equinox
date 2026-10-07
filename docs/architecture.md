@@ -63,7 +63,7 @@ Each step of the flow:
 1. A **fetch round** starts on a Scheduler call, an admin call, or `equinox ingest`.
 2. The collector calls both adapters concurrently. Each adapter returns raw responses plus canonical `Instrument`s and `Quote`s stamped with `fetched_at` (and `venue_ts` when present).
 3. Raw bodies are gzipped into `raw_responses`. Instruments are upserted, and quotes are inserted per round.
-4. After ingest, `match` runs over the round's instruments: normalise, block, veto, classify, diff, then score basis risk. The resulting `relationships` are stored for the round, and each verdict goes to the decision log.
+4. After ingest, `match` runs over the round's instruments: normalise, block, veto, classify, diff, then score basis risk. The resulting `relationships` are stored for the round, and each verdict goes to the decision log. The rules behind each step are written up in [equivalence.md](equivalence.md).
 5. The admin may run the LLM verifier. It can only downgrade a relationship, and it records its verdict.
 6. `POST /route` takes an `Order` for a target instrument and finds its `equivalent`, `equivalent_given_facts` and `complement` partners in the current (or pinned) round. The router is pure: inputs in, `Decision` out. The decision is logged.
 

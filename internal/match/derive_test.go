@@ -157,9 +157,14 @@ func member(p proposition, x decimal.Decimal) bool {
 // with point-by-point membership on a grid finer than the thresholds, and
 // the relations have the shapes a reader expects (symmetry of complement
 // and equality, antisymmetry of strict containment).
+//
+// The grid must extend beyond every bound genProp can draw (lo in [-3, 3],
+// hi up to lo+3 = 6), with margin on both sides, so that the unbounded tail
+// of a negated interval is sampled too. A grid that stopped at 4 made the
+// oracle call "not (between 1 and 4)" a subset of "lt 2" (CI, M2-08).
 func TestPropositionAlgebraAgreesWithMembership(t *testing.T) {
 	var points []decimal.Decimal
-	for i := -40; i <= 40; i++ {
+	for i := -100; i <= 100; i++ {
 		points = append(points, decimal.NewFromInt(int64(i)).Div(decimal.NewFromInt(10)))
 	}
 	rapid.Check(t, func(t *rapid.T) {
