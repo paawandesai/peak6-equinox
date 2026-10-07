@@ -1,0 +1,20 @@
+# Facts for the matcher fixtures (internal/match/pairs_test.go). Pinned to
+# the values the pairs in fed_pairs.yaml were written against, so the tests
+# stay deterministic when config/facts.yaml is updated after a Fed decision.
+# Same shape as config/facts.yaml.
+facts:
+  - id: fed_upper_bound
+    value: "4.00"
+    source: https://www.federalreserve.gov/newsevents/pressreleases/monetary20260916a.htm
+    as_of: 2026-09-16
+    notes: Percent. Target range 3.75-4.00 % after the September 16, 2026 decision.
+  - id: fed_next_meeting
+    value: "2026-10-28"
+    source: https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+    as_of: 2026-10-06
+    notes: Decision day of the October 27-28, 2026 meeting.
+  - id: fed_rate_step
+    value: "0.25"
+    source: https://www.federalreserve.gov/monetarypolicy/openmarket.htm
+    as_of: 2026-10-06
+    notes: Percentage points.

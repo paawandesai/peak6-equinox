@@ -15,12 +15,7 @@ import (
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/facts"
-	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/match"
 )
-
-// Set must satisfy the matcher's Facts interface (architecture.md: Compare
-// takes a facts.Set).
-var _ match.Facts = facts.Set{}
 
 // now is the clock every test judges as_of against: 2026-10-06 12:00 UTC.
 var now = time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC)

@@ -1,0 +1,297 @@
+# Fed pairs for the M2-04 matcher (internal/match/pairs_test.go), compared
+# with the facts in testdata/match/facts.yaml (fed_upper_bound=4.00 before the
+# 2026-10-28 meeting, fed_rate_step=0.25).
+#
+# Kalshi text is recorded KXFED market text (testdata/fixtures/kalshi,
+# 2026-10-06); Polymarket text is the recorded "Fed Decision in October?" and
+# "Fed Decision in December?" event text (testdata/fixtures/polymarket). Text
+# marked synthetic is written in one venue's style to exercise a rule.
+#
+# Fields: expect (required type), vetoes (codes that must be present), facts
+# (fact ids that must appear in facts_used, in order), explain (substrings the
+# explanation must contain), blocked (the blocking field for unrelated pairs).
+
+texts:
+  kx_oct_rules: &kx_oct_rules >-
+    If the upper bound of the target federal funds rate published on the Federal Reserve's official
+    website is greater than 4.00% following the Federal Reserve's Oct 28, 2026 meeting, then the market
+    resolves to Yes.
+
+
+    This market will expire the first 2:05 PM ET following the release of a Federal Reserve statement
+    for their Oct 28, 2026 meeting or one week following the last day of that meeting.
+  kx_oct_425_rules: &kx_oct_425_rules >-
+    If the upper bound of the target federal funds rate published on the Federal Reserve's official
+    website is greater than 4.25% following the Federal Reserve's Oct 28, 2026 meeting, then the market
+    resolves to Yes.
+
+
+    This market will expire the first 2:05 PM ET following the release of a Federal Reserve statement
+    for their Oct 28, 2026 meeting or one week following the last day of that meeting.
+  kx_oct_350_rules: &kx_oct_350_rules >-
+    If the upper bound of the target federal funds rate published on the Federal Reserve's official
+    website is greater than 3.50% following the Federal Reserve's Oct 28, 2026 meeting, then the market
+    resolves to Yes.
+
+
+    This market will expire the first 2:05 PM ET following the release of a Federal Reserve statement
+    for their Oct 28, 2026 meeting or one week following the last day of that meeting.
+  kx_dec_rules: &kx_dec_rules >-
+    If the upper bound of the target federal funds rate published on the Federal Reserve's official
+    website is greater than 4.00% following the Federal Reserve's Dec 9, 2026 meeting, then the market
+    resolves to Yes.
+
+
+    This market will expire the first 2:05 PM ET following the release of a Federal Reserve statement
+    for their Dec 9, 2026 meeting or one week following the last day of that meeting.
+  poly_oct_rules: &poly_oct_rules >-
+    The FED interest rates are defined in this market by the upper bound of the target federal funds
+    range. The decisions on the target federal funds range are made by the Federal Open Market Committee
+    (FOMC) meetings.
+
+
+    This market will resolve to the amount of basis points the upper bound of the target federal funds
+    rate is changed by versus the level it was prior to the Federal Reserve's October 2026 meeting.
+
+
+    If the target federal funds rate is changed to a level not expressed in the displayed options, the
+    change will be rounded up to the nearest 25 and will resolve to the relevant bracket. (e.g. if
+    there's a cut/increase of 12.5 bps it will be considered to be 25 bps)
+
+
+    The resolution source for this market is the FOMC’s statement after its meeting scheduled for
+    October 27-28, 2026 according to the official calendar:
+    https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm.
+
+
+    The level and change of the target federal funds rate is also published at the official website of
+    the Federal Reserve at https://www.federalreserve.gov/monetarypolicy/openmarket.htm.
+
+
+    This market may resolve as soon as the FOMC’s statement for their October meeting with relevant
+    data is issued. If no statement is released by the end date of the next scheduled meeting, this
+    market will resolve to the "No change" bracket.
+  poly_dec_rules: &poly_dec_rules >-
+    The FED interest rates are defined in this market by the upper bound of the target federal funds
+    range. The decisions on the target federal funds range are made by the Federal Open Market Committee
+    (FOMC) meetings.
+
+
+    This market will resolve to the amount of basis points the upper bound of the target federal funds
+    rate is changed by versus the level it was prior to the Federal Reserve's December 2026 meeting.
+
+
+    If the target federal funds rate is changed to a level not expressed in the displayed options, the
+    change will be rounded up to the nearest 25 and will resolve to the relevant bracket. (e.g. if
+    there's a cut/increase of 12.5 bps it will be considered to be 25 bps)
+
+
+    The resolution source for this market is the FOMC’s statement after its meeting scheduled for
+    December 8-9, 2026 according to the official calendar:
+    https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm.
+
+
+    This market may resolve as soon as the FOMC’s statement for their December meeting with relevant
+    data is issued. If no statement is released by the end date of the next scheduled meeting, this
+    market will resolve to the "No change" bracket.
+  # synthetic: the October decision text resolving on CME FedWatch instead of the FOMC statement
+  poly_oct_fedwatch_rules: &poly_oct_fedwatch_rules >-
+    This market will resolve to the amount of basis points the upper bound of the target federal funds
+    rate is changed by versus the level it was prior to the Federal Reserve's October 2026 meeting,
+    scheduled for October 27-28, 2026.
+
+
+    The resolution source for this market is the CME FedWatch tool.
+
+base:
+  kx_oct_400: &kx_oct_400
+    venue: kalshi
+    category: fed
+    market_id: KXFED-26OCT-T4.00
+    close: 2026-10-28T17:55:00Z
+    title: "Will the upper bound of the federal funds rate be above 4.00% following the Fed's Oct 28, 2026 meeting?"
+    rules: *kx_oct_rules
+  kx_oct_425: &kx_oct_425
+    venue: kalshi
+    category: fed
+    market_id: KXFED-26OCT-T4.25
+    close: 2026-10-28T17:55:00Z
+    title: "Will the upper bound of the federal funds rate be above 4.25% following the Fed's Oct 28, 2026 meeting?"
+    rules: *kx_oct_425_rules
+  kx_oct_350: &kx_oct_350
+    venue: kalshi
+    category: fed
+    market_id: KXFED-26OCT-T3.50
+    close: 2026-10-28T17:55:00Z
+    title: "Will the upper bound of the federal funds rate be above 3.50% following the Fed's Oct 28, 2026 meeting?"
+    rules: *kx_oct_350_rules
+  poly_oct: &poly_oct
+    venue: polymarket
+    category: fed
+    market_id: "2589813"
+    close: 2026-10-29T03:59:00Z
+    title: "Will the Fed increase interest rates by 25 bps after the October 2026 meeting?"
+    rules: *poly_oct_rules
+
+pairs:
+  # ---- the demo pair: facts close the level-vs-change gap ------------------
+  - id: FACT-01
+    name: Kalshi "above 4.25%" vs Polymarket "increase 50+ bps" given fed_upper_bound=4.00 on the 0.25 grid
+    expect: equivalent_given_facts
+    vetoes: [metric_mismatch, comparator_mismatch, threshold_mismatch]
+    facts: [fed_upper_bound, fed_next_meeting, fed_rate_step]
+    explain: ["gte 4.5", "2026-10-28", "the same set"]
+    a: *kx_oct_425
+    b:
+      <<: *poly_oct
+      market_id: "2589814"
+      title: "Will the Fed increase interest rates by 50+ bps after the October 2026 meeting?"
+  # ---- a plain equivalent in fed: no facts needed --------------------------
+  - id: EQ-F1
+    name: Kalshi ladder vs synthetic Polymarket level market on the same meeting (within 24 h, deadline defaulted)
+    expect: equivalent
+    # 0.99 - 0.09 (9 h 54 min gap) - 0.04 (edge rules unknown) - 0.05 (Polymarket deadline defaulted)
+    min_confidence: "0.81"
+    a: *kx_oct_400
+    b:
+      venue: polymarket
+      category: fed
+      market_id: "9001"
+      close: 2026-10-29T03:59:00Z
+      title: "Will the upper bound of the federal funds rate be above 4.00% after the October 2026 meeting?"
+      rules: >-
+        This market will resolve to "Yes" if the upper bound of the target federal funds rate is greater
+        than 4.00% following the Federal Reserve's October 27-28, 2026 meeting. The resolution source
+        for this market is the FOMC's statement after that meeting.
+  # ---- implies through the facts -------------------------------------------
+  - id: IMP-F1
+    name: Polymarket "increase 25 bps" (level eq 4.25) forces Kalshi "above 4.00"
+    expect: implies
+    vetoes: [metric_mismatch, comparator_mismatch, threshold_mismatch]
+    facts: [fed_upper_bound, fed_next_meeting]
+    explain: ["YES on polymarket:2589813 forces YES on kalshi:KXFED-26OCT-T4.00", "eq 4.25"]
+    a: *kx_oct_400
+    b: *poly_oct
+  - id: IMP-F2
+    name: Polymarket "decrease 25 bps" (level eq 3.75) forces Kalshi "above 3.50"
+    expect: implies
+    facts: [fed_upper_bound, fed_next_meeting]
+    explain: ["eq 3.75", "forces YES on kalshi:KXFED-26OCT-T3.50"]
+    a: *kx_oct_350
+    b:
+      <<: *poly_oct
+      market_id: "2589811"
+      title: "Will the Fed decrease interest rates by 25 bps after the October 2026 meeting?"
+  - id: IMP-F3
+    name: Polymarket "no change" (level eq 4.00) forces Kalshi "above 3.50"
+    expect: implies
+    facts: [fed_upper_bound, fed_next_meeting]
+    explain: ["eq 4", "forces YES on kalshi:KXFED-26OCT-T3.50"]
+    a: *kx_oct_350
+    b:
+      <<: *poly_oct
+      market_id: "2589812"
+      title: "Will there be no change in Fed interest rates after the October 2026 meeting?"
+  # ---- complement through the facts ----------------------------------------
+  - id: CMP-F1
+    name: Polymarket "decrease 50+ bps" (level lte 3.50) is exactly NO on Kalshi "above 3.50"
+    expect: complement
+    facts: [fed_upper_bound, fed_next_meeting]
+    explain: ["complement", "lte 3.5", "pays exactly when NO on"]
+    a: *kx_oct_350
+    b:
+      <<: *poly_oct
+      market_id: "2589810"
+      title: "Will the Fed decrease interest rates by 50+ bps after the October 2026 meeting?"
+  # ---- the veto suite --------------------------------------------------------
+  - id: V-F1
+    name: December bucket vs December ladder, the near miss (the change depends on October's decision)
+    expect: related
+    vetoes: [metric_mismatch]
+    facts: [fed_upper_bound, fed_next_meeting]
+    explain: ["depends on the prior decision", "2026-12-09"]
+    a:
+      venue: kalshi
+      category: fed
+      market_id: KXFED-26DEC-T4.00
+      close: 2026-12-09T18:55:00Z
+      title: "Will the upper bound of the federal funds rate be above 4.00% following the Fed's Dec 9, 2026 meeting?"
+      rules: *kx_dec_rules
+    b:
+      venue: polymarket
+      category: fed
+      market_id: "3215009"
+      close: 2026-12-09T23:59:00Z
+      title: "Will the Fed increase interest rates by 50+ bps after the December 2026 meeting?"
+      rules: *poly_dec_rules
+  - id: V-F2
+    name: December bucket vs October ladder (outside the blocking window)
+    expect: unrelated
+    blocked: deadline
+    a: *kx_oct_400
+    b:
+      venue: polymarket
+      category: fed
+      market_id: "3215008"
+      close: 2026-12-09T23:59:00Z
+      title: "Will the Fed increase interest rates by 25 bps after the December 2026 meeting?"
+      rules: *poly_dec_rules
+  - id: V-F3
+    name: "'increase 25 bps' is not 'above 4.25' (eq 4.25 vs gte 4.50: disjoint)"
+    expect: related
+    vetoes: [metric_mismatch]
+    facts: [fed_upper_bound, fed_next_meeting, fed_rate_step]
+    explain: ["neither coincide"]
+    a: *kx_oct_425
+    b: *poly_oct
+  - id: V-F4
+    name: source mismatch (FedWatch vs FOMC statement) blocks the facts rule
+    expect: related
+    vetoes: [metric_mismatch, source_mismatch]
+    a: *kx_oct_400
+    b:
+      <<: *poly_oct
+      market_id: "9002"
+      title: "Will the Fed increase interest rates by 50+ bps after the October 2026 meeting?"
+      rules: *poly_oct_fedwatch_rules
+  - id: V-F5
+    name: polarity flip with the facts (synthetic "not increase by 50+ bps") is the complement, never equivalent
+    expect: complement
+    vetoes: [metric_mismatch, polarity_mismatch]
+    facts: [fed_upper_bound, fed_next_meeting, fed_rate_step]
+    a: *kx_oct_425
+    b:
+      <<: *poly_oct
+      market_id: "9003"
+      title: "Will the Fed not increase interest rates by 50+ bps after the October 2026 meeting?"
+  - id: V-F6
+    name: "'decrease 25 bps' vs 'above 4.00' (eq 3.75 vs gte 4.25: disjoint, no containment)"
+    expect: related
+    facts: [fed_upper_bound, fed_next_meeting, fed_rate_step]
+    a: *kx_oct_400
+    b:
+      <<: *poly_oct
+      market_id: "2589811"
+      title: "Will the Fed decrease interest rates by 25 bps after the October 2026 meeting?"
+  - id: V-F7
+    name: two ladders one strike apart (above 4.00 forces above 3.50, never equivalent)
+    expect: implies
+    vetoes: [threshold_mismatch]
+    explain: ["YES on kalshi:KXFED-26OCT-T4.00 forces YES on kalshi:KXFED-26OCT-T3.50"]
+    a: *kx_oct_400
+    b: *kx_oct_350
+  - id: V-F8
+    name: cut-count market (unknown metric) vs ladder
+    expect: related
+    vetoes: [metric_unknown]
+    a: *kx_oct_400
+    b:
+      venue: polymarket
+      category: fed
+      market_id: "9004"
+      close: 2026-10-29T03:59:00Z
+      title: "Will 1 Fed rate cut happen by the October 2026 meeting?"
+      rules: >-
+        This market will resolve according to the exact amount of cuts of 25 basis points decided at
+        the Federal Reserve's October 27-28, 2026 meeting. The resolution source for this market is the
+        FOMC's statement after that meeting.
