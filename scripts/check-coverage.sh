@@ -6,7 +6,7 @@ set -euo pipefail
 threshold="${COVERAGE_THRESHOLD:-80.0}"
 profile="${COVERAGE_PROFILE:-coverage.out}"
 
-go test -coverpkg=./internal/... -coverprofile="$profile" ./...
+go test -timeout 20m -coverpkg=./internal/... -coverprofile="$profile" ./...
 
 # With -coverpkg the same block can appear once per test binary; a block is
 # covered if any binary hit it.

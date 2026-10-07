@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -33,8 +34,33 @@ func dbEnv(t *testing.T) {
 
 var repoFixtures = filepath.Join("..", "..", "testdata", "fixtures")
 
+// slimUniverse points UNIVERSE_DIR at a universe of only the Bitcoin and Fed
+// series. The seed test proves seed + normalise end to end on recorded
+// fixtures (hundreds of markets per venue); the Ethereum and politics pages
+// add ~1,000 more markets whose regex normalisation, about 6x slower under
+// -race, pushed this package past go test's default 10 m timeout on a busy
+// CI runner. Fed stays because the soonest-closing Bitcoin markets have no
+// recorded order books: without fed books in the round-robin every Kalshi
+// book 404s and the venue is marked failed. The dropped fixtures stay in the
+// repo for the normaliser and e2e tests.
+func slimUniverse(t *testing.T) {
+	t.Helper()
+	dir := t.TempDir()
+	files := map[string]string{
+		"kalshi.yaml":     "categories:\n  crypto:\n    series: [KXBTCD]\n  fed:\n    series: [KXFED]\n",
+		"polymarket.yaml": "categories:\n  crypto:\n    tag_slugs: [bitcoin]\n  fed:\n    tag_slugs: [fed-rates]\n",
+	}
+	for name, body := range files {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv("UNIVERSE_DIR", dir)
+}
+
 func TestSeedLoadsFixtureRound(t *testing.T) {
 	dbEnv(t)
+	slimUniverse(t)
 	tdb.Reset(t)
 	var out, errOut bytes.Buffer
 	// -max-quotes keeps the Kalshi adapter's 100 ms pacing to a few seconds.

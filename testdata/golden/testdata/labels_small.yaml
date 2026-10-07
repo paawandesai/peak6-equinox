@@ -1,0 +1,44 @@
+# Fixture labels for internal/eval tests. Synthetic ids; NOT human-confirmed
+# data (see testdata/golden/labels.yaml for the real file).
+version: 1
+round_id: 7
+labels:
+  - a_id: kalshi:FX-A1
+    b_id: polymarket:1001
+    label: equivalent
+    confirmed_by: fixture
+    confirmed_on: 2026-10-07
+  - a_id: kalshi:FX-A2
+    b_id: polymarket:1002
+    label: equivalent
+    confirmed_by: fixture
+    confirmed_on: 2026-10-07
+    note: the matcher says related here (a recall miss)
+  - a_id: kalshi:FX-A3
+    b_id: polymarket:1003
+    label: related
+    confirmed_by: fixture
+    confirmed_on: 2026-10-07
+    note: the matcher says equivalent here (a precision miss)
+  - a_id: kalshi:FX-A4
+    b_id: polymarket:1004
+    label: complement
+    confirmed_by: fixture
+    confirmed_on: 2026-10-07
+  # written in the other venue order on purpose
+  - a_id: polymarket:1005
+    b_id: kalshi:FX-A5
+    label: implies
+    confirmed_by: fixture
+    confirmed_on: 2026-10-07
+  - a_id: kalshi:FX-A6
+    b_id: polymarket:1006
+    label: unrelated
+    confirmed_by: fixture
+    confirmed_on: 2026-10-07
+  # not in candidates_small.yaml: no prediction available
+  - a_id: kalshi:FX-A7
+    b_id: polymarket:1007
+    label: equivalent_given_facts
+    confirmed_by: fixture
+    confirmed_on: 2026-10-07

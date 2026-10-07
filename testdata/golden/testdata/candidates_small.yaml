@@ -1,0 +1,78 @@
+# Fixture candidates for internal/eval tests (pairs with labels_small.yaml).
+version: 1
+round_id: 7
+drafted_at: 2026-10-07T12:00:00Z
+method: rules
+candidates:
+  - a_id: kalshi:FX-A1
+    a_title: A1
+    b_id: polymarket:1001
+    b_title: P1
+    category: crypto
+    suggested: equivalent
+    confidence: "0.98"
+    why: fixture
+    vetoes: []
+    explanation: fixture
+  - a_id: kalshi:FX-A2
+    a_title: A2
+    b_id: polymarket:1002
+    b_title: P2
+    category: crypto
+    suggested: related
+    confidence: "0.60"
+    why: fixture
+    vetoes: ["threshold_mismatch threshold: 1 vs 2"]
+    explanation: fixture
+  - a_id: kalshi:FX-A3
+    a_title: A3
+    b_id: polymarket:1003
+    b_title: P3
+    category: crypto
+    suggested: equivalent
+    confidence: "0.97"
+    why: fixture
+    vetoes: []
+    explanation: fixture
+  - a_id: kalshi:FX-A4
+    a_title: A4
+    b_id: polymarket:1004
+    b_title: P4
+    category: fed
+    suggested: complement
+    confidence: "0.97"
+    why: fixture
+    vetoes: []
+    explanation: fixture
+  - a_id: kalshi:FX-A5
+    a_title: A5
+    b_id: polymarket:1005
+    b_title: P5
+    category: fed
+    suggested: implies
+    confidence: "0.93"
+    why: fixture
+    vetoes: []
+    facts: [fed_upper_bound]
+    explanation: fixture
+  - a_id: kalshi:FX-A6
+    a_title: A6
+    b_id: polymarket:1006
+    b_title: P6
+    category: crypto
+    suggested: unrelated
+    confidence: "0.99"
+    why: fixture
+    vetoes: []
+    explanation: fixture
+  # drafted but not labelled: ignored by eval
+  - a_id: kalshi:FX-A8
+    a_title: A8
+    b_id: polymarket:1008
+    b_title: P8
+    category: crypto
+    suggested: related
+    confidence: "0.50"
+    why: fixture
+    vetoes: []
+    explanation: fixture

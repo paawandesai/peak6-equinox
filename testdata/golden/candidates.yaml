@@ -1,0 +1,580 @@
+# Golden-set candidates drafted by `equinox golden draft` from round 2 (rules only).
+# MACHINE OUTPUT: `suggested` is the matcher's verdict, not a label. Confirm each
+# pair's type in labels.yaml (the human-owned file; see its header). Re-running
+# the draft overwrites this file and never touches labels.yaml.
+version: 1
+round_id: 2
+drafted_at: 2026-10-07T05:08:13Z
+method: rules
+candidates:
+    - a_id: kalshi:KXFED-26OCT-T4.25
+      a_title: Will the upper bound of the federal funds rate be above 4.25% following the Fed's Oct 28, 2026 meeting? — Above 4.25%
+      b_id: polymarket:18246296022868501258060085368606280205967114341141276439803424448463050819498
+      b_title: Will the Fed increase interest rates by 50+ bps after the October 2026 meeting?
+      category: fed
+      suggested: equivalent_given_facts
+      confidence: "0.93"
+      why: 'rules say equivalent given a fact: check the fact and the arithmetic'
+      vetoes:
+        - 'metric_mismatch metric: rate_upper_bound vs rate_change'
+        - 'comparator_mismatch comparator: gt vs gte'
+        - 'threshold_mismatch threshold: 4.25 vs 0.5'
+      facts:
+        - fed_upper_bound
+        - fed_next_meeting
+        - fed_rate_step
+      explanation: 'equivalent_given_facts: the same payout once the facts are applied. Shared: subject fed_funds_rate, source federalreserve_gov, unit percent; deadlines 2026-10-28T18:05:00Z and 2026-10-29T03:59:00Z are 9h54m0s apart. Differs on metric (rate_upper_bound vs rate_change), comparator (gt vs gte), threshold (4.25 vs 0.5). Reasoning: given fed_upper_bound=4.00 (level before the 2026-10-28 meeting, fed_next_meeting), polymarket:18246296022868501258060085368606280205967114341141276439803424448463050819498 gte 0.5 is the level gte 4.5; on the 0.25 grid (fed_rate_step) gt 4.25 is gte 4.5 and gte 4.5 is gte 4.5: the same set. Facts used: fed_upper_bound=4.00 (as of 2026-09-16), fed_next_meeting=2026-10-28 (as of 2026-10-06), fed_rate_step=0.25 (as of 2026-10-06). Caveats: edge rules not compared; a deadline was taken from the close time.'
+    - a_id: kalshi:KXFED-26OCT-T3.50
+      a_title: Will the upper bound of the federal funds rate be above 3.50% following the Fed's Oct 28, 2026 meeting? — Above 3.50%
+      b_id: polymarket:17010377994663817312158123655937348199252960045746746128731746451645055725586
+      b_title: Will the Fed decrease interest rates by 50+ bps after the October 2026 meeting?
+      category: fed
+      suggested: complement
+      confidence: "0.91"
+      why: 'rules say complement: YES on A should pay exactly when NO on B pays'
+      vetoes:
+        - 'metric_mismatch metric: rate_upper_bound vs rate_change'
+        - 'comparator_mismatch comparator: gt vs lte'
+        - 'threshold_mismatch threshold: 3.5 vs -0.5'
+      facts:
+        - fed_upper_bound
+        - fed_next_meeting
+      explanation: 'complement: YES on kalshi:KXFED-26OCT-T3.50 pays exactly when NO on polymarket:17010377994663817312158123655937348199252960045746746128731746451645055725586 pays. Shared: subject fed_funds_rate, source federalreserve_gov, unit percent; deadlines 2026-10-28T18:05:00Z and 2026-10-29T03:59:00Z are 9h54m0s apart. Differs on metric (rate_upper_bound vs rate_change), comparator (gt vs lte), threshold (3.5 vs -0.5). Reasoning: given fed_upper_bound=4.00 (level before the 2026-10-28 meeting, fed_next_meeting), polymarket:17010377994663817312158123655937348199252960045746746128731746451645055725586 lte -0.5 is the level lte 3.5; YES on gt 3.5 is exactly NO on lte 3.5. Facts used: fed_upper_bound=4.00 (as of 2026-09-16), fed_next_meeting=2026-10-28 (as of 2026-10-06). Caveats: edge rules not compared; a deadline was taken from the close time.'
+    - a_id: kalshi:KXFED-26OCT-T2.75
+      a_title: Will the upper bound of the federal funds rate be above 2.75% following the Fed's Oct 28, 2026 meeting? — Above 2.75%
+      b_id: polymarket:111061902544814266207267295505639408607400625795891618462682726460921782993748
+      b_title: Will there be no change in Fed interest rates after the October 2026 meeting?
+      category: fed
+      suggested: implies
+      confidence: "0.87"
+      why: 'rules say implies: YES on one side should force YES on the other'
+      vetoes:
+        - 'metric_mismatch metric: rate_upper_bound vs rate_change'
+        - 'comparator_mismatch comparator: gt vs eq'
+        - 'threshold_mismatch threshold: 2.75 vs 0'
+      facts:
+        - fed_upper_bound
+        - fed_next_meeting
+      explanation: 'implies: YES on polymarket:111061902544814266207267295505639408607400625795891618462682726460921782993748 forces YES on kalshi:KXFED-26OCT-T2.75, not the reverse. Shared: subject fed_funds_rate, source federalreserve_gov, unit percent; deadlines 2026-10-28T18:05:00Z and 2026-10-29T03:59:00Z are 9h54m0s apart. Differs on metric (rate_upper_bound vs rate_change), comparator (gt vs eq), threshold (2.75 vs 0). Reasoning: given fed_upper_bound=4.00 (level before the 2026-10-28 meeting, fed_next_meeting), polymarket:111061902544814266207267295505639408607400625795891618462682726460921782993748 eq 0 is the level eq 4; eq 4 forces gt 2.75. Facts used: fed_upper_bound=4.00 (as of 2026-09-16), fed_next_meeting=2026-10-28 (as of 2026-10-06). Caveats: edge rules not compared; a deadline was taken from the close time.'
+    - a_id: kalshi:KXFED-27JAN-T0.00
+      a_title: Will the upper bound of the federal funds rate be above 0.00% following the Fed's Jan 27, 2027 meeting? — Above 0.00%
+      b_id: polymarket:63563009510989471204377539732457086916124654411092982704760023438039220215330
+      b_title: Will there be no change in Fed interest rates after the January 2027 meeting?
+      category: fed
+      suggested: related
+      confidence: "0.8"
+      why: 'related near miss: thresholds within 0.1 % or a fact was consulted; confirm it is not equivalent'
+      vetoes:
+        - 'metric_mismatch metric: rate_upper_bound vs rate_change'
+        - 'comparator_mismatch comparator: gt vs eq'
+      facts:
+        - fed_upper_bound
+        - fed_next_meeting
+      explanation: 'related: same subject fed_funds_rate with deadlines 9h54m0s apart (within 168h0m0s), but vetoed on metric (rate_upper_bound vs rate_change), comparator (gt vs eq). Facts: fact fed_upper_bound=4.00 is the level before the 2026-10-28 meeting (fed_next_meeting), but kalshi:KXFED-27JAN-T0.00 resolves on 2027-01-27: a later meeting''s change depends on the prior decision, so the fact does not apply.'
+    - a_id: kalshi:KXBTCD-26OCT0618-T76699.99
+      a_title: Bitcoin price on Oct 6, 2026? — $76,700 or above
+      b_id: polymarket:100185403350267155386341199712915055705179878891606575463769617454294511388358
+      b_title: Will the price of Bitcoin be above $82,000 on October 10?
+      category: crypto
+      suggested: related
+      confidence: "0.8"
+      why: 'related with the fewest vetoes: a hard negative'
+      vetoes:
+        - 'threshold_mismatch threshold: 76699.99 vs 82000'
+        - 'deadline_gap deadline: 2026-10-06T22:00:00Z vs 2026-10-10T16:00:00Z: 90h0m0s apart, not within 24h0m0s'
+        - 'source_mismatch resolution_source: cf_benchmarks_brti vs binance_btc_usdt'
+      explanation: 'related: same subject BTC with deadlines 90h0m0s apart (within 168h0m0s), but vetoed on threshold (76699.99 vs 82000), deadline (2026-10-06T22:00:00Z vs 2026-10-10T16:00:00Z: 90h0m0s apart, not within 24h0m0s), resolution_source (cf_benchmarks_brti vs binance_btc_usdt).'
+    - a_id: kalshi:KXFED-26DEC-T2.75
+      a_title: Will the upper bound of the federal funds rate be above 2.75% following the Fed's Dec 9, 2026 meeting? — Above 2.75%
+      b_id: polymarket:10021099765479877880206130084102113471770375449510519368096296649508325006675
+      b_title: Will the upper bound of the target federal funds rate be 2.75% at the end of 2026?
+      category: fed
+      suggested: unrelated
+      confidence: "0.95"
+      why: 'unrelated with the most matching terms: a hard negative'
+      vetoes:
+        - 'comparator_mismatch comparator: gt vs eq'
+        - 'deadline_gap deadline: 2026-12-09T19:05:00Z vs 2027-01-01T04:59:00Z: 537h54m0s apart, not within 24h0m0s'
+      explanation: 'unrelated: blocked on deadline (deadlines 537h54m0s apart, more than 168h0m0s).'
+    - a_id: kalshi:KXFED-26OCT-T3.00
+      a_title: Will the upper bound of the federal funds rate be above 3.00% following the Fed's Oct 28, 2026 meeting? — Above 3.00%
+      b_id: polymarket:33268510350568915228897273528353467773422190590579607471427765079749830445947
+      b_title: Will the Fed decrease interest rates by 25 bps after the October 2026 meeting?
+      category: fed
+      suggested: implies
+      confidence: "0.87"
+      why: 'rules say implies: YES on one side should force YES on the other'
+      vetoes:
+        - 'metric_mismatch metric: rate_upper_bound vs rate_change'
+        - 'comparator_mismatch comparator: gt vs eq'
+        - 'threshold_mismatch threshold: 3 vs -0.25'
+      facts:
+        - fed_upper_bound
+        - fed_next_meeting
+      explanation: 'implies: YES on polymarket:33268510350568915228897273528353467773422190590579607471427765079749830445947 forces YES on kalshi:KXFED-26OCT-T3.00, not the reverse. Shared: subject fed_funds_rate, source federalreserve_gov, unit percent; deadlines 2026-10-28T18:05:00Z and 2026-10-29T03:59:00Z are 9h54m0s apart. Differs on metric (rate_upper_bound vs rate_change), comparator (gt vs eq), threshold (3 vs -0.25). Reasoning: given fed_upper_bound=4.00 (level before the 2026-10-28 meeting, fed_next_meeting), polymarket:33268510350568915228897273528353467773422190590579607471427765079749830445947 eq -0.25 is the level eq 3.75; eq 3.75 forces gt 3. Facts used: fed_upper_bound=4.00 (as of 2026-09-16), fed_next_meeting=2026-10-28 (as of 2026-10-06). Caveats: edge rules not compared; a deadline was taken from the close time.'
+    - a_id: kalshi:KXFED-27JAN-T0.25
+      a_title: Will the upper bound of the federal funds rate be above 0.25% following the Fed's Jan 27, 2027 meeting? — Above 0.25%
+      b_id: polymarket:58421987972100586826330616250690474504359298033602990223828098109695719571344
+      b_title: Will the Fed increase interest rates by 25 bps after the January 2027 meeting?
+      category: fed
+      suggested: related
+      confidence: "0.8"
+      why: 'related near miss: thresholds within 0.1 % or a fact was consulted; confirm it is not equivalent'
+      vetoes:
+        - 'metric_mismatch metric: rate_upper_bound vs rate_change'
+        - 'comparator_mismatch comparator: gt vs eq'
+      facts:
+        - fed_upper_bound
+        - fed_next_meeting
+      explanation: 'related: same subject fed_funds_rate with deadlines 9h54m0s apart (within 168h0m0s), but vetoed on metric (rate_upper_bound vs rate_change), comparator (gt vs eq). Facts: fact fed_upper_bound=4.00 is the level before the 2026-10-28 meeting (fed_next_meeting), but kalshi:KXFED-27JAN-T0.25 resolves on 2027-01-27: a later meeting''s change depends on the prior decision, so the fact does not apply.'
+    - a_id: kalshi:KXBTCD-26OCT0618-T76799.99
+      a_title: Bitcoin price on Oct 6, 2026? — $76,800 or above
+      b_id: polymarket:10028560817328439091287345817781494578924455844768660780135978081903535146808
+      b_title: Will the price of Bitcoin be above $86,000 on October 10?
+      category: crypto
+      suggested: related
+      confidence: "0.8"
+      why: 'related with the fewest vetoes: a hard negative'
+      vetoes:
+        - 'threshold_mismatch threshold: 76799.99 vs 86000'
+        - 'deadline_gap deadline: 2026-10-06T22:00:00Z vs 2026-10-10T16:00:00Z: 90h0m0s apart, not within 24h0m0s'
+        - 'source_mismatch resolution_source: cf_benchmarks_brti vs binance_btc_usdt'
+      explanation: 'related: same subject BTC with deadlines 90h0m0s apart (within 168h0m0s), but vetoed on threshold (76799.99 vs 86000), deadline (2026-10-06T22:00:00Z vs 2026-10-10T16:00:00Z: 90h0m0s apart, not within 24h0m0s), resolution_source (cf_benchmarks_brti vs binance_btc_usdt).'
+    - a_id: kalshi:KXFED-26DEC-T3.00
+      a_title: Will the upper bound of the federal funds rate be above 3.00% following the Fed's Dec 9, 2026 meeting? — Above 3.00%
+      b_id: polymarket:22030816399818413560467152256926658656366292051273475071688151582132139764281
+      b_title: Will the upper bound of the target federal funds rate be 3.0% at the end of 2026?
+      category: fed
+      suggested: unrelated
+      confidence: "0.95"
+      why: 'unrelated with the most matching terms: a hard negative'
+      vetoes:
+        - 'comparator_mismatch comparator: gt vs eq'
+        - 'deadline_gap deadline: 2026-12-09T19:05:00Z vs 2027-01-01T04:59:00Z: 537h54m0s apart, not within 24h0m0s'
+      explanation: 'unrelated: blocked on deadline (deadlines 537h54m0s apart, more than 168h0m0s).'
+    - a_id: kalshi:KXFED-26OCT-T3.25
+      a_title: Will the upper bound of the federal funds rate be above 3.25% following the Fed's Oct 28, 2026 meeting? — Above 3.25%
+      b_id: polymarket:55159722761418013044126414276680602270318000841690689684819994448621694923050
+      b_title: Will the Fed increase interest rates by 25 bps after the October 2026 meeting?
+      category: fed
+      suggested: implies
+      confidence: "0.87"
+      why: 'rules say implies: YES on one side should force YES on the other'
+      vetoes:
+        - 'metric_mismatch metric: rate_upper_bound vs rate_change'
+        - 'comparator_mismatch comparator: gt vs eq'
+        - 'threshold_mismatch threshold: 3.25 vs 0.25'
+      facts:
+        - fed_upper_bound
+        - fed_next_meeting
+      explanation: 'implies: YES on polymarket:55159722761418013044126414276680602270318000841690689684819994448621694923050 forces YES on kalshi:KXFED-26OCT-T3.25, not the reverse. Shared: subject fed_funds_rate, source federalreserve_gov, unit percent; deadlines 2026-10-28T18:05:00Z and 2026-10-29T03:59:00Z are 9h54m0s apart. Differs on metric (rate_upper_bound vs rate_change), comparator (gt vs eq), threshold (3.25 vs 0.25). Reasoning: given fed_upper_bound=4.00 (level before the 2026-10-28 meeting, fed_next_meeting), polymarket:55159722761418013044126414276680602270318000841690689684819994448621694923050 eq 0.25 is the level eq 4.25; eq 4.25 forces gt 3.25. Facts used: fed_upper_bound=4.00 (as of 2026-09-16), fed_next_meeting=2026-10-28 (as of 2026-10-06). Caveats: edge rules not compared; a deadline was taken from the close time.'
+    - a_id: kalshi:KXFED-27JAN-T0.50
+      a_title: Will the upper bound of the federal funds rate be above 0.50% following the Fed's Jan 27, 2027 meeting? — Above 0.50%
+      b_id: polymarket:42452047366442275682382090045397807109079755041679563479952649068752467853296
+      b_title: Will the Fed increase interest rates by 50+ bps after the January 2027 meeting?
+      category: fed
+      suggested: related
+      confidence: "0.8"
+      why: 'related near miss: thresholds within 0.1 % or a fact was consulted; confirm it is not equivalent'
+      vetoes:
+        - 'metric_mismatch metric: rate_upper_bound vs rate_change'
+        - 'comparator_mismatch comparator: gt vs gte'
+      facts:
+        - fed_upper_bound
+        - fed_next_meeting
+      explanation: 'related: same subject fed_funds_rate with deadlines 9h54m0s apart (within 168h0m0s), but vetoed on metric (rate_upper_bound vs rate_change), comparator (gt vs gte). Facts: fact fed_upper_bound=4.00 is the level before the 2026-10-28 meeting (fed_next_meeting), but kalshi:KXFED-27JAN-T0.50 resolves on 2027-01-27: a later meeting''s change depends on the prior decision, so the fact does not apply.'
+    - a_id: kalshi:KXBTCD-26OCT0618-T76899.99
+      a_title: Bitcoin price on Oct 6, 2026? — $76,900 or above
+      b_id: polymarket:102213575204902074760005916744838468334765332333994096763253127452371697884776
+      b_title: Will the price of Bitcoin be above $84,000 on October 12?
+      category: crypto
+      suggested: related
+      confidence: "0.8"
+      why: 'related with the fewest vetoes: a hard negative'
+      vetoes:
+        - 'threshold_mismatch threshold: 76899.99 vs 84000'
+        - 'deadline_gap deadline: 2026-10-06T22:00:00Z vs 2026-10-12T16:00:00Z: 138h0m0s apart, not within 24h0m0s'
+        - 'source_mismatch resolution_source: cf_benchmarks_brti vs binance_btc_usdt'
+      explanation: 'related: same subject BTC with deadlines 138h0m0s apart (within 168h0m0s), but vetoed on threshold (76899.99 vs 84000), deadline (2026-10-06T22:00:00Z vs 2026-10-12T16:00:00Z: 138h0m0s apart, not within 24h0m0s), resolution_source (cf_benchmarks_brti vs binance_btc_usdt).'
+    - a_id: kalshi:KXFED-26DEC-T3.25
+      a_title: Will the upper bound of the federal funds rate be above 3.25% following the Fed's Dec 9, 2026 meeting? — Above 3.25%
+      b_id: polymarket:16971068639386640502659657646781431904217162229211786665483266631137687560030
+      b_title: Will the Fed’s lower bound reach 3.25% or lower before 2027?
+      category: fed
+      suggested: unrelated
+      confidence: "0.95"
+      why: 'unrelated with the most matching terms: a hard negative'
+      vetoes:
+        - 'metric_unknown metric: rate_upper_bound vs unknown'
+        - 'comparator_mismatch comparator: gt vs lte'
+        - 'deadline_gap deadline: 2026-12-09T19:05:00Z vs 2026-12-31T17:59:00Z: 526h54m0s apart, not within 24h0m0s'
+      explanation: 'unrelated: blocked on deadline (deadlines 526h54m0s apart, more than 168h0m0s).'
+    - a_id: kalshi:KXFED-26OCT-T2.75
+      a_title: Will the upper bound of the federal funds rate be above 2.75% following the Fed's Oct 28, 2026 meeting? — Above 2.75%
+      b_id: polymarket:18246296022868501258060085368606280205967114341141276439803424448463050819498
+      b_title: Will the Fed increase interest rates by 50+ bps after the October 2026 meeting?
+      category: fed
+      suggested: implies
+      confidence: "0.87"
+      why: 'rules say implies: YES on one side should force YES on the other'
+      vetoes:
+        - 'metric_mismatch metric: rate_upper_bound vs rate_change'
+        - 'comparator_mismatch comparator: gt vs gte'
+        - 'threshold_mismatch threshold: 2.75 vs 0.5'
+      facts:
+        - fed_upper_bound
+        - fed_next_meeting
+      explanation: 'implies: YES on polymarket:18246296022868501258060085368606280205967114341141276439803424448463050819498 forces YES on kalshi:KXFED-26OCT-T2.75, not the reverse. Shared: subject fed_funds_rate, source federalreserve_gov, unit percent; deadlines 2026-10-28T18:05:00Z and 2026-10-29T03:59:00Z are 9h54m0s apart. Differs on metric (rate_upper_bound vs rate_change), comparator (gt vs gte), threshold (2.75 vs 0.5). Reasoning: given fed_upper_bound=4.00 (level before the 2026-10-28 meeting, fed_next_meeting), polymarket:18246296022868501258060085368606280205967114341141276439803424448463050819498 gte 0.5 is the level gte 4.5; gte 4.5 forces gt 2.75. Facts used: fed_upper_bound=4.00 (as of 2026-09-16), fed_next_meeting=2026-10-28 (as of 2026-10-06). Caveats: edge rules not compared; a deadline was taken from the close time.'
+    - a_id: kalshi:KXBTCD-26OCT0618-T77999.99
+      a_title: Bitcoin price on Oct 6, 2026? — $78,000 or above
+      b_id: polymarket:16598363009235347286916760788518519639479429965831389385438637439430901253751
+      b_title: Will the price of Bitcoin be above $78,000 on October 12?
+      category: crypto
+      suggested: related
+      confidence: "0.8"
+      why: 'related near miss: thresholds within 0.1 % or a fact was consulted; confirm it is not equivalent'
+      vetoes:
+        - 'threshold_mismatch threshold: 77999.99 vs 78000'
+        - 'deadline_gap deadline: 2026-10-06T22:00:00Z vs 2026-10-12T16:00:00Z: 138h0m0s apart, not within 24h0m0s'
+        - 'source_mismatch resolution_source: cf_benchmarks_brti vs binance_btc_usdt'
+      explanation: 'related: same subject BTC with deadlines 138h0m0s apart (within 168h0m0s), but vetoed on threshold (77999.99 vs 78000), deadline (2026-10-06T22:00:00Z vs 2026-10-12T16:00:00Z: 138h0m0s apart, not within 24h0m0s), resolution_source (cf_benchmarks_brti vs binance_btc_usdt).'
+    - a_id: kalshi:KXBTCD-26OCT0618-T76999.99
+      a_title: Bitcoin price on Oct 6, 2026? — $77,000 or above
+      b_id: polymarket:103859404789311093235506940881605202929661897822734537621299315222240048152974
+      b_title: Will the price of Bitcoin be above $94,000 on October 7?
+      category: crypto
+      suggested: related
+      confidence: "0.8"
+      why: 'related with the fewest vetoes: a hard negative'
+      vetoes:
+        - 'threshold_mismatch threshold: 76999.99 vs 94000'
+        - 'deadline_mismatch deadline: 2026-10-06T22:00:00Z vs 2026-10-07T16:00:00Z: 18h0m0s apart; crypto deadlines are the measurement instant and must be identical'
+        - 'source_mismatch resolution_source: cf_benchmarks_brti vs binance_btc_usdt'
+      explanation: 'related: same subject BTC with deadlines 18h0m0s apart (within 168h0m0s), but vetoed on threshold (76999.99 vs 94000), deadline (2026-10-06T22:00:00Z vs 2026-10-07T16:00:00Z: 18h0m0s apart; crypto deadlines are the measurement instant and must be identical), resolution_source (cf_benchmarks_brti vs binance_btc_usdt).'
+    - a_id: kalshi:KXFED-26DEC-T3.50
+      a_title: Will the upper bound of the federal funds rate be above 3.50% following the Fed's Dec 9, 2026 meeting? — Above 3.50%
+      b_id: polymarket:13469338817388460729834022714290521037522577154587934145079627411549531574027
+      b_title: Will the upper bound of the target federal funds rate be 3.5% at the end of 2027?
+      category: fed
+      suggested: unrelated
+      confidence: "0.95"
+      why: 'unrelated with the most matching terms: a hard negative'
+      vetoes:
+        - 'comparator_mismatch comparator: gt vs eq'
+        - 'deadline_gap deadline: 2026-12-09T19:05:00Z vs 2028-01-01T04:59:00Z: 9297h54m0s apart, not within 24h0m0s'
+      explanation: 'unrelated: blocked on deadline (deadlines 9297h54m0s apart, more than 168h0m0s).'
+    - a_id: kalshi:KXFED-26OCT-T2.75
+      a_title: Will the upper bound of the federal funds rate be above 2.75% following the Fed's Oct 28, 2026 meeting? — Above 2.75%
+      b_id: polymarket:33268510350568915228897273528353467773422190590579607471427765079749830445947
+      b_title: Will the Fed decrease interest rates by 25 bps after the October 2026 meeting?
+      category: fed
+      suggested: implies
+      confidence: "0.87"
+      why: 'rules say implies: YES on one side should force YES on the other'
+      vetoes:
+        - 'metric_mismatch metric: rate_upper_bound vs rate_change'
+        - 'comparator_mismatch comparator: gt vs eq'
+        - 'threshold_mismatch threshold: 2.75 vs -0.25'
+      facts:
+        - fed_upper_bound
+        - fed_next_meeting
+      explanation: 'implies: YES on polymarket:33268510350568915228897273528353467773422190590579607471427765079749830445947 forces YES on kalshi:KXFED-26OCT-T2.75, not the reverse. Shared: subject fed_funds_rate, source federalreserve_gov, unit percent; deadlines 2026-10-28T18:05:00Z and 2026-10-29T03:59:00Z are 9h54m0s apart. Differs on metric (rate_upper_bound vs rate_change), comparator (gt vs eq), threshold (2.75 vs -0.25). Reasoning: given fed_upper_bound=4.00 (level before the 2026-10-28 meeting, fed_next_meeting), polymarket:33268510350568915228897273528353467773422190590579607471427765079749830445947 eq -0.25 is the level eq 3.75; eq 3.75 forces gt 2.75. Facts used: fed_upper_bound=4.00 (as of 2026-09-16), fed_next_meeting=2026-10-28 (as of 2026-10-06). Caveats: edge rules not compared; a deadline was taken from the close time.'
+    - a_id: kalshi:KXBTCD-26OCT0618-T79999.99
+      a_title: Bitcoin price on Oct 6, 2026? — $80,000 or above
+      b_id: polymarket:22248712962079319450417067102036039452563816152881685719209990911110593172178
+      b_title: Will the price of Bitcoin be above $80,000 on October 10?
+      category: crypto
+      suggested: related
+      confidence: "0.8"
+      why: 'related near miss: thresholds within 0.1 % or a fact was consulted; confirm it is not equivalent'
+      vetoes:
+        - 'threshold_mismatch threshold: 79999.99 vs 80000'
+        - 'deadline_gap deadline: 2026-10-06T22:00:00Z vs 2026-10-10T16:00:00Z: 90h0m0s apart, not within 24h0m0s'
+        - 'source_mismatch resolution_source: cf_benchmarks_brti vs binance_btc_usdt'
+      explanation: 'related: same subject BTC with deadlines 90h0m0s apart (within 168h0m0s), but vetoed on threshold (79999.99 vs 80000), deadline (2026-10-06T22:00:00Z vs 2026-10-10T16:00:00Z: 90h0m0s apart, not within 24h0m0s), resolution_source (cf_benchmarks_brti vs binance_btc_usdt).'
+    - a_id: kalshi:KXBTCD-26OCT0618-T77099.99
+      a_title: Bitcoin price on Oct 6, 2026? — $77,100 or above
+      b_id: polymarket:105408180158893292490017390271613327537614788203882236057777017554863813982997
+      b_title: Will the price of Bitcoin be above $76,000 on October 10?
+      category: crypto
+      suggested: related
+      confidence: "0.8"
+      why: 'related with the fewest vetoes: a hard negative'
+      vetoes:
+        - 'threshold_mismatch threshold: 77099.99 vs 76000'
+        - 'deadline_gap deadline: 2026-10-06T22:00:00Z vs 2026-10-10T16:00:00Z: 90h0m0s apart, not within 24h0m0s'
+        - 'source_mismatch resolution_source: cf_benchmarks_brti vs binance_btc_usdt'
+      explanation: 'related: same subject BTC with deadlines 90h0m0s apart (within 168h0m0s), but vetoed on threshold (77099.99 vs 76000), deadline (2026-10-06T22:00:00Z vs 2026-10-10T16:00:00Z: 90h0m0s apart, not within 24h0m0s), resolution_source (cf_benchmarks_brti vs binance_btc_usdt).'
+    - a_id: kalshi:KXFED-26DEC-T3.75
+      a_title: Will the upper bound of the federal funds rate be above 3.75% following the Fed's Dec 9, 2026 meeting? — Above 3.75%
+      b_id: polymarket:61078851078420927336908319350034407566038974210410444154944749944889389332268
+      b_title: Will the upper bound of the target federal funds rate be 3.75% at the end of 2027?
+      category: fed
+      suggested: unrelated
+      confidence: "0.95"
+      why: 'unrelated with the most matching terms: a hard negative'
+      vetoes:
+        - 'comparator_mismatch comparator: gt vs eq'
+        - 'deadline_gap deadline: 2026-12-09T19:05:00Z vs 2028-01-01T04:59:00Z: 9297h54m0s apart, not within 24h0m0s'
+      explanation: 'unrelated: blocked on deadline (deadlines 9297h54m0s apart, more than 168h0m0s).'
+    - a_id: kalshi:KXFED-26OCT-T2.75
+      a_title: Will the upper bound of the federal funds rate be above 2.75% following the Fed's Oct 28, 2026 meeting? — Above 2.75%
+      b_id: polymarket:55159722761418013044126414276680602270318000841690689684819994448621694923050
+      b_title: Will the Fed increase interest rates by 25 bps after the October 2026 meeting?
+      category: fed
+      suggested: implies
+      confidence: "0.87"
+      why: 'rules say implies: YES on one side should force YES on the other'
+      vetoes:
+        - 'metric_mismatch metric: rate_upper_bound vs rate_change'
+        - 'comparator_mismatch comparator: gt vs eq'
+        - 'threshold_mismatch threshold: 2.75 vs 0.25'
+      facts:
+        - fed_upper_bound
+        - fed_next_meeting
+      explanation: 'implies: YES on polymarket:55159722761418013044126414276680602270318000841690689684819994448621694923050 forces YES on kalshi:KXFED-26OCT-T2.75, not the reverse. Shared: subject fed_funds_rate, source federalreserve_gov, unit percent; deadlines 2026-10-28T18:05:00Z and 2026-10-29T03:59:00Z are 9h54m0s apart. Differs on metric (rate_upper_bound vs rate_change), comparator (gt vs eq), threshold (2.75 vs 0.25). Reasoning: given fed_upper_bound=4.00 (level before the 2026-10-28 meeting, fed_next_meeting), polymarket:55159722761418013044126414276680602270318000841690689684819994448621694923050 eq 0.25 is the level eq 4.25; eq 4.25 forces gt 2.75. Facts used: fed_upper_bound=4.00 (as of 2026-09-16), fed_next_meeting=2026-10-28 (as of 2026-10-06). Caveats: edge rules not compared; a deadline was taken from the close time.'
+    - a_id: kalshi:KXBTCD-26OCT0618-T81999.99
+      a_title: Bitcoin price on Oct 6, 2026? — $82,000 or above
+      b_id: polymarket:58100326529466815661410944022020977939794449485588814468318733550215282047446
+      b_title: Will the price of Bitcoin be above $82,000 on October 12?
+      category: crypto
+      suggested: related
+      confidence: "0.8"
+      why: 'related near miss: thresholds within 0.1 % or a fact was consulted; confirm it is not equivalent'
+      vetoes:
+        - 'threshold_mismatch threshold: 81999.99 vs 82000'
+        - 'deadline_gap deadline: 2026-10-06T22:00:00Z vs 2026-10-12T16:00:00Z: 138h0m0s apart, not within 24h0m0s'
+        - 'source_mismatch resolution_source: cf_benchmarks_brti vs binance_btc_usdt'
+      explanation: 'related: same subject BTC with deadlines 138h0m0s apart (within 168h0m0s), but vetoed on threshold (81999.99 vs 82000), deadline (2026-10-06T22:00:00Z vs 2026-10-12T16:00:00Z: 138h0m0s apart, not within 24h0m0s), resolution_source (cf_benchmarks_brti vs binance_btc_usdt).'
+    - a_id: kalshi:KXFED-26OCT-T3.00
+      a_title: Will the upper bound of the federal funds rate be above 3.00% following the Fed's Oct 28, 2026 meeting? — Above 3.00%
+      b_id: polymarket:111061902544814266207267295505639408607400625795891618462682726460921782993748
+      b_title: Will there be no change in Fed interest rates after the October 2026 meeting?
+      category: fed
+      suggested: implies
+      confidence: "0.87"
+      why: 'rules say implies: YES on one side should force YES on the other'
+      vetoes:
+        - 'metric_mismatch metric: rate_upper_bound vs rate_change'
+        - 'comparator_mismatch comparator: gt vs eq'
+        - 'threshold_mismatch threshold: 3 vs 0'
+      facts:
+        - fed_upper_bound
+        - fed_next_meeting
+      explanation: 'implies: YES on polymarket:111061902544814266207267295505639408607400625795891618462682726460921782993748 forces YES on kalshi:KXFED-26OCT-T3.00, not the reverse. Shared: subject fed_funds_rate, source federalreserve_gov, unit percent; deadlines 2026-10-28T18:05:00Z and 2026-10-29T03:59:00Z are 9h54m0s apart. Differs on metric (rate_upper_bound vs rate_change), comparator (gt vs eq), threshold (3 vs 0). Reasoning: given fed_upper_bound=4.00 (level before the 2026-10-28 meeting, fed_next_meeting), polymarket:111061902544814266207267295505639408607400625795891618462682726460921782993748 eq 0 is the level eq 4; eq 4 forces gt 3. Facts used: fed_upper_bound=4.00 (as of 2026-09-16), fed_next_meeting=2026-10-28 (as of 2026-10-06). Caveats: edge rules not compared; a deadline was taken from the close time.'
+    - a_id: kalshi:KXBTCD-26OCT0618-T83999.99
+      a_title: Bitcoin price on Oct 6, 2026? — $84,000 or above
+      b_id: polymarket:19237762638725087250431461906504177217210669994224395220619355341866160991623
+      b_title: Will the price of Bitcoin be above $84,000 on October 9?
+      category: crypto
+      suggested: related
+      confidence: "0.8"
+      why: 'related near miss: thresholds within 0.1 % or a fact was consulted; confirm it is not equivalent'
+      vetoes:
+        - 'threshold_mismatch threshold: 83999.99 vs 84000'
+        - 'deadline_gap deadline: 2026-10-06T22:00:00Z vs 2026-10-09T16:00:00Z: 66h0m0s apart, not within 24h0m0s'
+        - 'source_mismatch resolution_source: cf_benchmarks_brti vs binance_btc_usdt'
+      explanation: 'related: same subject BTC with deadlines 66h0m0s apart (within 168h0m0s), but vetoed on threshold (83999.99 vs 84000), deadline (2026-10-06T22:00:00Z vs 2026-10-09T16:00:00Z: 66h0m0s apart, not within 24h0m0s), resolution_source (cf_benchmarks_brti vs binance_btc_usdt).'
+    - a_id: kalshi:KXFED-26OCT-T3.00
+      a_title: Will the upper bound of the federal funds rate be above 3.00% following the Fed's Oct 28, 2026 meeting? — Above 3.00%
+      b_id: polymarket:18246296022868501258060085368606280205967114341141276439803424448463050819498
+      b_title: Will the Fed increase interest rates by 50+ bps after the October 2026 meeting?
+      category: fed
+      suggested: implies
+      confidence: "0.87"
+      why: 'rules say implies: YES on one side should force YES on the other'
+      vetoes:
+        - 'metric_mismatch metric: rate_upper_bound vs rate_change'
+        - 'comparator_mismatch comparator: gt vs gte'
+        - 'threshold_mismatch threshold: 3 vs 0.5'
+      facts:
+        - fed_upper_bound
+        - fed_next_meeting
+      explanation: 'implies: YES on polymarket:18246296022868501258060085368606280205967114341141276439803424448463050819498 forces YES on kalshi:KXFED-26OCT-T3.00, not the reverse. Shared: subject fed_funds_rate, source federalreserve_gov, unit percent; deadlines 2026-10-28T18:05:00Z and 2026-10-29T03:59:00Z are 9h54m0s apart. Differs on metric (rate_upper_bound vs rate_change), comparator (gt vs gte), threshold (3 vs 0.5). Reasoning: given fed_upper_bound=4.00 (level before the 2026-10-28 meeting, fed_next_meeting), polymarket:18246296022868501258060085368606280205967114341141276439803424448463050819498 gte 0.5 is the level gte 4.5; gte 4.5 forces gt 3. Facts used: fed_upper_bound=4.00 (as of 2026-09-16), fed_next_meeting=2026-10-28 (as of 2026-10-06). Caveats: edge rules not compared; a deadline was taken from the close time.'
+    - a_id: kalshi:KXBTCD-26OCT0618-T85999.99
+      a_title: Bitcoin price on Oct 6, 2026? — $86,000 or above
+      b_id: polymarket:111011310183365094358362017447202533181946750125663899150123756370710791740925
+      b_title: Will the price of Bitcoin be above $86,000 on October 12?
+      category: crypto
+      suggested: related
+      confidence: "0.8"
+      why: 'related near miss: thresholds within 0.1 % or a fact was consulted; confirm it is not equivalent'
+      vetoes:
+        - 'threshold_mismatch threshold: 85999.99 vs 86000'
+        - 'deadline_gap deadline: 2026-10-06T22:00:00Z vs 2026-10-12T16:00:00Z: 138h0m0s apart, not within 24h0m0s'
+        - 'source_mismatch resolution_source: cf_benchmarks_brti vs binance_btc_usdt'
+      explanation: 'related: same subject BTC with deadlines 138h0m0s apart (within 168h0m0s), but vetoed on threshold (85999.99 vs 86000), deadline (2026-10-06T22:00:00Z vs 2026-10-12T16:00:00Z: 138h0m0s apart, not within 24h0m0s), resolution_source (cf_benchmarks_brti vs binance_btc_usdt).'
+    - a_id: kalshi:KXFED-26OCT-T3.00
+      a_title: Will the upper bound of the federal funds rate be above 3.00% following the Fed's Oct 28, 2026 meeting? — Above 3.00%
+      b_id: polymarket:55159722761418013044126414276680602270318000841690689684819994448621694923050
+      b_title: Will the Fed increase interest rates by 25 bps after the October 2026 meeting?
+      category: fed
+      suggested: implies
+      confidence: "0.87"
+      why: 'rules say implies: YES on one side should force YES on the other'
+      vetoes:
+        - 'metric_mismatch metric: rate_upper_bound vs rate_change'
+        - 'comparator_mismatch comparator: gt vs eq'
+        - 'threshold_mismatch threshold: 3 vs 0.25'
+      facts:
+        - fed_upper_bound
+        - fed_next_meeting
+      explanation: 'implies: YES on polymarket:55159722761418013044126414276680602270318000841690689684819994448621694923050 forces YES on kalshi:KXFED-26OCT-T3.00, not the reverse. Shared: subject fed_funds_rate, source federalreserve_gov, unit percent; deadlines 2026-10-28T18:05:00Z and 2026-10-29T03:59:00Z are 9h54m0s apart. Differs on metric (rate_upper_bound vs rate_change), comparator (gt vs eq), threshold (3 vs 0.25). Reasoning: given fed_upper_bound=4.00 (level before the 2026-10-28 meeting, fed_next_meeting), polymarket:55159722761418013044126414276680602270318000841690689684819994448621694923050 eq 0.25 is the level eq 4.25; eq 4.25 forces gt 3. Facts used: fed_upper_bound=4.00 (as of 2026-09-16), fed_next_meeting=2026-10-28 (as of 2026-10-06). Caveats: edge rules not compared; a deadline was taken from the close time.'
+    - a_id: kalshi:KXBTCD-26OCT0618-T87999.99
+      a_title: Bitcoin price on Oct 6, 2026? — $88,000 or above
+      b_id: polymarket:105589724003080100803412935658600436479802204395220085111135708089827949726481
+      b_title: Will the price of Bitcoin be above $88,000 on October 9?
+      category: crypto
+      suggested: related
+      confidence: "0.8"
+      why: 'related near miss: thresholds within 0.1 % or a fact was consulted; confirm it is not equivalent'
+      vetoes:
+        - 'threshold_mismatch threshold: 87999.99 vs 88000'
+        - 'deadline_gap deadline: 2026-10-06T22:00:00Z vs 2026-10-09T16:00:00Z: 66h0m0s apart, not within 24h0m0s'
+        - 'source_mismatch resolution_source: cf_benchmarks_brti vs binance_btc_usdt'
+      explanation: 'related: same subject BTC with deadlines 66h0m0s apart (within 168h0m0s), but vetoed on threshold (87999.99 vs 88000), deadline (2026-10-06T22:00:00Z vs 2026-10-09T16:00:00Z: 66h0m0s apart, not within 24h0m0s), resolution_source (cf_benchmarks_brti vs binance_btc_usdt).'
+    - a_id: kalshi:KXFED-26OCT-T3.25
+      a_title: Will the upper bound of the federal funds rate be above 3.25% following the Fed's Oct 28, 2026 meeting? — Above 3.25%
+      b_id: polymarket:111061902544814266207267295505639408607400625795891618462682726460921782993748
+      b_title: Will there be no change in Fed interest rates after the October 2026 meeting?
+      category: fed
+      suggested: implies
+      confidence: "0.87"
+      why: 'rules say implies: YES on one side should force YES on the other'
+      vetoes:
+        - 'metric_mismatch metric: rate_upper_bound vs rate_change'
+        - 'comparator_mismatch comparator: gt vs eq'
+        - 'threshold_mismatch threshold: 3.25 vs 0'
+      facts:
+        - fed_upper_bound
+        - fed_next_meeting
+      explanation: 'implies: YES on polymarket:111061902544814266207267295505639408607400625795891618462682726460921782993748 forces YES on kalshi:KXFED-26OCT-T3.25, not the reverse. Shared: subject fed_funds_rate, source federalreserve_gov, unit percent; deadlines 2026-10-28T18:05:00Z and 2026-10-29T03:59:00Z are 9h54m0s apart. Differs on metric (rate_upper_bound vs rate_change), comparator (gt vs eq), threshold (3.25 vs 0). Reasoning: given fed_upper_bound=4.00 (level before the 2026-10-28 meeting, fed_next_meeting), polymarket:111061902544814266207267295505639408607400625795891618462682726460921782993748 eq 0 is the level eq 4; eq 4 forces gt 3.25. Facts used: fed_upper_bound=4.00 (as of 2026-09-16), fed_next_meeting=2026-10-28 (as of 2026-10-06). Caveats: edge rules not compared; a deadline was taken from the close time.'
+    - a_id: kalshi:KXBTCD-26OCT0618-T89999.99
+      a_title: Bitcoin price on Oct 6, 2026? — $90,000 or above
+      b_id: polymarket:12623735082940725132244113806888303048952230805983476777293815826015310613871
+      b_title: Will the price of Bitcoin be above $90,000 on October 8?
+      category: crypto
+      suggested: related
+      confidence: "0.8"
+      why: 'related near miss: thresholds within 0.1 % or a fact was consulted; confirm it is not equivalent'
+      vetoes:
+        - 'threshold_mismatch threshold: 89999.99 vs 90000'
+        - 'deadline_gap deadline: 2026-10-06T22:00:00Z vs 2026-10-08T16:00:00Z: 42h0m0s apart, not within 24h0m0s'
+        - 'source_mismatch resolution_source: cf_benchmarks_brti vs binance_btc_usdt'
+      explanation: 'related: same subject BTC with deadlines 42h0m0s apart (within 168h0m0s), but vetoed on threshold (89999.99 vs 90000), deadline (2026-10-06T22:00:00Z vs 2026-10-08T16:00:00Z: 42h0m0s apart, not within 24h0m0s), resolution_source (cf_benchmarks_brti vs binance_btc_usdt).'
+    - a_id: kalshi:KXFED-26OCT-T3.25
+      a_title: Will the upper bound of the federal funds rate be above 3.25% following the Fed's Oct 28, 2026 meeting? — Above 3.25%
+      b_id: polymarket:18246296022868501258060085368606280205967114341141276439803424448463050819498
+      b_title: Will the Fed increase interest rates by 50+ bps after the October 2026 meeting?
+      category: fed
+      suggested: implies
+      confidence: "0.87"
+      why: 'rules say implies: YES on one side should force YES on the other'
+      vetoes:
+        - 'metric_mismatch metric: rate_upper_bound vs rate_change'
+        - 'comparator_mismatch comparator: gt vs gte'
+        - 'threshold_mismatch threshold: 3.25 vs 0.5'
+      facts:
+        - fed_upper_bound
+        - fed_next_meeting
+      explanation: 'implies: YES on polymarket:18246296022868501258060085368606280205967114341141276439803424448463050819498 forces YES on kalshi:KXFED-26OCT-T3.25, not the reverse. Shared: subject fed_funds_rate, source federalreserve_gov, unit percent; deadlines 2026-10-28T18:05:00Z and 2026-10-29T03:59:00Z are 9h54m0s apart. Differs on metric (rate_upper_bound vs rate_change), comparator (gt vs gte), threshold (3.25 vs 0.5). Reasoning: given fed_upper_bound=4.00 (level before the 2026-10-28 meeting, fed_next_meeting), polymarket:18246296022868501258060085368606280205967114341141276439803424448463050819498 gte 0.5 is the level gte 4.5; gte 4.5 forces gt 3.25. Facts used: fed_upper_bound=4.00 (as of 2026-09-16), fed_next_meeting=2026-10-28 (as of 2026-10-06). Caveats: edge rules not compared; a deadline was taken from the close time.'
+    - a_id: kalshi:KXBTCD-26OCT0618-T91999.99
+      a_title: Bitcoin price on Oct 6, 2026? — $92,000 or above
+      b_id: polymarket:114133472419289424694347093470084941298231282893005921899014407374667805150802
+      b_title: Will the price of Bitcoin be above $92,000 on October 13?
+      category: crypto
+      suggested: related
+      confidence: "0.8"
+      why: 'related near miss: thresholds within 0.1 % or a fact was consulted; confirm it is not equivalent'
+      vetoes:
+        - 'threshold_mismatch threshold: 91999.99 vs 92000'
+        - 'deadline_gap deadline: 2026-10-06T22:00:00Z vs 2026-10-13T16:00:00Z: 162h0m0s apart, not within 24h0m0s'
+        - 'source_mismatch resolution_source: cf_benchmarks_brti vs binance_btc_usdt'
+      explanation: 'related: same subject BTC with deadlines 162h0m0s apart (within 168h0m0s), but vetoed on threshold (91999.99 vs 92000), deadline (2026-10-06T22:00:00Z vs 2026-10-13T16:00:00Z: 162h0m0s apart, not within 24h0m0s), resolution_source (cf_benchmarks_brti vs binance_btc_usdt).'
+    - a_id: kalshi:KXFED-26OCT-T3.25
+      a_title: Will the upper bound of the federal funds rate be above 3.25% following the Fed's Oct 28, 2026 meeting? — Above 3.25%
+      b_id: polymarket:33268510350568915228897273528353467773422190590579607471427765079749830445947
+      b_title: Will the Fed decrease interest rates by 25 bps after the October 2026 meeting?
+      category: fed
+      suggested: implies
+      confidence: "0.87"
+      why: 'rules say implies: YES on one side should force YES on the other'
+      vetoes:
+        - 'metric_mismatch metric: rate_upper_bound vs rate_change'
+        - 'comparator_mismatch comparator: gt vs eq'
+        - 'threshold_mismatch threshold: 3.25 vs -0.25'
+      facts:
+        - fed_upper_bound
+        - fed_next_meeting
+      explanation: 'implies: YES on polymarket:33268510350568915228897273528353467773422190590579607471427765079749830445947 forces YES on kalshi:KXFED-26OCT-T3.25, not the reverse. Shared: subject fed_funds_rate, source federalreserve_gov, unit percent; deadlines 2026-10-28T18:05:00Z and 2026-10-29T03:59:00Z are 9h54m0s apart. Differs on metric (rate_upper_bound vs rate_change), comparator (gt vs eq), threshold (3.25 vs -0.25). Reasoning: given fed_upper_bound=4.00 (level before the 2026-10-28 meeting, fed_next_meeting), polymarket:33268510350568915228897273528353467773422190590579607471427765079749830445947 eq -0.25 is the level eq 3.75; eq 3.75 forces gt 3.25. Facts used: fed_upper_bound=4.00 (as of 2026-09-16), fed_next_meeting=2026-10-28 (as of 2026-10-06). Caveats: edge rules not compared; a deadline was taken from the close time.'
+    - a_id: kalshi:KXBTCD-26OCT0618-T93999.99
+      a_title: Bitcoin price on Oct 6, 2026? — $94,000 or above
+      b_id: polymarket:109996532530988617378994822231191266689686464368373802860902777846614732732791
+      b_title: Will the price of Bitcoin be greater than $94,000 on October 8?
+      category: crypto
+      suggested: related
+      confidence: "0.8"
+      why: 'related near miss: thresholds within 0.1 % or a fact was consulted; confirm it is not equivalent'
+      vetoes:
+        - 'threshold_mismatch threshold: 93999.99 vs 94000'
+        - 'deadline_gap deadline: 2026-10-06T22:00:00Z vs 2026-10-08T16:00:00Z: 42h0m0s apart, not within 24h0m0s'
+        - 'source_mismatch resolution_source: cf_benchmarks_brti vs binance_btc_usdt'
+      explanation: 'related: same subject BTC with deadlines 42h0m0s apart (within 168h0m0s), but vetoed on threshold (93999.99 vs 94000), deadline (2026-10-06T22:00:00Z vs 2026-10-08T16:00:00Z: 42h0m0s apart, not within 24h0m0s), resolution_source (cf_benchmarks_brti vs binance_btc_usdt).'
+    - a_id: kalshi:KXFED-26OCT-T3.50
+      a_title: Will the upper bound of the federal funds rate be above 3.50% following the Fed's Oct 28, 2026 meeting? — Above 3.50%
+      b_id: polymarket:111061902544814266207267295505639408607400625795891618462682726460921782993748
+      b_title: Will there be no change in Fed interest rates after the October 2026 meeting?
+      category: fed
+      suggested: implies
+      confidence: "0.87"
+      why: 'rules say implies: YES on one side should force YES on the other'
+      vetoes:
+        - 'metric_mismatch metric: rate_upper_bound vs rate_change'
+        - 'comparator_mismatch comparator: gt vs eq'
+        - 'threshold_mismatch threshold: 3.5 vs 0'
+      facts:
+        - fed_upper_bound
+        - fed_next_meeting
+      explanation: 'implies: YES on polymarket:111061902544814266207267295505639408607400625795891618462682726460921782993748 forces YES on kalshi:KXFED-26OCT-T3.50, not the reverse. Shared: subject fed_funds_rate, source federalreserve_gov, unit percent; deadlines 2026-10-28T18:05:00Z and 2026-10-29T03:59:00Z are 9h54m0s apart. Differs on metric (rate_upper_bound vs rate_change), comparator (gt vs eq), threshold (3.5 vs 0). Reasoning: given fed_upper_bound=4.00 (level before the 2026-10-28 meeting, fed_next_meeting), polymarket:111061902544814266207267295505639408607400625795891618462682726460921782993748 eq 0 is the level eq 4; eq 4 forces gt 3.5. Facts used: fed_upper_bound=4.00 (as of 2026-09-16), fed_next_meeting=2026-10-28 (as of 2026-10-06). Caveats: edge rules not compared; a deadline was taken from the close time.'
+    - a_id: kalshi:KXBTCD-26OCT0717-T75999.99
+      a_title: Bitcoin price on Oct 7, 2026? — $76,000 or above
+      b_id: polymarket:38763845066534679924437973749316418212546344504468860507354215523953316186679
+      b_title: Will the price of Bitcoin be above $76,000 on October 9?
+      category: crypto
+      suggested: related
+      confidence: "0.8"
+      why: 'related near miss: thresholds within 0.1 % or a fact was consulted; confirm it is not equivalent'
+      vetoes:
+        - 'threshold_mismatch threshold: 75999.99 vs 76000'
+        - 'deadline_gap deadline: 2026-10-07T21:00:00Z vs 2026-10-09T16:00:00Z: 43h0m0s apart, not within 24h0m0s'
+        - 'source_mismatch resolution_source: cf_benchmarks_brti vs binance_btc_usdt'
+      explanation: 'related: same subject BTC with deadlines 43h0m0s apart (within 168h0m0s), but vetoed on threshold (75999.99 vs 76000), deadline (2026-10-07T21:00:00Z vs 2026-10-09T16:00:00Z: 43h0m0s apart, not within 24h0m0s), resolution_source (cf_benchmarks_brti vs binance_btc_usdt).'
+    - a_id: kalshi:KXFED-26OCT-T3.50
+      a_title: Will the upper bound of the federal funds rate be above 3.50% following the Fed's Oct 28, 2026 meeting? — Above 3.50%
+      b_id: polymarket:18246296022868501258060085368606280205967114341141276439803424448463050819498
+      b_title: Will the Fed increase interest rates by 50+ bps after the October 2026 meeting?
+      category: fed
+      suggested: implies
+      confidence: "0.87"
+      why: 'rules say implies: YES on one side should force YES on the other'
+      vetoes:
+        - 'metric_mismatch metric: rate_upper_bound vs rate_change'
+        - 'comparator_mismatch comparator: gt vs gte'
+        - 'threshold_mismatch threshold: 3.5 vs 0.5'
+      facts:
+        - fed_upper_bound
+        - fed_next_meeting
+      explanation: 'implies: YES on polymarket:18246296022868501258060085368606280205967114341141276439803424448463050819498 forces YES on kalshi:KXFED-26OCT-T3.50, not the reverse. Shared: subject fed_funds_rate, source federalreserve_gov, unit percent; deadlines 2026-10-28T18:05:00Z and 2026-10-29T03:59:00Z are 9h54m0s apart. Differs on metric (rate_upper_bound vs rate_change), comparator (gt vs gte), threshold (3.5 vs 0.5). Reasoning: given fed_upper_bound=4.00 (level before the 2026-10-28 meeting, fed_next_meeting), polymarket:18246296022868501258060085368606280205967114341141276439803424448463050819498 gte 0.5 is the level gte 4.5; gte 4.5 forces gt 3.5. Facts used: fed_upper_bound=4.00 (as of 2026-09-16), fed_next_meeting=2026-10-28 (as of 2026-10-06). Caveats: edge rules not compared; a deadline was taken from the close time.'
+    - a_id: kalshi:KXBTCD-26OCT0717-T77999.99
+      a_title: Bitcoin price on Oct 7, 2026? — $78,000 or above
+      b_id: polymarket:2835445683557365895963410649908857115066546839275774543214248831686655490726
+      b_title: Will the price of Bitcoin be above $78,000 on October 11?
+      category: crypto
+      suggested: related
+      confidence: "0.8"
+      why: 'related near miss: thresholds within 0.1 % or a fact was consulted; confirm it is not equivalent'
+      vetoes:
+        - 'threshold_mismatch threshold: 77999.99 vs 78000'
+        - 'deadline_gap deadline: 2026-10-07T21:00:00Z vs 2026-10-11T16:00:00Z: 91h0m0s apart, not within 24h0m0s'
+        - 'source_mismatch resolution_source: cf_benchmarks_brti vs binance_btc_usdt'
+      explanation: 'related: same subject BTC with deadlines 91h0m0s apart (within 168h0m0s), but vetoed on threshold (77999.99 vs 78000), deadline (2026-10-07T21:00:00Z vs 2026-10-11T16:00:00Z: 91h0m0s apart, not within 24h0m0s), resolution_source (cf_benchmarks_brti vs binance_btc_usdt).'
