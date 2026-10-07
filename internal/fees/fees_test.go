@@ -127,8 +127,8 @@ func TestPolymarketExponent(t *testing.T) {
 }
 
 // TestKalshiEdgeCases: M3-05 worked examples for edge cases
-// (0-fee markets, rounding up, symmetric prices), hand-verified against
-// the current approximate formula pending human PDF read (Q-8).
+// (0-fee markets, rounding up, symmetric prices), verified against
+// "Fee Schedule for July 2026, 7.7.26 Update" (Q-8).
 func TestKalshiEdgeCases(t *testing.T) {
 	// 0-fee market: multiplier 0 means fee-free series
 	if got := mustCompute(t, kalshi("0"), "0.50", "100"); !got.IsZero() {
@@ -150,6 +150,21 @@ func TestKalshiEdgeCases(t *testing.T) {
 	}
 	if !feeAt10.Equal(d("0.63")) {
 		t.Errorf("symmetric prices: fee = %s, want 0.63", feeAt10)
+	}
+}
+
+// TestKalshiOfficialTableExamples: Q-8 worked examples from the official
+// "General Trading Fees Table" in the July 2026 fee schedule.
+func TestKalshiOfficialTableExamples(t *testing.T) {
+	cases := []struct{ price, qty, want string }{
+		{"0.05", "100", "0.34"}, // Table: 100 @ $0.05 → $0.34
+		{"0.50", "100", "1.75"}, // Table: 100 @ $0.50 → $1.75
+		{"0.65", "100", "1.60"}, // Table: 100 @ $0.65 → $1.60
+	}
+	for _, tc := range cases {
+		if got := mustCompute(t, kalshi("0.07"), tc.price, tc.qty); !got.Equal(d(tc.want)) {
+			t.Errorf("official table: fee(%s × %s) = %s, want %s", tc.qty, tc.price, got, tc.want)
+		}
 	}
 }
 

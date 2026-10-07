@@ -166,15 +166,16 @@ const (
 )
 
 // feeSchedule is the Kalshi taker fee (domain.md § Fees).
-// Approximate: the official PDF (https://kalshi.com/docs/kalshi-fee-schedule.pdf)
-// is behind a bot checkpoint (HTTP 429), awaiting human PDF read. The formula
-// 0.07 × C × P × (1 − P) rounded up to the next cent is reproduced by multiple
-// independent sources, but unverified first-hand.
+// Verified 2026-10-07 against "Fee Schedule for July 2026, 7.7.26 Update"
+// (effective July 7, 2026): taker fee = round up(M × 0.07 × C × P × (1-P)),
+// where M is the series multiplier (default 1). The document states "round up
+// such that fee + positionCost is rounded to a centicent", but the published
+// table matches whole-order ceiling to the cent (default round_to = 0.01).
 func feeSchedule() canonical.FeeSchedule {
 	return canonical.FeeSchedule{
 		ID:       canonical.FeeScheduleKalshiTakerV1,
 		Params:   map[string]decimal.Decimal{"multiplier": decimal.RequireFromString("0.07")},
-		Verified: false,
+		Verified: true,
 		Source:   "https://kalshi.com/docs/kalshi-fee-schedule.pdf",
 	}
 }
