@@ -197,6 +197,41 @@ func TestPoliticsStageAndPolarity(t *testing.T) {
 	}
 }
 
+// TestPoliticsStageSurvivesInitials: middle initials and "Jr." in recorded
+// Kalshi rules must not cut the binding condition clause short (the stage
+// word comes after the name). Regression for the MR !22 review.
+func TestPoliticsStageSurvivesInitials(t *testing.T) {
+	const presTitle = "Who will win the next presidential election? — "
+	cases := []struct {
+		title, rules, stage string
+	}{
+		// Recorded KXPRESPERSON / KXPRESNOMR / KXPRESNOMD rules (2026-10-07).
+		{presTitle + "J.D. Vance", "If J.D. Vance is the next person inaugurated as President for the term beginning in 2029, then the market resolves to Yes.", StageInaugurated},
+		{presTitle + "Donald J. Trump", "If Donald J. Trump is the next person inaugurated as President for the term beginning in 2029, then the market resolves to Yes.", StageInaugurated},
+		{presTitle + "Donald J. Trump Jr.", "If Donald J. Trump Jr. is the next person inaugurated as President for the term beginning in 2029, then the market resolves to Yes.", StageInaugurated},
+		{presTitle + "Stephen A. Smith", "If Stephen A. Smith is the next person inaugurated as President for the term beginning in 2029, then the market resolves to Yes.", StageInaugurated},
+		{presTitle + "J.B. Pritzker", "If J.B. Pritzker is the next person inaugurated as President for the term beginning in 2029, then the market resolves to Yes.", StageInaugurated},
+		// A title with no stage word, so only the rules can supply it.
+		{"J.D. Vance 2028?", kxNomRVanceRules, StageWinNomination},
+		{"Donald J. Trump Jr. 2028?", "If Donald J. Trump Jr. wins and accepts the nomination for the Presidency for the Republican party in 2028, then the market resolves to Yes.", StageWinNomination},
+	}
+	for _, tc := range cases {
+		if st, _, ok := politicsStage(new(canonical.Quality), tc.rules, tc.title); st != tc.stage || !ok {
+			t.Errorf("%q: stage %q ok=%v, want %q", tc.rules, st, ok, tc.stage)
+		}
+	}
+	out := Normalize(politics(kxPolID, "Donald J. Trump Jr. 2028?",
+		"If Donald J. Trump Jr. wins and accepts the nomination for the Presidency for the Republican party in 2028, then the market resolves to Yes.", kxNomClose))
+	if out.Terms.Subject != "donald_j_trump_jr" || out.Terms.Metric != "win_nomination:us_president:republican:2028" {
+		t.Errorf("subject %q metric %q", out.Terms.Subject, out.Terms.Metric)
+	}
+	got := sentencesOf("If Donald J. Trump Jr. wins the U.S. election. The resolution source is the AP.\n\nOtherwise “No”. Next")
+	want := []string{"If Donald J. Trump Jr. wins the U.S. election.", "The resolution source is the AP.", "Otherwise “No”.", "Next"}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Errorf("sentencesOf = %q, want %q", got, want)
+	}
+}
+
 // TestPoliticsPairs runs the extracted terms through the matcher: wins vs
 // nominee is related (never equivalent), an election-date mismatch is vetoed,
 // and the same race on both venues with the same source is equivalent.

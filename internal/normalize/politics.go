@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/shopspring/decimal"
 
@@ -98,9 +100,10 @@ var (
 		`within|cabinet|speaker|impeach\w*|pardon\w*|says?|mentions?|tweets?|run\s+for|running|visit\w*|meet\w*)\b`)
 
 	// conditionRe: a clause that states the condition ("If X wins ...",
-	// "This market will resolve to the person who wins ..."). It stops at a
-	// sentence end, so "U.S." can cut it short; the stage word comes first.
-	conditionRe = regexp.MustCompile(`(?i)(?:\bif\b|\bresolves?\s+(?:to|according\s+to)\b)[^.\n]{0,240}`)
+	// "This market will resolve to the person who wins ..."). It is matched
+	// inside one sentence from sentencesOf, so the periods of "J.D. Vance",
+	// "Donald J. Trump" and "U.S." do not cut it short.
+	conditionRe = regexp.MustCompile(`(?i)(?:\bif\b|\bresolves?\s+(?:to|according\s+to)\b).{0,240}`)
 	// Stage words, strongest first: a nomination clause may also say "wins".
 	nominationRe  = regexp.MustCompile(`(?i)\bnomin(?:ee|ees|ation|ated)\b`)
 	runoffRe      = regexp.MustCompile(`(?i)\brun-?offs?\b`)
@@ -125,9 +128,11 @@ var (
 	// cycleYearRe: a year in the plausible election range.
 	cycleYearRe = regexp.MustCompile(`\b(20[2-9]\d)\b`)
 
-	// sentenceEndRe: a sentence end that is not inside "U.S." (the character
-	// before the period is lower case, a digit or a closing bracket or quote).
-	sentenceEndRe = regexp.MustCompile(`[\p{Ll}\d)\]”"'][.!?]\s+|\n+`)
+	// sentenceEndRe: a candidate sentence end. The character before the
+	// period must be lower case, a digit or a closing bracket or quote, so
+	// initials ("U.S.", "J.D.", "Donald J.") never end a sentence;
+	// sentencesOf also skips an end followed by a lower-case word ("Jr. wins").
+	sentenceEndRe = regexp.MustCompile(`[\p{Ll}\d)\]”"'’][.!?]\s+|\n+`)
 	// electionNounRe and scheduleCueRe: a sentence that schedules a vote.
 	electionNounRe = regexp.MustCompile(`(?i)\b(?:elections?|primar(?:y|ies)|caucus(?:es)?|run-?offs?|vote)\b`)
 	scheduleCueRe  = regexp.MustCompile(`(?i)\b(?:take\s+place|be\s+held|held|hold|scheduled)\b`)
@@ -245,9 +250,11 @@ func subjectSlug(name string) string {
 // state positively (or the reverse) is ambiguous: ok is false.
 func politicsStage(q *canonical.Quality, rules, title string) (stage string, negative, ok bool) {
 	titleStage, titleNeg := stageIn(title)
-	for _, clause := range conditionRe.FindAllString(rules, -1) {
-		if stage, negative = stageIn(clause); stage != "" {
-			break
+	for _, sentence := range sentencesOf(rules) {
+		if clause := conditionRe.FindString(sentence); clause != "" {
+			if stage, negative = stageIn(clause); stage != "" {
+				break
+			}
 		}
 	}
 	if stage == "" {
@@ -340,12 +347,20 @@ func cycleYearsIn(text string) []int {
 	return out
 }
 
-// sentencesOf splits text into sentences without breaking "U.S.".
+// sentencesOf splits text into sentences without breaking initials ("U.S.",
+// "J.D. Vance", "Donald J. Trump") or "Jr." before a lower-case word.
 func sentencesOf(text string) []string {
 	var out []string
 	start := 0
 	for _, loc := range sentenceEndRe.FindAllStringIndex(text, -1) {
-		end := loc[0] + 1 // keep the character before the period
+		end := loc[0] // a newline run ends the sentence where it starts
+		if text[loc[0]] != '\n' {
+			if next, _ := utf8.DecodeRuneInString(text[loc[1]:]); unicode.IsLower(next) {
+				continue // "Donald Trump Jr. wins": not a sentence end
+			}
+			_, size := utf8.DecodeRuneInString(text[loc[0]:])
+			end += size + 1 // keep the character before the period and the period
+		}
 		if end > start {
 			out = append(out, text[start:end])
 		}
