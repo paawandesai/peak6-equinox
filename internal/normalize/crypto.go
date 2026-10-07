@@ -32,8 +32,13 @@ const (
 	MetricPriceLow  = "price_low"  // the lowest price reached by the deadline
 )
 
-// UnitUSD is the threshold unit this extractor produces for $ amounts.
-const UnitUSD = "USD"
+// Threshold units this package produces.
+const (
+	UnitUSD     = "USD"     // $ amounts
+	UnitPercent = "percent" // percentages and (for fed) percentage points
+)
+
+func init() { Register(canonical.CategoryCrypto, extractCrypto) }
 
 // Deadline sanity window: a parsed deadline further than this from the close
 // time is a misread, and the close time is used instead.
@@ -66,10 +71,7 @@ var (
 
 // sourceNames maps text to canonical resolution-source IDs. Index and pair
 // suffixes make "CF Benchmarks BRTI" distinct from "CF Benchmarks ERTI".
-var sourceNames = []struct {
-	re *regexp.Regexp
-	id string
-}{
+var sourceNames = []sourceName{
 	{regexp.MustCompile(`(?i)\bcf\s+benchmarks\b`), "cf_benchmarks"},
 	{regexp.MustCompile(`(?i)\bbinance\b`), "binance"},
 	{regexp.MustCompile(`(?i)\bcoinbase\b`), "coinbase"},
@@ -85,10 +87,7 @@ var sourceNames = []struct {
 	{regexp.MustCompile(`(?i)\bbybit\b`), "bybit"},
 }
 
-var sourceSuffixes = []struct {
-	base, suffix string
-	re           *regexp.Regexp
-}{
+var sourceSuffixes = []sourceSuffix{
 	{"cf_benchmarks", "_brti", regexp.MustCompile(`(?i)\bBRTI\b|bitcoin\s+real[- ]time\s+index`)},
 	{"cf_benchmarks", "_erti", regexp.MustCompile(`(?i)\bERTI\b|ethereum\s+real[- ]time\s+index`)},
 	{"binance", "_btc_usdt", regexp.MustCompile(`(?i)\bBTC\s*/\s*USDT\b`)},
@@ -113,7 +112,7 @@ func extractCrypto(in canonical.Instrument) (canonical.Terms, canonical.Quality)
 	t.Subject = cryptoSubject(title)
 	t.Metric = cryptoMetric(title, rules)
 	cryptoCondition(&t, &q, srcs)
-	cryptoDeadline(&t, &q, in.CloseTime, srcs)
+	textDeadline(&t, &q, in.CloseTime, srcs, datesIn)
 	t.ResolutionSource = cryptoSource(rules + "\n" + title)
 	if strings.Contains(title, "$") || strings.Contains(rules, "$") {
 		if t.Unit == canonical.Unknown {
@@ -217,7 +216,7 @@ func cryptoCondition(t *canonical.Terms, q *canonical.Quality, srcs []source) {
 	t.Threshold = c.threshold
 	t.ThresholdHigh = c.high
 	if c.percent {
-		t.Unit = "percent"
+		t.Unit = UnitPercent
 	}
 	t.Polarity = canonical.PolarityPositive
 	if c.negated {
@@ -225,10 +224,12 @@ func cryptoCondition(t *canonical.Terms, q *canonical.Quality, srcs []source) {
 	}
 }
 
-// cryptoDeadline sets Deadline and DeadlineTZ. Without a complete, consistent
+// textDeadline sets Deadline and DeadlineTZ from the first text that states a
+// date (found by dates) and a time with a zone. Without a complete, consistent
 // date + time + zone the close time is used and flagged (D-060).
-func cryptoDeadline(t *canonical.Terms, q *canonical.Quality, closeTime time.Time, srcs []source) {
-	date, dateOK, dateAmbiguous := firstStated(srcs, datesIn, calendarDate.key)
+func textDeadline(t *canonical.Terms, q *canonical.Quality, closeTime time.Time, srcs []source,
+	dates func(string) []calendarDate) {
+	date, dateOK, dateAmbiguous := firstStated(srcs, dates, calendarDate.key)
 	clk, clockOK, clockAmbiguous := firstStated(srcs, clocksIn, clock.key)
 	var missing []string
 	if dateAmbiguous != "" {
@@ -302,17 +303,35 @@ func absDuration(d time.Duration) time.Duration {
 	return d
 }
 
-// cryptoSource returns the one resolution source the text makes authoritative
+// cryptoSource returns the one resolution source the text makes authoritative.
+func cryptoSource(text string) string {
+	return namedSource(text, sourceNames, sourceSuffixes)
+}
+
+// sourceName is one resolution-source alias and the canonical ID it maps to.
+type sourceName struct {
+	re *regexp.Regexp
+	id string
+}
+
+// sourceSuffix refines a base source ID when the text also names an index or
+// pair ("CF Benchmarks" + "BRTI" is cf_benchmarks_brti).
+type sourceSuffix struct {
+	base, suffix string
+	re           *regexp.Regexp
+}
+
+// namedSource returns the one resolution source the text makes authoritative
 // (named after a cue such as "the resolution source is", "based on", or
 // followed by "... Index"). With no authoritative name, a single mentioned
 // source counts; several candidates is unknown.
-func cryptoSource(text string) string {
+func namedSource(text string, names []sourceName, suffixes []sourceSuffix) string {
 	authoritative := map[string]bool{}
 	mentioned := map[string]bool{}
-	for _, s := range sourceNames {
+	for _, s := range names {
 		for _, loc := range s.re.FindAllStringIndex(text, -1) {
 			id := s.id
-			for _, suf := range sourceSuffixes {
+			for _, suf := range suffixes {
 				if suf.base == s.id && suf.re.MatchString(text) {
 					id += suf.suffix
 					break
