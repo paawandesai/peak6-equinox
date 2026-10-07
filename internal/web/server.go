@@ -61,6 +61,8 @@ type Server struct {
 }
 
 // New returns a Server. A nil Logger is replaced with one that discards output.
+// Zero-valued eligibility thresholds are filled from internal/config defaults
+// (production always loads them via config.Load).
 func New(cfg Config, deps Deps) *Server {
 	logger := deps.Logger
 	if logger == nil {
@@ -68,6 +70,19 @@ func New(cfg Config, deps Deps) *Server {
 	}
 	if deps.Now == nil {
 		deps.Now = func() time.Time { return time.Now().UTC() }
+	}
+	// Fill zero eligibility thresholds with defaults (test/e2e code may not populate).
+	if cfg.StaleAfter == 0 {
+		cfg.StaleAfter = 120 * time.Second // DefaultStaleAfterSeconds
+	}
+	if cfg.SkewWarn == 0 {
+		cfg.SkewWarn = 5 * time.Second // DefaultSkewWarnSeconds
+	}
+	if cfg.SkewMax == 0 {
+		cfg.SkewMax = 30 * time.Second // DefaultSkewMaxSeconds
+	}
+	if cfg.MinBookDepth.IsZero() {
+		cfg.MinBookDepth = decimal.RequireFromString("1") // DefaultMinBookDepth
 	}
 	return &Server{
 		cfg: cfg, deps: deps, log: logger,

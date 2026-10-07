@@ -116,7 +116,8 @@ func newTestServer(t *testing.T) (*Server, *store.Store) {
 	t.Helper()
 	st := store.New(tdb.Pool(t))
 	tdb.Reset(t)
-	s := New(Config{MinRouteConfidence: dec("0.9")}, Deps{Store: st, Now: func() time.Time { return seedNow.Add(time.Hour) }})
+	// Now returns seedNow so quotes are fresh (FetchedAt = seedNow).
+	s := New(Config{MinRouteConfidence: dec("0.9")}, Deps{Store: st, Now: func() time.Time { return seedNow }})
 	return s, st
 }
 
