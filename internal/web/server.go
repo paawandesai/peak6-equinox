@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/shopspring/decimal"
+
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/store"
 )
 
@@ -20,6 +22,8 @@ type Config struct {
 	AdminUser             string
 	AdminPassword         string
 	PublicRateLimitPerMin int
+	// MinRouteConfidence is passed to the router (MIN_ROUTE_CONFIDENCE).
+	MinRouteConfidence decimal.Decimal
 }
 
 // Deps holds the collaborators the web layer uses. Store and Ingester may be

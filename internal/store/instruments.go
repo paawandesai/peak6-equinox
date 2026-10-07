@@ -129,3 +129,38 @@ func (s *Store) ListInstruments(ctx context.Context, f InstrumentFilter) ([]Inst
 	}
 	return out, nil
 }
+
+// GetInstruments returns the instruments with the given IDs, keyed by ID, in
+// one query. IDs that do not exist are simply absent. Unstorable IDs (NUL
+// bytes, invalid UTF-8) are dropped before the query (AB-08).
+func (s *Store) GetInstruments(ctx context.Context, ids []string) (map[string]InstrumentRecord, error) {
+	clean := make([]string, 0, len(ids))
+	for _, id := range ids {
+		if !unstorable(id) {
+			clean = append(clean, id)
+		}
+	}
+	out := make(map[string]InstrumentRecord, len(clean))
+	if len(clean) == 0 {
+		return out, nil
+	}
+	if len(clean) > maxListLimit {
+		clean = clean[:maxListLimit]
+	}
+	rows, err := s.pool.Query(ctx, `SELECT `+instrumentCols+` FROM instruments WHERE id = ANY($1)`, clean)
+	if err != nil {
+		return nil, fmt.Errorf("getting instruments: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		r, err := scanInstrument(rows)
+		if err != nil {
+			return nil, fmt.Errorf("getting instruments: %w", err)
+		}
+		out[r.ID] = r
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("getting instruments: %w", err)
+	}
+	return out, nil
+}

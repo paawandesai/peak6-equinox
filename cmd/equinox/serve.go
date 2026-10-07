@@ -79,6 +79,7 @@ func newServerWith(cfg config.Config, logger *slog.Logger, deps web.Deps) *web.S
 		AdminUser:             cfg.AdminUser,
 		AdminPassword:         cfg.AdminPassword,
 		PublicRateLimitPerMin: cfg.PublicRateLimitPerMin,
+		MinRouteConfidence:    cfg.MinRouteConfidence,
 	}, deps)
 }
 

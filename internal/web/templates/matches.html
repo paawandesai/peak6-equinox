@@ -1,0 +1,37 @@
+{{define "content"}}
+<h1>Matches</h1>
+{{if .NoRound}}
+<p>No completed fetch round yet, so there is nothing to compare. Run <code>equinox seed</code> (offline fixtures) or <code>equinox ingest</code>, then <code>equinox match</code>.</p>
+{{else}}
+<p>Round <strong>{{.Round.ID}}</strong>{{if .Round.Pinned}} (pinned for the demo){{end}}, as of <strong>{{.Round.AsOf}}</strong>: {{.Total}} pair{{if ne .Total 1}}s{{end}} compared and kept, grouped by relationship type, strongest first. Click a pair for the contract diff and the routing form.</p>
+{{if .Truncated}}<p><mark>Showing the first {{.Total}} pairs only.</mark></p>{{end}}
+{{if not .Groups}}
+<p>Round {{.Round.ID}} has no stored relationships. Run <code>equinox match</code> against it.</p>
+{{end}}
+{{range .Groups}}
+<section>
+  <h2 id="type-{{.Type}}">{{.Type}} <small>({{len .Pairs}})</small></h2>
+  <p>{{.Label}}</p>
+  <table class="pairs">
+    <thead>
+      <tr><th>Pair</th><th>Contract A</th><th>Contract B</th><th>Type</th><th>Confidence</th><th>Method</th><th>Vetoes</th><th>As of</th></tr>
+    </thead>
+    <tbody>
+    {{range .Pairs}}
+      <tr>
+        <td><a href="/pairs/{{.ID}}">#{{.ID}}</a></td>
+        <td><span class="venue">{{.A.Venue}}</span> {{.A.Title}}</td>
+        <td><span class="venue">{{.B.Venue}}</span> {{.B.Title}}</td>
+        <td class="type-{{.Type}}">{{.Type}}</td>
+        <td>{{.Confidence}}</td>
+        <td>{{.Method}}</td>
+        <td>{{.Vetoes}}</td>
+        <td><small>{{.AsOf}}</small></td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+</section>
+{{end}}
+{{end}}
+{{end}}

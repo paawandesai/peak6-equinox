@@ -1,0 +1,31 @@
+{{define "layout"}}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="htmx-config" content='{"includeIndicatorStyles":false,"allowEval":false,"selfRequestsOnly":true,"responseHandling":[{"code":"204","swap":false},{"code":"[23]..","swap":true},{"code":"400","swap":true},{"code":"[45]..","swap":false,"error":true}]}'>
+  <title>{{.Title}} · Equinox</title>
+  <link rel="stylesheet" href="{{.Assets.PicoURL}}" integrity="{{.Assets.PicoSRI}}" crossorigin="anonymous">
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="{{.Assets.HtmxURL}}" integrity="{{.Assets.HtmxSRI}}" crossorigin="anonymous" defer></script>
+</head>
+<body>
+  <header>
+    <nav>
+      <ul><li><strong><a href="/">Equinox</a></strong> cross-venue contract matcher and router</li></ul>
+      <ul>
+        <li><a href="/">Matches</a></li>
+        {{if .Round}}<li><small>round {{.Round.ID}} ({{.Round.Status}}{{if .Round.Pinned}}, pinned{{end}}) as of {{.Round.AsOf}}</small></li>{{end}}
+      </ul>
+    </nav>
+    <p class="question">{{.Question}}</p>
+  </header>
+  <main>
+{{template "content" .}}
+  </main>
+  <footer>
+    <small>Everything here is a simulation over recorded venue data. Equinox never places orders. Prices are per $1 payout, in [0,1]; times are UTC.</small>
+  </footer>
+</body>
+</html>
+{{end}}

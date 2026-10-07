@@ -1,0 +1,45 @@
+{{define "route_result"}}
+<article id="route-result" class="trace">
+{{if .Errors}}
+  <header><strong>The order was not routed.</strong></header>
+  <ul role="alert">{{range .Errors}}<li>{{.}}</li>{{end}}</ul>
+{{else}}{{with .Decision}}
+  <header><strong>Decision #{{$.DecisionID}}</strong> · round {{.RoundID}} · target <code>{{.TargetID}}</code> · decided {{.DecidedAt}}</header>
+  <p><strong>Order:</strong> {{.OrderLine}}. Partners considered: {{.Partners}}.</p>
+
+  <h3>Chosen route</h3>
+  {{if .Chosen}}
+  <table>
+    <thead><tr><th>Venue</th><th>Instrument</th><th>Route</th><th>Filled</th><th>VWAP</th><th>Fee / contract</th><th>Basis / contract</th><th>All-in / contract</th></tr></thead>
+    <tbody>{{range .Chosen}}<tr><td><span class="venue">{{.Venue}}</span></td><td><code>{{.InstrumentID}}</code></td><td>{{.Route}}</td><td>{{.Quantity}}</td><td>{{money .VWAP}}</td><td>{{money .FeePerContract}}</td><td>{{money .BasisPenaltyPerContract}}</td><td><strong>{{money .AllInPerContract}}</strong></td></tr>{{end}}</tbody>
+  </table>
+  {{else}}
+  <p><mark>No venue can fill this order.</mark> Every candidate was excluded; see below.</p>
+  {{end}}
+
+  {{if .Alternatives}}
+  <h3>Ranked alternatives</h3>
+  <table>
+    <thead><tr><th>#</th><th>Venue</th><th>Instrument</th><th>Filled</th><th>VWAP</th><th>Fee / contract</th><th>All-in / contract</th><th>Note</th></tr></thead>
+    <tbody>{{range .Alternatives}}{{$alt := .}}{{range .Legs}}<tr><td>{{$alt.Rank}}</td><td><span class="venue">{{.Venue}}</span></td><td><code>{{.InstrumentID}}</code></td><td>{{.Quantity}}</td><td>{{money .VWAP}}</td><td>{{money .FeePerContract}}</td><td>{{money $alt.AllInPerContract}}</td><td>{{$alt.Note}}</td></tr>{{end}}{{end}}</tbody>
+  </table>
+  {{end}}
+
+  {{if .Exclusions}}
+  <h3>Excluded candidates</h3>
+  <table>
+    <thead><tr><th>Venue</th><th>Instrument</th><th>Reason</th><th>Detail</th></tr></thead>
+    <tbody>{{range .Exclusions}}<tr><td><span class="venue">{{.Venue}}</span></td><td><code>{{.InstrumentID}}</code></td><td><code>{{.Reason}}</code></td><td>{{.Detail}}</td></tr>{{end}}</tbody>
+  </table>
+  {{end}}
+
+  {{if .Warnings}}
+  <h3>Warnings</h3>
+  <ul>{{range .Warnings}}<li>{{.}}</li>{{end}}</ul>
+  {{end}}
+
+  <h3>Explanation</h3>
+  <p class="explanation">{{.Explanation}}</p>
+{{end}}{{end}}
+</article>
+{{end}}
