@@ -174,6 +174,8 @@ func TestPoliticsStageAndPolarity(t *testing.T) {
 		{"Will JD Vance be elected U.S. President in 2028?", "win_election:us_president:2028", canonical.PolarityPositive},
 		{"Will JD Vance not win the 2028 US Presidential Election?", "win_election:us_president:2028", canonical.PolarityNegative},
 		{"Will JD Vance lose the 2028 US Presidential Election?", "win_election:us_president:2028", canonical.PolarityNegative},
+		{"Will JD Vance won't win the 2028 US Presidential Election?", "win_election:us_president:2028", canonical.PolarityNegative},
+		{"Will JD Vance won’t win the 2028 US Presidential Election?", "win_election:us_president:2028", canonical.PolarityNegative},
 		{"Will JD Vance be the 2028 Republican presidential nominee?", "win_nomination:us_president:republican:2028", canonical.PolarityPositive},
 		{"Will JD Vance fail to win the 2028 Republican presidential nomination?", "win_nomination:us_president:republican:2028", canonical.PolarityNegative},
 		{"Will JD Vance lose the 2028 Republican presidential nomination?", "win_nomination:us_president:republican:2028", canonical.PolarityNegative},
@@ -187,6 +189,16 @@ func TestPoliticsStageAndPolarity(t *testing.T) {
 		out := Normalize(politics(pmPolID, tc.title, "", pmPolClose))
 		if out.Terms.Metric != tc.metric || out.Terms.Polarity != tc.polarity {
 			t.Errorf("%q: metric %q polarity %q, want %q %q", tc.title, out.Terms.Metric, out.Terms.Polarity, tc.metric, tc.polarity)
+		}
+	}
+	// Past-tense "won" is still a win cue; only the contraction "won't" negates.
+	for clause, wantNeg := range map[string]bool{
+		"If JD Vance won the 2028 US Presidential Election":       false,
+		"If JD Vance won't win the 2028 US Presidential Election": true,
+		"If JD Vance WON’T win the 2028 US Presidential Election": true,
+	} {
+		if st, neg := stageIn(clause); st != StageWinElection || neg != wantNeg {
+			t.Errorf("%q: stage %q negative=%v, want %q %v", clause, st, neg, StageWinElection, wantNeg)
 		}
 	}
 	// A title that negates what the rules state positively is ambiguous.
@@ -261,6 +273,15 @@ func TestPoliticsPairs(t *testing.T) {
 		r := compare(win, nom)
 		if r.Type != canonical.RelRelated || !hasVeto(r, match.VetoMetricMismatch) {
 			t.Errorf("type %s vetoes %+v, want related with metric_mismatch", r.Type, r.Vetoes)
+		}
+	})
+
+	t.Run("won't win the election is not win the election", func(t *testing.T) {
+		win := politics(pmPolID, "Will JD Vance win the 2028 US Presidential Election?", "", pmPolClose)
+		wont := politics(pmPolID2, "Will JD Vance won't win the 2028 US Presidential Election?", "", pmPolClose)
+		r := compare(win, wont)
+		if r.Type == canonical.RelEquivalent || !hasVeto(r, match.VetoPolarityMismatch) {
+			t.Errorf("type %s vetoes %+v, want polarity_mismatch", r.Type, r.Vetoes)
 		}
 	})
 

@@ -112,6 +112,8 @@ var (
 	winRe         = regexp.MustCompile(`(?i)\b(?:wins?|won|winner|elected|loses?|lost)\b`)
 	loseRe        = regexp.MustCompile(`(?i)\b(?:loses?|lost)\b`)
 	// stageNegatedRe: a negation before the stage word in the same clause.
+	// wontRe: the contraction "won't", whose "won" would otherwise match winRe.
+	wontRe         = regexp.MustCompile(`(?i)\bwon['’]t\b`)
 	stageNegatedRe = regexp.MustCompile(`(?i)\b(?:not|never|fails?\s+to|failed\s+to|won['’]t|doesn['’]t|didn['’]t)\b`)
 
 	// Offices.
@@ -280,8 +282,10 @@ func politicsStage(q *canonical.Quality, rules, title string) (stage string, neg
 }
 
 // stageIn classifies one clause, strongest stage first. A primary or caucus is
-// returned as "primary" so the caller can record it as unknown.
+// returned as "primary" so the caller can record it as unknown. "won't" is
+// read as "will not" first, so its "won" is never a win cue.
 func stageIn(clause string) (string, bool) {
+	clause = wontRe.ReplaceAllString(clause, "will not")
 	type cue struct {
 		re    *regexp.Regexp
 		stage string
