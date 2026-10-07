@@ -465,10 +465,10 @@ func TestSkewWithRouteIntegration(t *testing.T) {
 		SkewWarn: 5 * time.Second,
 		SkewMax:  30 * time.Second,
 	}
-	
+
 	q1 := canonical.Quote{InstrumentID: "test:1", FetchedAt: now}
 	q2 := canonical.Quote{InstrumentID: "test:2", FetchedAt: now.Add(-10 * time.Second)}
-	
+
 	exclude, warnings := Skew(q1, q2, cfg)
 	if exclude {
 		t.Errorf("10s skew should not exclude")

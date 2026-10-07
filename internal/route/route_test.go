@@ -582,3 +582,34 @@ func TestRouteEligibilityAndSkew(t *testing.T) {
 		t.Errorf("shallow partner exclusion = %+v, want insufficient_depth", ex)
 	}
 }
+
+func TestRouteTargetExcludedBySkew(t *testing.T) {
+	// Simpler test: just verify that target skew exclusion is recorded.
+	target, partners := scenario()
+	now := t0.Add(150 * time.Second)
+
+	// Make partner fresh and target old.
+	freshPartner := partners[0]
+	freshPartner.Quote.FetchedAt = now
+	oldTarget := target
+	oldTarget.Quote.FetchedAt = now.Add(-50 * time.Second) // 50s skew > 30s max
+
+	dec, err := Route(buy("10"), oldTarget, []canonical.Candidate{freshPartner}, cfg, now)
+	if err != nil {
+		t.Fatalf("Route: %v", err)
+	}
+
+	// Target should be excluded due to skew.
+	foundSkew := false
+	for _, ex := range dec.Exclusions {
+		if ex.InstrumentID == kalshiID && ex.Reason == ReasonSkew {
+			foundSkew = true
+			if !strings.Contains(ex.Detail, "50 s behind") {
+				t.Errorf("skew detail = %q, want '50 s behind'", ex.Detail)
+			}
+		}
+	}
+	if !foundSkew {
+		t.Errorf("target not excluded with skew; exclusions = %+v", dec.Exclusions)
+	}
+}
