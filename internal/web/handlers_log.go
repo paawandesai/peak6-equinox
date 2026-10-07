@@ -150,8 +150,10 @@ func (s *Server) handleDecision(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	snapshot := time.Time{}
+	var roundInfo *roundInfo
 	if err == nil {
 		snapshot = round.SnapshotAt()
+		roundInfo = newRoundInfo(round)
 	}
 	data := decisionPage{
 		routePage: routePage{
@@ -159,14 +161,12 @@ func (s *Server) handleDecision(w http.ResponseWriter, r *http.Request) {
 				Title:    "Decision " + r.PathValue("id"),
 				Question: "What did this simulated order do, and why did the router choose that venue?",
 				Assets:   pinnedAssets,
+				Round:    roundInfo,
 			},
 			DecisionID: rd.ID,
 			Decision:   newDecisionView(rd.Decision, countPartners(rd.Decision), snapshot),
 		},
 		CreatedAt: formatUTC(rd.CreatedAt),
-	}
-	if err == nil {
-		data.Round = newRoundInfo(round)
 	}
 	s.render(w, http.StatusOK, "decision", data)
 }

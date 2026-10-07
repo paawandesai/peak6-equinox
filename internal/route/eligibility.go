@@ -35,18 +35,13 @@ type EligibilityIssue struct {
 }
 
 // IsEligible checks quote-local eligibility: staleness, missing book, and
-// insufficient depth. It returns false and a list of issues if the quote
-// is ineligible, or true and an empty list if eligible.
+// insufficient depth on the side the order consumes. Returns false and issues if ineligible.
 //
 // Staleness: cfg.Snapshot - q.FetchedAt > cfg.StaleAfter excludes with ReasonStale.
-// A missing or zero FetchedAt is ineligible.
-//
-// Missing book: q.Quality flag no_book or both YesAsks and YesBids empty
-// excludes with ReasonNoBook.
-//
-// Insufficient depth: if the total size across both sides is less than
-// cfg.MinBookDepth, exclude with ReasonInsufficientDepth.
-func IsEligible(q canonical.Quote, cfg EligibilityConfig) (bool, []EligibilityIssue) {
+// Missing book: q.Quality flag no_book or both sides empty excludes with ReasonNoBook.
+// Insufficient depth: if depth on the consumed side < cfg.MinBookDepth, exclude with
+// ReasonInsufficientDepth. Buy YES consumes YesAsks; sell YES consumes YesBids.
+func IsEligible(q canonical.Quote, side canonical.Side, outcome canonical.Outcome, cfg EligibilityConfig) (bool, []EligibilityIssue) {
 	var exs []EligibilityIssue
 
 	// Staleness check: FetchedAt must be present and recent (relative to snapshot).
@@ -82,22 +77,30 @@ func IsEligible(q canonical.Quote, cfg EligibilityConfig) (bool, []EligibilityIs
 		return len(exs) == 0, exs
 	}
 
-	// Insufficient depth check: sum both sides and compare to MinBookDepth.
-	totalDepth := decimal.Zero
-	for _, l := range q.YesBids {
+	// Insufficient depth check: check depth on the side the order consumes.
+	// Buy YES consumes YesAsks (sellers); sell YES consumes YesBids (buyers).
+	// This is stricter than total-depth (Cursor reviewer fix).
+	var consumedSide []canonical.Level
+	if side == canonical.SideBuy && outcome == canonical.OutcomeYes {
+		consumedSide = q.YesAsks
+	} else if side == canonical.SideSell && outcome == canonical.OutcomeYes {
+		consumedSide = q.YesBids
+	} else if side == canonical.SideBuy && outcome == canonical.OutcomeNo {
+		consumedSide = q.YesBids // buy NO = sell YES
+	} else { // sell NO
+		consumedSide = q.YesAsks // sell NO = buy YES
+	}
+
+	sideDepth := decimal.Zero
+	for _, l := range consumedSide {
 		if l.Size.IsPositive() {
-			totalDepth = totalDepth.Add(l.Size)
+			sideDepth = sideDepth.Add(l.Size)
 		}
 	}
-	for _, l := range q.YesAsks {
-		if l.Size.IsPositive() {
-			totalDepth = totalDepth.Add(l.Size)
-		}
-	}
-	if totalDepth.LessThan(cfg.MinBookDepth) {
+	if sideDepth.LessThan(cfg.MinBookDepth) {
 		exs = append(exs, EligibilityIssue{
 			Reason: ReasonInsufficientDepth,
-			Detail: fmt.Sprintf("%s contracts available", totalDepth),
+			Detail: fmt.Sprintf("%s contracts available on consumed side", sideDepth),
 		})
 	}
 

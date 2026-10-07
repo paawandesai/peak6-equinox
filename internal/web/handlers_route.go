@@ -159,9 +159,13 @@ type decisionView struct {
 }
 
 func newDecisionView(d canonical.Decision, partners int, snapshot time.Time) *decisionView {
+	snapshotStr := ""
+	if !snapshot.IsZero() {
+		snapshotStr = formatUTC(snapshot)
+	}
 	return &decisionView{
 		RoundID: d.RoundID, TargetID: d.TargetID, DecidedAt: formatUTC(d.DecidedAt),
-		Snapshot: formatUTC(snapshot), OrderLine: orderLine(d.Order),
+		Snapshot: snapshotStr, OrderLine: orderLine(d.Order),
 		Chosen: d.Chosen, Alternatives: d.Alternatives, Exclusions: d.Exclusions, Warnings: d.Warnings,
 		Explanation: d.Explanation, Partners: partners,
 	}

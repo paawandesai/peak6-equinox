@@ -124,24 +124,24 @@ func TestIsEligible(t *testing.T) {
 			wantReas: nil,
 		},
 		{
-			name: "edge: exactly at MinBookDepth is eligible",
+			name: "edge: exactly at MinBookDepth is eligible (buy YES checks asks)",
 			quote: canonical.Quote{
 				InstrumentID: "test:9",
 				FetchedAt:    now.Add(-10 * time.Second),
-				YesBids:      []canonical.Level{{Price: dec("0.5"), Size: dec("0.5")}},
-				YesAsks:      []canonical.Level{{Price: dec("0.6"), Size: dec("0.5")}},
+				YesBids:      []canonical.Level{{Price: dec("0.5"), Size: dec("0")}},
+				YesAsks:      []canonical.Level{{Price: dec("0.6"), Size: dec("1")}},
 			},
 			cfg:      baseCfg,
 			wantOK:   true,
 			wantReas: nil,
 		},
 		{
-			name: "one side only is fine if depth is sufficient",
+			name: "one side only is fine if consumed side has depth (buy YES checks asks)",
 			quote: canonical.Quote{
 				InstrumentID: "test:10",
 				FetchedAt:    now.Add(-10 * time.Second),
 				YesBids:      []canonical.Level{{Price: dec("0.5"), Size: dec("10")}},
-				YesAsks:      []canonical.Level{},
+				YesAsks:      []canonical.Level{{Price: dec("0.6"), Size: dec("10")}},
 			},
 			cfg:      baseCfg,
 			wantOK:   true,
@@ -181,7 +181,7 @@ func TestIsEligible(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotOK, gotExs := IsEligible(tt.quote, tt.cfg)
+			gotOK, gotExs := IsEligible(tt.quote, canonical.SideBuy, canonical.OutcomeYes, tt.cfg)
 			if gotOK != tt.wantOK {
 				t.Errorf("IsEligible() gotOK = %v, want %v", gotOK, tt.wantOK)
 			}

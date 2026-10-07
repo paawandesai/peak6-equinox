@@ -113,12 +113,15 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 		DecidedAt:    now.UTC(),
 	}
 
-	cands := []candidate{}
-	targetEligible := false
-	targetExcludedBySkew := false
+	// Collect all candidates (target + partners) that pass pre-routing checks and eligibility.
+	type pendingCandidate struct {
+		cand  canonical.Candidate
+		route string
+	}
+	var pending []pendingCandidate
 
 	// Check target eligibility (staleness, missing book, depth).
-	if targetOK, targetExs := IsEligible(target.Quote, cfg.Eligibility); !targetOK {
+	if targetOK, targetExs := IsEligible(target.Quote, o.Side, o.Outcome, cfg.Eligibility); !targetOK {
 		for _, ex := range targetExs {
 			d.Exclusions = append(d.Exclusions, canonical.Exclusion{
 				InstrumentID: target.Instrument.ID,
@@ -128,19 +131,17 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 			})
 		}
 	} else {
-		targetEligible = true
-		cands = append(cands, candidate{Candidate: target, route: RouteDirect})
+		pending = append(pending, pendingCandidate{cand: target, route: RouteDirect})
 	}
 
-	// Check each partner's relationship, eligibility, and skew against target.
+	// Check each partner's relationship and eligibility.
 	for _, p := range partners {
 		if ex, ok := partnerExclusion(target, p, cfg); !ok {
 			d.Exclusions = append(d.Exclusions, ex)
 			continue
 		}
 
-		// Eligibility: staleness, missing book, depth.
-		if partnerOK, partnerExs := IsEligible(p.Quote, cfg.Eligibility); !partnerOK {
+		if partnerOK, partnerExs := IsEligible(p.Quote, o.Side, o.Outcome, cfg.Eligibility); !partnerOK {
 			for _, ex := range partnerExs {
 				d.Exclusions = append(d.Exclusions, canonical.Exclusion{
 					InstrumentID: p.Instrument.ID,
@@ -152,52 +153,38 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 			continue
 		}
 
-		// Skew: check time difference against target (only if target was eligible).
-		if targetEligible {
-			if excludeOlder, warnings := Skew(target.Quote, p.Quote, cfg.Eligibility); excludeOlder {
-				older := OlderQuote(target.Quote, p.Quote)
-				if older == p.Instrument.ID {
-					skewSec := int(target.Quote.FetchedAt.Sub(p.Quote.FetchedAt).Seconds())
-					if skewSec < 0 {
-						skewSec = -skewSec
-					}
-					d.Exclusions = append(d.Exclusions, canonical.Exclusion{
-						InstrumentID: p.Instrument.ID,
-						Venue:        p.Instrument.Venue,
-						Reason:       ReasonSkew,
-						Detail:       SkewDetail(skewSec),
-					})
-					continue
-				}
-				// If target is older, exclude it from cands and record ONCE.
-				if older == target.Instrument.ID && !targetExcludedBySkew {
-					skewSec := int(p.Quote.FetchedAt.Sub(target.Quote.FetchedAt).Seconds())
-					if skewSec < 0 {
-						skewSec = -skewSec
-					}
-					d.Exclusions = append(d.Exclusions, canonical.Exclusion{
-						InstrumentID: target.Instrument.ID,
-						Venue:        target.Instrument.Venue,
-						Reason:       ReasonSkew,
-						Detail:       SkewDetail(skewSec),
-					})
-					targetExcludedBySkew = true
-					// Remove target from cands.
-					newCands := []candidate{}
-					for _, c := range cands {
-						if c.Instrument.ID != target.Instrument.ID {
-							newCands = append(newCands, c)
-						}
-					}
-					cands = newCands
-				}
-				// Don't continue - partner is still eligible and should be added to cands.
-			} else if len(warnings) > 0 {
-				d.Warnings = append(d.Warnings, warnings...)
+		pending = append(pending, pendingCandidate{cand: p, route: RouteDirect})
+	}
+
+	// Skew check: exclude all quotes older than (freshest - SkewMax), warn for (freshest - SkewWarn).
+	// This ensures partner-vs-partner skew is enforced, not just target-vs-partner (reviewer fix).
+	var cands []candidate
+	if len(pending) > 1 {
+		var freshest time.Time
+		for _, pc := range pending {
+			if pc.cand.Quote.FetchedAt.After(freshest) {
+				freshest = pc.cand.Quote.FetchedAt
 			}
 		}
-
-		cands = append(cands, candidate{Candidate: p, route: RouteDirect})
+		for _, pc := range pending {
+			gap := freshest.Sub(pc.cand.Quote.FetchedAt)
+			gapSec := int(gap.Seconds())
+			if gap > cfg.Eligibility.SkewMax {
+				d.Exclusions = append(d.Exclusions, canonical.Exclusion{
+					InstrumentID: pc.cand.Instrument.ID,
+					Venue:        pc.cand.Instrument.Venue,
+					Reason:       ReasonSkew,
+					Detail:       SkewDetail(gapSec),
+				})
+			} else {
+				if gap > cfg.Eligibility.SkewWarn {
+					d.Warnings = append(d.Warnings, fmt.Sprintf("skew_warning: %s is %d s behind the freshest quote", pc.cand.Instrument.ID, gapSec))
+				}
+				cands = append(cands, candidate{Candidate: pc.cand, route: pc.route})
+			}
+		}
+	} else if len(pending) == 1 {
+		cands = append(cands, candidate{Candidate: pending[0].cand, route: pending[0].route})
 	}
 
 	sz := size(o, cands)

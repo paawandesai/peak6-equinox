@@ -15,6 +15,7 @@ import (
 
 	"github.com/shopspring/decimal"
 
+	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/config"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/store"
 )
 
@@ -75,17 +76,18 @@ func New(cfg Config, deps Deps) *Server {
 		deps.Now = func() time.Time { return time.Now().UTC() }
 	}
 	// Fill zero eligibility thresholds with defaults (test/e2e code may not populate).
+	// Reference config package constants to avoid drift (reviewer fix).
 	if cfg.StaleAfter == 0 {
-		cfg.StaleAfter = 120 * time.Second // DefaultStaleAfterSeconds
+		cfg.StaleAfter = time.Duration(config.DefaultStaleAfterSeconds) * time.Second
 	}
 	if cfg.SkewWarn == 0 {
-		cfg.SkewWarn = 5 * time.Second // DefaultSkewWarnSeconds
+		cfg.SkewWarn = time.Duration(config.DefaultSkewWarnSeconds) * time.Second
 	}
 	if cfg.SkewMax == 0 {
-		cfg.SkewMax = 30 * time.Second // DefaultSkewMaxSeconds
+		cfg.SkewMax = time.Duration(config.DefaultSkewMaxSeconds) * time.Second
 	}
 	if cfg.MinBookDepth.IsZero() {
-		cfg.MinBookDepth = decimal.RequireFromString("1") // DefaultMinBookDepth
+		cfg.MinBookDepth = decimal.RequireFromString(config.DefaultMinBookDepth)
 	}
 	return &Server{
 		cfg: cfg, deps: deps, log: logger,
