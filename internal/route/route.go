@@ -118,7 +118,7 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 	targetExcludedBySkew := false
 
 	// Check target eligibility (staleness, missing book, depth).
-	if targetOK, targetExs := IsEligible(target.Quote, now, cfg.Eligibility); !targetOK {
+	if targetOK, targetExs := IsEligible(target.Quote, cfg.Eligibility); !targetOK {
 		for _, ex := range targetExs {
 			d.Exclusions = append(d.Exclusions, canonical.Exclusion{
 				InstrumentID: target.Instrument.ID,
@@ -140,7 +140,7 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 		}
 
 		// Eligibility: staleness, missing book, depth.
-		if partnerOK, partnerExs := IsEligible(p.Quote, now, cfg.Eligibility); !partnerOK {
+		if partnerOK, partnerExs := IsEligible(p.Quote, cfg.Eligibility); !partnerOK {
 			for _, ex := range partnerExs {
 				d.Exclusions = append(d.Exclusions, canonical.Exclusion{
 					InstrumentID: p.Instrument.ID,

@@ -13,8 +13,11 @@ import (
 // EligibilityConfig holds the staleness, skew, and depth thresholds for
 // routing eligibility checks (M3-01, FR-15, NFR-09).
 type EligibilityConfig struct {
+	// Snapshot is the round snapshot time against which quote age is measured
+	// (NFR-09, D-077). Typically round.FinishedAt, or round.StartedAt if zero.
+	Snapshot time.Time
 	// StaleAfter is the maximum age of a quote. Quotes older than this are
-	// ineligible (now - FetchedAt > StaleAfter).
+	// ineligible (Snapshot - FetchedAt > StaleAfter).
 	StaleAfter time.Duration
 	// SkewWarn is the skew threshold for a warning (abs(q1.FetchedAt - q2.FetchedAt)).
 	SkewWarn time.Duration
@@ -35,7 +38,7 @@ type EligibilityIssue struct {
 // insufficient depth. It returns false and a list of issues if the quote
 // is ineligible, or true and an empty list if eligible.
 //
-// Staleness: now - q.FetchedAt > cfg.StaleAfter excludes with ReasonStale.
+// Staleness: cfg.Snapshot - q.FetchedAt > cfg.StaleAfter excludes with ReasonStale.
 // A missing or zero FetchedAt is ineligible.
 //
 // Missing book: q.Quality flag no_book or both YesAsks and YesBids empty
@@ -43,17 +46,23 @@ type EligibilityIssue struct {
 //
 // Insufficient depth: if the total size across both sides is less than
 // cfg.MinBookDepth, exclude with ReasonInsufficientDepth.
-func IsEligible(q canonical.Quote, now time.Time, cfg EligibilityConfig) (bool, []EligibilityIssue) {
+func IsEligible(q canonical.Quote, cfg EligibilityConfig) (bool, []EligibilityIssue) {
 	var exs []EligibilityIssue
 
-	// Staleness check: FetchedAt must be present and recent.
-	if q.FetchedAt.IsZero() {
+	// Staleness check: FetchedAt must be present and recent (relative to snapshot).
+	// Fail closed if snapshot is unknown.
+	if cfg.Snapshot.IsZero() {
+		exs = append(exs, EligibilityIssue{
+			Reason: ReasonStale,
+			Detail: "round snapshot time unknown",
+		})
+	} else if q.FetchedAt.IsZero() {
 		exs = append(exs, EligibilityIssue{
 			Reason: ReasonStale,
 			Detail: "fetched_at is missing or zero",
 		})
 	} else {
-		age := now.Sub(q.FetchedAt)
+		age := cfg.Snapshot.Sub(q.FetchedAt)
 		if age > cfg.StaleAfter {
 			exs = append(exs, EligibilityIssue{
 				Reason: ReasonStale,

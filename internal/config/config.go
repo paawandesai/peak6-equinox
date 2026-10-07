@@ -35,6 +35,7 @@ const (
 	DefaultMinRouteConfidence    = "0.9"
 	DefaultMinBookDepth          = "1"
 	DefaultPublicRateLimitPerMin = 60
+	DefaultStaleRoundWarnMinutes = 10
 	DefaultLLMModel              = "claude-haiku-4-5-20251001"
 	DefaultLLMDailyCallCap       = 200
 	DefaultLLMMaxOutputTokens    = 400
@@ -78,6 +79,7 @@ type Config struct {
 	MinRouteConfidence    decimal.Decimal
 	MinBookDepth          decimal.Decimal
 	PublicRateLimitPerMin int
+	StaleRoundWarnMinutes int
 
 	LLMEnabled         bool
 	AnthropicAPIKey    string
@@ -124,6 +126,7 @@ func Load(lookup LookupFunc) (Config, error) {
 		MinRouteConfidence:    l.probability("MIN_ROUTE_CONFIDENCE", DefaultMinRouteConfidence),
 		MinBookDepth:          l.positiveDecimal("MIN_BOOK_DEPTH", DefaultMinBookDepth),
 		PublicRateLimitPerMin: l.integer("PUBLIC_RATE_LIMIT_PER_MIN", DefaultPublicRateLimitPerMin, 1, 1_000_000),
+		StaleRoundWarnMinutes: l.integer("STALE_ROUND_WARN_MINUTES", DefaultStaleRoundWarnMinutes, 1, 10_000),
 
 		LLMEnabled:         l.boolean("LLM_ENABLED", false),
 		AnthropicAPIKey:    l.optional("ANTHROPIC_API_KEY", ""),

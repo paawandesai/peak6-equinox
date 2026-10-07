@@ -126,6 +126,7 @@ func newServerWith(cfg config.Config, logger *slog.Logger, deps web.Deps) *web.S
 		SkewWarn:              cfg.SkewWarn,
 		SkewMax:               cfg.SkewMax,
 		MinBookDepth:          cfg.MinBookDepth,
+		StaleRoundWarnMinutes: cfg.StaleRoundWarnMinutes,
 	}, deps)
 }
 

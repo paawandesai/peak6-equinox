@@ -23,6 +23,7 @@ var (
 		RoundID:            7,
 		MinRouteConfidence: d("0.9"),
 		Eligibility: EligibilityConfig{
+			Snapshot:     t0, // quotes are fetched at t0, so they're fresh (0s old)
 			StaleAfter:   120 * time.Second,
 			SkewWarn:     5 * time.Second,
 			SkewMax:      30 * time.Second,
@@ -535,7 +536,10 @@ func TestRouteEligibilityAndSkew(t *testing.T) {
 	now := t0.Add(150 * time.Second) // 150s after t0
 
 	// Stale target: all quotes fetched at t0 are now 150s old (> 120s threshold).
-	dec, err := Route(buy("10"), target, partners, cfg, now)
+	// Use a config with snapshot=now so quotes at t0 are 150s old.
+	staleCfg := cfg
+	staleCfg.Eligibility.Snapshot = now
+	dec, err := Route(buy("10"), target, partners, staleCfg, now)
 	if err != nil {
 		t.Fatalf("Route: %v", err)
 	}
@@ -624,12 +628,15 @@ func TestRouteTargetExcludedBySkew(t *testing.T) {
 
 	t.Run("target stale, partner fresh", func(t *testing.T) {
 		// Target is stale (> 120s), partner is fresh.
+		// Use snapshot=now so target at now-150s is stale.
+		staleCfg := cfg
+		staleCfg.Eligibility.Snapshot = now
 		freshPartner := partners[0]
 		freshPartner.Quote.FetchedAt = now
 		staleTarget := target
 		staleTarget.Quote.FetchedAt = now.Add(-150 * time.Second) // stale, also skewed
 
-		dec, err := Route(buy("10"), staleTarget, []canonical.Candidate{freshPartner}, cfg, now)
+		dec, err := Route(buy("10"), staleTarget, []canonical.Candidate{freshPartner}, staleCfg, now)
 		if err != nil {
 			t.Fatalf("Route: %v", err)
 		}

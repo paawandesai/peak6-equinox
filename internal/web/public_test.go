@@ -68,7 +68,8 @@ func seedPublic(t *testing.T, st *store.Store) seeded {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := st.FinishRound(ctx, round.ID, store.RoundOK, nil, seedNow.Add(time.Minute)); err != nil {
+	// FinishedAt at seedNow+3m: routing snapshot after relationship logs (seedNow+2m).
+	if err := st.FinishRound(ctx, round.ID, store.RoundOK, nil, seedNow.Add(3*time.Minute)); err != nil {
 		t.Fatal(err)
 	}
 	round, err = st.GetRound(ctx, round.ID)
@@ -170,7 +171,7 @@ func TestPublicMatchesPage(t *testing.T) {
 		"Which Kalshi and Polymarket contracts are the same bet",
 		`id="type-equivalent"`, `id="type-related"`,
 		seedTitleA, seedTitleB, seedTitleC,
-		"0.97", "0.40", "2026-10-06 17:01:00 UTC",
+		"0.97", "0.40", "2026-10-06 17:03:00 UTC",
 		`href="/pairs/`+strconv.FormatInt(sd.eqID, 10)+`"`,
 		`href="/pairs/`+strconv.FormatInt(sd.relID, 10)+`"`,
 		"round "+strconv.FormatInt(sd.round.ID, 10),

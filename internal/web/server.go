@@ -8,6 +8,7 @@ package web
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -36,6 +37,8 @@ type Config struct {
 	SkewMax time.Duration
 	// MinBookDepth is the minimum book depth (MIN_BOOK_DEPTH).
 	MinBookDepth decimal.Decimal
+	// StaleRoundWarnMinutes is the stale-round warning threshold (STALE_ROUND_WARN_MINUTES).
+	StaleRoundWarnMinutes int
 }
 
 // Deps holds the collaborators the web layer uses. Store and Ingester may be
@@ -92,6 +95,25 @@ func New(cfg Config, deps Deps) *Server {
 }
 
 func (s *Server) now() time.Time { return s.deps.Now() }
+
+// staleRoundWarning returns a warning message if the round snapshot is older
+// than StaleRoundWarnMinutes, or an empty string if the round is fresh (NFR-09, D-077).
+func (s *Server) staleRoundWarning(r store.Round) string {
+	if s.cfg.StaleRoundWarnMinutes <= 0 {
+		return ""
+	}
+	snapshot := r.SnapshotAt()
+	if snapshot.IsZero() {
+		return ""
+	}
+	age := s.now().Sub(snapshot)
+	ageMinutes := int(age.Minutes())
+	threshold := s.cfg.StaleRoundWarnMinutes
+	if ageMinutes >= threshold {
+		return fmt.Sprintf("Data is %d minutes old.", ageMinutes)
+	}
+	return ""
+}
 
 // Handler returns the root handler with all routes and middleware applied.
 func (s *Server) Handler() http.Handler {

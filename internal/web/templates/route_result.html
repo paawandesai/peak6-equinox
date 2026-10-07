@@ -5,6 +5,7 @@
   <ul role="alert">{{range .Errors}}<li>{{.}}</li>{{end}}</ul>
 {{else}}{{with .Decision}}
   <header><strong>Decision #{{$.DecisionID}}</strong> · round {{.RoundID}} · target <code>{{.TargetID}}</code> · decided {{.DecidedAt}}</header>
+  <p><strong>As of:</strong> {{.Snapshot}} (snapshot)</p>
   <p><strong>Order:</strong> {{.OrderLine}}. Partners considered: {{.Partners}}.</p>
 
   <h3>Chosen route</h3>

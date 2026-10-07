@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+	"time"
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/store"
@@ -143,6 +144,15 @@ func (s *Server) handleDecision(w http.ResponseWriter, r *http.Request) {
 		s.dbError(w, "loading routing decision", err)
 		return
 	}
+	round, err := st.GetRound(ctx, rd.RoundID)
+	if err != nil && !isNotFound(err) {
+		s.dbError(w, "loading the decision's round", err)
+		return
+	}
+	snapshot := time.Time{}
+	if err == nil {
+		snapshot = round.SnapshotAt()
+	}
 	data := decisionPage{
 		routePage: routePage{
 			page: page{
@@ -151,15 +161,12 @@ func (s *Server) handleDecision(w http.ResponseWriter, r *http.Request) {
 				Assets:   pinnedAssets,
 			},
 			DecisionID: rd.ID,
-			Decision:   newDecisionView(rd.Decision, countPartners(rd.Decision)),
+			Decision:   newDecisionView(rd.Decision, countPartners(rd.Decision), snapshot),
 		},
 		CreatedAt: formatUTC(rd.CreatedAt),
 	}
-	if round, err := st.GetRound(ctx, rd.RoundID); err == nil {
+	if err == nil {
 		data.Round = newRoundInfo(round)
-	} else if !isNotFound(err) {
-		s.dbError(w, "loading the decision's round", err)
-		return
 	}
 	s.render(w, http.StatusOK, "decision", data)
 }

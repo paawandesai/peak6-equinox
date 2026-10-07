@@ -87,11 +87,13 @@ func sampleDecision() canonical.Decision {
 
 func TestPrintDecision(t *testing.T) {
 	var out bytes.Buffer
-	if err := printDecision(&out, 42, sampleDecision()); err != nil {
+	snapshot := time.Date(2026, 10, 6, 11, 58, 0, 0, time.UTC)
+	if err := printDecision(&out, 42, sampleDecision(), snapshot); err != nil {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
 		"Routing decision #42 (round 7) for " + routeKalshiID,
+		"As of:    2026-10-06T11:58:00Z",
 		"Order:    buy 100 contracts YES market IOC",
 		"Chosen:   polymarket " + routePolymarketID + " (direct): 100 contracts, VWAP 0.5150, fee 0.0175, basis 0.0000, all-in 0.5325",
 		"#1 polymarket " + routePolymarketID + ": all-in 0.5325",
@@ -110,7 +112,7 @@ func TestPrintDecision(t *testing.T) {
 	n := dec("25")
 	d.Order.Quantity, d.Order.Notional, d.Order.Type, d.Order.LimitPrice = nil, &n, canonical.OrderLimit, &[]decimal.Decimal{dec("0.5")}[0]
 	out.Reset()
-	if err := printDecision(&out, 1, d); err != nil {
+	if err := printDecision(&out, 1, d, snapshot); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(out.String(), "Chosen:   none") || !strings.Contains(out.String(), "$25 notional YES limit IOC limit 0.5000") {
@@ -136,7 +138,7 @@ func TestLogSummary(t *testing.T) {
 func seedRouteRound(t *testing.T, s *store.Store) store.Round {
 	t.Helper()
 	ctx := context.Background()
-	t0 := time.Now().UTC()
+	t0 := time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC)
 	round, err := s.CreateRound(ctx, t0)
 	if err != nil {
 		t.Fatal(err)

@@ -104,10 +104,11 @@ func (s *Server) handleAppCSS(w http.ResponseWriter, _ *http.Request) {
 // page is the data every full page shares. Question is the one line that
 // states what the page answers (NFR-16).
 type page struct {
-	Title    string
-	Question string
-	Assets   assets
-	Round    *roundInfo
+	Title        string
+	Question     string
+	Assets       assets
+	Round        *roundInfo
+	StaleWarning string // "Data is N minutes old" when round is stale (NFR-09, D-077)
 }
 
 // roundInfo is the round a page reads from, as shown in headers.

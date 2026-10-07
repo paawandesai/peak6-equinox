@@ -148,6 +148,7 @@ type decisionView struct {
 	RoundID      int64
 	TargetID     string
 	DecidedAt    string
+	Snapshot     string
 	OrderLine    string
 	Chosen       []canonical.Leg
 	Alternatives []canonical.Alternative
@@ -157,9 +158,10 @@ type decisionView struct {
 	Partners     int
 }
 
-func newDecisionView(d canonical.Decision, partners int) *decisionView {
+func newDecisionView(d canonical.Decision, partners int, snapshot time.Time) *decisionView {
 	return &decisionView{
-		RoundID: d.RoundID, TargetID: d.TargetID, DecidedAt: formatUTC(d.DecidedAt), OrderLine: orderLine(d.Order),
+		RoundID: d.RoundID, TargetID: d.TargetID, DecidedAt: formatUTC(d.DecidedAt),
+		Snapshot: formatUTC(snapshot), OrderLine: orderLine(d.Order),
 		Chosen: d.Chosen, Alternatives: d.Alternatives, Exclusions: d.Exclusions, Warnings: d.Warnings,
 		Explanation: d.Explanation, Partners: partners,
 	}
@@ -236,10 +238,17 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 		s.routeFailure(w, r, http.StatusServiceUnavailable, in.PairID, "the database is unavailable; try again shortly")
 		return
 	}
+	round, err := st.GetRound(ctx, rel.RoundID)
+	if err != nil {
+		s.log.Error("loading round for route", "err", err)
+		s.routeFailure(w, r, http.StatusServiceUnavailable, in.PairID, "the database is unavailable; try again shortly")
+		return
+	}
 	cfg := route.Config{
 		RoundID:            rel.RoundID,
 		MinRouteConfidence: s.cfg.MinRouteConfidence,
 		Eligibility: route.EligibilityConfig{
+			Snapshot:     round.SnapshotAt(),
 			StaleAfter:   s.cfg.StaleAfter,
 			SkewWarn:     s.cfg.SkewWarn,
 			SkewMax:      s.cfg.SkewMax,
@@ -267,11 +276,13 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 	s.log.Info("routing decision stored", "decision_id", id, "round_id", dec.RoundID, "target", dec.TargetID,
 		"chosen", len(dec.Chosen), "alternatives", len(dec.Alternatives), "exclusions", len(dec.Exclusions))
 
+	p := s.routePageHeader(in.PairID)
+	p.StaleWarning = s.staleRoundWarning(round)
 	data := routePage{
-		page:       s.routePageHeader(in.PairID),
+		page:       p,
 		PairID:     in.PairID,
 		DecisionID: id,
-		Decision:   newDecisionView(dec, len(partners)),
+		Decision:   newDecisionView(dec, len(partners), round.SnapshotAt()),
 	}
 	s.renderRoute(w, r, http.StatusOK, data)
 }

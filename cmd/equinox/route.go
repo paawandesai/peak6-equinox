@@ -135,6 +135,7 @@ func runRoute(ctx context.Context, args []string, stdout io.Writer) error {
 		RoundID:            in.round.ID,
 		MinRouteConfidence: cfg.MinRouteConfidence,
 		Eligibility: route.EligibilityConfig{
+			Snapshot:     in.round.SnapshotAt(),
 			StaleAfter:   cfg.StaleAfter,
 			SkewWarn:     cfg.SkewWarn,
 			SkewMax:      cfg.SkewMax,
@@ -159,7 +160,7 @@ func runRoute(ctx context.Context, args []string, stdout io.Writer) error {
 		enc.SetIndent("", "  ")
 		return enc.Encode(dec)
 	}
-	return printDecision(stdout, id, dec)
+	return printDecision(stdout, id, dec, in.round.SnapshotAt())
 }
 
 // routeInputs is everything Route needs from the database.
@@ -249,7 +250,7 @@ func logSummary(dec canonical.Decision) string {
 }
 
 // printDecision renders a decision for a terminal.
-func printDecision(w io.Writer, id int64, dec canonical.Decision) error {
+func printDecision(w io.Writer, id int64, dec canonical.Decision, snapshot time.Time) error {
 	o := dec.Order
 	size := ""
 	switch {
@@ -264,6 +265,7 @@ func printDecision(w io.Writer, id int64, dec canonical.Decision) error {
 	}
 	var b strings.Builder
 	fmt.Fprintf(&b, "Routing decision #%d (round %d) for %s at %s\n", id, dec.RoundID, dec.TargetID, dec.DecidedAt.Format(time.RFC3339))
+	fmt.Fprintf(&b, "As of:    %s\n", snapshot.UTC().Format(time.RFC3339))
 	fmt.Fprintf(&b, "Order:    %s\n", orderLine)
 	if len(dec.Chosen) == 0 {
 		b.WriteString("Chosen:   none\n")

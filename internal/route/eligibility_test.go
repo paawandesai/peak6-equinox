@@ -12,7 +12,8 @@ import (
 
 func TestIsEligible(t *testing.T) {
 	now := time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)
-	cfg := EligibilityConfig{
+	baseCfg := EligibilityConfig{
+		Snapshot:     now,
 		StaleAfter:   120 * time.Second,
 		SkewWarn:     5 * time.Second,
 		SkewMax:      30 * time.Second,
@@ -22,7 +23,6 @@ func TestIsEligible(t *testing.T) {
 	tests := []struct {
 		name     string
 		quote    canonical.Quote
-		now      time.Time
 		cfg      EligibilityConfig
 		wantOK   bool
 		wantReas []string // list of expected reasons
@@ -35,8 +35,7 @@ func TestIsEligible(t *testing.T) {
 				YesBids:      []canonical.Level{{Price: dec("0.5"), Size: dec("10")}},
 				YesAsks:      []canonical.Level{{Price: dec("0.6"), Size: dec("10")}},
 			},
-			now:      now,
-			cfg:      cfg,
+			cfg:      baseCfg,
 			wantOK:   true,
 			wantReas: nil,
 		},
@@ -48,8 +47,7 @@ func TestIsEligible(t *testing.T) {
 				YesBids:      []canonical.Level{{Price: dec("0.5"), Size: dec("10")}},
 				YesAsks:      []canonical.Level{{Price: dec("0.6"), Size: dec("10")}},
 			},
-			now:      now,
-			cfg:      cfg,
+			cfg:      baseCfg,
 			wantOK:   false,
 			wantReas: []string{ReasonStale},
 		},
@@ -61,8 +59,7 @@ func TestIsEligible(t *testing.T) {
 				YesBids:      []canonical.Level{{Price: dec("0.5"), Size: dec("10")}},
 				YesAsks:      []canonical.Level{{Price: dec("0.6"), Size: dec("10")}},
 			},
-			now:      now,
-			cfg:      cfg,
+			cfg:      baseCfg,
 			wantOK:   false,
 			wantReas: []string{ReasonStale},
 		},
@@ -74,8 +71,7 @@ func TestIsEligible(t *testing.T) {
 				Quality:      canonical.Quality{{Flag: canonical.QualityNoBook}},
 				YesBids:      []canonical.Level{{Price: dec("0.5"), Size: dec("10")}},
 			},
-			now:      now,
-			cfg:      cfg,
+			cfg:      baseCfg,
 			wantOK:   false,
 			wantReas: []string{ReasonNoBook},
 		},
@@ -87,8 +83,7 @@ func TestIsEligible(t *testing.T) {
 				YesBids:      []canonical.Level{},
 				YesAsks:      []canonical.Level{},
 			},
-			now:      now,
-			cfg:      cfg,
+			cfg:      baseCfg,
 			wantOK:   false,
 			wantReas: []string{ReasonNoBook},
 		},
@@ -100,8 +95,7 @@ func TestIsEligible(t *testing.T) {
 				YesBids:      []canonical.Level{{Price: dec("0.5"), Size: dec("0.3")}},
 				YesAsks:      []canonical.Level{{Price: dec("0.6"), Size: dec("0.4")}},
 			},
-			now:      now,
-			cfg:      cfg,
+			cfg:      baseCfg,
 			wantOK:   false,
 			wantReas: []string{ReasonInsufficientDepth},
 		},
@@ -113,8 +107,7 @@ func TestIsEligible(t *testing.T) {
 				YesBids:      []canonical.Level{},
 				YesAsks:      []canonical.Level{},
 			},
-			now:      now,
-			cfg:      cfg,
+			cfg:      baseCfg,
 			wantOK:   false,
 			wantReas: []string{ReasonStale, ReasonNoBook},
 		},
@@ -126,8 +119,7 @@ func TestIsEligible(t *testing.T) {
 				YesBids:      []canonical.Level{{Price: dec("0.5"), Size: dec("10")}},
 				YesAsks:      []canonical.Level{{Price: dec("0.6"), Size: dec("10")}},
 			},
-			now:      now,
-			cfg:      cfg,
+			cfg:      baseCfg,
 			wantOK:   true,
 			wantReas: nil,
 		},
@@ -139,8 +131,7 @@ func TestIsEligible(t *testing.T) {
 				YesBids:      []canonical.Level{{Price: dec("0.5"), Size: dec("0.5")}},
 				YesAsks:      []canonical.Level{{Price: dec("0.6"), Size: dec("0.5")}},
 			},
-			now:      now,
-			cfg:      cfg,
+			cfg:      baseCfg,
 			wantOK:   true,
 			wantReas: nil,
 		},
@@ -152,16 +143,45 @@ func TestIsEligible(t *testing.T) {
 				YesBids:      []canonical.Level{{Price: dec("0.5"), Size: dec("10")}},
 				YesAsks:      []canonical.Level{},
 			},
-			now:      now,
-			cfg:      cfg,
+			cfg:      baseCfg,
 			wantOK:   true,
 			wantReas: nil,
+		},
+		{
+			name: "snapshot staleness: 121s is stale (NFR-09, D-077)",
+			quote: canonical.Quote{
+				InstrumentID: "test:11",
+				FetchedAt:    now.Add(-121 * time.Second),
+				YesBids:      []canonical.Level{{Price: dec("0.5"), Size: dec("10")}},
+				YesAsks:      []canonical.Level{{Price: dec("0.6"), Size: dec("10")}},
+			},
+			cfg:      baseCfg,
+			wantOK:   false,
+			wantReas: []string{ReasonStale},
+		},
+		{
+			name: "zero snapshot: fail closed (NFR-09, D-077)",
+			quote: canonical.Quote{
+				InstrumentID: "test:12",
+				FetchedAt:    now.Add(-10 * time.Second),
+				YesBids:      []canonical.Level{{Price: dec("0.5"), Size: dec("10")}},
+				YesAsks:      []canonical.Level{{Price: dec("0.6"), Size: dec("10")}},
+			},
+			cfg: EligibilityConfig{
+				Snapshot:     time.Time{}, // zero
+				StaleAfter:   120 * time.Second,
+				SkewWarn:     5 * time.Second,
+				SkewMax:      30 * time.Second,
+				MinBookDepth: decimal.NewFromInt(1),
+			},
+			wantOK:   false,
+			wantReas: []string{ReasonStale},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotOK, gotExs := IsEligible(tt.quote, tt.now, tt.cfg)
+			gotOK, gotExs := IsEligible(tt.quote, tt.cfg)
 			if gotOK != tt.wantOK {
 				t.Errorf("IsEligible() gotOK = %v, want %v", gotOK, tt.wantOK)
 			}
@@ -179,7 +199,7 @@ func TestIsEligible(t *testing.T) {
 
 func TestSkew(t *testing.T) {
 	now := time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)
-	cfg := EligibilityConfig{
+	baseCfg := EligibilityConfig{
 		StaleAfter:   120 * time.Second,
 		SkewWarn:     5 * time.Second,
 		SkewMax:      30 * time.Second,
@@ -204,7 +224,7 @@ func TestSkew(t *testing.T) {
 				InstrumentID: "test:2",
 				FetchedAt:    now,
 			},
-			cfg:              cfg,
+			cfg:              baseCfg,
 			wantExcludeOlder: false,
 			wantWarnings:     0,
 		},
@@ -218,7 +238,7 @@ func TestSkew(t *testing.T) {
 				InstrumentID: "test:2",
 				FetchedAt:    now.Add(-3 * time.Second),
 			},
-			cfg:              cfg,
+			cfg:              baseCfg,
 			wantExcludeOlder: false,
 			wantWarnings:     0,
 		},
@@ -232,7 +252,7 @@ func TestSkew(t *testing.T) {
 				InstrumentID: "test:2",
 				FetchedAt:    now.Add(-10 * time.Second),
 			},
-			cfg:              cfg,
+			cfg:              baseCfg,
 			wantExcludeOlder: false,
 			wantWarnings:     1,
 		},
@@ -246,7 +266,7 @@ func TestSkew(t *testing.T) {
 				InstrumentID: "test:2",
 				FetchedAt:    now.Add(-35 * time.Second),
 			},
-			cfg:              cfg,
+			cfg:              baseCfg,
 			wantExcludeOlder: true,
 			wantWarnings:     0,
 		},
@@ -260,7 +280,7 @@ func TestSkew(t *testing.T) {
 				InstrumentID: "test:2",
 				FetchedAt:    now.Add(-5 * time.Second),
 			},
-			cfg:              cfg,
+			cfg:              baseCfg,
 			wantExcludeOlder: false,
 			wantWarnings:     0,
 		},
@@ -274,7 +294,7 @@ func TestSkew(t *testing.T) {
 				InstrumentID: "test:2",
 				FetchedAt:    now.Add(-30 * time.Second),
 			},
-			cfg:              cfg,
+			cfg:              baseCfg,
 			wantExcludeOlder: false,
 			wantWarnings:     1,
 		},
@@ -288,7 +308,7 @@ func TestSkew(t *testing.T) {
 				InstrumentID: "test:2",
 				FetchedAt:    now,
 			},
-			cfg:              cfg,
+			cfg:              baseCfg,
 			wantExcludeOlder: false,
 			wantWarnings:     0,
 		},
@@ -302,7 +322,7 @@ func TestSkew(t *testing.T) {
 				InstrumentID: "test:2",
 				FetchedAt:    time.Time{},
 			},
-			cfg:              cfg,
+			cfg:              baseCfg,
 			wantExcludeOlder: false,
 			wantWarnings:     0,
 		},
@@ -316,7 +336,7 @@ func TestSkew(t *testing.T) {
 				InstrumentID: "test:2",
 				FetchedAt:    now,
 			},
-			cfg:              cfg,
+			cfg:              baseCfg,
 			wantExcludeOlder: true,
 			wantWarnings:     0,
 		},
