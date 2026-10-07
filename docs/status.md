@@ -46,7 +46,7 @@ Next operator action (Tier 2): human verification of Fed demo rendering (criteri
 
 ## In progress
 
-- M3 tickets: docs/tickets/M3.md written (10 tickets M3-01…M3-10); MR !32 open; GitLab issues #21–#30 created with M3 label. M3 kickoff pending operator merge of !32.
+- M3 tickets: docs/tickets/M3.md merged (MR !32); GitLab issues #21–#30 created with M3 label. M3-05 (fee verification) merged as MR !33. M3-01 (eligibility checks) in progress as MR !34.
 
 ## Blocked
 
@@ -72,6 +72,7 @@ None.
 | D-069 | M2-07: web pages `/near-misses`, `/log`, `/decisions/{id}`, `/eval` (read-only artifact contract), server-rendered SVG price history, facts/basis/type legend on pair page; NFR-05 collector success page; AB-15 5 GiB growth alert. Tier 1. | 2026-10-07 |
 | D-070 | M2-05: golden set machinery (`internal/eval`, `equinox golden draft`, `equinox eval [--out]`, `make eval`); `testdata/golden/candidates.yaml` drafted (40 pairs from fixture round 2); `labels.yaml` ships empty (Q-7). Tier 1. | 2026-10-07 |
 | D-071 | M2-02: politics normaliser; `<stage>:<office>[:<party>]:<year>` metric structure; Kalshi + Polymarket universe filled; politics fixtures recorded. Tier 1. | 2026-10-07 |
+| D-074 | M3-01: `MIN_BOOK_DEPTH` config field (default 1 contract) for eligibility depth checks. Tier 2. | 2026-10-07 |
 | D-072 | M2-06: settlement back-test (`internal/eval/backtest*.go`, `equinox backtest --fixtures | --live`); allowlist + Markdown report; fixture test PASS (1031 instruments, 207544 pairs, 24/24 agreed); equivalence.md §7–§8 filled. Tier 1. | 2026-10-07 |
 | D-073 | M3-05: both venues verified (Kalshi via official July 7 2026 PDF supplied by Paawan, Q-8; Polymarket M1-08); adapters Verified=true; worked-example tests. Tier 2 shared-file update (domain.md). | 2026-10-07 |
 
