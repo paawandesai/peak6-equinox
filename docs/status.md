@@ -94,23 +94,23 @@ None.
 | FR-02 | done (M1) | | NFR-02 | partial (M1 quote cap / round timing) |
 | FR-03 | done (M1) | | NFR-03 | done (M1) |
 | FR-04 | done (M1) | | NFR-04 | partial (M1 e2e path) |
-| FR-05 | done (M1) | | NFR-05 | partial (M2 machinery; precision gate blocked on Q-7) |
+| FR-05 | done (M1) | | NFR-05 | partial (M2 admin page; 95% gate is measurement) |
 | FR-06 | done (M2 all cats) | | NFR-06 | partial (M2 machinery; precision blocked on Q-7) |
 | FR-07 | done (M1) | | NFR-07 | done (M2 fixture back-test) |
-| FR-08 | partial (M2 facts/basis/type UI; fed/politics exact) | | NFR-08 | done (M1) |
+| FR-08 | partial (M2 fed/politics; crypto M1) | | NFR-08 | done (M1) |
 | FR-09 | partial (M2 all 5 types; LLM M3) | | NFR-09 | not started |
-| FR-10 | partial (M2 all types UI) | | NFR-10 | done (M1) |
-| FR-11 | partial (M2 near-misses UI) | | NFR-11 | partial (M1 harness; live verifier M3) |
+| FR-10 | done (M2) | | NFR-10 | done (M1) |
+| FR-11 | partial (M2 code + UI) | | NFR-11 | partial (M1 harness; live verifier M3) |
 | FR-12 | partial (single-venue v0) | | NFR-12 | done (M1) |
 | FR-13 | not started | | NFR-13 | done (M1) |
 | FR-14 | not started | | NFR-14 | done (M1) |
 | FR-15 | not started | | NFR-15 | not started |
 | FR-16 | partial (initial schedules) | | NFR-16 | partial (M1 pages) |
-| FR-17 | partial (M2 near-misses; persistence complete) | | NFR-17 | done (M1) |
-| FR-18 | done (M2) | | | |
-| FR-19 | done (M2) | | | |
+| FR-17 | partial (M2 near-misses persisted + UI) | | NFR-17 | done (M1) |
+| FR-18 | partial (M2 machinery; labels empty) | | | |
+| FR-19 | partial (M2 code + UI via /eval) | | | |
 | FR-20 | not started | | | |
-| FR-21 | partial (M2 near-misses; matches/pair/route/log) | | | |
+| FR-21 | partial (M2 near-misses/log/eval/history; M1 matches/pair/route) | | | |
 | FR-22 | done (M1) | | | |
 | FR-23 | not started | | | |
 | FR-24 | not started | | | |
