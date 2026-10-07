@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -22,7 +23,8 @@ const shutdownTimeout = 10 * time.Second
 
 func init() { register("serve", runServe) }
 
-// runServe starts the web server on $PORT (default 8080). The database pool
+// runServe starts the web server on $PORT (default 8080). In staging and
+// prod it applies pending migrations first (M1-12). The database pool then
 // connects lazily, so /healthz answers without a reachable database and the
 // admin routes recover as soon as it is reachable.
 func runServe(ctx context.Context, _ []string, _ io.Writer) error {
@@ -31,6 +33,9 @@ func runServe(ctx context.Context, _ []string, _ io.Writer) error {
 		return err
 	}
 	logger := newLogger(cfg)
+	if err := migrateOnStartup(ctx, cfg, logger); err != nil {
+		return err
+	}
 	deps, closeDeps, err := buildDeps(ctx, cfg, logger)
 	if err != nil {
 		return err
@@ -42,6 +47,42 @@ func runServe(ctx context.Context, _ []string, _ io.Writer) error {
 	}
 	logger.Info("starting server", "version", buildVersion(), "addr", ln.Addr().String(), "config", cfg)
 	return serve(ctx, ln, newServerWith(cfg, logger, deps), logger)
+}
+
+// migrateOnStartup applies every pending migration before the server listens
+// when APP_ENV is prod or staging (M1-12), so a deploy never serves against a
+// stale schema. It is idempotent: a second run finds nothing to do, and the
+// goose session lock in store.Migrate serialises instances that start at the
+// same time. Local and CI runs keep `make migrate` explicit, because tests own
+// their schemas. A migration failure stops the start-up, so Cloud Run keeps
+// the previous revision serving.
+func migrateOnStartup(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
+	if !migratesOnStartup(cfg.AppEnv) {
+		return nil
+	}
+	logger.Info("applying migrations on startup", "app_env", cfg.AppEnv)
+	if err := store.Migrate(ctx, cfg.DatabaseURL, store.MigrateUp, migrationLog{logger}); err != nil {
+		return fmt.Errorf("migrating on startup: %w", err)
+	}
+	return nil
+}
+
+// migratesOnStartup reports whether serve migrates before listening in appEnv.
+func migratesOnStartup(appEnv string) bool {
+	return appEnv == config.EnvProd || appEnv == config.EnvStaging
+}
+
+// migrationLog turns the migrator's one-line-per-migration output into
+// structured log records.
+type migrationLog struct{ logger *slog.Logger }
+
+func (m migrationLog) Write(p []byte) (int, error) {
+	for line := range strings.SplitSeq(strings.TrimRight(string(p), "\n"), "\n") {
+		if line != "" {
+			m.logger.Info("migration", "result", line)
+		}
+	}
+	return len(p), nil
 }
 
 // buildDeps wires the store (a lazily connecting pool) and the collector.

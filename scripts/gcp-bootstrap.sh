@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
-# One-time GCP setup for Equinox (M1-02, D-002, D-016, D-034).
+# One-time GCP setup for Equinox (M1-02, D-002, D-016, D-034) and the
+# Cloud Scheduler collector job (M1-12, FR-04).
 #
 # Idempotent: every resource is checked before it is created, so the script
 # can be re-run safely. Each step is echoed before it runs. Generated
 # passwords are written straight to Secret Manager and never printed (AB-06).
 #
-# Needs: gcloud authenticated with Owner (or equivalent) on the project, openssl.
-# Env overrides: GCP_PROJECT, GCP_REGION.
+# The Scheduler job needs the Cloud Run service URL, so it is created on the
+# first run after `make deploy`; until then that step is skipped with a note.
+#
+# Needs: gcloud authenticated with Owner (or equivalent) on the project,
+# openssl, base64. Env overrides: GCP_PROJECT, GCP_REGION.
 set -euo pipefail
 
 PROJECT="${GCP_PROJECT:-peak6-equinox-510816}"
@@ -24,6 +28,11 @@ SECRET_DB_URL="equinox-database-url"
 SECRET_STAGING_DB_URL="equinox-staging-database-url"
 SECRET_ADMIN_PASSWORD="equinox-admin-password"
 SECRET_ANTHROPIC_KEY="equinox-anthropic-key"
+RUN_SERVICE="equinox"
+ADMIN_USER="admin" # must match ADMIN_USER in the Makefile deploy targets
+SCHEDULER_JOB="equinox-collect"
+SCHEDULER_SCHEDULE="*/5 * * * *"
+SCHEDULER_ATTEMPT_DEADLINE="300s" # a round takes up to a few minutes (D-062)
 APIS=(
   run.googleapis.com
   sqladmin.googleapis.com
@@ -180,6 +189,40 @@ create_app_secrets() {
   fi
 }
 
+# create_scheduler_job creates the collector trigger (D-016, FR-04): every 5
+# minutes, POST <service-url>/admin/ingest with a basic-auth header. The
+# password is read from Secret Manager at creation time and never printed; to
+# pick up a rotated password, delete the job and re-run this script. The job
+# is skipped until the service is deployed, because the URL is only known then.
+create_scheduler_job() {
+  step "Cloud Scheduler job '$SCHEDULER_JOB' ('$SCHEDULER_SCHEDULE', POST /admin/ingest)"
+  if gc scheduler jobs describe "$SCHEDULER_JOB" --location="$REGION" >/dev/null 2>&1; then
+    skip "$SCHEDULER_JOB (delete it and re-run to pick up a new URL or password)"
+    return
+  fi
+  local url
+  url="$(gc run services describe "$RUN_SERVICE" --region="$REGION" --format='value(status.url)' 2>/dev/null || true)"
+  if [[ -z "$url" ]]; then
+    echo "    Cloud Run service '$RUN_SERVICE' is not deployed yet: run 'make deploy', then re-run this script"
+    return
+  fi
+  local auth
+  auth="$(
+    printf '%s:' "$ADMIN_USER"
+    gc secrets versions access latest --secret="$SECRET_ADMIN_PASSWORD"
+  )"
+  auth="$(printf '%s' "$auth" | base64 | tr -d '\n')"
+  echo "    + gcloud --project=$PROJECT --quiet scheduler jobs create http $SCHEDULER_JOB" \
+    "--location=$REGION --schedule='$SCHEDULER_SCHEDULE' --uri=$url/admin/ingest" \
+    "--http-method=POST --headers=Authorization=Basic [REDACTED] --attempt-deadline=$SCHEDULER_ATTEMPT_DEADLINE"
+  gc scheduler jobs create http "$SCHEDULER_JOB" --location="$REGION" \
+    --schedule="$SCHEDULER_SCHEDULE" --time-zone=Etc/UTC \
+    --uri="$url/admin/ingest" --http-method=POST \
+    --headers="Authorization=Basic $auth" \
+    --attempt-deadline="$SCHEDULER_ATTEMPT_DEADLINE" --max-retry-attempts=0 \
+    --description="Equinox collector: one fetch round every 5 minutes (D-016, FR-04)" >/dev/null
+}
+
 print_manual_steps() {
   cat <<EOF
 
@@ -190,13 +233,15 @@ print_manual_steps() {
   3. Paste the real Anthropic key (it is read from stdin, not from the command line):
        gcloud secrets versions add $SECRET_ANTHROPIC_KEY --project=$PROJECT --data-file=-
      then type or paste the key and press Ctrl-D.
-  4. Deploy: make deploy (prod) or make deploy-staging.
+  4. Deploy: make deploy (prod) or make deploy-staging. After the first prod deploy,
+     re-run this script once so it creates the '$SCHEDULER_JOB' Scheduler job.
 EOF
 }
 
 main() {
   command -v gcloud >/dev/null || { echo "gcloud not found" >&2; exit 1; }
   command -v openssl >/dev/null || { echo "openssl not found" >&2; exit 1; }
+  command -v base64 >/dev/null || { echo "base64 not found" >&2; exit 1; }
   echo "Bootstrapping project $PROJECT in $REGION"
   enable_apis
   create_ar_repo
@@ -205,6 +250,7 @@ main() {
   create_db_user_and_urls
   create_service_account
   create_app_secrets
+  create_scheduler_job
   print_manual_steps
 }
 

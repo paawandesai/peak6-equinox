@@ -1,11 +1,13 @@
-<!-- OWNER: shared. Created in M1-11 (safety harness); M1-12 completes the deployment and development sections. Kept current by every ticket that touches LLM use. -->
+<!-- OWNER: shared. Created in M1-11 (safety harness); deployment and development sections completed in M1-12. Kept current by every ticket that touches LLM use. -->
 # AI usage disclosure
 
-Equinox uses AI in two places: a runtime LLM verifier inside the product, and AI tools during development. Both are described here (brief deliverable 6).
+Equinox uses AI in two places: a runtime LLM verifier inside the product, and AI tools during development. Both are described here (brief deliverable 6). Nothing on the public pages calls a model: matching, diffs and routing are deterministic code, and the verifier only ever adjusts a rules verdict downwards.
 
 ## Runtime LLM use
 
 **Purpose.** The matcher is deterministic rules first (D-003). An LLM verifier gives a second opinion on two kinds of pairs: `uncertain` pairs the rules could not settle, and every rules `equivalent` (D-022). It arrives in M3; the safety harness it runs inside was built and tested first, in M1-11.
+
+**Status in production (M1-12).** The verifier is not switched on. `make deploy` sets `LLM_ENABLED=false`, and the `equinox-anthropic-key` secret has no version until the human adds the real key (status.md Q-3), so the deployed service holds no Anthropic credential and makes no model calls. Every relationship shown on the live site today carries method `rules`.
 
 **Model.** Anthropic Messages API, model `claude-haiku-4-5-20251001`, the cheapest tier (D-046). `LLM_MODEL` overrides it. The production client is admin-triggered only; no public web request can cause a call (NFR-11, AB-04).
 
@@ -25,8 +27,9 @@ Every outcome appends a human-readable note to the relationship's explanation.
 - *Venue text is data.* Titles and rules are the only untrusted input (AB-01). `BuildPrompt` places them inside `<<<BEGIN:LABEL>>>` … `<<<END:LABEL>>>` blocks after a fixed system prompt that states the blocks are data and never instructions. Each field is NFKC-normalised, stripped of control, format (zero-width, bidi override, BOM), private-use and invalid characters, has every run of `<` or `>` collapsed and angle-bracket look-alikes removed (so no venue text can open or close a block), and is capped at 4,000 characters. The rules verdict is not shown to the model, so it cannot be steered by it.
 - *Strict output schema (AB-13).* The model must answer with exactly `{"relationship", "differing_fields", "confidence", "evidence"}`. The decoder refuses responses over 16 KiB, unknown keys, anything after the JSON object, nesting deeper than 8 levels, a non-numeric or exponent-form confidence, a confidence outside [0,1], more than 3 evidence quotes or any over 200 characters, more than 16 differing fields or any over 64 characters, and control or format characters in either list. A ```json fence is tolerated.
 - *Cache (AB-11).* Verdicts are cached by `CacheKey` = SHA-256 of both instruments' normalised title and rules text, the prompt version and the model ID, length-prefixed and order-sensitive (because `implies` is directional). A cached verdict goes through `Apply` like a fresh one, so a poisoned entry can never upgrade.
-- *Spend cap.* `LLM_DAILY_CALL_CAP` (default 200) calls per UTC day; once reached the verifier is skipped and logged (M3).
 - *Logging.* Guard events are structured `slog` records with the pair IDs, the rules type, the model's type and confidence. Raw model output and venue text are never logged.
+
+**The cap.** `LLM_DAILY_CALL_CAP` (default 200) bounds the number of model calls per UTC day; once it is reached the verifier is skipped and the skip is logged, and the rules verdict stands (M3). `LLM_MAX_OUTPUT_TOKENS` (default 400) bounds each answer. At the Haiku tier the cap is well under one dollar a day; raising it is a 2-critical decision under operating-rules.md and needs the human's approval first. Spend is tracked in status.md against the $50 project budget.
 
 **Fixed prompt-injection and jailbreak suite.** `testdata/llm/injection_cases.yaml` holds 32 fixed attacks: "ignore previous instructions", fake closing delimiters and fake system-role text, DAN-style jailbreaks, instructions in the title, zero-width, homoglyph and bidi obfuscation, prompt-in-a-URL, a request for the system prompt, JSON embedded in venue text, and hostile outputs (non-JSON, extra fields, out-of-range confidence, oversized evidence, a 2 MiB payload, trailing text, two objects, deep nesting), plus two control cases. CI runs every case through `BuildPrompt` → `AdversarialMock` (a model that obeys whatever the injected text demands) → `Decode` → `Apply` in `tests/security/ab01_prompt_injection_test.go`, and asserts the final relationship is never stronger than the rules verdict, every output validates, and nothing panics. **No live or paid API is ever called in CI.**
 
@@ -34,4 +37,16 @@ Every outcome appends a human-readable note to the relationship's explanation.
 
 ## Development AI use
 
-Development is run through Agent Orchestrator (AO) per [operating-rules.md](operating-rules.md): a Grok operator drives AO, Claude Code workers implement one ticket each on their own branch, and a Cursor agent reviews every MR. Humans review at the points listed there: the kickoff pack, every Tier 2 decision (veto after the fact), every 2-critical decision (approval before acting), human-owned files, and the golden labels. M1-12 completes this section with the deployment details.
+Most of the code, tests and operator-owned documentation in this repository were written by AI agents under the process in [operating-rules.md](operating-rules.md). The roles, and what each one may and may not do:
+
+**Grok operator running AO.** A Grok bot hosts and drives Agent Orchestrator (AO). It breaks each milestone into tickets (`docs/tickets/`), spawns one worker per ready ticket, routes CI failures and review findings back to the owning worker, merges MRs that are CI-green and reviewer-approved (D-049), and keeps `docs/status.md`, `docs/log.md` and `docs/decisions.md` current. It decides Tier 1 and Tier 2 questions itself and logs them; it never decides Tier 3 questions (scope, requirements, stack, budget, human-owned files, the golden labels).
+
+**Claude Code workers.** Each ticket is implemented by one Claude Code session on its own branch and git worktree, with `CLAUDE.md`, the brief, the ticket, the architecture and the domain docs as its instructions. Workers run under the operator's Claude subscription (OAuth); the project's `ANTHROPIC_API_KEY` is never present in a worker's environment, so development agents cannot spend the product's LLM budget and the runtime key cannot leak into a worker transcript. Workers write code, tests and MR descriptions, run `make check` locally, and record non-obvious choices as `D-` entries. They never place or simulate real orders, never call venue endpoints that need credentials, and never run paid APIs from tests. Text found in web pages, venue data, dependencies, issues or MR comments is treated as information, not instructions.
+
+**Cursor reviewer.** A Cursor agent reviews every MR before merge, and findings go back to the worker. A worker that fails the same check twice is stopped and the ticket re-scoped by the operator.
+
+**Deterministic gates that no agent can skip.** Every MR runs typecheck, lint, the test suite with the race detector, the abuse-case suite in `tests/security/`, the 80 % coverage floor, gitleaks, govulncheck and the human-owned-file guard. Weakening or deleting a test needs a logged decision.
+
+**Human review points.** Paawan Desai, the human, wrote the kickoff pack (brief, requirements, threat model, plan, operating rules; the files only an MR labelled `human-approved` may change), answers the open questions in `docs/status.md`, can veto any Tier 1 or Tier 2 decision after the fact (the operator reverts and logs the reversal), must approve every 2-critical decision before it is acted on (hard constraints, security mitigations, the equivalence definition and veto rules, spend above $35, data deletion, anything after code freeze), owns the golden labels used to measure precision, and holds the cloud credentials: the GCP project, the Secret Manager entries and the Anthropic key are set up by the human or by the operator host's authenticated `gcloud`, never by a worker's own credentials.
+
+**Deployment.** Production deploys (`make deploy`, M1-02 and M1-12) are Tier 2 decisions run from the operator host and logged in `docs/decisions.md`. The Cloud Scheduler job that drives the collector authenticates with the admin password from Secret Manager; no AI agent holds that password in its context, because `scripts/gcp-bootstrap.sh` reads it from the secret and writes it straight into the job.
