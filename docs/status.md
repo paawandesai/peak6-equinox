@@ -1,15 +1,21 @@
 <!-- OWNER: operator. -->
 # Status
 
-_Last updated: 2026-10-06 ~21:55 CT by operator (M1 verified HIT WITH CAVEATS; M2 tickets written; wave 1 starting)._
+_Last updated: 2026-10-07 ~17:05 UTC by operator (M2 tickets complete; exit verify MISS)._
 
 ## Current milestone
 
-**M2 in progress** (target Fri 2026-10-09). Tickets in [tickets/M2.md](tickets/M2.md). Wave 1–3 merged (M2-01, M2-03, M2-04); M2-08 docs merged. Open: M2-02 (!22), M2-04-hotfix (!25), M2-05 (!26), M2-06 (worker spawning), M2-07 (!27).
+**M2 exit verification (2026-10-07 ~17:00 UTC):** **MISS.** All M2 code tickets merged; docs/equivalence.md landed; golden/eval machinery + back-test complete. Exit criteria status:
+  1. Precision ≥0.95 at `equivalent` on human-confirmed labels — **BLOCKED** (testdata/golden/labels.yaml empty; Q-7 human gate).
+     - Subpart: 0 veto false positives on the veto suite — **MET** (TestPairsFromFixtures 0 FP on 37 V- cases; documented in equivalence.md §8).
+     - Subpart: 0 back-test mismatches on fixture set — **MET** (1031 instruments, 207544 pairs, 24/24 agreed; equivalence.md §7–§8).
+  2. ≥10 true `equivalent` / `complement` across ≥2 categories in a live round — **MISS** (live revision equinox-00009 pinned round 3: 0 equivalent/complement, 768 related; fixture draft: 1 `equivalent_given_facts`, 1 `complement`, both fed-only).
+  3. Fed demo pair + near-miss render correctly live — **MISS** (live URL /near-misses /log /eval all 404; M2 routes not deployed; live is pre-M2 revision equinox-00009-2bk created 2026-10-07T01:34:33Z).
+  4. docs/equivalence.md merged — **MET** (MR !24 merged as ba0a6c66).
 
-**M1 verification (2026-10-06 ~21:55 CT):** **HIT WITH CAVEATS.** See operator report in log. Caveats: live round 3 has 0 `equivalent` / 768 `related` (Q-4/D-060 accepted for M1); E2E equivalent path is synthetic (D-064); D-065 still awaiting human veto (Tier 2, non-blocking); live `POST /route` on related pairs correctly refuses (`not_routable`) — chosen-venue VWAP path proven in CI e2e only until live equivalents exist (M2).
+Next operator action (Tier 2, out of scope for this docs MR): prod redeploy of M2 code (`make deploy`), `equinox match`, `equinox pin`, human review of live round for Q-7 label candidates.
 
-**Previous:** M1 complete (all M1-01…M1-12 merged).
+**Previous:** M1 verification HIT WITH CAVEATS (2026-10-06 ~21:55 CT).
 
 
 ## Done
@@ -29,17 +35,18 @@ _Last updated: 2026-10-06 ~21:55 CT by operator (M1 verified HIT WITH CAVEATS; M
 - M1-12: Full production deploy with Scheduler collector and AI-usage doc — MR !16 merged as 23c191d (closes #12); revision equinox-00008-b2g; Scheduler `equinox-collect`; round 3 matched + pinned (`equinox pin`).
 
 - M2-01: Fed/macro normaliser — MR !21 merged (closes #13).
+- M2-02: Politics normaliser — MR !22 merged (closes #14).
 - M2-03: Facts loader + Fed demo facts — MR !20 merged (closes #15).
 - M2-04: Matcher v1 (derived types, Fed facts rule, basis risk) — MR !23 merged (closes #16).
+- M2-04-hotfix: Flaky rapid oracle fix — MR !25 merged (follow-up to #16).
+- M2-05: Golden set + eval machinery — MR !26 merged as b92a3ec (closes #17).
+- M2-06: Settlement back-test — MR !29 merged (closes #18).
+- M2-07: Web near-misses / log / eval / history / NFR-05 / AB-15 — MR !27 merged (closes #19).
 - M2-08: `docs/equivalence.md` methodology — MR !24 merged as ba0a6c66 (closes #20).
 
 ## In progress
 
-- M2-02 politics normaliser — MR !22 (worker peak6-equinox-17); rebase after !24; coverage flake on match oracle.
-- M2-04 follow-up oracle fix — MR !25 (peak6-equinox-22); prefer merge before match-dependent work.
-- M2-05 golden/eval — MR !26 (peak6-equinox-19).
-- M2-06 settlement back-test — worker peak6-equinox-23 spawned (issue #18); deps (M2-04) met.
-- M2-07 web near-misses / log / eval / history / NFR-05 / AB-15 — MR !27 (peak6-equinox-20).
+None.
 
 ## Blocked
 
@@ -59,7 +66,13 @@ None.
 | D-060 | M1-07: crypto normaliser rules; deadline veto refined **stricter** than D-019 (exact deadline for crypto; "within 24 h" read strictly). Tier 2, touches a veto rule; see Q-4. | 2026-10-06 |
 | D-061 (7) | M1-07: `.gitleaks.toml` allowlist for matcher fixture venue market keys (`market_id`/`key: KX…` in `testdata/match/crypto_pairs.yaml` only). Tier 2 CI-gate config; rest of D-061 is Tier 1. | 2026-10-06 |
 | D-065 | M1-12: prod start-up migrations; Dockerfile fixes; Scheduler `equinox-collect`; on-demand `equinox match` via Cloud Run job; **match-then-pin** rule so `/` stays on a matched round across Scheduler ticks. Tier 2 (prod deploy). | 2026-10-07 |
+| D-066 | M2-03: facts loader (`internal/facts`, `config/facts.yaml`); strict YAML validation; `facts.Set` satisfies `match.Facts`. Tier 1. | 2026-10-07 |
+| D-067 | M2-01: Fed/macro normaliser; category-scoped `Register` registry in `internal/normalize`. Tier 1. | 2026-10-07 |
 | D-068 | M2-04: derived types by set algebra (`implies` recorded for either direction, explanation names it); Fed facts rule with two new facts (`fed_next_meeting`, `fed_rate_step`); basis-risk weights; near-miss rule includes "a fact was consulted". Tier 2, defines classification rules; Q-4 not acted on. | 2026-10-07 |
+| D-069 | M2-07: web pages `/near-misses`, `/log`, `/decisions/{id}`, `/eval` (read-only artifact contract), server-rendered SVG price history, facts/basis/type legend on pair page; NFR-05 collector success page; AB-15 5 GiB growth alert. Tier 1. | 2026-10-07 |
+| D-070 | M2-05: golden set machinery (`internal/eval`, `equinox golden draft`, `equinox eval [--out]`, `make eval`); `testdata/golden/candidates.yaml` drafted (40 pairs from fixture round 2); `labels.yaml` ships empty (Q-7). Tier 1. | 2026-10-07 |
+| D-071 | M2-02: politics normaliser; `<stage>:<office>[:<party>]:<year>` metric structure; Kalshi + Polymarket universe filled; politics fixtures recorded. Tier 1. | 2026-10-07 |
+| D-072 | M2-06: settlement back-test (`internal/eval/backtest*.go`, `equinox backtest --fixtures | --live`); allowlist + Markdown report; fixture test PASS (1031 instruments, 207544 pairs, 24/24 agreed); equivalence.md §7–§8 filled. Tier 1. | 2026-10-07 |
 
 ## Open questions
 
@@ -81,28 +94,28 @@ None.
 | FR-02 | done (M1) | | NFR-02 | partial (M1 quote cap / round timing) |
 | FR-03 | done (M1) | | NFR-03 | done (M1) |
 | FR-04 | done (M1) | | NFR-04 | partial (M1 e2e path) |
-| FR-05 | done (M1) | | NFR-05 | partial (M1 measuring starts) |
-| FR-06 | partial (crypto only) | | NFR-06 | partial (M1) |
-| FR-07 | done (M1) | | NFR-07 | not started |
-| FR-08 | partial (subject/threshold/deadline; crypto exact) | | NFR-08 | done (M1) |
-| FR-09 | partial (`equivalent`/`related`/`unrelated`) | | NFR-09 | not started |
-| FR-10 | not started | | NFR-10 | done (M1) |
-| FR-11 | not started | | NFR-11 | partial (M1 harness; live verifier M3) |
+| FR-05 | done (M1) | | NFR-05 | partial (M2 machinery; precision gate blocked on Q-7) |
+| FR-06 | done (M2 all cats) | | NFR-06 | partial (M2 machinery; precision blocked on Q-7) |
+| FR-07 | done (M1) | | NFR-07 | done (M2 fixture back-test) |
+| FR-08 | partial (M2 facts/basis/type UI; fed/politics exact) | | NFR-08 | done (M1) |
+| FR-09 | partial (M2 all 5 types; LLM M3) | | NFR-09 | not started |
+| FR-10 | partial (M2 all types UI) | | NFR-10 | done (M1) |
+| FR-11 | partial (M2 near-misses UI) | | NFR-11 | partial (M1 harness; live verifier M3) |
 | FR-12 | partial (single-venue v0) | | NFR-12 | done (M1) |
 | FR-13 | not started | | NFR-13 | done (M1) |
 | FR-14 | not started | | NFR-14 | done (M1) |
 | FR-15 | not started | | NFR-15 | not started |
 | FR-16 | partial (initial schedules) | | NFR-16 | partial (M1 pages) |
-| FR-17 | partial (persist) | | NFR-17 | done (M1) |
-| FR-18 | not started | | | |
-| FR-19 | not started | | | |
+| FR-17 | partial (M2 near-misses; persistence complete) | | NFR-17 | done (M1) |
+| FR-18 | done (M2) | | | |
+| FR-19 | done (M2) | | | |
 | FR-20 | not started | | | |
-| FR-21 | partial (matches/pair/route) | | | |
+| FR-21 | partial (M2 near-misses; matches/pair/route/log) | | | |
 | FR-22 | done (M1) | | | |
 | FR-23 | not started | | | |
 | FR-24 | not started | | | |
-| FR-25 | not started | | | |
-| FR-26 | partial (`migrate`/`ingest`/`match`/`route`/`serve`/`pin`) | | | |
+| FR-25 | done (M2) | | | |
+| FR-26 | partial (M2 `backtest`/`eval`/`golden`; M1 `migrate`/`ingest`/`match`/`route`/`serve`/`pin`) | | | |
 | FR-27 | done (M1) | | | |
 
 ## Spend to date
