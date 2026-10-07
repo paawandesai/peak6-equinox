@@ -141,14 +141,5 @@ func TestGoldenUsageErrors(t *testing.T) {
 	}
 }
 
-func TestPlannedBacktestStillStubbed(t *testing.T) {
-	if _, ok := commands["backtest"]; ok {
-		return // M2-06 landed
-	}
-	var out bytes.Buffer
-	if code := run(context.Background(), []string{"backtest"}, &out, io.Discard); code != 0 || !strings.Contains(out.String(), "M2-06") {
-		t.Errorf("backtest stub: exit %d, %q", code, out.String())
-	}
-}
 
 func itoa64(n int64) string { return strconv.FormatInt(n, 10) }
