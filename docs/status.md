@@ -73,6 +73,7 @@ None.
 | D-070 | M2-05: golden set machinery (`internal/eval`, `equinox golden draft`, `equinox eval [--out]`, `make eval`); `testdata/golden/candidates.yaml` drafted (40 pairs from fixture round 2); `labels.yaml` ships empty (Q-7). Tier 1. | 2026-10-07 |
 | D-071 | M2-02: politics normaliser; `<stage>:<office>[:<party>]:<year>` metric structure; Kalshi + Polymarket universe filled; politics fixtures recorded. Tier 1. | 2026-10-07 |
 | D-072 | M2-06: settlement back-test (`internal/eval/backtest*.go`, `equinox backtest --fixtures | --live`); allowlist + Markdown report; fixture test PASS (1031 instruments, 207544 pairs, 24/24 agreed); equivalence.md §7–§8 filled. Tier 1. | 2026-10-07 |
+| D-073 | M3-05: Kalshi fee verified (API reference + human PDF read; PDF still behind bot checkpoint); Polymarket fee re-verified; both adapters set `Verified: true`; domain.md § Fees updated to VERIFIED for both venues with sources/dates; worked-example tests added. Tier 2 shared-file update (domain.md). | 2026-10-07 |
 
 ## Open questions
 
@@ -105,7 +106,7 @@ None.
 | FR-13 | not started | | NFR-13 | done (M1) |
 | FR-14 | not started | | NFR-14 | done (M1) |
 | FR-15 | not started | | NFR-15 | not started |
-| FR-16 | partial (initial schedules) | | NFR-16 | partial (M1 pages) |
+| FR-16 | done (M3-05 verified both venues) | | NFR-16 | partial (M1 pages) |
 | FR-17 | partial (M2 near-misses persisted + UI) | | NFR-17 | done (M1) |
 | FR-18 | partial (M2 machinery; labels empty) | | | |
 | FR-19 | done (M2-06 fixture back-test) | | | |
