@@ -25,14 +25,14 @@ func init() { register("pin", runPin) }
 func runPin(ctx context.Context, args []string, stdout io.Writer) error {
 	fs := flag.NewFlagSet("pin", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
-	clear := fs.Bool("clear", false, "unpin every round")
+	unpinAll := fs.Bool("clear", false, "unpin every round")
 	if err := fs.Parse(args); err != nil {
 		return fmt.Errorf("%w: %w", err, errUsage)
 	}
 	var id int64
 	switch {
-	case *clear && fs.NArg() == 0:
-	case !*clear && fs.NArg() == 1:
+	case *unpinAll && fs.NArg() == 0:
+	case !*unpinAll && fs.NArg() == 1:
 		n, err := strconv.ParseInt(fs.Arg(0), 10, 64)
 		if err != nil || n <= 0 {
 			return fmt.Errorf("round id must be a positive integer: %w", errUsage)
@@ -50,7 +50,7 @@ func runPin(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 	defer st.Close()
-	if *clear {
+	if *unpinAll {
 		if err := st.UnpinRounds(ctx); err != nil {
 			return err
 		}
