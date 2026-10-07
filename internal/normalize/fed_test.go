@@ -355,17 +355,12 @@ func TestExtractFedHostileTextDoesNotPanic(t *testing.T) {
 
 func TestRegistry(t *testing.T) {
 	got := Registered()
-	want := map[canonical.Category]bool{canonical.CategoryCrypto: true, canonical.CategoryFed: true}
+	want := map[canonical.Category]bool{canonical.CategoryCrypto: true, canonical.CategoryFed: true, canonical.CategoryPolitics: true}
 	for _, c := range got {
 		delete(want, c)
 	}
 	if len(want) != 0 {
 		t.Errorf("Registered() = %v, missing %v", got, want)
-	}
-	for _, c := range got {
-		if c == canonical.CategoryPolitics {
-			t.Error("politics is registered before M2-02")
-		}
 	}
 
 	// A new category dispatches through the registry without touching extract.go.

@@ -3,11 +3,14 @@
 # any correction is a Tier 1 change logged in docs/decisions.md.
 # crypto uses bitcoin + ethereum (the Kalshi KXBTCD/KXETHD counterparts), not the broad
 # "crypto" tag, which returns ~2,100 events and ~30 MB per sweep (D-056).
-# politics is filled in M2.
+# politics: verified 2026-10-07 by M2-02 (D-071): president (9 open events: the 2028 winner,
+# VP nominees, announcements) and primaries (10 open events: the 2028 Democratic and Republican
+# nominees, state primaries). The broad politics / elections / midterms tags return hundreds of
+# events and thousands of markets per sweep, so they are not used.
 categories:
   crypto:
     tag_slugs: [bitcoin, ethereum]
   fed:
     tag_slugs: [fed-rates]
   politics:
-    tag_slugs: []
+    tag_slugs: [president, primaries]

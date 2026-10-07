@@ -59,7 +59,7 @@ func repoUniverseDir(t *testing.T) string {
 	return filepath.Join("..", "..", "config", "universe")
 }
 
-// TestLoadUniverseRepoFiles pins the M1 universe in config/universe/.
+// TestLoadUniverseRepoFiles pins the universe in config/universe/ (politics from M2-02).
 func TestLoadUniverseRepoFiles(t *testing.T) {
 	us, err := LoadUniverse(repoUniverseDir(t))
 	if err != nil {
@@ -67,7 +67,8 @@ func TestLoadUniverseRepoFiles(t *testing.T) {
 	}
 	k := us.For(canonical.VenueKalshi)
 	wantK := map[canonical.Category][]string{
-		canonical.CategoryCrypto: {"KXBTCD", "KXETHD"}, canonical.CategoryFed: {"KXFED"}, canonical.CategoryPolitics: nil,
+		canonical.CategoryCrypto: {"KXBTCD", "KXETHD"}, canonical.CategoryFed: {"KXFED"},
+		canonical.CategoryPolitics: {"KXPRESPERSON", "KXPRESNOMD", "KXPRESNOMR"},
 	}
 	for c, want := range wantK {
 		sel, ok := k.Categories[c]
@@ -83,7 +84,8 @@ func TestLoadUniverseRepoFiles(t *testing.T) {
 	}
 	p := us.For(canonical.VenuePolymarket)
 	wantP := map[canonical.Category][]string{
-		canonical.CategoryCrypto: {"bitcoin", "ethereum"}, canonical.CategoryFed: {"fed-rates"}, canonical.CategoryPolitics: nil,
+		canonical.CategoryCrypto: {"bitcoin", "ethereum"}, canonical.CategoryFed: {"fed-rates"},
+		canonical.CategoryPolitics: {"president", "primaries"},
 	}
 	for c, want := range wantP {
 		sel, ok := p.Categories[c]
