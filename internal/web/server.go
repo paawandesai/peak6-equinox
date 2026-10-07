@@ -36,6 +36,14 @@ type Deps struct {
 	Logger   *slog.Logger
 	Store    *store.Store
 	Ingester Ingester
+	// AnthropicAPIKey is the key for LLM verification. Empty means disabled.
+	AnthropicAPIKey string
+	// LLMModel is the Anthropic model ID for verification (default claude-haiku-4-5-20251001).
+	LLMModel string
+	// LLMDailyCallCap is the maximum LLM calls per UTC day (default 200).
+	LLMDailyCallCap int
+	// LLMMaxOutputTokens caps each LLM response (default 400).
+	LLMMaxOutputTokens int
 	// Now overrides the clock (tests). It must return UTC.
 	Now func() time.Time
 	// DBSize overrides the database-size query behind the AB-15 growth alert

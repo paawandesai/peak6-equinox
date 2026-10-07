@@ -30,6 +30,12 @@
     <p>Ingest is not configured on this server.</p>
   {{end}}
 
+  <h2>LLM Verification</h2>
+  <form method="post" action="/admin/llm-verify">
+    <button type="submit">Verify equivalent pairs with LLM</button>
+    <span>Runs LLM verifier on all rules-equivalent pairs from the current round. Downgrade-only, cached, budget-capped.</span>
+  </form>
+
   <h2>Last {{len .Rounds}} rounds</h2>
   {{if not .Rounds}}
     <p>No rounds yet. Run <code>equinox seed</code> or <code>equinox ingest</code>, or press the button above.</p>

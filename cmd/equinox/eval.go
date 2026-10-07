@@ -30,9 +30,9 @@ const defaultLabelsFile = "testdata/golden/labels.yaml"
 const defaultSummaryFile = "config/eval_summary.json"
 
 // runEval reports precision and recall per relationship type on the golden
-// set, rules only (FR-18, NFR-06, US-06; rules+LLM is M3):
+// set (FR-18, NFR-06, US-06):
 //
-//	equinox eval [--labels PATH] [--candidates PATH] [--out PATH] [--require-labels] [--verbose]
+//	equinox eval [--labels PATH] [--candidates PATH] [--out PATH] [--method METHOD] [--require-labels] [--verbose]
 //
 // Each labelled pair is re-classified from the instruments in the database
 // with the facts in FACTS_FILE, so the figures are for the matcher as built,
@@ -40,6 +40,11 @@ const defaultSummaryFile = "config/eval_summary.json"
 // verdicts recorded in a candidates file are used instead and no database
 // is needed (an offline dry run). An empty labels file exits 0 with a note,
 // or 1 with --require-labels.
+//
+// --method selects which relationships to evaluate: "rules" (default) uses
+// only rules-based relationships, "rules+llm" uses relationships verified by
+// the LLM (M3-06). The eval reports the delta in precision/recall when the
+// LLM is involved.
 //
 // The same figures are written as JSON to --out (default
 // config/eval_summary.json; --out= disables) in the contract the web eval
@@ -50,6 +55,7 @@ func runEval(ctx context.Context, args []string, stdout io.Writer) error {
 	labelsPath := fs.String("labels", defaultLabelsFile, "human-confirmed labels file")
 	candidatesPath := fs.String("candidates", "", "use the rules verdicts in this candidates file instead of the database")
 	outPath := fs.String("out", defaultSummaryFile, "write the JSON summary artifact here (empty: do not write)")
+	method := fs.String("method", "rules", "relationship method to evaluate: rules or rules+llm")
 	require := fs.Bool("require-labels", false, "exit non-zero when the labels file has no labels")
 	verbose := fs.Bool("verbose", false, "list every labelled pair with its verdict")
 	command := "equinox eval"
@@ -61,6 +67,16 @@ func runEval(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 	if fs.NArg() > 0 {
 		return fmt.Errorf("eval takes no positional arguments: %w", errUsage)
+	}
+	// Validate method flag
+	var evalMethod canonical.Method
+	switch *method {
+	case "rules":
+		evalMethod = canonical.MethodRules
+	case "rules+llm":
+		evalMethod = canonical.MethodRulesLLM
+	default:
+		return fmt.Errorf("--method must be 'rules' or 'rules+llm'; got %q: %w", *method, errUsage)
 	}
 	labels, err := eval.LoadLabels(*labelsPath)
 	if err != nil {
@@ -98,7 +114,7 @@ func runEval(ctx context.Context, args []string, stdout io.Writer) error {
 			return err
 		}
 		defer st.Close()
-		predict, err = storePredictor(ctx, st, labels, factSet)
+		predict, err = storePredictor(ctx, st, labels, factSet, evalMethod)
 		if err != nil {
 			return err
 		}
@@ -137,9 +153,42 @@ func candidatesPredictor(c eval.Candidates) eval.Predictor {
 }
 
 // storePredictor loads every labelled instrument once, normalises it and
-// classifies pairs on demand with the rules, A on the first venue in
-// canonical order as `equinox match` does.
-func storePredictor(ctx context.Context, st *store.Store, labels eval.Labels, fs facts.Set) (eval.Predictor, error) {
+// classifies pairs on demand. When method is MethodRules, it classifies with
+// the rules on demand like `equinox match` does. When method is MethodRulesLLM,
+// it reads stored relationships from the database that were LLM-verified.
+func storePredictor(ctx context.Context, st *store.Store, labels eval.Labels, fs facts.Set, method canonical.Method) (eval.Predictor, error) {
+	if method == canonical.MethodRulesLLM {
+		// For rules+llm, we read relationships from the database that have
+		// method='rules+llm'. We need to load them from the round that the
+		// labels reference, or the latest round.
+		roundID := labels.RoundID
+		if roundID == 0 {
+			rd, err := st.CurrentRound(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("getting current round for rules+llm eval: %w", err)
+			}
+			roundID = rd.ID
+		}
+		rels, err := st.ListRelationships(ctx, store.RelationshipFilter{RoundID: roundID, Limit: 10000})
+		if err != nil {
+			return nil, fmt.Errorf("loading relationships for rules+llm eval: %w", err)
+		}
+		// Build a map of (aID, bID) -> type for rules+llm relationships
+		relMap := make(map[string]canonical.RelationshipType)
+		for _, r := range rels {
+			if r.Method == canonical.MethodRulesLLM {
+				key := pairKey(r.AID, r.BID)
+				relMap[key] = r.Type
+			}
+		}
+		return func(aID, bID string) (canonical.RelationshipType, bool) {
+			key := pairKey(aID, bID)
+			t, ok := relMap[key]
+			return t, ok
+		}, nil
+	}
+
+	// For rules-only, classify on demand
 	idSet := map[string]struct{}{}
 	for _, l := range labels.Labels {
 		idSet[l.AID] = struct{}{}
@@ -169,6 +218,15 @@ func storePredictor(ctx context.Context, st *store.Store, labels eval.Labels, fs
 		}
 		return match.Compare(a, b, fs).Type, true
 	}, nil
+}
+
+// pairKey returns a canonical key for an (a, b) pair, with a and b in
+// lexicographic order so pairKey(x, y) == pairKey(y, x).
+func pairKey(aID, bID string) string {
+	if aID > bID {
+		aID, bID = bID, aID
+	}
+	return aID + "|" + bID
 }
 
 // venueRank is a venue's position in canonical.Venues().

@@ -12,6 +12,7 @@ import (
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/collector"
+	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/llm"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/store"
 )
 
@@ -42,6 +43,7 @@ func (s *Server) adminRoutes(mux *http.ServeMux) {
 	mux.Handle("/admin", index)
 	mux.Handle("/admin/{$}", index)
 	mux.Handle("/admin/ingest", s.adminAuth(http.HandlerFunc(s.handleAdminIngest)))
+	mux.Handle("/admin/llm-verify", s.adminAuth(http.HandlerFunc(s.handleAdminLLMVerify)))
 	mux.Handle("/admin/", s.adminAuth(http.NotFoundHandler()))
 }
 
@@ -252,4 +254,158 @@ func sanitizeID(s string) string {
 		return "?"
 	}
 	return b.String()
+}
+
+// llmVerifyResponse is the JSON body of POST /admin/llm-verify.
+type llmVerifyResponse struct {
+	RoundID         int64  `json:"round_id,omitempty"`
+	Verified        int    `json:"verified"`
+	Downgraded      int    `json:"downgraded"`
+	CacheHits       int    `json:"cache_hits"`
+	BudgetExhausted bool   `json:"budget_exhausted"`
+	Error           string `json:"error,omitempty"`
+}
+
+// handleAdminLLMVerify runs the LLM verifier on all rules-equivalent pairs from
+// the current or pinned round. It updates relationships.method='rules+llm' and
+// downgrades relationships.type when the LLM says so, logs each verdict to
+// decision_log, and returns a summary. If ANTHROPIC_API_KEY is missing, returns
+// HTTP 503.
+func (s *Server) handleAdminLLMVerify(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", "POST")
+		s.writeJSON(w, http.StatusMethodNotAllowed, llmVerifyResponse{Error: "use POST"})
+		return
+	}
+	if s.deps.Store == nil {
+		s.writeJSON(w, http.StatusServiceUnavailable, llmVerifyResponse{Error: "database not configured"})
+		return
+	}
+	if s.deps.AnthropicAPIKey == "" {
+		s.writeJSON(w, http.StatusServiceUnavailable, llmVerifyResponse{Error: "LLM verifier unavailable: ANTHROPIC_API_KEY not set"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Minute)
+	defer cancel()
+
+	// Get the current or pinned round
+	rd, err := s.deps.Store.CurrentRound(ctx)
+	if err != nil {
+		s.log.Error("getting current round for llm verification", "error", err)
+		s.writeJSON(w, http.StatusInternalServerError, llmVerifyResponse{Error: "database unavailable"})
+		return
+	}
+
+	// Get all rules-equivalent pairs
+	candidates, err := s.deps.Store.ListRelationships(ctx, store.RelationshipFilter{
+		RoundID: rd.ID,
+		Limit:   10000,
+	})
+	if err != nil {
+		s.log.Error("listing relationships for llm verification", "error", err, "round_id", rd.ID)
+		s.writeJSON(w, http.StatusInternalServerError, llmVerifyResponse{Error: "database unavailable"})
+		return
+	}
+
+	// Filter to rules-only equivalent or equivalent_given_facts
+	var pairs []canonical.Relationship
+	for _, rel := range candidates {
+		if rel.Method == canonical.MethodRules && (rel.Type == canonical.RelEquivalent || rel.Type == canonical.RelEquivalentGivenFacts) {
+			pairs = append(pairs, rel)
+		}
+	}
+
+	if len(pairs) == 0 {
+		s.writeJSON(w, http.StatusOK, llmVerifyResponse{RoundID: rd.ID, Verified: 0, Downgraded: 0})
+		return
+	}
+
+	// Build the verifier stack: Anthropic client -> cache -> budget
+	model := s.deps.LLMModel
+	if model == "" {
+		model = "claude-haiku-4-5-20251001"
+	}
+	maxTokens := s.deps.LLMMaxOutputTokens
+	if maxTokens <= 0 {
+		maxTokens = 400
+	}
+	dailyCap := s.deps.LLMDailyCallCap
+	if dailyCap <= 0 {
+		dailyCap = 200
+	}
+
+	// Anthropic client -> Verifier -> Cache -> Budget
+	client, err := llm.NewAnthropicClient(s.deps.AnthropicAPIKey, model, maxTokens)
+	if err != nil {
+		s.log.Error("creating anthropic client", "error", err)
+		s.writeJSON(w, http.StatusInternalServerError, llmVerifyResponse{Error: "failed to initialize LLM client"})
+		return
+	}
+
+	verifier := llm.NewVerifier(client)
+	cache := llm.NewPGCache(s.deps.Store, model, llm.PromptVersion)
+	cachedVerifier := llm.NewCachedVerifier(verifier, cache, model, llm.PromptVersion)
+	budgetedVerifier := llm.NewBudgetedVerifier(cachedVerifier, s.deps.Store, dailyCap)
+
+	var verified, downgraded, cacheHits int
+	var budgetExhausted bool
+
+	// Verify each pair and update the relationship
+	for _, rel := range pairs {
+		// Get instruments
+		aRec, err := s.deps.Store.GetInstrument(ctx, rel.AID)
+		if err != nil {
+			s.log.Error("getting instrument for llm verification", "error", err, "id", rel.AID)
+			continue
+		}
+		bRec, err := s.deps.Store.GetInstrument(ctx, rel.BID)
+		if err != nil {
+			s.log.Error("getting instrument for llm verification", "error", err, "id", rel.BID)
+			continue
+		}
+
+		// Check cache first for hit tracking
+		cacheKey := llm.CacheKey(aRec.Instrument, bRec.Instrument, llm.PromptVersion, model)
+		if _, hit, _ := cache.Get(ctx, cacheKey); hit {
+			cacheHits++
+		}
+
+		// Verify with the full stack
+		verdict, err := budgetedVerifier.Verify(ctx, aRec.Instrument, bRec.Instrument, rel)
+		if err != nil {
+			if errors.Is(err, llm.ErrBudgetExhausted) {
+				budgetExhausted = true
+				s.log.Warn("llm daily budget exhausted", "round_id", rd.ID, "verified_so_far", verified)
+				break
+			}
+			// Record the error and keep the rules verdict
+			result := llm.GuardError(ctx, s.log, rel, err)
+			if _, err := s.deps.Store.UpsertRelationship(ctx, result.Relationship); err != nil {
+				s.log.Error("updating relationship after llm error", "error", err, "a_id", rel.AID, "b_id", rel.BID)
+			}
+			continue
+		}
+
+		// Apply the guard (downgrade-only)
+		result := llm.Guard(ctx, s.log, rel, verdict)
+		verified++
+		if result.Outcome == llm.OutcomeDowngraded {
+			downgraded++
+		}
+
+		// Update the relationship in the database
+		if _, err := s.deps.Store.UpsertRelationship(ctx, result.Relationship); err != nil {
+			s.log.Error("updating relationship after llm verification", "error", err, "a_id", rel.AID, "b_id", rel.BID)
+			continue
+		}
+	}
+
+	s.writeJSON(w, http.StatusOK, llmVerifyResponse{
+		RoundID:         rd.ID,
+		Verified:        verified,
+		Downgraded:      downgraded,
+		CacheHits:       cacheHits,
+		BudgetExhausted: budgetExhausted,
+	})
 }
