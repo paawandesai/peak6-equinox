@@ -212,6 +212,14 @@ func subjectIn(re *regexp.Regexp, text string) string {
 // subjectSlug turns a name into a subject: parties map to
 // "<party>_party"; people are lower-cased with dots and apostrophes dropped
 // and other separators turned into underscores ("J.D. Vance" is "jd_vance").
+// notANameWords are capitalised question and sentence openers that the name
+// pattern can capture on their own ("If Will not win ..."). A real first
+// name such as "Will Hurd" keeps its surname and is unaffected.
+var notANameWords = map[string]bool{
+	"will": true, "if": true, "the": true, "this": true, "that": true, "who": true, "which": true,
+	"what": true, "yes": true, "no": true, "it": true, "they": true, "he": true, "she": true,
+}
+
 func subjectSlug(name string) string {
 	name = strings.TrimSpace(name)
 	if m := partyNameRe.FindStringSubmatch(name); m != nil {
@@ -238,7 +246,7 @@ func subjectSlug(name string) string {
 		}
 		b.WriteRune(r)
 	}
-	if b.Len() == 0 {
+	if b.Len() == 0 || notANameWords[b.String()] {
 		return canonical.Unknown
 	}
 	return b.String()

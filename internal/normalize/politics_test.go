@@ -136,6 +136,8 @@ func TestPoliticsUnparsedIsUnknown(t *testing.T) {
 		{"another office", "Will Gavin Newsom win the 2028 U.S. Senate election in California?", "", "gavin_newsom", canonical.Unknown, ""},
 		{"a foreign presidency", "Will Lula win the 2026 Brazilian presidential election?", "", "lula", canonical.Unknown, ""},
 		{"no stage", "Gavin Newsom 2028?", "", canonical.Unknown, canonical.Unknown, ""},
+		// Shrunk rapid counterexample from CI pipeline 39949.
+		{"question word as name", "presidential the 2028 wins ", "If Will not wins U.S. ", canonical.Unknown, "win_election:us_president:2028", ""},
 		{"odds listing", "JD Vance Republican nomination odds leader on October 31?", "", canonical.Unknown, canonical.Unknown, ""},
 		{"popular vote", "Will JD Vance win the popular vote in the 2028 US Presidential Election?", "", canonical.Unknown, canonical.Unknown, ""},
 	}
@@ -324,6 +326,7 @@ func TestPoliticsSubjectSlug(t *testing.T) {
 		"J.D. Vance": "jd_vance", "JD Vance": "jd_vance", "Alexandria Ocasio-Cortez": "alexandria_ocasio_cortez",
 		"Beto O'Rourke": "beto_orourke", "Donald Trump Jr.": "donald_trump_jr", "the Democratic Party": "democratic_party",
 		"Democrats": "democratic_party", "Republicans": "republican_party", "GOP": "republican_party", "...": canonical.Unknown,
+		"Will": canonical.Unknown, "Will Hurd": "will_hurd",
 	} {
 		if got := subjectSlug(in); got != want {
 			t.Errorf("subjectSlug(%q) = %q, want %q", in, got, want)
@@ -446,8 +449,13 @@ func TestPoliticsExtractNeverPanicsProperty(t *testing.T) {
 		if err := out.Terms.Validate(); err != nil {
 			t.Fatalf("invalid terms for %q / %q: %v", title, rules, err)
 		}
-		if (out.Terms.Threshold != nil) != (out.Terms.Subject != canonical.Unknown && out.Terms.Metric != canonical.Unknown) {
-			t.Fatalf("threshold set without a subject and metric (or the reverse): %+v", out.Terms)
+		// The reverse does not hold: a rules/title polarity conflict keeps the
+		// subject and metric but leaves the proposition unknown.
+		if out.Terms.Threshold != nil && (out.Terms.Subject == canonical.Unknown || out.Terms.Metric == canonical.Unknown) {
+			t.Fatalf("threshold set without a subject and metric: %+v", out.Terms)
+		}
+		if out.Terms.Subject == "will" {
+			t.Fatalf("question word taken as a name: %+v", out.Terms)
 		}
 	})
 }
