@@ -213,6 +213,7 @@ func TestPoliticsStageSurvivesInitials(t *testing.T) {
 		{presTitle + "J.B. Pritzker", "If J.B. Pritzker is the next person inaugurated as President for the term beginning in 2029, then the market resolves to Yes.", StageInaugurated},
 		// A title with no stage word, so only the rules can supply it.
 		{"J.D. Vance 2028?", kxNomRVanceRules, StageWinNomination},
+		{"Robert F. Kennedy Jr. 2028?", "If Robert F. Kennedy Jr. wins and accepts the nomination for the Presidency for the Republican party in 2028, then the market resolves to Yes.", StageWinNomination},
 		{"Donald J. Trump Jr. 2028?", "If Donald J. Trump Jr. wins and accepts the nomination for the Presidency for the Republican party in 2028, then the market resolves to Yes.", StageWinNomination},
 	}
 	for _, tc := range cases {
