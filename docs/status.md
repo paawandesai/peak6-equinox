@@ -46,7 +46,7 @@ Next operator action (Tier 2): human verification of Fed demo rendering (criteri
 
 ## In progress
 
-None.
+- M3 tickets: docs/tickets/M3.md written (10 tickets M3-01…M3-10); MR !32 open; GitLab issues #21–#30 created with M3 label. M3 kickoff pending operator merge of !32.
 
 ## Blocked
 
