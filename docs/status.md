@@ -108,7 +108,7 @@ None.
 | FR-16 | partial (initial schedules) | | NFR-16 | partial (M1 pages) |
 | FR-17 | partial (M2 near-misses persisted + UI) | | NFR-17 | done (M1) |
 | FR-18 | partial (M2 machinery; labels empty) | | | |
-| FR-19 | partial (M2-06 fixture; live pending) | | | |
+| FR-19 | done (M2-06 fixture back-test) | | | |
 | FR-20 | not started | | | |
 | FR-21 | partial (M2 near-misses/log/eval/history; M1 matches/pair/route) | | | |
 | FR-22 | done (M1) | | | |
