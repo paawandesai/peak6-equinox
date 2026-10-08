@@ -2,6 +2,7 @@ package llm
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/shopspring/decimal"
@@ -12,6 +13,8 @@ import (
 )
 
 var tdb testdb.DB
+
+func TestMain(m *testing.M) { os.Exit(tdb.Run(m)) }
 
 // TestPGCacheRoundTrip verifies the Postgres-backed cache stores and retrieves verdicts.
 func TestPGCacheRoundTrip(t *testing.T) {
