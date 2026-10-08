@@ -6,7 +6,7 @@
 {{else if .Broken}}
 <p><mark>{{.Broken}}</mark></p>
 {{else}}{{with .Summary}}
-<p>Produced <strong>{{$.Produced}}</strong>{{if .Command}} by <code>{{.Command}}</code>{{end}}{{if .RoundID}} on round <strong>{{.RoundID}}</strong>{{end}}: <strong>{{.Labels}}</strong> labelled pair{{if ne .Labels 1}}s{{end}}{{if .LabelsFile}} from <code>{{.LabelsFile}}</code>{{end}}{{if .Method}}, method <code>{{.Method}}</code>{{end}}.</p>
+<p>Produced <strong>{{formatTime $.Produced $.Timezone}}</strong>{{if .Command}} by <code>{{.Command}}</code>{{end}}{{if .RoundID}} on round <strong>{{.RoundID}}</strong>{{end}}: <strong>{{.Labels}}</strong> labelled pair{{if ne .Labels 1}}s{{end}}{{if .LabelsFile}} from <code>{{.LabelsFile}}</code>{{end}}{{if .Method}}, method <code>{{.Method}}</code>{{end}}.</p>
 {{end}}
 {{with .Equiv}}
 <p id="equivalent-precision">Precision at <em>equivalent</em>: <strong>{{.Precision}}</strong> {{if not .HasPrec}}(undefined: no equivalent predictions){{else if .MeetsTarget}}<span class="pass">meets the {{$.Target}} target</span>{{else}}<span class="fail">below the {{$.Target}} target</span>{{end}}.</p>

@@ -43,8 +43,9 @@ func (s *Server) handleNearMisses(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	round := roundFromContext(r.Context())
+	tz := timezoneFromRequest(r)
 	data := nearMissesPage{
-		page: s.pageBase(round, "Near misses", "Which pairs looked like the same bet but were rejected, and by which rule?"),
+		page: s.pageBase(round, "Near misses", "Which pairs looked like the same bet but were rejected, and by which rule?", tz),
 	}
 	if round.ID == 0 {
 		data.NoRound = true

@@ -32,7 +32,7 @@
   <p>Each fact is reviewed data from <code>config/facts.yaml</code> (FR-10). For <em>equivalent_given_facts</em> the verdict rests on them; for a <em>related</em> verdict they are the facts that were tried and did not close the gap.</p>
   <table class="facts">
     <thead><tr><th>Fact</th><th>Value</th><th>Source</th><th>As of</th></tr></thead>
-    <tbody>{{range .Facts}}<tr><td><code>{{.Key}}</code></td><td>{{.Value}}</td><td>{{with httpURL .Source}}<a href="{{.}}" rel="noopener noreferrer">{{.}}</a>{{else}}{{.Source}}{{end}}</td><td>{{utc .AsOf}}</td></tr>{{end}}</tbody>
+    <tbody>{{range .Facts}}<tr><td><code>{{.Key}}</code></td><td>{{.Value}}</td><td>{{with httpURL .Source}}<a href="{{.}}" rel="noopener noreferrer">{{.}}</a>{{else}}{{.Source}}{{end}}</td><td>{{formatTime .AsOf $.Timezone}}</td></tr>{{end}}</tbody>
   </table>
   {{else}}
   <p>None: this verdict rests on the contract terms alone.</p>
@@ -50,8 +50,8 @@
   {{if .LogEntries}}
   <h3>Decision-log entries for this pair</h3>
   <table class="log">
-    <thead><tr><th>When (UTC)</th><th>Kind</th><th>Summary</th></tr></thead>
-    <tbody>{{range .LogEntries}}<tr><td><small>{{.At}}</small></td><td><code>{{.Kind}}</code></td><td class="summary">{{.Summary}}</td></tr>{{end}}</tbody>
+    <thead><tr><th>When</th><th>Kind</th><th>Summary</th></tr></thead>
+    <tbody>{{range .LogEntries}}<tr><td><small>{{formatTime .At $.Timezone}}</small></td><td><code>{{.Kind}}</code></td><td class="summary">{{.Summary}}</td></tr>{{end}}</tbody>
   </table>
   <p><a href="/log">Full decision log</a></p>
   {{end}}
@@ -73,7 +73,7 @@
   <h2>Current touch in round {{.Round.ID}}</h2>
   <p>Best YES bid and ask on each venue as fetched in this round. Mid is for display only; routing walks the book.</p>
   <table>
-    <thead><tr><th>Venue</th><th>Best bid</th><th>Best ask</th><th>Mid</th><th>Levels (bid/ask)</th><th>Fetched (UTC)</th><th>Venue time</th><th>Quality</th></tr></thead>
+    <thead><tr><th>Venue</th><th>Best bid</th><th>Best ask</th><th>Mid</th><th>Levels (bid/ask)</th><th>Fetched</th><th>Venue time</th><th>Quality</th></tr></thead>
     <tbody>
       {{template "touch" .QuoteA}}
       {{template "touch" .QuoteB}}
@@ -129,7 +129,7 @@
   <p>This instrument is no longer in the store.</p>
   {{else}}
   <p><small>ID <code>{{.ID}}</code> · market <code>{{.MarketID}}</code>{{if .EventID}} · event <code>{{.EventID}}</code>{{end}}</small></p>
-  <p><small>{{.Category}} · {{.Status}} · closes {{.Close}}</small></p>
+  <p><small>{{.Category}} · {{.Status}} · closes {{formatTime .Close .Tz}}</small></p>
   <details>
     <summary>Rules text</summary>
     <p class="rules">{{.Rules}}</p>
@@ -143,7 +143,7 @@
 <tr>
   <td><span class="venue">{{.Venue}}</span></td>
   {{if .Present}}
-  <td>{{.BestBid}}</td><td>{{.BestAsk}}</td><td>{{.Mid}}</td><td>{{.BidLevels}}/{{.AskLevels}}</td><td>{{.FetchedAt}}</td><td>{{.VenueTS}}</td>
+  <td>{{.BestBid}}</td><td>{{.BestAsk}}</td><td>{{.Mid}}</td><td>{{.BidLevels}}/{{.AskLevels}}</td><td>{{formatTime .FetchedAt .Tz}}</td><td>{{if .VenueTS}}{{formatTime .VenueTS .Tz}}{{else}}{{.VenueTSStr}}{{end}}</td>
   <td>{{if .Quality}}{{range .Quality}}<code>{{.Flag}}</code> {{end}}{{else}}ok{{end}}</td>
   {{else}}
   <td colspan="7">No quote for this instrument in the round.</td>

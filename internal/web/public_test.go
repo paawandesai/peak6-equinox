@@ -172,7 +172,7 @@ func TestPublicMatchesPage(t *testing.T) {
 		"Which Kalshi and Polymarket contracts are the same bet",
 		`id="type-equivalent"`, `id="type-related"`,
 		seedTitleA, seedTitleB, seedTitleC,
-		"0.97", "0.40", "2026-10-06 17:03:00 UTC",
+		"0.97", "0.40", "2026-10-06 13:03:00 EDT", // seedNow+3min (17:03 UTC) in ET (M3-08 Cursor round 2)
 		`href="/pairs/`+strconv.FormatInt(sd.eqID, 10)+`"`,
 		`href="/pairs/`+strconv.FormatInt(sd.relID, 10)+`"`,
 		"round "+strconv.FormatInt(sd.round.ID, 10),
@@ -245,7 +245,7 @@ func TestPublicPairPage(t *testing.T) {
 		`<tr class="diff-differ"><td>resolution_source</td><td>CF Benchmarks</td><td>Binance</td><td>differ</td></tr>`,
 		`<tr class="diff-unknown"><td>edge_rules</td>`,
 		// Touch on each venue.
-		"0.4800", "0.5200", "0.5000", "0.4900", "1/2", "2026-10-06 17:03:00 UTC",
+		"0.4800", "0.5200", "0.5000", "0.4900", "1/2", "2026-10-06 13:03:00 EDT", // seedNow+3min in ET (M3-08)
 		// Route form.
 		`action="/route"`, `hx-post="/route"`, `name="pair" value="`+strconv.FormatInt(sd.eqID, 10)+`"`,
 		`<option value="`+seedKalshiA+`" selected>`, `<option value="`+seedPolyB+`">`,
@@ -302,7 +302,8 @@ func TestGroupPairsOrdering(t *testing.T) {
 	for _, id := range ids {
 		views[id] = missingInstrumentView(id)
 	}
-	groups := groupPairs(rels, views, "now")
+	now := time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)
+	groups := groupPairs(rels, views, now)
 	if len(groups) != 2 || groups[0].Type != "equivalent" || groups[1].Type != "related" {
 		t.Fatalf("groups = %+v", groups)
 	}
@@ -313,7 +314,7 @@ func TestGroupPairsOrdering(t *testing.T) {
 	if len(order) != 3 || order[0] != 2 || order[1] != 4 || order[2] != 1 {
 		t.Errorf("equivalent order = %v, want [2 4 1] (confidence desc, then id)", order)
 	}
-	if !groups[0].Pairs[0].A.Missing || groups[0].Pairs[0].AsOf != "now" || groups[0].Pairs[0].Confidence != "0.95" {
+	if !groups[0].Pairs[0].A.Missing || groups[0].Pairs[0].AsOf != now || groups[0].Pairs[0].Confidence != "0.95" {
 		t.Errorf("row = %+v", groups[0].Pairs[0])
 	}
 }
@@ -326,7 +327,8 @@ func TestLoadInstrumentViewsMarksMissing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if views[seedKalshiA].Missing || views[seedKalshiA].Title != seedTitleA || views[seedKalshiA].Close != "2026-10-07 17:00:00 UTC" {
+	wantClose := time.Date(2026, 10, 7, 17, 0, 0, 0, time.UTC)
+	if views[seedKalshiA].Missing || views[seedKalshiA].Title != seedTitleA || views[seedKalshiA].Close != wantClose {
 		t.Errorf("A = %+v", views[seedKalshiA])
 	}
 	if !views["kalshi:NOPE"].Missing || views["kalshi:NOPE"].Venue != "kalshi" {
@@ -384,8 +386,64 @@ func TestFormatHelpers(t *testing.T) {
 	if got := nullPrice(decimal.NullDecimal{Decimal: dec("0.5"), Valid: true}); got != "0.5000" {
 		t.Errorf("nullPrice = %q", got)
 	}
-	info := newRoundInfo(store.Round{ID: 3, StartedAt: seedNow, Status: store.RoundRunning})
-	if info.AsOf != "2026-10-06 17:00:00 UTC" || info.Status != "running" {
+	info := newRoundInfo(store.Round{ID: 3, StartedAt: seedNow, Status: store.RoundRunning}, TzET)
+	wantAsOf := "2026-10-06 13:00:00 EDT" // seedNow (17:00 UTC) in ET (EDT in October)
+	if info.AsOf != wantAsOf || info.Status != "running" {
 		t.Errorf("roundInfo = %+v", info)
+	}
+}
+
+// TestTimezoneSelectorSelected verifies that the timezone selector's 'selected' attribute
+// follows the cookie value (M3-08 Cursor round 2 finding 4).
+func TestTimezoneSelectorSelected(t *testing.T) {
+	s, st := newTestServer(t)
+	seedPublic(t, st)
+
+	tests := []struct {
+		name       string
+		cookieVal  string
+		wantSelect string
+	}{
+		{
+			name:       "ET cookie shows ET selected",
+			cookieVal:  "ET",
+			wantSelect: `<option value="ET" selected>ET</option>`,
+		},
+		{
+			name:       "CT cookie shows CT selected",
+			cookieVal:  "CT",
+			wantSelect: `<option value="CT" selected>CT</option>`,
+		},
+		{
+			name:       "UTC cookie shows UTC selected",
+			cookieVal:  "UTC",
+			wantSelect: `<option value="UTC" selected>UTC</option>`,
+		},
+		{
+			name:       "no cookie defaults to ET selected",
+			cookieVal:  "",
+			wantSelect: `<option value="ET" selected>ET</option>`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/", nil)
+			if tt.cookieVal != "" {
+				//nolint:gosec // G124: Test cookie doesn't need security attributes
+				req.AddCookie(&http.Cookie{Name: timezoneCookie, Value: tt.cookieVal})
+			}
+			w := httptest.NewRecorder()
+			s.Handler().ServeHTTP(w, req)
+
+			if w.Code != http.StatusOK {
+				t.Fatalf("status = %d, want 200", w.Code)
+			}
+
+			body := w.Body.String()
+			if !strings.Contains(body, tt.wantSelect) {
+				t.Errorf("response does not contain %q", tt.wantSelect)
+			}
+		})
 	}
 }

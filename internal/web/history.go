@@ -35,9 +35,10 @@ type historyChart struct {
 	XTicks         []chartTick
 	Points         int
 	Rounds         int
-	From, To       string
+	From, To       time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
 	Empty          bool
 	Rows           []historyRow
+	Tz             string // Timezone for formatTime in templates (M3-08 Cursor round 2)
 }
 
 // historySeries is one instrument's line. Mid is the polyline of mids;
@@ -64,7 +65,7 @@ type chartTick struct {
 
 // historyRow is one point of the data table under the chart.
 type historyRow struct {
-	At      string
+	At      time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
 	RoundID int64
 	Venue   string
 	Bid     string
@@ -76,10 +77,10 @@ type historyRow struct {
 // Prices are on a fixed [0,1] axis, the domain every price lives in, so two
 // venues are always on the same scale. Time runs from the first to the last
 // stored fetch; a single round is centred.
-func buildHistoryChart(aID, bID string, pts []store.QuotePoint) historyChart {
+func buildHistoryChart(aID, bID string, pts []store.QuotePoint, tz string) historyChart {
 	c := historyChart{Width: chartWidth, Height: chartHeight,
 		X0: px(chartLeft), Y0: px(chartTop), X1: px(chartWidth - chartRight), Y1: px(chartHeight - chartBottom),
-		PlotW: px(chartWidth - chartLeft - chartRight), PlotH: px(chartHeight - chartTop - chartBottom)}
+		PlotW: px(chartWidth - chartLeft - chartRight), PlotH: px(chartHeight - chartTop - chartBottom), Tz: tz}
 	if len(pts) == 0 {
 		c.Empty = true
 		return c
@@ -95,7 +96,7 @@ func buildHistoryChart(aID, bID string, pts []store.QuotePoint) historyChart {
 		}
 		rounds[p.RoundID] = true
 	}
-	c.Points, c.Rounds, c.From, c.To = len(pts), len(rounds), formatUTC(first), formatUTC(last)
+	c.Points, c.Rounds, c.From, c.To = len(pts), len(rounds), first, last
 	span := last.Sub(first)
 	xOf := func(t time.Time) float64 {
 		w := float64(chartWidth - chartLeft - chartRight)
@@ -120,7 +121,7 @@ func buildHistoryChart(aID, bID string, pts []store.QuotePoint) historyChart {
 				sr.Last = p.Mid.Decimal.StringFixed(4)
 				sr.Dots = append(sr.Dots, chartPt{X: fpx(x), Y: fpx(yOf(p.Mid.Decimal))})
 			}
-			c.Rows = append(c.Rows, historyRow{At: formatUTC(p.FetchedAt), RoundID: p.RoundID, Venue: sr.Venue,
+			c.Rows = append(c.Rows, historyRow{At: p.FetchedAt, RoundID: p.RoundID, Venue: sr.Venue,
 				Bid: nullPrice(p.BestBid), Ask: nullPrice(p.BestAsk), Mid: nullPrice(p.Mid)})
 		}
 		sr.Mid, sr.Bid, sr.Ask = string(mid), string(bid), string(ask)

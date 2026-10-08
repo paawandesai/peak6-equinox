@@ -4,8 +4,8 @@
   <header><strong>The order was not routed.</strong></header>
   <ul role="alert">{{range .Errors}}<li>{{.}}</li>{{end}}</ul>
 {{else}}{{with .Decision}}
-  <header><strong>Decision #{{$.DecisionID}}</strong> · round {{.RoundID}} · target <code>{{.TargetID}}</code> · decided {{.DecidedAt}}</header>
-  {{if .Snapshot}}<p><strong>As of:</strong> {{.Snapshot}} (snapshot)</p>{{end}}
+  <header><strong>Decision #{{$.DecisionID}}</strong> · round {{.RoundID}} · target <code>{{.TargetID}}</code> · decided {{formatTime .DecidedAt $.Timezone}}</header>
+  {{if not .Snapshot.IsZero}}<p><strong>As of:</strong> {{formatTime .Snapshot $.Timezone}} (snapshot)</p>{{end}}
   <p><strong>Order:</strong> {{.OrderLine}}. Partners considered: {{.Partners}}.</p>
 
   <h3>Chosen route</h3>

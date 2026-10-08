@@ -147,8 +147,8 @@ type routePage struct {
 type decisionView struct {
 	RoundID      int64
 	TargetID     string
-	DecidedAt    string
-	Snapshot     string
+	DecidedAt    time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
+	Snapshot     time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
 	OrderLine    string
 	Chosen       []canonical.Leg
 	Alternatives []canonical.Alternative
@@ -159,13 +159,9 @@ type decisionView struct {
 }
 
 func newDecisionView(d canonical.Decision, partners int, snapshot time.Time) *decisionView {
-	snapshotStr := ""
-	if !snapshot.IsZero() {
-		snapshotStr = formatUTC(snapshot)
-	}
 	return &decisionView{
-		RoundID: d.RoundID, TargetID: d.TargetID, DecidedAt: formatUTC(d.DecidedAt),
-		Snapshot: snapshotStr, OrderLine: orderLine(d.Order),
+		RoundID: d.RoundID, TargetID: d.TargetID, DecidedAt: d.DecidedAt,
+		Snapshot: snapshot, OrderLine: orderLine(d.Order),
 		Chosen: d.Chosen, Alternatives: d.Alternatives, Exclusions: d.Exclusions, Warnings: d.Warnings,
 		Explanation: d.Explanation, Partners: partners,
 	}
@@ -298,7 +294,8 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 	s.log.Info("routing decision stored", "decision_id", id, "round_id", dec.RoundID, "target", dec.TargetID,
 		"chosen", len(dec.Chosen), "alternatives", len(dec.Alternatives), "exclusions", len(dec.Exclusions))
 
-	p := s.routePageHeader(in.PairID, round)
+	tz := timezoneFromRequest(r)
+	p := s.routePageHeader(in.PairID, round, tz)
 	p.StaleWarning = s.staleRoundWarning(round)
 	data := routePage{
 		page:       p,
@@ -309,8 +306,8 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 	s.renderRoute(w, r, http.StatusOK, data)
 }
 
-func (s *Server) routePageHeader(pairID int64, round store.Round) page {
-	return s.pageBase(round, "Routing trace", fmt.Sprintf("Where would this order fill best, and why? (pair %d)", pairID))
+func (s *Server) routePageHeader(pairID int64, round store.Round, tz string) page {
+	return s.pageBase(round, "Routing trace", fmt.Sprintf("Where would this order fill best, and why? (pair %d)", pairID), tz)
 }
 
 // routeFailure renders the problems at the given status: as a fragment for
@@ -318,7 +315,8 @@ func (s *Server) routePageHeader(pairID int64, round store.Round) page {
 // full page otherwise.
 func (s *Server) routeFailure(w http.ResponseWriter, r *http.Request, status int, pairID int64, problems ...string) {
 	round := roundFromContext(r.Context())
-	s.renderRoute(w, r, status, routePage{page: s.routePageHeader(pairID, round), PairID: pairID, Errors: problems})
+	tz := timezoneFromRequest(r)
+	s.renderRoute(w, r, status, routePage{page: s.routePageHeader(pairID, round, tz), PairID: pairID, Errors: problems})
 }
 
 func (s *Server) renderRoute(w http.ResponseWriter, r *http.Request, status int, data routePage) {

@@ -58,6 +58,8 @@ var templateFuncs = template.FuncMap{
 	// httpURL returns s only when it is an absolute http(s) URL, else "", so
 	// a template can decide whether a source is safe to turn into a link.
 	"httpURL": httpURL,
+	// formatTime formats a time.Time in the user's chosen timezone (M3-08).
+	"formatTime": formatTime,
 }
 
 // pages are the parsed template sets, one per page, each with the layout.
@@ -96,6 +98,8 @@ func (s *Server) publicRoutes(mux *http.ServeMux) {
 	mux.Handle("GET /decisions/{id}", wrap(s.handleDecision))
 	mux.Handle("GET /log", wrap(s.handleLog))
 	mux.Handle("GET /eval", wrap(s.handleEval))
+	// POST /timezone sets the user's timezone preference cookie (M3-08, no round middleware needed)
+	mux.Handle("POST /timezone", s.rateLimitMiddleware(http.HandlerFunc(s.handleTimezone)))
 	mux.HandleFunc("GET /static/app.css", s.handleAppCSS)
 }
 
@@ -116,6 +120,7 @@ type page struct {
 	Round        *roundInfo
 	StaleWarning string // "Data is N minutes old" when round is stale (NFR-09, D-077)
 	Banner       banner // Demo mode or no-round banner (NFR-04, M3-07)
+	Timezone     string // User's timezone preference (ET/CT/UTC/Local, M3-08)
 }
 
 // banner is the structured data for the demo/no-round banner (M3-07).
@@ -132,15 +137,15 @@ type roundInfo struct {
 	ID     int64
 	Status string
 	Pinned bool
-	AsOf   string
+	AsOf   string // Formatted in user's timezone (M3-08 Cursor round 2: UI-02 contract)
 }
 
-func newRoundInfo(r store.Round) *roundInfo {
+func newRoundInfo(r store.Round, tz string) *roundInfo {
 	asOf := r.FinishedAt
 	if asOf.IsZero() {
 		asOf = r.StartedAt
 	}
-	return &roundInfo{ID: r.ID, Status: string(r.Status), Pinned: r.Pinned, AsOf: formatUTC(asOf)}
+	return &roundInfo{ID: r.ID, Status: string(r.Status), Pinned: r.Pinned, AsOf: formatTime(asOf, tz)}
 }
 
 // nullPrice renders an optional price for display.
@@ -209,9 +214,9 @@ type errorPage struct {
 // renderError writes a full error page with a plain message. The message is
 // written by this package, never copied from the request or the database.
 func (s *Server) renderError(w http.ResponseWriter, status int, message string) {
-	// renderError is called without request context; use an empty round (no banner)
+	// renderError is called without request context; use an empty round and default timezone
 	s.render(w, status, "error", errorPage{
-		page:    s.pageBase(store.Round{}, http.StatusText(status), "Something went wrong."),
+		page:    s.pageBase(store.Round{}, http.StatusText(status), "Something went wrong.", TzET),
 		Status:  status,
 		Message: message,
 	})
@@ -220,8 +225,9 @@ func (s *Server) renderError(w http.ResponseWriter, status int, message string) 
 // renderErrorWithContext writes a full error page with banner from request context.
 func (s *Server) renderErrorWithContext(w http.ResponseWriter, r *http.Request, status int, message string) {
 	round := roundFromContext(r.Context())
+	tz := timezoneFromRequest(r)
 	s.render(w, status, "error", errorPage{
-		page:    s.pageBase(round, http.StatusText(status), "Something went wrong."),
+		page:    s.pageBase(round, http.StatusText(status), "Something went wrong.", tz),
 		Status:  status,
 		Message: message,
 	})
@@ -278,16 +284,17 @@ type instrumentView struct {
 	Title    string
 	Rules    string
 	Status   string
-	Close    string
+	Close    time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
 	Quality  []canonical.QualityIssue
 	Missing  bool
+	Tz       string // Timezone for formatTime in sub-templates (M3-08)
 }
 
 func newInstrumentView(in canonical.Instrument) instrumentView {
 	return instrumentView{
 		ID: in.ID, Venue: string(in.Venue), MarketID: in.VenueMarketID, EventID: in.VenueEventID,
 		Category: string(in.Category), Title: in.Title, Rules: in.RulesText, Status: string(in.Status),
-		Close: formatUTC(in.CloseTime), Quality: in.Quality,
+		Close: in.CloseTime, Quality: in.Quality,
 	}
 }
 
