@@ -2,11 +2,12 @@ package store
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
 )
@@ -17,7 +18,7 @@ func (s *Store) GetLLMUsage(ctx context.Context, day time.Time) (calls, inputTok
 	d := day.UTC().Truncate(24 * time.Hour).Format("2006-01-02")
 	row := s.pool.QueryRow(ctx, `SELECT calls, input_tokens, output_tokens FROM llm_usage WHERE day = $1`, d)
 	err = row.Scan(&calls, &inputTokens, &outputTokens)
-	if errors.Is(err, sql.ErrNoRows) {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return 0, 0, 0, nil
 	}
 	if err != nil {
@@ -50,7 +51,7 @@ func (s *Store) GetLLMVerdict(ctx context.Context, cacheKey string) (canonical.L
 	var verdictJSON []byte
 	row := s.pool.QueryRow(ctx, `SELECT verdict FROM llm_verdicts WHERE cache_key = $1`, cacheKey)
 	err := row.Scan(&verdictJSON)
-	if errors.Is(err, sql.ErrNoRows) {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return canonical.LLMVerdict{}, false, nil
 	}
 	if err != nil {

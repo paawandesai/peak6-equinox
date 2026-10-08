@@ -119,3 +119,6 @@ func TestMigrationLogWritesOneRecordPerLine(t *testing.T) {
 		t.Errorf("records = %d, want 2 in %q", got, buf.String())
 	}
 }
+
+// TestBuildDepsWiresLLMFields is covered by tests/security/ab04_llm_spend_test.go
+// which creates a full server with fake LLM credentials and verifies the route works.

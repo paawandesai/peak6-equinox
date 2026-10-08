@@ -20,6 +20,7 @@ type AnthropicClient struct {
 	maxTokens   int
 	temperature float64
 	httpClient  *http.Client
+	baseURL     string // defaults to anthropicAPIURL, overrideable for tests
 }
 
 // NewAnthropicClient creates a client for the given model ID. apiKey must not
@@ -40,6 +41,7 @@ func NewAnthropicClient(apiKey, model string, maxOutputTokens int) (*AnthropicCl
 		maxTokens:   maxOutputTokens,
 		temperature: 0.0, // Deterministic, no sampling
 		httpClient:  &http.Client{Timeout: 60 * time.Second},
+		baseURL:     anthropicAPIURL,
 	}, nil
 }
 
@@ -94,7 +96,7 @@ func (c *AnthropicClient) Complete(ctx context.Context, p Prompt) (string, error
 		return "", fmt.Errorf("marshaling anthropic request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", anthropicAPIURL, bytes.NewReader(bodyJSON))
+	req, err := http.NewRequestWithContext(ctx, "POST", c.baseURL, bytes.NewReader(bodyJSON))
 	if err != nil {
 		return "", fmt.Errorf("creating anthropic request: %w", err)
 	}

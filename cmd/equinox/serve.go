@@ -97,7 +97,15 @@ func buildDeps(ctx context.Context, cfg config.Config, logger *slog.Logger) (web
 		pool.Close()
 		return web.Deps{}, nil, err
 	}
-	return web.Deps{Logger: logger, Store: st, Ingester: col}, pool.Close, nil
+	return web.Deps{
+		Logger:             logger,
+		Store:              st,
+		Ingester:           col,
+		AnthropicAPIKey:    cfg.AnthropicAPIKey,
+		LLMModel:           cfg.LLMModel,
+		LLMDailyCallCap:    cfg.LLMDailyCallCap,
+		LLMMaxOutputTokens: cfg.LLMMaxOutputTokens,
+	}, pool.Close, nil
 }
 
 // utcTime renders log timestamps in UTC.

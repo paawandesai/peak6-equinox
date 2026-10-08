@@ -261,7 +261,6 @@ type llmVerifyResponse struct {
 	RoundID         int64  `json:"round_id,omitempty"`
 	Verified        int    `json:"verified"`
 	Downgraded      int    `json:"downgraded"`
-	CacheHits       int    `json:"cache_hits"`
 	BudgetExhausted bool   `json:"budget_exhausted"`
 	Error           string `json:"error,omitempty"`
 }
@@ -335,7 +334,8 @@ func (s *Server) handleAdminLLMVerify(w http.ResponseWriter, r *http.Request) {
 		dailyCap = 200
 	}
 
-	// Anthropic client -> Verifier -> Cache -> Budget
+	// Build verifier stack: Anthropic client -> Budget -> Cache
+	// Cache wraps budget so cache hits don't burn the daily cap
 	client, err := llm.NewAnthropicClient(s.deps.AnthropicAPIKey, model, maxTokens)
 	if err != nil {
 		s.log.Error("creating anthropic client", "error", err)
@@ -344,11 +344,11 @@ func (s *Server) handleAdminLLMVerify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	verifier := llm.NewVerifier(client)
+	budgetedVerifier := llm.NewBudgetedVerifier(verifier, s.deps.Store, dailyCap)
 	cache := llm.NewPGCache(s.deps.Store, model, llm.PromptVersion)
-	cachedVerifier := llm.NewCachedVerifier(verifier, cache, model, llm.PromptVersion)
-	budgetedVerifier := llm.NewBudgetedVerifier(cachedVerifier, s.deps.Store, dailyCap)
+	cachedVerifier := llm.NewCachedVerifier(budgetedVerifier, cache, model, llm.PromptVersion)
 
-	var verified, downgraded, cacheHits int
+	var verified, downgraded int
 	var budgetExhausted bool
 
 	// Verify each pair and update the relationship
@@ -365,14 +365,8 @@ func (s *Server) handleAdminLLMVerify(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		// Check cache first for hit tracking
-		cacheKey := llm.CacheKey(aRec.Instrument, bRec.Instrument, llm.PromptVersion, model)
-		if _, hit, _ := cache.Get(ctx, cacheKey); hit {
-			cacheHits++
-		}
-
-		// Verify with the full stack
-		verdict, err := budgetedVerifier.Verify(ctx, aRec.Instrument, bRec.Instrument, rel)
+		// Verify with the cached+budgeted stack
+		verdict, err := cachedVerifier.Verify(ctx, aRec.Instrument, bRec.Instrument, rel)
 		if err != nil {
 			if errors.Is(err, llm.ErrBudgetExhausted) {
 				budgetExhausted = true
@@ -405,7 +399,6 @@ func (s *Server) handleAdminLLMVerify(w http.ResponseWriter, r *http.Request) {
 		RoundID:         rd.ID,
 		Verified:        verified,
 		Downgraded:      downgraded,
-		CacheHits:       cacheHits,
 		BudgetExhausted: budgetExhausted,
 	})
 }
