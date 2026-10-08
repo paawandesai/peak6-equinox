@@ -2,7 +2,6 @@ package web
 
 import (
 	"context"
-	_ "embed"
 	"errors"
 	"fmt"
 	"html/template"
@@ -31,10 +30,13 @@ const (
 	adminRounds   = 20
 )
 
-//go:embed templates/admin.html
-var adminHTML string
+// adminTmpl is parsed with the layout like other pages (UI-08).
+var adminTmpl *template.Template
 
-var adminTmpl = template.Must(template.New("admin").Parse(adminHTML))
+func init() {
+	// Parse admin.html with layout.html
+	adminTmpl = template.Must(template.New("").Funcs(templateFuncs).ParseFS(templateFS, "templates/layout.html", "templates/admin.html"))
+}
 
 // adminRoutes registers /admin/*. Every path, including unknown ones, goes
 // through adminAuth before anything else, and method checks run after it so an
@@ -69,6 +71,7 @@ type venueView struct {
 }
 
 type adminPage struct {
+	page        // UI-08: embed base page (Title, Assets, Round, etc.)
 	Now         string
 	AppEnv      string
 	DBSize      string
@@ -82,6 +85,11 @@ type adminPage struct {
 	IngestReady bool
 	PinnedRound *roundView // M3-07: pinned round info for demo mode section
 	HasPinned   bool       // M3-07: whether a round is currently pinned
+	// UI-08: LLM verifier state (design.md § 4)
+	LLMVerifierState       string // "disabled", "ready", "cap_reached"
+	LLMVerifierStateChip   string // chip class for the state
+	LLMVerifierStateText   string // human-readable state text
+	LLMVerifierButtonLabel string // button label
 }
 
 func (s *Server) handleAdminIndex(w http.ResponseWriter, r *http.Request) {
@@ -90,34 +98,51 @@ func (s *Server) handleAdminIndex(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	page := adminPage{Now: s.now().Format(time.RFC3339), AppEnv: s.cfg.AppEnv, IngestReady: s.deps.Ingester != nil}
+	// UI-08: admin page now uses layout template
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	// Get current round for page base
+	var currentRound store.Round
+	if s.deps.Store != nil {
+		if rd, err := s.deps.Store.CurrentRound(ctx); err == nil {
+			currentRound = rd
+		}
+	}
+
+	tz := timezoneFromRequest(r)
+	p := adminPage{
+		page:        s.pageBase(currentRound, "Admin", "", tz),
+		Now:         s.now().Format(time.RFC3339),
+		AppEnv:      s.cfg.AppEnv,
+		IngestReady: s.deps.Ingester != nil,
+	}
 	if s.deps.Ingester != nil {
 		if id, running := s.deps.Ingester.Running(); running {
-			page.RunningID = id
+			p.RunningID = id
 		}
 	}
 	if rid := r.URL.Query().Get("round"); rid != "" {
-		page.Message = "ingest round " + sanitizeID(rid) + " finished; see the table"
+		p.Message = "ingest round " + sanitizeID(rid) + " finished; see the table"
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
-	defer cancel()
+
 	switch growth, err := s.checkDBGrowth(ctx); {
 	case errors.Is(err, errNoDBSize):
-		page.DBError = "database not configured"
+		p.DBError = "database not configured"
 	case err != nil:
 		s.log.Error("reading database size", "error", err)
-		page.DBError = "database unavailable"
+		p.DBError = "database unavailable"
 	default:
-		page.DBSize, page.DBThreshold, page.DBAlert = growth.Size, growth.Threshold, growth.Breached
+		p.DBSize, p.DBThreshold, p.DBAlert = growth.Size, growth.Threshold, growth.Breached
 	}
-	page.Collector = collectorSuccess(nil, s.now())
+	p.Collector = collectorSuccess(nil, s.now())
 	if s.deps.Store != nil {
 		// M3-07: query pinned round directly
 		if pinned, err := s.deps.Store.PinnedRound(ctx); err == nil {
 			views := roundViews([]store.Round{pinned})
 			if len(views) > 0 {
-				page.PinnedRound = &views[0]
-				page.HasPinned = true
+				p.PinnedRound = &views[0]
+				p.HasPinned = true
 			}
 		} else if !isNotFound(err) {
 			s.log.Error("querying pinned round", "error", err)
@@ -126,18 +151,55 @@ func (s *Server) handleAdminIndex(w http.ResponseWriter, r *http.Request) {
 		rounds, err := s.deps.Store.ListRounds(ctx, adminRounds)
 		if err != nil {
 			s.log.Error("listing rounds", "error", err)
-			page.DBError = "database unavailable"
+			p.DBError = "database unavailable"
 		}
-		page.Rounds = roundViews(rounds)
+		p.Rounds = roundViews(rounds)
 		recent, err := s.deps.Store.ListRoundsSince(ctx, s.now().Add(-collectorWindow), 0)
 		if err != nil {
 			s.log.Error("listing recent rounds", "error", err)
-			page.DBError = "database unavailable"
+			p.DBError = "database unavailable"
 		}
-		page.Collector = collectorSuccess(recent, s.now())
+		p.Collector = collectorSuccess(recent, s.now())
+
+	}
+
+	// UI-08: LLM verifier state (design.md § 4)
+	p.LLMVerifierButtonLabel = "Verify equivalent pairs with LLM"
+	if s.deps.AnthropicAPIKey == "" {
+		p.LLMVerifierState = "disabled"
+		p.LLMVerifierStateChip = "chip-muted"
+		p.LLMVerifierStateText = "disabled: ANTHROPIC_API_KEY not set"
+	} else if s.deps.Store == nil {
+		// Default state when Store is nil
+		p.LLMVerifierState = "ready"
+		p.LLMVerifierStateChip = "chip-ok"
+		p.LLMVerifierStateText = "ready: 0 of 200 calls used today"
+	} else {
+		// Check daily usage
+		dailyCap := s.deps.LLMDailyCallCap
+		if dailyCap <= 0 {
+			dailyCap = 200
+		}
+		calls, _, _, err := s.deps.Store.GetLLMUsage(ctx, s.now())
+		if err != nil {
+			s.log.Error("getting LLM usage for admin page", "error", err)
+			p.LLMVerifierState = "ready"
+			p.LLMVerifierStateChip = "chip-ok"
+			p.LLMVerifierStateText = fmt.Sprintf("ready: 0 of %d calls used today", dailyCap)
+		} else if calls >= int64(dailyCap) {
+			p.LLMVerifierState = "cap_reached"
+			p.LLMVerifierStateChip = "chip-danger"
+			p.LLMVerifierStateText = fmt.Sprintf("cap reached: %d of %d", calls, dailyCap)
+		} else {
+			p.LLMVerifierState = "ready"
+			p.LLMVerifierStateChip = "chip-ok"
+			p.LLMVerifierStateText = fmt.Sprintf("ready: %d of %d calls used today", calls, dailyCap)
+		}
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := adminTmpl.Execute(w, page); err != nil {
+	w.Header().Set("X-Robots-Tag", "noindex") // UI-08: noindex via header, not meta tag
+	// UI-08: render through layout template
+	if err := adminTmpl.ExecuteTemplate(w, "layout", p); err != nil {
 		s.log.Error("rendering admin page", "error", err)
 	}
 }

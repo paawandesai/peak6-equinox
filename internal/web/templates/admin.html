@@ -1,76 +1,132 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="robots" content="noindex">
-  <title>Equinox admin</title>
-</head>
-<body>
-  <h1>Equinox admin</h1>
-  <p>Environment: <strong>{{.AppEnv}}</strong>. Page time (UTC): {{.Now}}.
-  {{if .DBError}}Database: <strong>{{.DBError}}</strong>.{{else}}Database size: <strong>{{.DBSize}}</strong> (alert threshold {{.DBThreshold}}){{if .DBAlert}} <strong>ALERT: database size is above the {{.DBThreshold}} growth threshold (AB-15); an error-level log entry was written. Trim raw responses or raise the disk before the collector fills it.</strong>{{else}}, below the threshold{{end}}.{{end}}</p>
+{{define "content"}}
+<h1>Admin</h1>
 
-  <h2>Collector success, trailing {{.Collector.Window}} (NFR-05)</h2>
-  <p>Since {{.Collector.Since}}: <strong>{{.Collector.Rate}}</strong> of {{.Collector.Attempts}} expected {{.Collector.Cadence}} ticks succeeded (target {{.Collector.Target}}): <strong>{{if .Collector.Meets}}MEETS TARGET{{else}}BELOW TARGET{{end}}</strong>.
-  ok {{.Collector.OK}}, partial {{.Collector.Partial}}, failed {{.Collector.Failed}}, running {{.Collector.Running}}, missing ticks {{.Collector.Missing}} ({{.Collector.Observed}} rounds observed of {{.Collector.Expected}} scheduled). A partial round (one venue failed) counts as a success; a missing tick counts as a failure.</p>
+{{/* Health strip (UI-08, design.md § 3): collector success rate, DB size, pinned round */}}
+<dl class="strip">
+  <div>
+    <dt>Collector success</dt>
+    <dd>{{.Collector.Rate}} of {{.Collector.Attempts}} (target {{.Collector.Target}}):
+      {{if .Collector.Meets}}<span class="chip chip-ok">meets target</span>{{else}}<span class="chip chip-danger">below target</span>{{end}}
+    </dd>
+  </div>
+  <div>
+    <dt>Database size</dt>
+    <dd>{{if .DBError}}{{.DBError}}{{else}}{{.DBSize}} of {{.DBThreshold}}{{end}}</dd>
+  </div>
+  <div>
+    <dt>Pinned round</dt>
+    <dd>{{if .HasPinned}}round {{.PinnedRound.ID}}, as of {{.PinnedRound.Started}}{{else}}no round pinned{{end}}</dd>
+  </div>
+</dl>
 
-  {{if .Message}}<p><em>{{.Message}}</em></p>{{end}}
+{{/* AB-15 alert banner when DB size exceeds threshold */}}
+{{if .DBAlert}}<div class="banner banner-danger" role="alert">ALERT: database size is above the {{.DBThreshold}} growth threshold (AB-15).</div>{{end}}
 
-  <h2>Ingest</h2>
-  {{if .RunningID}}
-    <p>Round <strong>{{.RunningID}}</strong> is running now.</p>
-  {{end}}
+{{/* Detail lines for test compatibility */}}
+<h2>Collector success, trailing {{.Collector.Window}} (NFR-05)</h2>
+<p>Since {{.Collector.Since}}: <strong>{{.Collector.Rate}}</strong> of {{.Collector.Attempts}} expected {{.Collector.Cadence}} ticks succeeded (target {{.Collector.Target}}): <strong>{{if .Collector.Meets}}MEETS TARGET{{else}}BELOW TARGET{{end}}</strong>.
+ok {{.Collector.OK}}, partial {{.Collector.Partial}}, failed {{.Collector.Failed}}, running {{.Collector.Running}}, missing ticks {{.Collector.Missing}} ({{.Collector.Observed}} rounds observed of {{.Collector.Expected}} scheduled). A partial round (one venue failed) counts as a success; a missing tick counts as a failure.</p>
+
+<p>{{if .DBError}}Database: <strong>{{.DBError}}</strong>.{{else}}Database size: <strong>{{.DBSize}}</strong> (alert threshold {{.DBThreshold}}){{if .DBAlert}} <strong>ALERT: database size is above the {{.DBThreshold}} growth threshold (AB-15); an error-level log entry was written. Trim raw responses or raise the disk before the collector fills it.</strong>{{else}}, below the threshold{{end}}.{{end}}</p>
+
+{{if .Message}}<p><em>{{.Message}}</em></p>{{end}}
+
+<h2>Actions</h2>
+
+{{/* Ingest action with state */}}
+<section>
+  <h3>Ingest</h3>
   {{if .IngestReady}}
-  <form method="post" action="/admin/ingest">
-    <button type="submit"{{if .RunningID}} disabled{{end}}>Run one fetch round now</button>
-    <span>Fetches both venues and stores a new round. Cloud Scheduler does the same every 5 minutes.</span>
-  </form>
+    {{if .RunningID}}
+    <p><span class="chip chip-info">round {{.RunningID}} running</span></p>
+    {{end}}
+    <form method="post" action="/admin/ingest">
+      <button type="submit"{{if .RunningID}} disabled{{end}}>Run one fetch round now</button>
+      <small>Fetches both venues and stores a new round. Cloud Scheduler does the same every 5 minutes.</small>
+    </form>
   {{else}}
+    <p><span class="chip chip-muted">not configured</span></p>
     <p>Ingest is not configured on this server.</p>
   {{end}}
+</section>
 
-  <h2>LLM Verification</h2>
-  <form method="post" action="/admin/llm-verify">
-    <button type="submit">Verify equivalent pairs with LLM</button>
-    <span>Runs LLM verifier on all rules-equivalent pairs from the current round. Downgrade-only, cached, budget-capped.</span>
-  </form>
-
-  <h2>Demo Mode</h2>
+{{/* Unpin action (M3-07) */}}
+<section>
+  <h3>Unpin round (demo mode)</h3>
   {{if .HasPinned}}
-  <p>Round <strong>{{.PinnedRound.ID}}</strong> (started {{.PinnedRound.Started}}, duration {{.PinnedRound.Duration}}, status {{.PinnedRound.Status}}) is currently pinned.</p>
-  <p><em>Demo mode active: all pages use this round's stored data. No live venue calls.</em></p>
-  <form method="post" action="/admin/unpin">
-    <button type="submit">Unpin round</button>
-    <span>Unpins the current round. Next page request will use the latest round.</span>
-  </form>
+    <p><span class="chip chip-info">round {{.PinnedRound.ID}} pinned</span></p>
+    <p>Demo mode active: all pages use this round's stored data. No live venue calls.</p>
+    <form method="post" action="/admin/unpin">
+      <button type="submit">Unpin round</button>
+      <small>Unpins the current round. Next page request will use the latest round.</small>
+    </form>
   {{else}}
-  <p>No round is currently pinned. Pages use the latest round.</p>
+    <p><span class="chip chip-muted">no round pinned</span></p>
+    <p>No round is currently pinned. Pages use the latest round.</p>
   {{end}}
+</section>
 
-  <h2>Last {{len .Rounds}} rounds</h2>
-  {{if not .Rounds}}
-    <p>No rounds yet. Run <code>equinox seed</code> or <code>equinox ingest</code>, or press the button above.</p>
-  {{else}}
-  <table border="1" cellpadding="4">
-    <thead>
-      <tr><th>Round</th><th>Started (UTC)</th><th>Duration</th><th>Status</th><th>Venue</th><th>OK</th><th>Instruments</th><th>Quotes</th><th>Venue time</th><th>Error</th></tr>
-    </thead>
-    <tbody>
-    {{range .Rounds}}
-      {{$r := .}}
-      {{if not .Venues}}
-      <tr><td>{{$r.ID}}{{if $r.Pinned}} (pinned){{end}}</td><td>{{$r.Started}}</td><td>{{$r.Duration}}</td><td>{{$r.Status}}</td><td colspan="6"></td></tr>
-      {{end}}
-      {{range $i, $v := .Venues}}
-      <tr>
-        {{if eq $i 0}}<td rowspan="{{len $r.Venues}}">{{$r.ID}}{{if $r.Pinned}} (pinned){{end}}</td><td rowspan="{{len $r.Venues}}">{{$r.Started}}</td><td rowspan="{{len $r.Venues}}">{{$r.Duration}}</td><td rowspan="{{len $r.Venues}}">{{$r.Status}}</td>{{end}}
-        <td>{{$v.Venue}}</td><td>{{if $v.OK}}yes{{else}}no{{end}}</td><td>{{$v.Instruments}}</td><td>{{$v.Quotes}}</td><td>{{$v.Duration}}</td><td>{{$v.Error}}</td>
-      </tr>
-      {{end}}
-    {{end}}
-    </tbody>
-  </table>
+{{/* LLM verification action with state (M3-06, UI-08) */}}
+<section>
+  <h3>LLM Verification</h3>
+  <p><span class="chip {{.LLMVerifierStateChip}}">{{.LLMVerifierStateText}}</span></p>
+  {{if ne .LLMVerifierState "disabled"}}
+  <form method="post" action="/admin/llm-verify">
+    <button type="submit"{{if eq .LLMVerifierState "cap_reached"}} disabled{{end}}>{{.LLMVerifierButtonLabel}}</button>
+    <small>Runs LLM verifier on all rules-equivalent pairs from the current round. Downgrade-only, cached, budget-capped.</small>
+  </form>
   {{end}}
-</body>
-</html>
+</section>
+
+<h2>Last {{len .Rounds}} rounds</h2>
+{{if not .Rounds}}
+  <p>No rounds yet. Run <code>equinox seed</code> or <code>equinox ingest</code>, or press the button above.</p>
+{{else}}
+<table class="data stack">
+  <thead>
+    <tr>
+      <th>Round</th>
+      <th>Started (UTC)</th>
+      <th>Duration</th>
+      <th>Status</th>
+      <th>Venue</th>
+      <th>OK</th>
+      <th>Instruments</th>
+      <th>Quotes</th>
+      <th>Venue time</th>
+      <th>Error</th>
+    </tr>
+  </thead>
+  <tbody>
+  {{range .Rounds}}
+    {{$r := .}}
+    {{if not .Venues}}
+    <tr>
+      <td data-label="Round">{{$r.ID}}{{if $r.Pinned}} (pinned){{end}}</td>
+      <td data-label="Started (UTC)">{{$r.Started}}</td>
+      <td data-label="Duration">{{$r.Duration}}</td>
+      <td data-label="Status">{{$r.Status}}</td>
+      <td colspan="6"></td>
+    </tr>
+    {{end}}
+    {{range $i, $v := .Venues}}
+    <tr>
+      {{if eq $i 0}}
+      <td data-label="Round" rowspan="{{len $r.Venues}}">{{$r.ID}}{{if $r.Pinned}} (pinned){{end}}</td>
+      <td data-label="Started (UTC)" rowspan="{{len $r.Venues}}">{{$r.Started}}</td>
+      <td data-label="Duration" rowspan="{{len $r.Venues}}">{{$r.Duration}}</td>
+      <td data-label="Status" rowspan="{{len $r.Venues}}">{{$r.Status}}</td>
+      {{end}}
+      <td data-label="Venue">{{$v.Venue}}</td>
+      <td data-label="OK">{{if $v.OK}}yes{{else}}no{{end}}</td>
+      <td data-label="Instruments" class="num">{{$v.Instruments}}</td>
+      <td data-label="Quotes" class="num">{{$v.Quotes}}</td>
+      <td data-label="Venue time">{{$v.Duration}}</td>
+      <td data-label="Error">{{$v.Error}}</td>
+    </tr>
+    {{end}}
+  {{end}}
+  </tbody>
+</table>
+{{end}}
+{{end}}

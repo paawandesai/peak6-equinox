@@ -132,7 +132,12 @@ func TestAdminIndexWithoutStore(t *testing.T) {
 		if rec.Code != http.StatusOK || !strings.Contains(rec.Header().Get("Content-Type"), "text/html") {
 			t.Fatalf("%s: status %d, type %q", path, rec.Code, rec.Header().Get("Content-Type"))
 		}
-		for _, want := range []string{"database not configured", "Round <strong>3</strong> is running", "No rounds yet", `action="/admin/ingest"`, "disabled"} {
+		// UI-08: noindex via X-Robots-Tag header
+		if got := rec.Header().Get("X-Robots-Tag"); got != "noindex" {
+			t.Errorf("%s: X-Robots-Tag = %q, want noindex", path, got)
+		}
+		// UI-08: updated markup expectations for layout and chips
+		for _, want := range []string{"database not configured", "round 3 running", "No rounds yet", `action="/admin/ingest"`, "disabled"} {
 			if !strings.Contains(body, want) {
 				t.Errorf("%s: body lacks %q", path, want)
 			}
@@ -181,16 +186,18 @@ func TestAdminIndexRendersRounds(t *testing.T) {
 		t.Fatalf("status %d: %s", rec.Code, rec.Body.String())
 	}
 	body := rec.Body.String()
+	// UI-08: table uses data-label attributes, health strip has DB size
 	for _, want := range []string{
-		"Last 2 rounds", `rowspan="2">partial</td>`, "<td>running</td>", "2026-10-06 22:00:00", "41.2s", "<td>955</td>", "<td>400</td>",
-		"instruments: HTTP status 500 &lt;b&gt;", "<td>kalshi</td>", "<td>polymarket</td>", "Database size: <strong>",
+		"Last 2 rounds", `rowspan="2">partial`, "running", "2026-10-06 22:00:00", "41.2s", "955", "400",
+		"instruments: HTTP status 500 &lt;b&gt;", "kalshi", "polymarket", "Database size",
 		"Run one fetch round now",
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("body lacks %q", want)
 		}
 	}
-	if strings.Contains(body, "disabled") || strings.Contains(body, "is running now") {
+	// UI-08: idle ingester should not show running state
+	if strings.Contains(body, "chip-info") && strings.Contains(body, "running") {
 		t.Error("idle ingester rendered as running")
 	}
 }
@@ -536,5 +543,158 @@ func TestAdminUnpinRouteOrder(t *testing.T) {
 	rec = do(h, request(http.MethodGet, "/admin/unknown", withAuth(testUser, testPass)))
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("/admin/unknown status = %d, want 404", rec.Code)
+	}
+}
+
+// TestAdminLLMVerifierStates: admin page shows the three verifier states (UI-08).
+func TestAdminLLMVerifierStates(t *testing.T) {
+	st := store.New(tdb.Pool(t))
+	tdb.Reset(t)
+
+	tests := []struct {
+		name         string
+		apiKey       string
+		callsUsed    int64
+		dailyCap     int
+		wantChip     string
+		wantText     string
+		wantDisabled bool
+	}{
+		{"disabled no key", "", 0, 200, "chip-muted", "disabled: ANTHROPIC_API_KEY not set", true},
+		{"ready zero calls", "sk-test", 0, 200, "chip-ok", "ready: 0 of 200 calls used today", false},
+		{"ready some calls", "sk-test", 12, 200, "chip-ok", "ready: 12 of 200 calls used today", false},
+		{"cap reached", "sk-test", 200, 200, "chip-danger", "cap reached: 200 of 200", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tdb.Reset(t)
+			ctx := context.Background()
+
+			// Seed LLM usage if needed
+			if tt.callsUsed > 0 {
+				if err := st.IncrementLLMUsage(ctx, t0, int(tt.callsUsed), 1000, 500); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			deps := Deps{Store: st, AnthropicAPIKey: tt.apiKey, LLMDailyCallCap: tt.dailyCap}
+			s, ck := newAdminServer(t, deps, "ci")
+			ck.t = t0 // Match the usage day
+
+			rec := do(s.Handler(), request(http.MethodGet, "/admin", withAuth(testUser, testPass)))
+			body := rec.Body.String()
+
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status %d", rec.Code)
+			}
+
+			// Check chip class and state text
+			if !strings.Contains(body, tt.wantChip) {
+				t.Errorf("body lacks chip class %q", tt.wantChip)
+			}
+			if !strings.Contains(body, tt.wantText) {
+				t.Errorf("body lacks state text %q", tt.wantText)
+			}
+
+			// Check button disabled state
+			if tt.wantDisabled {
+				if !strings.Contains(body, "disabled") {
+					t.Error("button should be disabled")
+				}
+			} else {
+				// For enabled states, check the button is present and not disabled
+				if !strings.Contains(body, "Verify equivalent pairs") {
+					t.Error("verify button missing")
+				}
+			}
+		})
+	}
+}
+
+// TestAdminPinnedUnpinnedStrip: admin page shows pinned round info in the health strip (UI-08 AC).
+func TestAdminPinnedUnpinnedStrip(t *testing.T) {
+	st := store.New(tdb.Pool(t))
+	tdb.Reset(t)
+	ctx := context.Background()
+
+	// Create and pin a round
+	r1, err := st.CreateRound(ctx, t0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.FinishRound(ctx, r1.ID, store.RoundOK, nil, t0.Add(time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.PinRound(ctx, r1.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	s, _ := newAdminServer(t, Deps{Store: st}, "ci")
+
+	// Pinned state
+	rec := do(s.Handler(), request(http.MethodGet, "/admin", withAuth(testUser, testPass)))
+	body := rec.Body.String()
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d", rec.Code)
+	}
+
+	// Check health strip shows pinned round
+	if !strings.Contains(body, "Pinned round") {
+		t.Error("health strip lacks 'Pinned round' label")
+	}
+	if !strings.Contains(body, fmt.Sprintf("round %d", r1.ID)) {
+		t.Errorf("health strip lacks round ID %d", r1.ID)
+	}
+
+	// Unpin
+	if err := st.UnpinRounds(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	// Unpinned state
+	rec = do(s.Handler(), request(http.MethodGet, "/admin", withAuth(testUser, testPass)))
+	body = rec.Body.String()
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d", rec.Code)
+	}
+
+	// Check health strip shows no pinned round
+	if !strings.Contains(body, "Pinned round") {
+		t.Error("health strip lacks 'Pinned round' label")
+	}
+	if !strings.Contains(body, "no round pinned") {
+		t.Error("health strip lacks 'no round pinned' text")
+	}
+}
+
+// TestAdminAB15Banner: breach renders banner banner-danger with role="alert", below threshold no banner (operator review round 2).
+func TestAdminAB15Banner(t *testing.T) {
+	st := store.New(tdb.Pool(t))
+	tdb.Reset(t)
+
+	// Above threshold: banner present
+	s, _ := newAdminServer(t, Deps{Store: st, DBSize: func(context.Context) (int64, error) { return 5<<30 + 1, nil }}, "ci")
+	rec := do(s.Handler(), request(http.MethodGet, "/admin", withAuth(testUser, testPass)))
+	body := rec.Body.String()
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d", rec.Code)
+	}
+	if !strings.Contains(body, `class="banner banner-danger"`) {
+		t.Error("breach: body lacks banner banner-danger class")
+	}
+	if !strings.Contains(body, `role="alert"`) {
+		t.Error("breach: body lacks role=alert")
+	}
+
+	// Below threshold: no banner
+	s, _ = newAdminServer(t, Deps{Store: st, DBSize: func(context.Context) (int64, error) { return 5 << 30, nil }}, "ci")
+	rec = do(s.Handler(), request(http.MethodGet, "/admin", withAuth(testUser, testPass)))
+	body = rec.Body.String()
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d", rec.Code)
+	}
+	if strings.Contains(body, `class="banner banner-danger"`) {
+		t.Error("below threshold: banner present")
 	}
 }
