@@ -87,7 +87,12 @@ func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
 		s.dbError(w, "loading instruments for matches", err)
 		return
 	}
-	data.Groups = groupPairs(rels, views, data.Round.AsOf)
+	// groupPairs needs the raw time for pairRow.AsOf (M3-08 Cursor round 2: UI-02 contract keeps Round.AsOf formatted)
+	asOf := round.FinishedAt
+	if asOf.IsZero() {
+		asOf = round.StartedAt
+	}
+	data.Groups = groupPairs(rels, views, asOf)
 	s.render(w, http.StatusOK, "matches", data)
 }
 

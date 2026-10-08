@@ -14,7 +14,7 @@ func (s *Server) pageBase(r store.Round, title, question, timezone string) page 
 		// No round available: show the no-round fallback banner
 		bnr = banner{Show: true, Pinned: false}
 	} else {
-		round = newRoundInfo(r)
+		round = newRoundInfo(r, timezone)
 		if r.Pinned {
 			// Pinned round: show the demo mode banner formatted in the user's timezone (M3-08)
 			asOf := r.FinishedAt

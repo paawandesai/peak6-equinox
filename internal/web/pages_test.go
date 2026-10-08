@@ -275,7 +275,7 @@ func TestPairPageShowsHistoryFactsBasisAndLog(t *testing.T) {
 
 func TestBuildHistoryChart(t *testing.T) {
 	const a, b = "kalshi:A", "polymarket:B"
-	if c := buildHistoryChart(a, b, nil); !c.Empty || c.Width != chartWidth {
+	if c := buildHistoryChart(a, b, nil, TzET); !c.Empty || c.Width != chartWidth {
 		t.Errorf("empty chart = %+v", c)
 	}
 	np := func(s string) decimal.NullDecimal { return decimal.NullDecimal{Decimal: dec(s), Valid: true} }
@@ -284,7 +284,7 @@ func TestBuildHistoryChart(t *testing.T) {
 		{RoundID: 1, InstrumentID: b, BestBid: np("0"), BestAsk: np("1"), Mid: np("0.50"), FetchedAt: seedNow},
 		{RoundID: 2, InstrumentID: a, BestAsk: np("0.70"), FetchedAt: seedNow.Add(time.Hour)}, // one-sided: no mid, no bid
 	}
-	c := buildHistoryChart(a, b, pts)
+	c := buildHistoryChart(a, b, pts, TzET)
 	wantFrom := time.Date(2026, 10, 6, 17, 0, 0, 0, time.UTC)
 	wantTo := time.Date(2026, 10, 6, 18, 0, 0, 0, time.UTC)
 	if c.Empty || c.Points != 3 || c.Rounds != 2 || c.From != wantFrom || c.To != wantTo {
@@ -317,7 +317,7 @@ func TestBuildHistoryChart(t *testing.T) {
 		t.Errorf("rows = %+v", c.Rows)
 	}
 	// A single round is centred and gets one x tick.
-	c = buildHistoryChart(a, b, pts[:2])
+	c = buildHistoryChart(a, b, pts[:2], TzET)
 	if c.Rounds != 1 || len(c.XTicks) != 1 || c.XTicks[0].Anchor != "middle" || !strings.HasPrefix(c.Series[0].Mid, "376.0,") {
 		t.Errorf("single-round chart = %+v", c)
 	}

@@ -15,7 +15,7 @@
 {{else}}
 <p>Latest {{len .Entries}} entr{{if eq (len .Entries) 1}}y{{else}}ies{{end}} (at most {{.Limit}}).</p>
 <table class="log">
-  <thead><tr><th>When (UTC)</th><th>Kind</th><th>About</th><th>Summary</th></tr></thead>
+  <thead><tr><th>When</th><th>Kind</th><th>About</th><th>Summary</th></tr></thead>
   <tbody>
   {{range .Entries}}
     <tr>

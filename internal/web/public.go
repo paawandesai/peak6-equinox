@@ -137,15 +137,15 @@ type roundInfo struct {
 	ID     int64
 	Status string
 	Pinned bool
-	AsOf   time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
+	AsOf   string // Formatted in user's timezone (M3-08 Cursor round 2: UI-02 contract)
 }
 
-func newRoundInfo(r store.Round) *roundInfo {
+func newRoundInfo(r store.Round, tz string) *roundInfo {
 	asOf := r.FinishedAt
 	if asOf.IsZero() {
 		asOf = r.StartedAt
 	}
-	return &roundInfo{ID: r.ID, Status: string(r.Status), Pinned: r.Pinned, AsOf: asOf}
+	return &roundInfo{ID: r.ID, Status: string(r.Status), Pinned: r.Pinned, AsOf: formatTime(asOf, tz)}
 }
 
 // nullPrice renders an optional price for display.

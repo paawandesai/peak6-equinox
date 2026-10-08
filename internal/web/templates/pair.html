@@ -73,7 +73,7 @@
   <h2>Current touch in round {{.Round.ID}}</h2>
   <p>Best YES bid and ask on each venue as fetched in this round. Mid is for display only; routing walks the book.</p>
   <table>
-    <thead><tr><th>Venue</th><th>Best bid</th><th>Best ask</th><th>Mid</th><th>Levels (bid/ask)</th><th>Fetched (UTC)</th><th>Venue time</th><th>Quality</th></tr></thead>
+    <thead><tr><th>Venue</th><th>Best bid</th><th>Best ask</th><th>Mid</th><th>Levels (bid/ask)</th><th>Fetched</th><th>Venue time</th><th>Quality</th></tr></thead>
     <tbody>
       {{template "touch" .QuoteA}}
       {{template "touch" .QuoteB}}

@@ -19,7 +19,7 @@
         <li><a href="/near-misses">Near misses</a></li>
         <li><a href="/log">Decision log</a></li>
         <li><a href="/eval">Eval</a></li>
-        {{if .Round}}<li><small>round {{.Round.ID}} ({{.Round.Status}}{{if .Round.Pinned}}, pinned{{end}}) as of {{formatTime .Round.AsOf .Timezone}}</small></li>{{end}}
+        {{if .Round}}<li><small>round {{.Round.ID}} ({{.Round.Status}}{{if .Round.Pinned}}, pinned{{end}}) as of {{.Round.AsOf}}</small></li>{{end}}
       </ul>
     </nav>
     {{if .StaleWarning}}<p role="alert"><mark>{{.StaleWarning}}</mark></p>{{end}}
