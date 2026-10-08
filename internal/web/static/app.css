@@ -428,20 +428,14 @@ polyline.hist-mid, polyline.hist-side { fill: none; }
 .v-match { background: var(--eq-ok-bg); color: var(--eq-ok); }
 .v-differs { background: var(--eq-danger-bg); color: var(--eq-danger); }
 .v-closed { background: var(--eq-info-bg); color: var(--eq-info); }
-.v-unknown { background: var(--pico-background-color); color: var(--eq-muted); box-shadow: inset 0 0 0 1.5px var(--eq-muted); }
-/* routing outcome */
-.o-routed { background: var(--eq-ok); color: var(--eq-on-solid); box-shadow: none; }
-.o-partial { background: var(--eq-warn-bg); color: var(--eq-warn); }
-.o-notrouted { background: var(--eq-danger); color: var(--eq-on-solid); box-shadow: none; }
-/* danger badge (error page) */
-.b-danger { background: var(--eq-danger); color: var(--eq-on-solid); box-shadow: none; }
-.v-closed { background: var(--eq-info-bg); color: var(--eq-info); }
 .v-unknown { background: var(--pico-background-color); color: var(--eq-muted); font-style: italic; box-shadow: inset 0 0 0 1.5px var(--eq-muted); }
 /* routing outcome + misc */
 .o-routed, .b-chosen { background: var(--eq-ok); color: var(--eq-on-solid); box-shadow: none; }
 .o-partial { background: var(--eq-warn); color: var(--eq-on-solid); box-shadow: none; }
 .o-notrouted { background: var(--eq-danger); color: var(--eq-on-solid); box-shadow: none; }
 .b-review { background: var(--eq-danger-bg); color: var(--eq-danger); }
+/* danger badge (error page) */
+.b-danger { background: var(--eq-danger); color: var(--eq-on-solid); box-shadow: none; }
 
 /* --- freshness stamp ----------------------------------------------------- */
 .stamp { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .375rem .5rem; font-size: var(--eq-text-s); color: var(--eq-ink-2); }
