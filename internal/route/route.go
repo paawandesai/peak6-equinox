@@ -39,7 +39,8 @@ type Config struct {
 
 // Leg routes.
 const (
-	RouteDirect = "direct"
+	RouteDirect     = "direct"
+	RouteComplement = "complement"
 )
 
 // Exclusion reasons. Each Exclusion also carries a human-readable Detail.
@@ -147,7 +148,20 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 			continue
 		}
 
-		if partnerOK, partnerExs := IsEligible(p.Quote, o.Side, o.Outcome, cfg.Eligibility); !partnerOK {
+		// For complement relationships, create a candidate with the opposite side.
+		// For other relationships (equivalent, equivalent_given_facts), use the same side.
+		isComplement := p.Relationship != nil && p.Relationship.Type == canonical.RelComplement
+		checkSide := o.Side
+		checkOutcome := o.Outcome
+		routeType := RouteDirect
+
+		if isComplement {
+			// Complement: buying YES on A ≡ buying NO on B (domain.md rule 5)
+			checkOutcome = complementOutcome(o.Outcome)
+			routeType = RouteComplement
+		}
+
+		if partnerOK, partnerExs := IsEligible(p.Quote, checkSide, checkOutcome, cfg.Eligibility); !partnerOK {
 			for _, ex := range partnerExs {
 				d.Exclusions = append(d.Exclusions, canonical.Exclusion{
 					InstrumentID: p.Instrument.ID,
@@ -159,7 +173,7 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 			continue
 		}
 
-		pending = append(pending, pendingCandidate{cand: p, route: RouteDirect})
+		pending = append(pending, pendingCandidate{cand: p, route: routeType})
 	}
 
 	// Skew check: use Skew() to check each candidate against the freshest quote.
@@ -368,8 +382,6 @@ func partnerExclusion(target, p canonical.Candidate, cfg Config) (canonical.Excl
 		ex.Reason, ex.Detail = ReasonRelationshipMismatch, fmt.Sprintf("relationship links %s and %s, not the target", r.AID, r.BID)
 	case !r.Type.Routable():
 		ex.Reason, ex.Detail = ReasonNotRoutable, fmt.Sprintf("relationship type %s is never routed", r.Type)
-	case r.Type == canonical.RelComplement:
-		ex.Reason, ex.Detail = ReasonComplementUnsupported, "complement routes (buying the other side) arrive in M3"
 	case r.Confidence.LessThan(cfg.MinRouteConfidence):
 		ex.Reason, ex.Detail = ReasonLowConfidence, fmt.Sprintf("confidence %s is below the %s floor", r.Confidence, cfg.MinRouteConfidence)
 	case p.Quote.InstrumentID != p.Instrument.ID:
@@ -383,6 +395,14 @@ func partnerExclusion(target, p canonical.Candidate, cfg Config) (canonical.Excl
 // linksTo reports whether r relates exactly the two instruments a and b.
 func linksTo(r canonical.Relationship, a, b string) bool {
 	return (r.AID == a && r.BID == b) || (r.AID == b && r.BID == a)
+}
+
+// complementOutcome returns the opposite outcome (YES ↔ NO).
+func complementOutcome(o canonical.Outcome) canonical.Outcome {
+	if o == canonical.OutcomeYes {
+		return canonical.OutcomeNo
+	}
+	return canonical.OutcomeYes
 }
 
 // size resolves the order's quantity in contracts. A USD notional is
@@ -416,9 +436,17 @@ func evaluate(c candidate, o canonical.Order, sz sizing, cfg Config) (option, ca
 	if c.Instrument.Status == canonical.StatusClosed || c.Instrument.Status == canonical.StatusSettled {
 		return fail(ReasonNotOpen, fmt.Sprintf("instrument is %s", c.Instrument.Status))
 	}
-	levels := bookSide(c.Quote, o.Side, o.Outcome)
+
+	// For complement routes, use the opposite outcome (buying YES on A ≡ buying NO on B).
+	// The side remains the same (we're still buying or selling).
+	evalOutcome := o.Outcome
+	if c.route == RouteComplement {
+		evalOutcome = complementOutcome(o.Outcome)
+	}
+
+	levels := bookSide(c.Quote, o.Side, evalOutcome)
 	if c.Quote.Quality.Has(canonical.QualityNoBook) || len(levels) == 0 {
-		return fail(ReasonNoBook, fmt.Sprintf("no %s on the %s side", sideName(o.Side), o.Outcome))
+		return fail(ReasonNoBook, fmt.Sprintf("no %s on the %s side", sideName(o.Side), evalOutcome))
 	}
 	if !sz.ok {
 		return fail(ReasonNoQuantity, "notional could not be converted: no candidate has a touch")
@@ -452,11 +480,17 @@ func evaluate(c candidate, o canonical.Order, sz sizing, cfg Config) (option, ca
 		basisPenalty = basisScore.Mul(cfg.BasisPenaltyMultiplier)
 	}
 
+	// For complement routes, the leg shows the actual trade (e.g., NO on the complement instrument).
+	legOutcome := o.Outcome
+	if c.route == RouteComplement {
+		legOutcome = complementOutcome(o.Outcome)
+	}
+
 	leg := canonical.Leg{
 		InstrumentID:            c.Instrument.ID,
 		Venue:                   c.Instrument.Venue,
 		Side:                    o.Side,
-		Outcome:                 o.Outcome,
+		Outcome:                 legOutcome,
 		Quantity:                f.Quantity,
 		VWAP:                    f.VWAP(),
 		FeePerContract:          fee.Div(f.Quantity),
@@ -579,8 +613,18 @@ func explainSweep(d canonical.Decision, legs []canonical.Leg, opts []option, sz 
 		if filled.Equal(sz.qty) {
 			fillDesc = fmt.Sprintf("all %s", filled)
 		}
-		fmt.Fprintf(&b, " Best route: %s (%s) fills %s contracts at a VWAP of %s %s Total cost: %s.",
-			legs[0].Venue, legs[0].InstrumentID, fillDesc, money(legs[0].VWAP), costClause(legs[0]), money(totalCost))
+
+		// For complement routes, explain the opposite-side trade (M3-04)
+		routeDesc := ""
+		if legs[0].Route == RouteComplement {
+			routeDesc = fmt.Sprintf(" Chose %s on %s (complement of %s) at %s",
+				strings.ToUpper(string(legs[0].Outcome)), legs[0].InstrumentID, d.TargetID, legs[0].Venue)
+		} else {
+			routeDesc = fmt.Sprintf(" Best route: %s (%s)", legs[0].Venue, legs[0].InstrumentID)
+		}
+
+		fmt.Fprintf(&b, "%s fills %s contracts at a VWAP of %s %s Total cost: %s.",
+			routeDesc, fillDesc, money(legs[0].VWAP), costClause(legs[0]), money(totalCost))
 		if filled.LessThan(sz.qty) {
 			shortfall := sz.qty.Sub(filled)
 			fmt.Fprintf(&b, " Shortfall: %s contracts (%s).", shortfall, d.Order.TIF)
@@ -609,8 +653,13 @@ func explainSweep(d canonical.Decision, legs []canonical.Leg, opts []option, sz 
 
 		// List each leg in cost order
 		for i, leg := range legs {
-			fmt.Fprintf(&b, " [%d] %s (%s): %s contracts at VWAP %s %s",
-				i+1, leg.Venue, leg.InstrumentID, leg.Quantity, money(leg.VWAP), costClause(leg))
+			// For complement routes, indicate the opposite-side trade (M3-04)
+			legDesc := fmt.Sprintf("%s (%s)", leg.Venue, leg.InstrumentID)
+			if leg.Route == RouteComplement {
+				legDesc = fmt.Sprintf("%s (%s %s, complement)", leg.Venue, strings.ToUpper(string(leg.Outcome)), leg.InstrumentID)
+			}
+			fmt.Fprintf(&b, " [%d] %s: %s contracts at VWAP %s %s",
+				i+1, legDesc, leg.Quantity, money(leg.VWAP), costClause(leg))
 		}
 
 		if totalQty.LessThan(sz.qty) {

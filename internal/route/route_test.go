@@ -316,7 +316,8 @@ func TestRoutePartnerExclusions(t *testing.T) {
 		{"relationship to another instrument", cand(polymarketID, nil, asks, rel(otherID, polymarketID, canonical.RelEquivalent, "0.95")), ReasonRelationshipMismatch},
 		{"related", cand(polymarketID, nil, asks, rel(polymarketID, kalshiID, canonical.RelRelated, "0.95")), ReasonNotRoutable},
 		{"implies", cand(polymarketID, nil, asks, rel(kalshiID, polymarketID, canonical.RelImplies, "0.95")), ReasonNotRoutable},
-		{"complement", cand(polymarketID, nil, asks, rel(kalshiID, polymarketID, canonical.RelComplement, "0.95")), ReasonComplementUnsupported},
+		// M3-04: complement removed from exclusions (now routable, but this test case has no NO book so it's excluded for insufficient depth)
+		{"complement", cand(polymarketID, nil, asks, rel(kalshiID, polymarketID, canonical.RelComplement, "0.95")), ReasonInsufficientDepth},
 		{"low confidence", cand(polymarketID, nil, asks, rel(kalshiID, polymarketID, canonical.RelEquivalent, "0.89")), ReasonLowConfidence},
 		{"quote mismatch", badQuote, ReasonQuoteMismatch},
 		{"closed", closed, ReasonNotOpen},

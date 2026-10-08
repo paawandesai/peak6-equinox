@@ -32,8 +32,11 @@ func Sweep(order canonical.Order, candidates []canonical.Candidate, cfg Config) 
 	// evaluate() but for ranking purposes). We need full option details for
 	// proper tie-breaking (depth, basis, full vs partial).
 	type rankedCandidate struct {
-		cand canonical.Candidate
-		opt  option
+		cand      canonical.Candidate
+		opt       option
+		route     string
+		evalSide  canonical.Side
+		evalOutcome canonical.Outcome
 	}
 	var ranked []rankedCandidate
 	for _, cand := range candidates {
@@ -41,7 +44,17 @@ func Sweep(order canonical.Order, candidates []canonical.Candidate, cfg Config) 
 		if cand.Instrument.Status == canonical.StatusClosed || cand.Instrument.Status == canonical.StatusSettled {
 			continue
 		}
-		levels := bookSide(cand.Quote, order.Side, order.Outcome)
+
+		// Determine route type and which side/outcome to evaluate.
+		// For complement relationships, evaluate the opposite outcome.
+		route := RouteDirect
+		evalOutcome := order.Outcome
+		if cand.Relationship != nil && cand.Relationship.Type == canonical.RelComplement {
+			route = RouteComplement
+			evalOutcome = complementOutcome(order.Outcome)
+		}
+
+		levels := bookSide(cand.Quote, order.Side, evalOutcome)
 		if len(levels) == 0 || cand.Quote.Quality.Has(canonical.QualityNoBook) {
 			continue
 		}
@@ -69,16 +82,22 @@ func Sweep(order canonical.Order, candidates []canonical.Candidate, cfg Config) 
 			basisPenalty = basisScore.Mul(cfg.BasisPenaltyMultiplier)
 		}
 
+		// For complement routes, the leg shows the actual trade (e.g., NO on the complement instrument).
+		legOutcome := order.Outcome
+		if route == RouteComplement {
+			legOutcome = complementOutcome(order.Outcome)
+		}
+
 		leg := canonical.Leg{
 			InstrumentID:            cand.Instrument.ID,
 			Venue:                   cand.Instrument.Venue,
 			Side:                    order.Side,
-			Outcome:                 order.Outcome,
+			Outcome:                 legOutcome,
 			Quantity:                f.Quantity,
 			VWAP:                    f.VWAP(),
 			FeePerContract:          fee.Div(f.Quantity),
 			BasisPenaltyPerContract: basisPenalty,
-			Route:                   RouteDirect,
+			Route:                   route,
 		}
 		leg.AllInPerContract = allIn(leg)
 
@@ -90,7 +109,7 @@ func Sweep(order canonical.Order, candidates []canonical.Candidate, cfg Config) 
 			basisScore: basisScore,
 		}
 
-		ranked = append(ranked, rankedCandidate{cand: cand, opt: opt})
+		ranked = append(ranked, rankedCandidate{cand: cand, opt: opt, route: route, evalSide: order.Side, evalOutcome: evalOutcome})
 	}
 
 	if len(ranked) == 0 {
@@ -164,7 +183,8 @@ func Sweep(order canonical.Order, candidates []canonical.Candidate, cfg Config) 
 		}
 
 		// Walk this candidate's book for the remaining quantity (may be less than full order)
-		levels := bookSide(rc.cand.Quote, order.Side, order.Outcome)
+		// For complement routes, use the opposite outcome
+		levels := bookSide(rc.cand.Quote, rc.evalSide, rc.evalOutcome)
 		f := walk(levels, order.Side, remaining, order.LimitPrice)
 
 		if !f.Quantity.IsPositive() {
@@ -183,16 +203,22 @@ func Sweep(order canonical.Order, candidates []canonical.Candidate, cfg Config) 
 			basisPenalty = rc.cand.Relationship.BasisRisk.Score.Mul(cfg.BasisPenaltyMultiplier)
 		}
 
+		// For complement routes, the leg shows the actual trade (e.g., NO on the complement instrument).
+		legOutcome := order.Outcome
+		if rc.route == RouteComplement {
+			legOutcome = complementOutcome(order.Outcome)
+		}
+
 		leg := canonical.Leg{
 			InstrumentID:            rc.cand.Instrument.ID,
 			Venue:                   rc.cand.Instrument.Venue,
 			Side:                    order.Side,
-			Outcome:                 order.Outcome,
+			Outcome:                 legOutcome,
 			Quantity:                f.Quantity,
 			VWAP:                    f.VWAP(),
 			FeePerContract:          fee.Div(f.Quantity),
 			BasisPenaltyPerContract: basisPenalty,
-			Route:                   RouteDirect,
+			Route:                   rc.route,
 		}
 		leg.AllInPerContract = allIn(leg)
 		legs = append(legs, leg)
