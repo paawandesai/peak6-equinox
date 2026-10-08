@@ -96,7 +96,7 @@ MoSCoW: M = Must, S = Should, C = Could, W = Won't (this build).
 | NFR-06 | Data accuracy | Precision at least **0.95** for `equivalent` on the golden set, and **0** false positives in the hard-veto test suite. Recall is reported, with no target. |
 | NFR-07 | Data accuracy | Settlement back-test: **0** `equivalent` pairs that settled differently, with every exception investigated and logged |
 | NFR-08 | Data accuracy | Every price in the system is a decimal probability in [0,1] per $1 payout. Inputs outside that range are rejected and flagged (property-tested). |
-| NFR-09 | Data accuracy | Quotes older than 120 s are ineligible on live data. Skew above 5 s warns and above 30 s excludes (configurable; see [environment.md](environment.md)). |
+| NFR-09 | Data accuracy | Quotes more than 120 s older than their round's snapshot time are ineligible (age is measured against the snapshot, not the current time; D-077). Skew above 5 s warns and above 30 s excludes. Routing shows the snapshot's "as of" time, and live pages show a warning banner when the latest successful round is more than 10 minutes old (all configurable; see [environment.md](environment.md)). |
 | NFR-10 | Security | Every `/admin/*` route requires basic auth with a constant-time compare and a rate limit; public routes are read-only (AB-04, AB-05, AB-14) |
 | NFR-11 | Security | No LLM call can originate from a public request. The verifier output is schema-validated and the downgrade-only rule is enforced in code (AB-01, AB-04, AB-13) |
 | NFR-12 | Security | All external data is rendered with auto-escaping and a strict CSP is sent. Venue payloads are size-limited and validated (AB-02, AB-07) |

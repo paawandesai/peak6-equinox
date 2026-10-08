@@ -82,7 +82,7 @@ func newTouchView(q store.QuoteRecord) touchView {
 func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 	id, ok := parseID(r.PathValue("id"))
 	if !ok {
-		s.renderError(w, http.StatusNotFound, "No such pair.")
+		s.renderErrorWithContext(w, r, http.StatusNotFound, "No such pair.")
 		return
 	}
 	st, ok := s.storeOrFail(w)
@@ -92,19 +92,35 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), dbTimeout)
 	defer cancel()
 
+	// Get current round from context (pinned or latest)
+	currentRound := roundFromContext(r.Context())
+
 	rel, err := st.GetRelationship(ctx, id)
 	switch {
 	case isNotFound(err):
-		s.renderError(w, http.StatusNotFound, "No such pair.")
+		s.renderErrorWithContext(w, r, http.StatusNotFound, "No such pair.")
 		return
 	case err != nil:
 		s.dbError(w, "loading relationship", err)
 		return
 	}
-	round, err := st.GetRound(ctx, rel.RoundID)
-	if err != nil {
-		s.dbError(w, "loading the pair's round", err)
-		return
+
+	// Determine which round to use for data and banner (M3-07, NFR-04)
+	var round store.Round
+	if currentRound.Pinned {
+		// NFR-04: when a round is pinned, reject pairs from other rounds
+		if rel.RoundID != currentRound.ID {
+			s.renderErrorWithContext(w, r, http.StatusNotFound, "This pair belongs to a different round.")
+			return
+		}
+		round = currentRound
+	} else {
+		// Unpinned or no current round: use the pair's own round (allows viewing older pairs from /log)
+		round, err = st.GetRound(ctx, rel.RoundID)
+		if err != nil {
+			s.dbError(w, "loading the pair's round", err)
+			return
+		}
 	}
 	views, err := loadInstrumentViews(ctx, st, []string{rel.AID, rel.BID})
 	if err != nil {
@@ -112,13 +128,8 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	data := pairPage{
-		page: page{
-			Title:    "Pair " + r.PathValue("id"),
-			Question: "Why does Equinox think these two contracts are, or are not, the same bet, and where would an order fill best?",
-			Assets:   pinnedAssets,
-			Round:    newRoundInfo(round),
-		},
-		ID: rel.ID, Type: string(rel.Type), TypeLabel: typeLabels[rel.Type], Confidence: rel.Confidence.StringFixed(2),
+		page: s.pageBase(round, "Pair "+r.PathValue("id"), "Why does Equinox think these two contracts are, or are not, the same bet, and where would an order fill best?"),
+		ID:   rel.ID, Type: string(rel.Type), TypeLabel: typeLabels[rel.Type], Confidence: rel.Confidence.StringFixed(2),
 		Method: string(rel.Method), Explanation: rel.Explanation, A: views[rel.AID], B: views[rel.BID],
 		Diff: rel.Diff, Vetoes: rel.Vetoes, Facts: rel.FactsUsed, BasisRisk: rel.BasisRisk,
 		NearMiss: rel.Type == canonical.RelRelated, Types: allTypeViews(),

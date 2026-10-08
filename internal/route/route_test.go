@@ -173,33 +173,56 @@ func TestRouteFOKNeverPartiallyFills(t *testing.T) {
 		t.Fatalf("chosen = %+v", dec.Chosen)
 	}
 	ex := exclusion(t, dec, kalshiID)
-	if ex.Reason != ReasonInsufficientDepth || !strings.Contains(ex.Detail, "100 of 150") {
+	if ex.Reason != ReasonInsufficientDepth || !strings.Contains(ex.Detail, "FOK requires 150") {
 		t.Errorf("exclusion = %+v", ex)
+	}
+
+	// Finding #5: FOK Alternatives should not include partials (only polymarket full fill)
+	if len(dec.Alternatives) != 1 || dec.Alternatives[0].Legs[0].InstrumentID != polymarketID {
+		t.Errorf("FOK alternatives should only include full fills, got %d: %+v", len(dec.Alternatives), dec.Alternatives)
 	}
 
 	dec = mustRoute(t, buy("150"), target, partners)
 	if len(dec.Alternatives) != 2 || dec.Alternatives[1].Legs[0].InstrumentID != kalshiID {
 		t.Fatalf("IOC alternatives = %+v", dec.Alternatives)
 	}
+	// Finding #5: IOC partial alternative should have NotePartial prefix
 	if alt := dec.Alternatives[1]; !strings.HasPrefix(alt.Note, NotePartial) || !alt.Legs[0].Quantity.Equal(d("100")) {
 		t.Errorf("IOC partial = %+v", alt)
 	}
 }
 
 // TestRouteIOCPartialWhenNothingFillsFully: wanting 500, every book is short;
-// IOC picks the lowest all-in partial and says so.
+// M3-03 greedy sweep fills across venues (one leg per venue, not per price level).
 func TestRouteIOCPartialWhenNothingFillsFully(t *testing.T) {
 	target, partners := scenario()
 	dec := mustRoute(t, buy("500"), target, partners)
-	if len(dec.Chosen) != 1 || dec.Chosen[0].InstrumentID != polymarketID || !dec.Chosen[0].Quantity.Equal(d("150")) {
-		t.Fatalf("chosen = %+v", dec.Chosen)
+	// Greedy sweep creates one leg per venue: poly (150 total) + kalshi (100) = 250
+	if len(dec.Chosen) != 2 {
+		t.Fatalf("chosen should have 2 legs (one per venue), got %d: %+v", len(dec.Chosen), dec.Chosen)
 	}
-	if !hasWarning(dec, "fills 150 of 500") || !strings.Contains(dec.Explanation, "only 150 of 500") {
-		t.Errorf("warnings = %v\nexplanation = %s", dec.Warnings, dec.Explanation)
+	totalFilled := decimal.Zero
+	for _, leg := range dec.Chosen {
+		totalFilled = totalFilled.Add(leg.Quantity)
+	}
+	if !totalFilled.Equal(d("250")) {
+		t.Errorf("total filled = %s, want 250 (greedy sweep across venues)", totalFilled)
+	}
+	if !hasWarning(dec, "fills 250 of 500") {
+		t.Errorf("warnings = %v (should mention partial fill)", dec.Warnings)
 	}
 	dec = mustRoute(t, fok(buy("500")), target, partners)
-	if len(dec.Chosen) != 0 || len(dec.Exclusions) != 2 || !strings.Contains(dec.Explanation, "No venue can fill") {
-		t.Errorf("FOK 500: chosen = %+v exclusions = %+v", dec.Chosen, dec.Exclusions)
+	if len(dec.Chosen) != 0 || !strings.Contains(dec.Explanation, "No venue can fill") {
+		t.Errorf("FOK 500: chosen = %+v explanation = %s", dec.Chosen, dec.Explanation)
+	}
+	// Round 3 #3: FOK should exclude both candidates (insufficient combined depth)
+	if len(dec.Exclusions) != 2 {
+		t.Errorf("FOK 500: expected 2 exclusions, got %d: %+v", len(dec.Exclusions), dec.Exclusions)
+	}
+	for _, ex := range dec.Exclusions {
+		if ex.Reason != ReasonInsufficientDepth {
+			t.Errorf("FOK 500 exclusion: reason = %s, want %s: %+v", ex.Reason, ReasonInsufficientDepth, ex)
+		}
 	}
 }
 
@@ -497,6 +520,24 @@ func TestRouteProperties(t *testing.T) {
 			orderQty = *o.Quantity
 		}
 		for _, alt := range dec.Alternatives {
+			// M3-03: alternatives can have multiple legs (multi-venue fills)
+			// For multi-leg alternatives, check total quantity vs order
+			if len(alt.Legs) > 1 {
+				if o.TIF == canonical.TIFFOK && o.Quantity != nil {
+					altTotal := decimal.Zero
+					for _, leg := range alt.Legs {
+						altTotal = altTotal.Add(leg.Quantity)
+					}
+					if !altTotal.Equal(orderQty) {
+						t.Fatalf("FOK multi-leg alternative partial: %s of %s", altTotal, orderQty)
+					}
+				}
+				if o.TIF == canonical.TIFFOK && strings.HasPrefix(alt.Note, NotePartial) {
+					t.Fatalf("FOK alternative marked partial: %+v", alt)
+				}
+				continue // Skip per-leg checks for multi-leg alternatives
+			}
+
 			leg := alt.Legs[0]
 			if leg.FeePerContract.IsNegative() {
 				t.Fatalf("negative fee on %s: %s", leg.InstrumentID, leg.FeePerContract)

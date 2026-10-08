@@ -60,22 +60,15 @@ func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), dbTimeout)
 	defer cancel()
 
-	data := matchesPage{page: page{
-		Title:    "Matches",
-		Question: "Which Kalshi and Polymarket contracts are the same bet, and how sure is Equinox?",
-		Assets:   pinnedAssets,
-	}}
-	round, err := st.CurrentRound(ctx)
-	switch {
-	case isNotFound(err):
+	round := roundFromContext(r.Context())
+	data := matchesPage{
+		page: s.pageBase(round, "Matches", "Which Kalshi and Polymarket contracts are the same bet, and how sure is Equinox?"),
+	}
+	if round.ID == 0 {
 		data.NoRound = true
 		s.render(w, http.StatusOK, "matches", data)
 		return
-	case err != nil:
-		s.dbError(w, "loading current round", err)
-		return
 	}
-	data.Round = newRoundInfo(round)
 
 	rels, err := st.ListRelationships(ctx, store.RelationshipFilter{RoundID: round.ID, Limit: maxMatchRows + 1})
 	if err != nil {

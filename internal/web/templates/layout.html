@@ -10,6 +10,7 @@
   <script src="{{.Assets.HtmxURL}}" integrity="{{.Assets.HtmxSRI}}" crossorigin="anonymous" defer></script>
 </head>
 <body>
+  {{if .Banner.Show}}<div class="banner">{{if .Banner.Pinned}}Demo mode: data as of {{.Banner.AsOf}} (round {{.Banner.RoundID}}). <a href="/admin">Unpin</a>{{else}}No data available yet. Run ingest from <a href="/admin">/admin</a>.{{end}}</div>{{end}}
   <header>
     <nav>
       <ul><li><strong><a href="/">Equinox</a></strong> cross-venue contract matcher and router</li></ul>
