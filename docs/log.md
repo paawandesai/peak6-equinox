@@ -74,3 +74,4 @@ Add one line per action, newest at the bottom: `YYYY-MM-DD HH:MM UTC · actor ·
 2026-10-08 00:02 UTC · operator · Merged MR !37 (M3-09 public rate limiting) at b29b328c; pipeline 41199 green; Cursor approved c2a692c. D-076 awaiting human veto.
 2026-10-07 20:05 UTC · M3-01 worker · Synced MR !34 with main (9e5adf3, merged MR !37 rate limiting). · MR!34
 2026-10-08 00:50 UTC · M3-01 worker · Added .gitleaksignore to suppress M3-06 false positive (D-079, Tier 2). · .gitleaksignore, decisions.md, status.md
+2026-10-08 01:35 UTC · operator · Recorded D-081 (human, Paawan 2026-10-07 8:29 PM CT): UI clarity/usability track, orchestrator designs with /design (UI-01), Sonnet workers implement UI-02+; refines D-031, stack unchanged. Removed a stray conflict marker left in log.md by an earlier merge. · decisions.md D-081, status.md
