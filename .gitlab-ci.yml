@@ -120,7 +120,20 @@ gitleaks:
       optional: true
   script:
     - git config --global --add safe.directory "$CI_PROJECT_DIR"
-    - gitleaks git --redact --verbose --no-banner --config .gitleaks.toml .
+    # MR pipelines scan only this MR's commits (D-078). gitleaks' default walk is
+    # `git log --all`, and the runner's checkout carries refs fetched for other
+    # branches' pipelines, so one finding on any unmerged branch failed every MR.
+    # Main pipelines keep the unchanged full-history scan.
+    - |
+      if [ -n "$CI_MERGE_REQUEST_DIFF_BASE_SHA" ]; then
+        git cat-file -e "$CI_MERGE_REQUEST_DIFF_BASE_SHA^{commit}" 2>/dev/null \
+          || git fetch --quiet origin "$CI_MERGE_REQUEST_DIFF_BASE_SHA" \
+          || git fetch --quiet origin "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
+        echo "gitleaks scan range: $CI_MERGE_REQUEST_DIFF_BASE_SHA..HEAD ($(git rev-list --count "$CI_MERGE_REQUEST_DIFF_BASE_SHA..HEAD") commits, HEAD=$(git rev-parse HEAD))"
+        gitleaks git --redact --verbose --no-banner --config .gitleaks.toml --log-opts="$CI_MERGE_REQUEST_DIFF_BASE_SHA..HEAD" .
+      else
+        gitleaks git --redact --verbose --no-banner --config .gitleaks.toml .
+      fi
 
 guard-human-files:
   stage: check
