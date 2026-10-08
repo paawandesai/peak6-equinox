@@ -1,7 +1,7 @@
 <!-- OWNER: operator. -->
 # Status
 
-_Last updated: 2026-10-08 ~03:43 UTC by operator (D-085: Paawan kept D-073/074/076/079 after the PRD check; ci-gate manual MR pipelines in force since !35 merged as fb21cd3b)._
+_Last updated: 2026-10-08 ~03:43 UTC by operator (D-087: Paawan kept D-073/074/076/079 after the PRD check; ci-gate manual MR pipelines in force since !35 merged as fb21cd3b)._
 
 ## Current milestone
 
@@ -82,7 +82,7 @@ None.
 
 ## Kept decisions (veto closed)
 
-Paawan kept these four in the operator chat on 2026-10-07 at 8:38 PM CT, after the operator checked them against the PRD. Recorded as D-085 (By: human).
+Paawan kept these four in the operator chat on 2026-10-07 at 8:38 PM CT, after the operator checked them against the PRD. Recorded as D-087 (By: human) (numbered D-085 on this branch before !46 took D-085; renumbered at merge).
 
 | Decision | Summary | Kept | PRD check |
 |---|---|---|---|
