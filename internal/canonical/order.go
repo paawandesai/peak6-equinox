@@ -137,6 +137,26 @@ type Exclusion struct {
 	Detail       string `json:"detail"`
 }
 
+// DecisionInput records one candidate considered by the router at decision time.
+// It captures the router's actual input snapshot, so the trace shows what the
+// router saw (not a later re-query that might disagree). UI-25, D-098 call 3.
+type DecisionInput struct {
+	InstrumentID string `json:"instrument_id"`
+	Venue        Venue  `json:"venue"`
+	// RelationshipType is the target pair's type at decision time ("self" for the target).
+	RelationshipType RelationshipType `json:"relationship_type"`
+	Confidence       decimal.Decimal  `json:"confidence"` // 1.0 for the target
+	// OutcomeSide is the outcome the router checked on this candidate.
+	OutcomeSide Outcome `json:"outcome_side"`
+	// BestAsk and AskDepth record the book at decision time (top N levels, capped).
+	BestAsk  decimal.Decimal `json:"best_ask"`
+	AskDepth []Level         `json:"ask_depth"`
+	// Quote times from the stored quote.
+	FetchedAt time.Time  `json:"fetched_at"`
+	VenueTS   *time.Time `json:"venue_ts,omitempty"`
+	RoundID   int64      `json:"round_id"`
+}
+
 // Decision is the router's output for one Order (FR-12/FR-13).
 type Decision struct {
 	RoundID      int64         `json:"round_id"`
@@ -149,6 +169,12 @@ type Decision struct {
 	// Explanation is the one-paragraph plain-English summary. Required.
 	Explanation string    `json:"explanation"`
 	DecidedAt   time.Time `json:"decided_at"`
+	// Inputs records the quotes the router read, one per candidate considered (eligible or not).
+	// Empty for decisions stored before UI-25. UI-25, D-098 call 3.
+	Inputs []DecisionInput `json:"inputs,omitempty"`
+	// TargetType is the target pair's relationship type at decision time.
+	// Empty for decisions stored before UI-25.
+	TargetType RelationshipType `json:"target_type,omitempty"`
 }
 
 // Validate checks the round, target, order, decision time and that the

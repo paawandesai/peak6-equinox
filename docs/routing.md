@@ -139,6 +139,8 @@ Every `Decision` includes:
 | `Warnings` | Non-fatal issues: skew warnings, approximate fees, notional conversions, partial fills. |
 | `Explanation` | A prose summary of the decision: what was chosen, why, cost breakdown per leg, ranked alternatives with their gap to the chosen cost, exclusions, and fee verification status. |
 | `DecidedAt` | The UTC instant the decision was made. |
+| `Inputs` | (UI-25, D-099) The input snapshot recorded at decision time: one entry per candidate considered (target + partners, eligible and excluded), with venue, instrument id, relationship type and confidence, outcome side checked, best ask, ask depth (top 10 levels), quote times and round id. Empty for decisions stored before UI-25. |
+| `TargetType` | (UI-25, D-099) The target pair's relationship type at decision time. Empty for decisions stored before UI-25. |
 
 ### Exclusion reasons
 

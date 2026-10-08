@@ -175,3 +175,4 @@ Paawan kept these four in the operator chat on 2026-10-07 at 8:38 PM CT, after t
 | ID | Severity | Status | Ticket |
 |---|---|---|---|
 | none yet | | | AB harnesses landed in M1 (AB-01/02/05/06/07/08/11/12/13/14) |
+| D-099 | Router stores input quotes and label with each decision (UI-25, D-098 call 3). `canonical.Decision` gains `Inputs []DecisionInput` (venue, instrument id, relationship type/confidence at decision time, outcome side, best ask, ask depth capped at 10 levels, quote times, round id) and `TargetType`. Stored as optional jsonb fields; no SQL migration. Old decisions decode with empty fields. | 2026-10-08 |

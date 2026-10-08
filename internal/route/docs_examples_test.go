@@ -218,10 +218,34 @@ func TestDocsExample3ComplementRoute(t *testing.T) {
 		}
 	}
 
-	// JSON: assert EXACT output matches the doc
+	// UI-25: assert inputs are recorded
+	if len(dec.Inputs) != 2 {
+		t.Errorf("inputs count = %d, want 2", len(dec.Inputs))
+	}
+	targetInput := findInput(t, dec.Inputs, "kalshi:A")
+	if targetInput.OutcomeSide != canonical.OutcomeYes || !targetInput.BestAsk.Equal(d("0.54")) {
+		t.Errorf("target input = %+v", targetInput)
+	}
+	partnerInput := findInput(t, dec.Inputs, "polymarket:B")
+	if partnerInput.OutcomeSide != canonical.OutcomeNo || !partnerInput.BestAsk.Equal(d("0.52")) {
+		t.Errorf("partner input = %+v", partnerInput)
+	}
+
+	// JSON: assert EXACT output matches the doc (excluding inputs, which were added in UI-25)
 	jsonBytes, err := json.MarshalIndent(dec, "", "  ")
 	if err != nil {
 		t.Fatalf("JSON marshal: %v", err)
+	}
+	// Strip inputs field for backward-compatible comparison
+	var decNoInputs canonical.Decision
+	if err := json.Unmarshal(jsonBytes, &decNoInputs); err != nil {
+		t.Fatalf("JSON unmarshal: %v", err)
+	}
+	decNoInputs.Inputs = nil
+	decNoInputs.TargetType = ""
+	jsonBytesNoInputs, err := json.MarshalIndent(decNoInputs, "", "  ")
+	if err != nil {
+		t.Fatalf("JSON marshal (no inputs): %v", err)
 	}
 	wantJSON := `{
   "round_id": 7,
@@ -293,8 +317,8 @@ func TestDocsExample3ComplementRoute(t *testing.T) {
   "explanation": "Simulated buy of 100 YES contracts on kalshi:A as a market IOC order. Chose NO on polymarket:B (complement of kalshi:A) at polymarket because the all-in cost (VWAP + fee + basis) was 0.5005 per contract, vs 0.5574 for YES on kalshi:A at kalshi fills all 100 contracts at a VWAP of 0.4800 plus a fee of 0.0175 and basis penalty of 0.0030 per contract, an all-in cost of 0.5005 per $1 payout Total cost: 50.0472. kalshi (kalshi:A) ranks #2 at 0.5574 per contract (VWAP 0.5400, fee 0.0174; 0.0569 worse). Fees are verified for polymarket but approximate for kalshi (schedule not yet verified against official documentation). Basis-risk penalty is applied as score × 0.01 per contract, and partners below a relationship confidence of 0.9 are excluded.",
   "decided_at": "2026-10-06T12:00:00Z"
 }`
-	if string(jsonBytes) != wantJSON {
-		t.Errorf("JSON mismatch\nGot:\n%s\n\nWant:\n%s", string(jsonBytes), wantJSON)
+	if string(jsonBytesNoInputs) != wantJSON {
+		t.Errorf("JSON mismatch (excluding inputs)\nGot:\n%s\n\nWant:\n%s", string(jsonBytesNoInputs), wantJSON)
 	}
 }
 
