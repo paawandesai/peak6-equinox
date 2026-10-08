@@ -4,7 +4,10 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
+
+	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
 )
 
 // TestAnthropicClientSuccess verifies the client can parse a successful response
@@ -76,15 +79,7 @@ func TestAnthropicClientEmptyModel(t *testing.T) {
 		t.Fatal("expected error for empty model")
 	}
 }
-package llm
 
-import (
-	"context"
-	"sync"
-	"testing"
-
-	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
-)
 
 // TestConcurrentVerifyUsageAttribution proves that parallel Verify calls with
 // a shared verifier correctly attribute per-call token usage (Cursor: run with -race).
