@@ -105,17 +105,17 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Determine which round to use: current (pinned or latest), or the pair's own round as fallback
+	// Determine which round to use for data and banner (M3-07, NFR-04)
 	var round store.Round
-	if currentRound.ID != 0 {
-		// NFR-04: when a round is available (pinned or latest), reject pairs from other rounds
+	if currentRound.Pinned {
+		// NFR-04: when a round is pinned, reject pairs from other rounds
 		if rel.RoundID != currentRound.ID {
 			s.renderErrorWithContext(w, r, http.StatusNotFound, "This pair belongs to a different round.")
 			return
 		}
 		round = currentRound
 	} else {
-		// No current round available (no pinned, no finished): use the pair's own round
+		// Unpinned or no current round: use the pair's own round (allows viewing older pairs from /log)
 		round, err = st.GetRound(ctx, rel.RoundID)
 		if err != nil {
 			s.dbError(w, "loading the pair's round", err)

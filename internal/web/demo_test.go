@@ -10,11 +10,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/store"
 )
+
+// newBrokenPool creates a pool with an invalid connection string to trigger DB errors.
+func newBrokenPool(ctx context.Context) (*pgxpool.Pool, error) {
+	return pgxpool.New(ctx, "postgres://nobody@127.0.0.1:1/none?connect_timeout=1")
+}
 
 // TestDemoModeBanner: table-driven tests for M3-07 demo mode banner behavior.
 // Covers: pinned (every page shows banner), unpinned (latest round, no banner),
@@ -295,5 +301,235 @@ func TestAdminShowsPinnedRound(t *testing.T) {
 	}
 	if !strings.Contains(body, "Unpin") {
 		t.Error("expected admin page to show Unpin button")
+	}
+}
+
+// TestPinnedRoundRejectsOtherRoundPairs: when a round is pinned, /pairs/{id} and
+// POST /route reject pairs from other rounds with 404 (NFR-04).
+func TestPinnedRoundRejectsOtherRoundPairs(t *testing.T) {
+	ctx := context.Background()
+	st := store.New(tdb.Pool(t))
+	tdb.Reset(t)
+
+	now := time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)
+
+	// Seed two rounds with pairs
+	round1, err := st.CreateRound(ctx, now.Add(-time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.FinishRound(ctx, round1.ID, store.RoundOK, nil, now.Add(-55*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+
+	round2, err := st.CreateRound(ctx, now.Add(-10*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.FinishRound(ctx, round2.ID, store.RoundOK, nil, now.Add(-5*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create pair in round2 (newer)
+	threshold := decimal.RequireFromString("1")
+	insA := canonical.Instrument{
+		ID:            "kalshi:R2A",
+		Venue:         canonical.VenueKalshi,
+		VenueMarketID: "R2A",
+		Category:      canonical.CategoryPolitics,
+		Title:         "Round 2 A",
+		Status:        canonical.StatusOpen,
+		FeeSchedule:   canonical.FeeSchedule{ID: "kalshi_taker_v1"},
+		Terms: canonical.Terms{
+			Subject: "test", Metric: "result", Comparator: canonical.ComparatorEQ, Threshold: &threshold,
+			Unit: canonical.Unknown, DeadlineTZ: canonical.Unknown, ResolutionSource: canonical.Unknown,
+			EdgeRules: canonical.Unknown, Polarity: canonical.PolarityPositive,
+		},
+	}
+	insB := canonical.Instrument{
+		ID:            "polymarket:R2B",
+		Venue:         canonical.VenuePolymarket,
+		VenueMarketID: "R2B",
+		Category:      canonical.CategoryPolitics,
+		Title:         "Round 2 B",
+		Status:        canonical.StatusOpen,
+		FeeSchedule:   canonical.FeeSchedule{ID: "polymarket_v1"},
+		Terms: canonical.Terms{
+			Subject: "test", Metric: "result", Comparator: canonical.ComparatorEQ, Threshold: &threshold,
+			Unit: canonical.Unknown, DeadlineTZ: canonical.Unknown, ResolutionSource: canonical.Unknown,
+			EdgeRules: canonical.Unknown, Polarity: canonical.PolarityPositive,
+		},
+	}
+	if err := st.UpsertInstrument(ctx, round2.ID, insA); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.UpsertInstrument(ctx, round2.ID, insB); err != nil {
+		t.Fatal(err)
+	}
+	rel := canonical.Relationship{
+		RoundID: round2.ID, AID: insA.ID, BID: insB.ID, Type: canonical.RelEquivalent,
+		Confidence: decimal.RequireFromString("0.95"), Method: canonical.MethodRules, Explanation: "test",
+	}
+	relID, err := st.UpsertRelationship(ctx, rel)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Pin round1 (older)
+	if err := st.PinRound(ctx, round1.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := Config{AppEnv: "ci", PublicRateLimitPerMin: 10000, MinRouteConfidence: decimal.RequireFromString("0.9")}
+	deps := Deps{Store: st, Now: func() time.Time { return now }}
+	s := New(cfg, deps)
+	handler := s.Handler()
+
+	// Test GET /pairs/{id} for newer-round pair: should 404
+	req := httptest.NewRequest(http.MethodGet, "/pairs/"+strconv.FormatInt(relID, 10), nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("GET /pairs/{id} for newer-round pair: status %d, want 404", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "different round") {
+		t.Error("expected 'different round' message")
+	}
+
+	// Test POST /route for newer-round pair: should 404
+	form := url.Values{
+		"pair": {strconv.FormatInt(relID, 10)}, "target": {insA.ID}, "side": {"buy"}, "outcome": {"yes"},
+		"quantity": {"10"}, "type": {"market"}, "tif": {"IOC"},
+	}
+	req = httptest.NewRequest(http.MethodPost, "/route", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("POST /route for newer-round pair: status %d, want 404", rec.Code)
+	}
+}
+
+// TestUnpinnedAllowsOlderRoundPairs: with no pin, /pairs/{id} and POST /route
+// use the pair's own round and return 200 (allows decision-log navigation).
+func TestUnpinnedAllowsOlderRoundPairs(t *testing.T) {
+	ctx := context.Background()
+	st := store.New(tdb.Pool(t))
+	tdb.Reset(t)
+
+	now := time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)
+
+	// Seed older round with pair
+	round1, err := st.CreateRound(ctx, now.Add(-time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.FinishRound(ctx, round1.ID, store.RoundOK, nil, now.Add(-55*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+
+	threshold := decimal.RequireFromString("1")
+	insA := canonical.Instrument{
+		ID:            "kalshi:OLD1",
+		Venue:         canonical.VenueKalshi,
+		VenueMarketID: "OLD1",
+		Category:      canonical.CategoryPolitics,
+		Title:         "Old A",
+		Status:        canonical.StatusOpen,
+		FeeSchedule:   canonical.FeeSchedule{ID: "kalshi_taker_v1"},
+		Terms: canonical.Terms{
+			Subject: "test", Metric: "result", Comparator: canonical.ComparatorEQ, Threshold: &threshold,
+			Unit: canonical.Unknown, DeadlineTZ: canonical.Unknown, ResolutionSource: canonical.Unknown,
+			EdgeRules: canonical.Unknown, Polarity: canonical.PolarityPositive,
+		},
+	}
+	insB := canonical.Instrument{
+		ID:            "polymarket:OLD2",
+		Venue:         canonical.VenuePolymarket,
+		VenueMarketID: "OLD2",
+		Category:      canonical.CategoryPolitics,
+		Title:         "Old B",
+		Status:        canonical.StatusOpen,
+		FeeSchedule:   canonical.FeeSchedule{ID: "polymarket_v1"},
+		Terms: canonical.Terms{
+			Subject: "test", Metric: "result", Comparator: canonical.ComparatorEQ, Threshold: &threshold,
+			Unit: canonical.Unknown, DeadlineTZ: canonical.Unknown, ResolutionSource: canonical.Unknown,
+			EdgeRules: canonical.Unknown, Polarity: canonical.PolarityPositive,
+		},
+	}
+	if err := st.UpsertInstrument(ctx, round1.ID, insA); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.UpsertInstrument(ctx, round1.ID, insB); err != nil {
+		t.Fatal(err)
+	}
+	rel := canonical.Relationship{
+		RoundID: round1.ID, AID: insA.ID, BID: insB.ID, Type: canonical.RelEquivalent,
+		Confidence: decimal.RequireFromString("0.95"), Method: canonical.MethodRules, Explanation: "test",
+	}
+	relID, err := st.UpsertRelationship(ctx, rel)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Seed newer round (becomes latest)
+	round2, err := st.CreateRound(ctx, now.Add(-10*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.FinishRound(ctx, round2.ID, store.RoundOK, nil, now.Add(-5*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+
+	// No pin: latest round is round2, but older-round pair should still work
+	cfg := Config{AppEnv: "ci", PublicRateLimitPerMin: 10000, MinRouteConfidence: decimal.RequireFromString("0.9")}
+	deps := Deps{Store: st, Now: func() time.Time { return now }}
+	s := New(cfg, deps)
+	handler := s.Handler()
+
+	// Test GET /pairs/{id} for older-round pair: should 200
+	req := httptest.NewRequest(http.MethodGet, "/pairs/"+strconv.FormatInt(relID, 10), nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("GET /pairs/{id} for older-round pair (unpinned): status %d, want 200", rec.Code)
+	}
+
+	// Test POST /route for older-round pair: should 200
+	form := url.Values{
+		"pair": {strconv.FormatInt(relID, 10)}, "target": {insA.ID}, "side": {"buy"}, "outcome": {"yes"},
+		"quantity": {"10"}, "type": {"market"}, "tif": {"IOC"},
+	}
+	req = httptest.NewRequest(http.MethodPost, "/route", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("POST /route for older-round pair (unpinned): status %d, want 200; body: %s", rec.Code, rec.Body.String())
+	}
+}
+
+// TestMiddlewareCurrentRoundDBError: when CurrentRound fails with a non-NotFound
+// DB error, the middleware renders 503 instead of continuing.
+func TestMiddlewareCurrentRoundDBError(t *testing.T) {
+	// Use a pool with invalid connection to trigger DB error
+	ctx := context.Background()
+	pool, err := newBrokenPool(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(pool.Close)
+
+	st := store.New(pool)
+	cfg := Config{AppEnv: "ci", PublicRateLimitPerMin: 10000}
+	deps := Deps{Store: st, Now: func() time.Time { return time.Now() }}
+	s := New(cfg, deps)
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Errorf("status %d, want 503 when CurrentRound fails", rec.Code)
 	}
 }
