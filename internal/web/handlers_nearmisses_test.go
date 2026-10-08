@@ -65,10 +65,10 @@ func TestNearMissStripSummary(t *testing.T) {
 	wantHTML(t, rec, 200)
 	body := rec.Body.String()
 
-	// The strip should show the count and veto count
+	// The strip should show the count and veto count with proper dt/dd structure
 	wantContains(t, body, `<dl class="strip">`)
-	wantContains(t, body, "Count:", "2 near misses")
-	wantContains(t, body, "Stopped by a veto:", "1")
+	wantContains(t, body, "<dt>Count:</dt>", "<dd>2 near misses</dd>")
+	wantContains(t, body, "<dt>Stopped by a veto:</dt>", "<dd>1</dd>")
 }
 
 // TestNearMissRowOrdering verifies vetoed pairs still come first.

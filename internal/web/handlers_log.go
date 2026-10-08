@@ -2,8 +2,10 @@ package web
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
@@ -101,7 +103,7 @@ func newLogEntryView(e store.LogEntry) logEntryView {
 		Summary:       e.Summary,
 	}
 	v.Link, v.LinkLabel = logEntryLink(e.Kind, e.Ref)
-	v.About = v.LinkLabel // Default to link label; handlers_log_test.go will verify enrichment when needed
+	v.About = logEntryAbout(e) // Build from payload per UI-06
 	return v
 }
 
@@ -117,6 +119,49 @@ func logKindChipClass(kind store.LogKind) string {
 	default:
 		return "chip-muted"
 	}
+}
+
+// logEntryAbout builds the "about" text from the payload (UI-06).
+// Relationship entries: "pair #N: venue1 / venue2" from a_id/b_id.
+// Routing entries: "decision #N" + outcome phrase. Falls back to LinkLabel if payload doesn't parse.
+func logEntryAbout(e store.LogEntry) string {
+	_, label := logEntryLink(e.Kind, e.Ref)
+	switch e.Kind {
+	case store.LogRelationship, store.LogLLM:
+		// Parse RelationshipPayload to get venue names from a_id/b_id
+		var p struct {
+			AID string `json:"a_id"`
+			BID string `json:"b_id"`
+		}
+		if err := json.Unmarshal(e.Payload, &p); err != nil || p.AID == "" || p.BID == "" {
+			return label // Fall back if payload doesn't parse
+		}
+		venueA := venueFromInstrumentID(p.AID)
+		venueB := venueFromInstrumentID(p.BID)
+		return label + ": " + venueA + " / " + venueB
+	case store.LogRouting:
+		// Parse Decision to get outcome phrase
+		var d canonical.Decision
+		if err := json.Unmarshal(e.Payload, &d); err != nil {
+			return label // Fall back if payload doesn't parse
+		}
+		chosen := len(d.Chosen) > 0
+		partial := chosen && d.Order.Quantity != nil && totalFilled(d.Chosen).LessThan(*d.Order.Quantity)
+		isComplement := hasComplement(d.Chosen)
+		venueCount := countVenues(d.Chosen)
+		phrase, _ := OutcomePhrase(chosen, partial, isComplement, venueCount)
+		return label + ": " + phrase
+	default:
+		return label
+	}
+}
+
+// venueFromInstrumentID extracts the venue name from an instrument ID ("venue:id").
+func venueFromInstrumentID(id string) string {
+	if idx := strings.Index(id, ":"); idx > 0 {
+		return id[:idx]
+	}
+	return "unknown"
 }
 
 // logEntryLink maps an entry to the page about it. The ref must be a valid

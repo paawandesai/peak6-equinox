@@ -50,7 +50,7 @@ func TestLogKindChipClass(t *testing.T) {
 	}
 }
 
-// TestLogAboutField verifies the About field shows readable text instead of bare refs.
+// TestLogAboutField verifies the About field shows readable text with venue names and outcome phrases.
 func TestLogAboutField(t *testing.T) {
 	s, st := newTestServer(t)
 	sd := seedPublic(t, st)
@@ -59,18 +59,18 @@ func TestLogAboutField(t *testing.T) {
 	wantHTML(t, rec, 200)
 	body := rec.Body.String()
 
-	// The "about" column should show "pair #N" and "decision #N" (via About field)
-	wantContains(t, body, `pair #`, `decision #`)
+	// Relationship entries should show "pair #N: venue / venue" from a_id/b_id
+	wantContains(t, body, `pair #`)
+	wantContains(t, body, `kalshi / polymarket`) // Venue names extracted from payload
 
-	// Links should use the About text, not raw refs
+	// Routing entries should show "decision #N: outcome phrase"
+	wantContains(t, body, `decision #`)
+	wantContains(t, body, `Routed`) // Outcome phrase from OutcomePhrase helper
+
+	// Links should point to the correct pages
 	wantContains(t, body,
 		`href="/pairs/`,
 		`href="/decisions/`)
-
-	// The decision's "about" should mention the decision number
-	if !strings.Contains(body, "decision #") {
-		t.Error("decision log entry should show 'decision #' in the about field")
-	}
 }
 
 // TestLogSummaryClamped verifies summaries use clamp-2 and expand in details.
@@ -82,9 +82,9 @@ func TestLogSummaryClamped(t *testing.T) {
 	wantHTML(t, rec, 200)
 	body := rec.Body.String()
 
-	// Summaries should be in details elements with clamp-2 on the summary
+	// Summaries should be in details elements with clamp-2 inside a span
 	wantContains(t, body, `<details>`)
-	wantContains(t, body, `<summary class="clamp-2"`)
+	wantContains(t, body, `<span class="clamp-2">`)
 
 	// The full summary text should appear inside the details (not just truncated)
 	wantContains(t, body, seedExplainEq) // From the relationship entry

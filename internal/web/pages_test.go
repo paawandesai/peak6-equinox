@@ -141,8 +141,8 @@ func TestDecisionLogPage(t *testing.T) {
 	body := rec.Body.String()
 	wantContains(t, body,
 		"What did Equinox decide recently, and why?",
-		`href="/pairs/`+strconv.FormatInt(sd.eqID, 10)+`">pair #`+strconv.FormatInt(sd.eqID, 10)+`</a>`,
-		`href="/decisions/`+strconv.FormatInt(decisionID, 10)+`">decision #`+strconv.FormatInt(decisionID, 10)+`</a>`,
+		`href="/pairs/`+strconv.FormatInt(sd.eqID, 10)+`">pair #`+strconv.FormatInt(sd.eqID, 10)+`: kalshi / polymarket</a>`,
+		`href="/decisions/`+strconv.FormatInt(decisionID, 10)+`">decision #`+strconv.FormatInt(decisionID, 10)+`: Routed</a>`,
 		`<span class="chip chip-info">relationship</span>`, `<span class="chip chip-ok">routing</span>`,
 		"route buy 100 contracts yes on "+seedKalshiA,
 		seedExplainEq, "Latest 3 entries",
