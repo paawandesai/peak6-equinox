@@ -40,7 +40,7 @@ Paawan approved the Claude Design v2 UI on 2026-10-08 at 1:41 PM CT, together wi
 | UI-25 | Router stores input quotes and label with each decision (◆ 13, 17; D-098 call 3) | new data | 2 (stored decision schema) | — |
 | UI-26 | Admin health data: match runs + 90-day daily history (◆ 14, 15) | new data | 2 (schema) | UI-17 |
 
-GitLab issues are listed at the end of this file.
+GitLab issues #42–#58 (UI-10 = #42 … UI-26 = #58) are listed at the end of this file.
 
 ---
 
@@ -654,3 +654,27 @@ No UI-02..UI-08 acceptance criterion is dropped. Each carries into the ticket th
 | UI-06 near misses + log | UI-14, UI-15 | Veto-first rows, kind chips, clamped summaries and the filter form kept. |
 | UI-07 eval | UI-16 (+ UI-23, UI-24) | Headline with verdict, type chips, empty state and the M3-06 delta (now UI-24) kept. |
 | UI-08 admin | UI-17 (+ UI-19, UI-22, UI-26) | Layout, noindex, health values with AB-15, the actions with all four verifier states and the D-097 last run, and the rounds table kept. |
+
+## GitLab issues
+
+Each ticket is a GitLab issue labelled `ui` and `UI-v2`, created 2026-10-08. The issue body repeats the ticket. This file is the source of truth.
+
+| Ticket | Issue | Depends on (issues) |
+|---|---|---|
+| UI-10 | #42 | — |
+| UI-11 | #43 | #42 |
+| UI-12 | #44 | #42 |
+| UI-13 | #45 | #42, #57 |
+| UI-14 | #46 | #42 |
+| UI-15 | #47 | #42, #57 |
+| UI-16 | #48 | #42 |
+| UI-17 | #49 | #42 |
+| UI-18 | #50 | #43 |
+| UI-19 | #51 | #42, #49 |
+| UI-20 | #52 | #44, #46, #39 |
+| UI-21 | #53 | #44 |
+| UI-22 | #54 | #44, #49 |
+| UI-23 | #55 | #48 |
+| UI-24 | #56 | #55 |
+| UI-25 | #57 | — |
+| UI-26 | #58 | #49 |
