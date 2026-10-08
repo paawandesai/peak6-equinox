@@ -1,7 +1,7 @@
 <!-- OWNER: operator. -->
 # Status
 
-_Last updated: 2026-10-08 ~03:43 UTC by operator (D-087: Paawan kept D-073/074/076/079 after the PRD check; ci-gate manual MR pipelines in force since !35 merged as fb21cd3b)._
+_Last updated: 2026-10-08 17:30 UTC by orchestrator (M3 + UI-02…08 merged; #39 and UI-09 open). Previous:_ _Last updated: 2026-10-08 ~03:43 UTC by operator (D-087: Paawan kept D-073/074/076/079 after the PRD check; ci-gate manual MR pipelines in force since !35 merged as fb21cd3b)._
 
 ## Current milestone
 
@@ -44,10 +44,30 @@ Next operator action (Tier 2): human verification of Fed demo rendering (criteri
 - M2-07: Web near-misses / log / eval / history / NFR-05 / AB-15 — MR !27 merged (closes #19).
 - M2-08: `docs/equivalence.md` methodology — MR !24 merged as ba0a6c66 (closes #20).
 
+- M3-01: Router eligibility (staleness, skew, depth) — MR !34 merged as 2da4cf6 (closes #21).
+- M3-02: Basis penalty in routing cost — MR !40 merged as c508f31 (closes #22).
+- M3-03: Greedy sweep / split across venues — MR !45 merged as 9088532 (closes #23).
+- M3-04: Complement routing — MR !48 merged as c2857f0 (closes #24).
+- M3-05: Fee verification + worked examples — MR !33 merged as 96ca21a (closes #25).
+- M3-06: LLM verifier live client, cache, cap, admin — MR !38 merged as 7173b84 (closes #26).
+- M3-07: Demo mode (zero venue calls while pinned) + as-of banner — MR !46 merged as 1c4cb2a (closes #27).
+- M3-08: Timezone selector — MR !47 merged as d374b61 (closes #28); follow-up (tzdata, Secure cookie, UTC fallback) MR !51 merged as 563e285.
+- M3-09: Public route rate limiting — MR !37 merged as b29b328 (closes #29).
+- M3-10: `docs/routing.md` — MR !49 merged as 7e67718 (closes #30).
+- UI-01: design spec `docs/design.md` + wave-9 tickets (D-081) — MR !43 merged as 69cc835.
+- UI-02: Layout, tokens, shared components, view-model helpers — MR !50 merged as a35eda6 (closes #31).
+- UI-03: Matches page — MR !54 merged as c671ece (closes #32).
+- UI-04: Pair page — MR !52 merged as e420da2 (closes #33).
+- UI-05: Routing trace — MR !53 merged as 72d4c4a (closes #34).
+- UI-06: Near misses and decision log — merged as 65b38ad (closes #35).
+- UI-07: Eval page — merged as cbac998 (closes #36).
+- UI-08: Admin page — merged (closes #37); follow-up (persist LLM verify last-run summary, #40) merged as da123b9.
+
 ## In progress
 
-- UI track (D-081): UI-01 design spec in review (docs/design.md + wave-9 tickets UI-02…UI-08 in docs/tickets/M3.md); UI-02+ workers wait for the design MR to merge and stay behind M3 exit-critical work.
-- M3 tickets: docs/tickets/M3.md merged (MR !32); GitLab issues #21–#30 created with M3 label. M3-05 (fee verification) merged as MR !33. M3-09 (public rate limiting) merged as MR !37. M3-01 (eligibility checks) in progress as MR !34. M3-06 (complement routing) in progress as MR !38.
+- #39 M2 follow-up: matcher misses the 6 corrected golden pairs (D-083) — MR !58 in operator review (round 4 asked for the 17 overwritten fixtures to be restored; worker steered 2026-10-08 17:30 UTC).
+- UI-09 (#41): Claude Design pass on the Equinox UI — ticket only; no implementation worker until Paawan approves the design.
+- Golden labels (Q-7 / D-083): human item.
 
 ## Blocked
 
