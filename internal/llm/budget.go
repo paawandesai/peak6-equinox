@@ -74,6 +74,8 @@ func (bv *BudgetedVerifier) Verify(ctx context.Context, a, b canonical.Instrumen
 		usage := bv.tokenSource.LastUsage()
 		if err := bv.store.RecordLLMTokens(ctx, today, usage.InputTokens, usage.OutputTokens); err != nil {
 			// AO review issue #2: log the error but return the verdict (don't discard paid work)
+			// Note: using fmt.Printf here because we don't have access to slog.Logger in this layer.
+			// The caller (admin handler) will log structured errors from the outer layer.
 			fmt.Printf("WARNING: failed to record token usage: %v\n", err)
 		}
 	}
@@ -116,8 +118,9 @@ func (c *CachedVerifier) Verify(ctx context.Context, a, b canonical.Instrument, 
 		return canonical.LLMVerdict{}, err
 	}
 
+	// AO review: log cache Put failures but return the verdict (don't discard paid work)
 	if err := c.cache.Put(ctx, key, verdict); err != nil {
-		return canonical.LLMVerdict{}, fmt.Errorf("storing verdict in cache: %w", err)
+		fmt.Printf("WARNING: failed to cache verdict: %v\n", err)
 	}
 
 	return verdict, nil

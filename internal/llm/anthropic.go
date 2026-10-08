@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -20,8 +21,9 @@ type AnthropicClient struct {
 	maxTokens   int
 	temperature float64
 	httpClient  *http.Client
-	baseURL     string // defaults to anthropicAPIURL, overrideable for tests
-	lastUsage   Usage  // token counts from the most recent successful call
+	baseURL     string     // defaults to anthropicAPIURL, overrideable for tests
+	lastUsage   Usage      // token counts from the most recent successful call
+	usageMu     sync.Mutex // guards lastUsage (AO review: prevent data race)
 }
 
 // NewAnthropicClient creates a client for the given model ID. apiKey must not
@@ -166,10 +168,12 @@ func (c *AnthropicClient) Complete(ctx context.Context, p Prompt) (string, error
 
 	// Record token usage from this call (AO review issue #5)
 	if apiResp.Usage != nil {
+		c.usageMu.Lock()
 		c.lastUsage = Usage{
 			InputTokens:  apiResp.Usage.InputTokens,
 			OutputTokens: apiResp.Usage.OutputTokens,
 		}
+		c.usageMu.Unlock()
 	}
 
 	return text, nil
@@ -177,6 +181,9 @@ func (c *AnthropicClient) Complete(ctx context.Context, p Prompt) (string, error
 
 // LastUsage returns the token counts from the most recent successful Complete call.
 // Returns zero values if no successful call has been made yet.
+// Thread-safe (AO review: guards against data race).
 func (c *AnthropicClient) LastUsage() Usage {
+	c.usageMu.Lock()
+	defer c.usageMu.Unlock()
 	return c.lastUsage
 }
