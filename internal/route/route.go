@@ -356,24 +356,28 @@ func allIn(l canonical.Leg) decimal.Decimal {
 	return l.VWAP.Sub(l.FeePerContract).Sub(l.BasisPenaltyPerContract)
 }
 
+// quantizeCost rounds all-in cost to 4 decimal places for transitive comparison
+// (M3-02: 0.0001 tolerance = $0.0001 per contract).
+func quantizeCost(c decimal.Decimal) decimal.Decimal {
+	return c.Round(4)
+}
+
 // better orders options: full fills before partial ones, then the lowest
-// all-in cost (buy) or the highest net proceeds (sell) within 0.0001 tolerance
+// all-in cost (buy) or the highest net proceeds (sell) quantized to 4 dp
 // (M3-02), then the larger fill, then the deeper book, then the lower basis
 // score, then the lexicographically first venue name (domain.md rule 6).
 func better(side canonical.Side, a, b option) bool {
-	const costTolerance = "0.0001"
-	tol := decimal.RequireFromString(costTolerance)
-
 	if a.full != b.full {
 		return a.full
 	}
-	// Compare all-in costs with 0.0001 tolerance for deterministic tie-breaking (M3-02).
-	costDiff := a.leg.AllInPerContract.Sub(b.leg.AllInPerContract).Abs()
-	if costDiff.GreaterThan(tol) {
+	// Quantize to 4 dp for transitive comparison (M3-02: 0.0001 = $0.0001/contract).
+	aQuant := quantizeCost(a.leg.AllInPerContract)
+	bQuant := quantizeCost(b.leg.AllInPerContract)
+	if !aQuant.Equal(bQuant) {
 		if side == canonical.SideBuy {
-			return a.leg.AllInPerContract.LessThan(b.leg.AllInPerContract)
+			return aQuant.LessThan(bQuant)
 		}
-		return a.leg.AllInPerContract.GreaterThan(b.leg.AllInPerContract)
+		return aQuant.GreaterThan(bQuant)
 	}
 	if !a.leg.Quantity.Equal(b.leg.Quantity) {
 		return a.leg.Quantity.GreaterThan(b.leg.Quantity)
@@ -381,7 +385,7 @@ func better(side canonical.Side, a, b option) bool {
 	if !a.fill.DepthWithinLimit.Equal(b.fill.DepthWithinLimit) {
 		return a.fill.DepthWithinLimit.GreaterThan(b.fill.DepthWithinLimit)
 	}
-	// Within cost tolerance, prefer lower basis score (M3-02 tie-break).
+	// Within quantized cost equality, prefer lower basis score (M3-02 tie-break).
 	if !a.basisScore.Equal(b.basisScore) {
 		return a.basisScore.LessThan(b.basisScore)
 	}

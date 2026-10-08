@@ -98,7 +98,7 @@ func alternativeSentence(rank int, opt, best option, sz sizing) string {
 	if l.BasisPenaltyPerContract.IsZero() {
 		breakdown = fmt.Sprintf("VWAP %s, fee %s", money(l.VWAP), money(l.FeePerContract))
 	} else {
-		breakdown = fmt.Sprintf("VWAP %s, fee %s, basis %s", money(l.VWAP), money(l.FeePerContract), money(l.BasisPenaltyPerContract))
+		breakdown = fmt.Sprintf("VWAP %s, fee %s, basis %s (score %s)", money(l.VWAP), money(l.FeePerContract), money(l.BasisPenaltyPerContract), money(opt.basisScore))
 	}
 	s := fmt.Sprintf("%s (%s) ranks #%d at %s per contract (%s; %s worse)",
 		l.Venue, l.InstrumentID, rank, money(l.AllInPerContract), breakdown, money(gap))

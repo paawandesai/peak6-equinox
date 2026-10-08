@@ -91,6 +91,8 @@ func New(cfg Config, deps Deps) *Server {
 	if cfg.MinBookDepth.IsZero() {
 		cfg.MinBookDepth = decimal.RequireFromString("1")
 	}
+	// BASIS_PENALTY_MULTIPLIER: config.Load rejects zero/negative, so this default
+	// is only for direct test construction (not production).
 	if cfg.BasisPenaltyMult.IsZero() {
 		cfg.BasisPenaltyMult = decimal.RequireFromString("0.01")
 	}
