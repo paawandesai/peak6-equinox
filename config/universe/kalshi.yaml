@@ -9,6 +9,6 @@ categories:
   crypto:
     series: [KXBTCD, KXETHD]
   fed:
-    series: [KXFED]
+    series: [KXFED, KXFEDDECISION, KXRATECUTCOUNT, KXRATECUT]
   politics:
     series: [KXPRESPERSON, KXPRESNOMD, KXPRESNOMR]

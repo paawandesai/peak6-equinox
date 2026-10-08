@@ -57,12 +57,14 @@ facts:
       target range changes; every entry is a multiple of 0.25.
 
   # Decision days of the scheduled FOMC meetings that the golden-set Fed pairs
-  # rely on (D-083, Paawan 2026-10-07 9:30 PM CT). Kalshi KXFEDDECISION and
-  # Polymarket "Fed Decision in <month>?" pay the same only if each meeting
-  # is held on its scheduled date: a meeting moved off its date resolves
-  # "Fed maintains rate" on Kalshi but waits for the statement on Polymarket.
-  # Those pairs are therefore labelled equivalent_given_facts with this fact
-  # and fed_rate_step. Record-only: the matcher does not read this id yet.
+  # rely on (D-083, Paawan 2026-10-07 9:30 PM CT). The matcher uses this fact
+  # for the Fed exception to the 7-day block (proposed D-095, nearest-meeting assignment)
+  # and to derive no-negative-range implies relationships (D-083). Kalshi
+  # KXFEDDECISION and Polymarket "Fed Decision in <month>?" pay the same only
+  # if each meeting is held on its scheduled date: a meeting moved off its date
+  # resolves "Fed maintains rate" on Kalshi but waits for the statement on
+  # Polymarket. Those pairs are therefore labelled equivalent_given_facts with
+  # this fact and fed_rate_step.
   - id: fed_meeting_dates
     value: "2026-10-28,2026-12-09,2027-01-27"
     source: https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm

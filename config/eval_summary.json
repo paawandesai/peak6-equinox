@@ -1,0 +1,68 @@
+{
+  "generated_at": "2026-10-08T18:28:23Z",
+  "command": "equinox eval",
+  "round_id": 2,
+  "labels_file": "testdata/golden/labels.yaml",
+  "labels": 40,
+  "method": "rules",
+  "types": [
+    {
+      "type": "equivalent",
+      "support": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "precision": null,
+      "recall": null
+    },
+    {
+      "type": "equivalent_given_facts",
+      "support": 1,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": "1",
+      "recall": "1"
+    },
+    {
+      "type": "complement",
+      "support": 1,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": "1",
+      "recall": "1"
+    },
+    {
+      "type": "implies",
+      "support": 17,
+      "tp": 17,
+      "fp": 0,
+      "fn": 0,
+      "precision": "1",
+      "recall": "1"
+    },
+    {
+      "type": "related",
+      "support": 19,
+      "tp": 19,
+      "fp": 0,
+      "fn": 0,
+      "precision": "1",
+      "recall": "1"
+    },
+    {
+      "type": "unrelated",
+      "support": 2,
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "precision": "1",
+      "recall": "1"
+    }
+  ],
+  "notes": [
+    "equivalent precision not measurable: no equivalent prediction among the labelled pairs (target \u003e= 0.95, NFR-06)",
+    "rules+llm: not evaluated (M3)"
+  ]
+}

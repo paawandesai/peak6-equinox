@@ -41,7 +41,7 @@ import (
 // result and set rules+llm. Confidence is the matcher's confidence in the
 // returned type, in [0,1]; the rules are in classify.go.
 func Compare(a, b canonical.Instrument, f facts.Set) canonical.Relationship {
-	blocked := block(a, b)
+	blocked, blockFacts := block(a, b, f)
 	vetoes := vetoes(a, b)
 	rel := canonical.Relationship{
 		AID:       a.ID,
@@ -53,8 +53,11 @@ func Compare(a, b canonical.Instrument, f facts.Set) canonical.Relationship {
 	}
 	v := classify(a, b, blocked, vetoes, f)
 	rel.Type, rel.Confidence, rel.Explanation = v.typ, v.confidence, v.explanation
-	if len(v.facts) > 0 {
-		rel.FactsUsed = v.facts
+	// Merge facts from block (Fed exception) and classify (derivation)
+	allFacts := append([]canonical.FactUse{}, blockFacts...)
+	allFacts = append(allFacts, v.facts...)
+	if len(allFacts) > 0 {
+		rel.FactsUsed = allFacts
 	}
 	if rel.Type.Routable() || rel.Type == canonical.RelImplies {
 		br := basisRisk(a, b, v)
