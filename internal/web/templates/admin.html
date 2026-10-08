@@ -36,6 +36,18 @@
     <span>Runs LLM verifier on all rules-equivalent pairs from the current round. Downgrade-only, cached, budget-capped.</span>
   </form>
 
+  <h2>Demo Mode</h2>
+  {{if .HasPinned}}
+  <p>Round <strong>{{.PinnedRound.ID}}</strong> (started {{.PinnedRound.Started}}, duration {{.PinnedRound.Duration}}, status {{.PinnedRound.Status}}) is currently pinned.</p>
+  <p><em>Demo mode active: all pages use this round's stored data. No live venue calls.</em></p>
+  <form method="post" action="/admin/unpin">
+    <button type="submit">Unpin round</button>
+    <span>Unpins the current round. Next page request will use the latest round.</span>
+  </form>
+  {{else}}
+  <p>No round is currently pinned. Pages use the latest round.</p>
+  {{end}}
+
   <h2>Last {{len .Rounds}} rounds</h2>
   {{if not .Rounds}}
     <p>No rounds yet. Run <code>equinox seed</code> or <code>equinox ingest</code>, or press the button above.</p>

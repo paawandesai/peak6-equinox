@@ -218,6 +218,9 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), dbTimeout)
 	defer cancel()
 
+	// Get current round from context (pinned or latest) - NFR-04
+	currentRound := roundFromContext(r.Context())
+
 	rel, err := st.GetRelationship(ctx, in.PairID)
 	switch {
 	case isNotFound(err):
@@ -228,11 +231,31 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 		s.routeFailure(w, r, http.StatusServiceUnavailable, in.PairID, "the database is unavailable; try again shortly")
 		return
 	}
+
+	// Determine which round to use for routing and banner (M3-07, NFR-04)
+	var round store.Round
+	if currentRound.Pinned {
+		// NFR-04: when a round is pinned, reject pairs from other rounds
+		if rel.RoundID != currentRound.ID {
+			s.routeFailure(w, r, http.StatusNotFound, in.PairID, "this pair belongs to a different round")
+			return
+		}
+		round = currentRound
+	} else {
+		// Unpinned or no current round: use the pair's own round (allows routing older pairs from /log)
+		round, err = st.GetRound(ctx, rel.RoundID)
+		if err != nil {
+			s.log.Error("loading round for route", "err", err)
+			s.routeFailure(w, r, http.StatusServiceUnavailable, in.PairID, "the database is unavailable; try again shortly")
+			return
+		}
+	}
+
 	if in.Target != rel.AID && in.Target != rel.BID {
 		s.routeFailure(w, r, http.StatusBadRequest, in.PairID, "target must be one of the pair's instrument IDs")
 		return
 	}
-	target, partners, err := s.loadRouteInputs(ctx, st, rel.RoundID, in.Target)
+	target, partners, err := s.loadRouteInputs(ctx, st, round.ID, in.Target)
 	switch {
 	case isNotFound(err):
 		s.routeFailure(w, r, http.StatusNotFound, in.PairID, "the target instrument is no longer in the store")
@@ -242,14 +265,8 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 		s.routeFailure(w, r, http.StatusServiceUnavailable, in.PairID, "the database is unavailable; try again shortly")
 		return
 	}
-	round, err := st.GetRound(ctx, rel.RoundID)
-	if err != nil {
-		s.log.Error("loading round for route", "err", err)
-		s.routeFailure(w, r, http.StatusServiceUnavailable, in.PairID, "the database is unavailable; try again shortly")
-		return
-	}
 	cfg := route.Config{
-		RoundID:                rel.RoundID,
+		RoundID:                round.ID,
 		MinRouteConfidence:     s.cfg.MinRouteConfidence,
 		BasisPenaltyMultiplier: s.cfg.BasisPenaltyMult,
 		Eligibility: route.EligibilityConfig{
@@ -281,7 +298,7 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 	s.log.Info("routing decision stored", "decision_id", id, "round_id", dec.RoundID, "target", dec.TargetID,
 		"chosen", len(dec.Chosen), "alternatives", len(dec.Alternatives), "exclusions", len(dec.Exclusions))
 
-	p := s.routePageHeader(in.PairID)
+	p := s.routePageHeader(in.PairID, round)
 	p.StaleWarning = s.staleRoundWarning(round)
 	data := routePage{
 		page:       p,
@@ -292,19 +309,16 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 	s.renderRoute(w, r, http.StatusOK, data)
 }
 
-func (s *Server) routePageHeader(pairID int64) page {
-	return page{
-		Title:    "Routing trace",
-		Question: fmt.Sprintf("Where would this order fill best, and why? (pair %d)", pairID),
-		Assets:   pinnedAssets,
-	}
+func (s *Server) routePageHeader(pairID int64, round store.Round) page {
+	return s.pageBase(round, "Routing trace", fmt.Sprintf("Where would this order fill best, and why? (pair %d)", pairID))
 }
 
 // routeFailure renders the problems at the given status: as a fragment for
 // htmx (which swaps 400 responses in, see the htmx-config meta) or as a
 // full page otherwise.
 func (s *Server) routeFailure(w http.ResponseWriter, r *http.Request, status int, pairID int64, problems ...string) {
-	s.renderRoute(w, r, status, routePage{page: s.routePageHeader(pairID), PairID: pairID, Errors: problems})
+	round := roundFromContext(r.Context())
+	s.renderRoute(w, r, status, routePage{page: s.routePageHeader(pairID, round), PairID: pairID, Errors: problems})
 }
 
 func (s *Server) renderRoute(w http.ResponseWriter, r *http.Request, status int, data routePage) {
