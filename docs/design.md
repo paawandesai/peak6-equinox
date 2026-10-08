@@ -192,9 +192,9 @@ Changes: an outcome strip in words; the leg table shows all four cost terms (M3-
 | M3-09 rate limiting (merged) | JSON 429 with `Retry-After` | Unchanged; documented in section 4. |
 | M3-10 `docs/routing.md` | not started | The trace vocabulary here (reason phrases, cost terms) is what that doc should use. |
 
-## 8. Cut order and freeze
+## 8. Priority and completion
 
-From the brief: this track never blocks or delays an M2 or M3 exit criterion. Must-ship: UI-02 (layout and tokens), UI-03 (matches), UI-04 (pair), UI-05 (route trace). Cut, in this order, if the schedule is tight: UI-08 (admin), UI-07 (eval), UI-06 (near misses and log). Each cut is a Tier 2 entry. Code freeze is Sunday 2026-10-11 09:00 CT; after it only demo-critical UI fixes go in.
+Paawan's rule (2026-10-07 8:55 PM CT, superseding the cut order in the UI brief): every ticket, UI-02 to UI-08 included, is worked until it is merged. Deadlines and the code freeze are not stop points and not reasons to cut scope, and UI tickets are never cut for schedule. M3 tickets still take worker slots first when both are ready; within the UI track the order is UI-02, then UI-03, UI-04 and UI-05 (the demo path), then UI-06, UI-07, UI-08.
 
 ## 9. What was proposed and not built
 
