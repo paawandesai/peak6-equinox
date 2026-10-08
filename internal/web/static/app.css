@@ -304,8 +304,8 @@ table.diff .annot.annot-stands { color: var(--eq-danger); }
 
 /* legacy status words (kept; templates migrate to chips) */
 .diff-match td:last-child, .diff-differ td:last-child, .diff-unknown td:last-child { font-weight: 400; }
-.type-equivalent, .type-equivalent_given_facts, .type-complement { color: var(--eq-ok); font-weight: 600; }
-.type-implies { color: var(--eq-info); font-weight: 600; }
+.type-equivalent, .type-equivalent_given_facts { color: var(--eq-ok); font-weight: 600; }
+.type-complement, .type-implies { color: var(--eq-info); font-weight: 600; }
 .type-related { color: var(--eq-warn); font-weight: 600; }
 .type-unrelated { color: var(--eq-muted); }
 .pass { color: var(--eq-ok); font-weight: 600; }
@@ -427,6 +427,14 @@ polyline.hist-mid, polyline.hist-side { fill: none; }
 /* diff verdict */
 .v-match { background: var(--eq-ok-bg); color: var(--eq-ok); }
 .v-differs { background: var(--eq-danger-bg); color: var(--eq-danger); }
+.v-closed { background: var(--eq-info-bg); color: var(--eq-info); }
+.v-unknown { background: var(--pico-background-color); color: var(--eq-muted); box-shadow: inset 0 0 0 1.5px var(--eq-muted); }
+/* routing outcome */
+.o-routed { background: var(--eq-ok); color: var(--eq-on-solid); box-shadow: none; }
+.o-partial { background: var(--eq-warn-bg); color: var(--eq-warn); }
+.o-notrouted { background: var(--eq-danger); color: var(--eq-on-solid); box-shadow: none; }
+/* danger badge (error page) */
+.b-danger { background: var(--eq-danger); color: var(--eq-on-solid); box-shadow: none; }
 .v-closed { background: var(--eq-info-bg); color: var(--eq-info); }
 .v-unknown { background: var(--pico-background-color); color: var(--eq-muted); font-style: italic; box-shadow: inset 0 0 0 1.5px var(--eq-muted); }
 /* routing outcome + misc */

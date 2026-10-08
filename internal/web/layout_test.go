@@ -37,10 +37,10 @@ func TestLayoutStamp(t *testing.T) {
 		t.Error("stamp missing age text")
 	}
 
-	// Check for a timezone abbreviation (ET, CT, UTC, or EDT/EST/CDT/CST)
-	tzPattern := regexp.MustCompile(`(ET|CT|UTC|EDT|EST|CDT|CST)`)
-	if !tzPattern.MatchString(body) {
-		t.Error("stamp missing timezone abbreviation")
+	// Check for a timezone abbreviation (ET, CT, UTC, EDT/EST/CDT/CST) in the <time> element
+	timePattern := regexp.MustCompile(`<time[^>]*>[^<]*(ET|CT|UTC|EDT|EST|CDT|CST|MST|MDT|PST|PDT)[^<]*</time>`)
+	if !timePattern.MatchString(body) {
+		t.Error("stamp missing timezone abbreviation in <time> element")
 	}
 }
 
