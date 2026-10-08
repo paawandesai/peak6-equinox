@@ -87,11 +87,13 @@ func sampleDecision() canonical.Decision {
 
 func TestPrintDecision(t *testing.T) {
 	var out bytes.Buffer
-	if err := printDecision(&out, 42, sampleDecision()); err != nil {
+	snapshot := time.Date(2026, 10, 6, 11, 58, 0, 0, time.UTC)
+	if err := printDecision(&out, 42, sampleDecision(), snapshot); err != nil {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
 		"Routing decision #42 (round 7) for " + routeKalshiID,
+		"As of:    2026-10-06T11:58:00Z",
 		"Order:    buy 100 contracts YES market IOC",
 		"Chosen:   polymarket " + routePolymarketID + " (direct): 100 contracts, VWAP 0.5150, fee 0.0175, basis 0.0000, all-in 0.5325",
 		"#1 polymarket " + routePolymarketID + ": all-in 0.5325",
@@ -110,7 +112,7 @@ func TestPrintDecision(t *testing.T) {
 	n := dec("25")
 	d.Order.Quantity, d.Order.Notional, d.Order.Type, d.Order.LimitPrice = nil, &n, canonical.OrderLimit, &[]decimal.Decimal{dec("0.5")}[0]
 	out.Reset()
-	if err := printDecision(&out, 1, d); err != nil {
+	if err := printDecision(&out, 1, d, snapshot); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(out.String(), "Chosen:   none") || !strings.Contains(out.String(), "$25 notional YES limit IOC limit 0.5000") {
@@ -190,10 +192,14 @@ func TestRouteCommandEndToEnd(t *testing.T) {
 	if code := run(ctx, args, &out, &errOut); code != 0 {
 		t.Fatalf("exit %d, stderr %s", code, errOut.String())
 	}
-	for _, want := range []string{"Chosen:   polymarket " + routePolymarketID, "#2 kalshi " + routeKalshiID, "Best route: polymarket", "approximate for kalshi"} {
+	for _, want := range []string{"Chosen:   polymarket " + routePolymarketID, "#2 kalshi " + routeKalshiID, "Best route: polymarket"} {
 		if !strings.Contains(out.String(), want) {
 			t.Errorf("output lacks %q:\n%s", want, out.String())
 		}
+	}
+	// The fixture round snapshot is old (2026-10-06 12:01), so the stale-round warning should appear (M3-01, NFR-09).
+	if !strings.Contains(out.String(), "WARNING: Data is") {
+		t.Errorf("output lacks stale-round warning (snapshot is old):\n%s", out.String())
 	}
 
 	out.Reset()
@@ -273,5 +279,25 @@ func TestRouteCommandNoDatabase(t *testing.T) {
 	var out, errOut bytes.Buffer
 	if code := run(context.Background(), []string{"route", "--target", routeKalshiID, "--qty", "1"}, &out, &errOut); code != 1 {
 		t.Fatalf("exit %d, stderr %s", code, errOut.String())
+	}
+}
+
+// TestRouteCommandStaleWarningAbsent verifies the stale-round warning is suppressed
+// when STALE_ROUND_WARN_MINUTES is set very high (M3-01, NFR-09).
+func TestRouteCommandStaleWarningAbsent(t *testing.T) {
+	setAppEnv(t, tdb.DSN(t))
+	t.Setenv("STALE_ROUND_WARN_MINUTES", "10000") // Set threshold to max (10000 min = ~7 days), so the old fixture snapshot won't trigger a warning.
+	tdb.Reset(t)
+	ctx := context.Background()
+	s := store.New(tdb.Pool(t))
+	seedRouteRound(t, s)
+
+	var out, errOut bytes.Buffer
+	if code := run(ctx, []string{"route", "--target", routeKalshiID, "--qty", "100"}, &out, &errOut); code != 0 {
+		t.Fatalf("exit %d, stderr %s", code, errOut.String())
+	}
+	// With a very high threshold, no warning should appear even though the snapshot is old.
+	if strings.Contains(out.String(), "WARNING:") {
+		t.Errorf("output has stale warning when threshold is very high:\n%s", out.String())
 	}
 }

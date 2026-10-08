@@ -21,6 +21,7 @@
         {{if .Round}}<li><small>round {{.Round.ID}} ({{.Round.Status}}{{if .Round.Pinned}}, pinned{{end}}) as of {{.Round.AsOf}}</small></li>{{end}}
       </ul>
     </nav>
+    {{if .StaleWarning}}<p role="alert"><mark>{{.StaleWarning}}</mark></p>{{end}}
     <p class="question">{{.Question}}</p>
   </header>
   <main>

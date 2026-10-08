@@ -1,2 +1,2 @@
-# M3-06 worker 30: synthetic test cache key (64-char hex) flagged as generic-api-key
+# Suppress false positive: fake 64-hex cache key in M3-06 test (D-079).
 726c8f1f09d970ec369f658ac31a27dde1aee947:internal/store/llm_test.go:generic-api-key:92

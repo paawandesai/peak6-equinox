@@ -43,6 +43,15 @@ type Round struct {
 	Pinned      bool
 }
 
+// SnapshotAt returns the round snapshot time for eligibility checks (NFR-09, D-077).
+// Uses FinishedAt if non-zero, otherwise StartedAt.
+func (r Round) SnapshotAt() time.Time {
+	if !r.FinishedAt.IsZero() {
+		return r.FinishedAt
+	}
+	return r.StartedAt
+}
+
 const roundCols = `id, started_at, finished_at, status, venue_status, pinned`
 
 func scanRound(row pgx.Row) (Round, error) {
