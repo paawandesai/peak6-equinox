@@ -150,7 +150,7 @@ Add one line per action, newest at the bottom: `YYYY-MM-DD HH:MM UTC · actor ·
 **Satisfies:** FR-12, FR-15, FR-17, US-03, US-05, US-08  
 **Files:** `internal/canonical/order.go`, `internal/route/route.go`, `internal/route/inputs_test.go`, `internal/route/docs_examples_test.go`, `internal/store/crud_test.go`, `docs/architecture.md`, `docs/routing.md`, `docs/decisions.md`, `docs/status.md`, `docs/log.md`
 
-Added `Inputs []DecisionInput` to `canonical.Decision` (UI-25, D-098 call 3). The router now captures the input snapshot at decision time: one entry per candidate considered (target + partners, eligible and excluded), with venue, instrument id, relationship type (empty for the target itself) and confidence, outcome side checked, best ask, ask depth (capped at 10 levels), quote times and round id. This makes routing decisions a faithful record of what the router saw, not a later re-query that might disagree.
+Added `Inputs []DecisionInput` and `TargetType RelationshipType` to `canonical.Decision` (UI-25, D-098 call 3). The router now captures the input snapshot at decision time: one entry per candidate considered (target + partners, eligible and excluded), with venue, instrument id, relationship type (`"self"` for the target, otherwise the partner's relationship type) and confidence, outcome side checked, best ask, ask depth (capped at 10 levels), quote times and round id. This makes routing decisions a faithful record of what the router saw, not a later re-query that might disagree.
 
 Stored in the same `routing_decisions.decision` jsonb; no SQL migration needed. Old decisions decode with empty `Inputs` (omitempty). Size is bounded: levels capped at 10, candidates capped by the number of partners.
 
