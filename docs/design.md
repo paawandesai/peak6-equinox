@@ -59,7 +59,7 @@ Text plus colour, never colour alone. Every state has a visible word; colour is 
 | Match / differ | "match" / "differ" | `--eq-ok` / `--eq-danger` | diff rows |
 | Facts used | "fact: `fed_upper_bound` = 4.00, federalreserve.gov, as of 2026-09-16" | `--eq-info` | pair, diff |
 | Basis risk | score to two decimals plus a word: "low" < 0.20, "moderate" 0.20 to 0.49, "high" ≥ 0.50; "not scored" when absent | `--eq-ok` / `--eq-warn` / `--eq-danger` / `--eq-muted` | pair strip, route legs |
-| Staleness | "as of 01:35:52 UTC, 3 min ago"; stale-round banner carrying the existing server text unchanged, "Data is 42 minutes old." (D-077; the string and `TestStaleRoundWarning` stay as they are, the banner only adds the `warn` tint and role) | `--eq-warn` banner | header, every page |
+| Staleness | "Data as of 2026-10-08 01:35:52 UTC (round 1)", the existing `.Round.AsOf` string, rendered by M3-08's formatter in the selected timezone; age is not computed in the layout; stale-round banner carrying the existing server text unchanged, "Data is 42 minutes old." (D-077; the string and `TestStaleRoundWarning` stay as they are, the banner only adds the `warn` tint and role) | `--eq-warn` banner | header, every page |
 | Demo mode (M3-07) | banner: "Demo mode: data as of <time> (round <id>). Unpin from /admin" | `--eq-info` banner | header, every page |
 | Quote eligibility | reason as a phrase, not a code alone: "stale: fetched 140 s before the snapshot", "skew: 31 s behind kalshi", "no book", "too shallow: 12 contracts available", "not routable: related pairs are never routed", "low confidence: 0.87 is below the 0.9 floor" | `--eq-danger` reason word, body colour detail | route exclusions |
 | Skew warning, approximate fees | listed under "Warnings" with the same phrasing | `--eq-warn` | route trace |
@@ -96,7 +96,7 @@ Components, each a class in `app.css` and a template define in `layout.html`:
 - **`.strip`**: the one-line summary under an `h1`, a `dl` of label/value pairs laid out inline (`dl.strip > div { display:inline-block }`), wrapping at 390 px.
 - **`.chip`** with `.chip-ok | .chip-info | .chip-warn | .chip-danger | .chip-muted`: the state word with its tint; used for types, outcomes, buckets. Never a chip without text.
 - **`.banner`** with the same variants and `role="status"` (stale, demo mode) or `role="alert"` (errors): full-width line under the nav.
-- **`.asof`**: the header line "Data as of 2026-10-08 01:35 UTC (round 1, 3 min ago)"; M3-08's timezone selector sits at its right end.
+- **`.asof`**: the header line "Data as of 2026-10-08 01:35:52 UTC (round 1)" built from the existing `.Round.AsOf` and `.Round.ID` (pre-formatted by M3-08's formatter in the selected timezone; no age is computed); M3-08's timezone selector sits at its right end.
 - **`table.data`**: compact padding (`--eq-table-pad`), numeric columns right-aligned (`td.num`), IDs in `code` with `overflow-wrap:anywhere` so nothing overflows at 1280 px.
 - **Stacked rows under 640 px**: `table.data.stack` turns each row into a block and each cell into "label: value" using `td::before { content: attr(data-label) }`; templates add `data-label` to every `td`. CSS only, no JS. Column order on the narrow layout is the hierarchy in section 3.
 - **`.clamp-2`**: two-line clamp for titles and summaries (`-webkit-line-clamp`), with the full text in `title`; the pair page never clamps.
@@ -112,7 +112,7 @@ Before (1280 px): nav with round text wrapping; question line; `h1`; one paragra
 After:
 
 ```
-Equinox  Matches  Near misses  Decision log  Eval        Data as of 2026-10-08 01:35 UTC (round 1, 3 min ago) [tz]
+Equinox  Matches  Near misses  Decision log  Eval        Data as of 2026-10-08 01:35:52 UTC (round 1) [tz]
 Which Kalshi and Polymarket contracts are the same bet, and how sure is Equinox?
 Matches
 [round 1 | 1000 pairs kept | routable: 2 | implies: 25 | related: 973 | showing first 1000]
