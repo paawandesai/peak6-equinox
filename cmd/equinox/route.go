@@ -160,7 +160,16 @@ func runRoute(ctx context.Context, args []string, stdout io.Writer) error {
 		enc.SetIndent("", "  ")
 		return enc.Encode(dec)
 	}
-	return printDecision(stdout, id, dec, in.round.SnapshotAt())
+	// Warn if round data is stale (reviewer fix).
+	snapshot := in.round.SnapshotAt()
+	if !snapshot.IsZero() && cfg.StaleRoundWarnMinutes > 0 {
+		age := time.Now().UTC().Sub(snapshot)
+		ageMin := int(age.Minutes())
+		if ageMin >= cfg.StaleRoundWarnMinutes {
+			fmt.Fprintf(stdout, "WARNING: Data is %d minutes old.\n\n", ageMin)
+		}
+	}
+	return printDecision(stdout, id, dec, snapshot)
 }
 
 // routeInputs is everything Route needs from the database.
