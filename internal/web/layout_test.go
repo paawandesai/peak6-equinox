@@ -193,6 +193,23 @@ func TestLayoutBannerGlyphs(t *testing.T) {
 	if !strings.Contains(staleBody, `banner-danger`) {
 		t.Error("stale banner should use banner-danger class")
 	}
+
+	// No-data banner (no round available - empty database)
+	st2 := store.New(tdb.Pool(t))
+	tdb.Reset(t) // Reset to empty database
+	srv2 := New(Config{MinRouteConfidence: dec("0.9")}, Deps{Store: st2, Now: func() time.Time { return seedNow }})
+	noDataBody := get(srv2.Handler(), "/").Body.String()
+
+	// No-data banner should have ? glyph with aria-hidden and banner-warn class
+	if !strings.Contains(noDataBody, `<span class="g" aria-hidden="true">?</span>`) {
+		t.Error("no-data banner missing ? glyph with aria-hidden")
+	}
+	if !strings.Contains(noDataBody, `banner-warn`) {
+		t.Error("no-data banner should use banner-warn class")
+	}
+	if !strings.Contains(noDataBody, "No data available yet") {
+		t.Error("no-data banner missing expected text")
+	}
 }
 
 // TestLayoutContextBar verifies the context bar (UI-10 AC): stamp + round + timezone form.
