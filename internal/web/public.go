@@ -98,8 +98,8 @@ func (s *Server) publicRoutes(mux *http.ServeMux) {
 	mux.Handle("GET /decisions/{id}", wrap(s.handleDecision))
 	mux.Handle("GET /log", wrap(s.handleLog))
 	mux.Handle("GET /eval", wrap(s.handleEval))
-	// POST /timezone sets the user's timezone preference cookie (M3-08)
-	mux.Handle("POST /timezone", wrap(s.handleTimezone))
+	// POST /timezone sets the user's timezone preference cookie (M3-08, no round middleware needed)
+	mux.Handle("POST /timezone", s.rateLimitMiddleware(http.HandlerFunc(s.handleTimezone)))
 	mux.HandleFunc("GET /static/app.css", s.handleAppCSS)
 }
 
@@ -287,6 +287,7 @@ type instrumentView struct {
 	Close    time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
 	Quality  []canonical.QualityIssue
 	Missing  bool
+	Tz       string // Timezone for formatTime in sub-templates (M3-08)
 }
 
 func newInstrumentView(in canonical.Instrument) instrumentView {

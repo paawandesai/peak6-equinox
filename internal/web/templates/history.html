@@ -2,7 +2,7 @@
 {{if .Empty}}
 <p>No stored quotes for either contract yet. Each fetch round adds one point per contract.</p>
 {{else}}
-<p>{{.Points}} touch{{if ne .Points 1}}es{{end}} across {{.Rounds}} round{{if ne .Rounds 1}}s{{end}}, from {{.From}} to {{.To}}. Solid line: mid of the best YES bid and ask; thin lines: best bid and best ask. Prices are per $1 payout on a fixed 0 to 1 axis so both venues share one scale.</p>
+<p>{{.Points}} touch{{if ne .Points 1}}es{{end}} across {{.Rounds}} round{{if ne .Rounds 1}}s{{end}}, from {{formatTime .From $.Timezone}} to {{formatTime .To $.Timezone}}. Solid line: mid of the best YES bid and ask; thin lines: best bid and best ask. Prices are per $1 payout on a fixed 0 to 1 axis so both venues share one scale.</p>
 <figure class="history">
 <svg class="hist" viewBox="0 0 {{.Width}} {{.Height}}" width="{{.Width}}" height="{{.Height}}" role="img" aria-labelledby="hist-title">
   <title id="hist-title">Price history of the two contracts across fetch rounds</title>
@@ -25,8 +25,8 @@
 <details>
   <summary>Data points</summary>
   <table>
-    <thead><tr><th>Fetched (UTC)</th><th>Round</th><th>Venue</th><th>Best bid</th><th>Best ask</th><th>Mid</th></tr></thead>
-    <tbody>{{range .Rows}}<tr><td>{{.At}}</td><td>{{.RoundID}}</td><td><span class="venue">{{.Venue}}</span></td><td>{{.Bid}}</td><td>{{.Ask}}</td><td>{{.Mid}}</td></tr>{{end}}</tbody>
+    <thead><tr><th>Fetched</th><th>Round</th><th>Venue</th><th>Best bid</th><th>Best ask</th><th>Mid</th></tr></thead>
+    <tbody>{{range .Rows}}<tr><td>{{formatTime .At $.Timezone}}</td><td>{{.RoundID}}</td><td><span class="venue">{{.Venue}}</span></td><td>{{.Bid}}</td><td>{{.Ask}}</td><td>{{.Mid}}</td></tr>{{end}}</tbody>
   </table>
 </details>
 {{end}}

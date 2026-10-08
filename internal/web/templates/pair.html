@@ -50,8 +50,8 @@
   {{if .LogEntries}}
   <h3>Decision-log entries for this pair</h3>
   <table class="log">
-    <thead><tr><th>When (UTC)</th><th>Kind</th><th>Summary</th></tr></thead>
-    <tbody>{{range .LogEntries}}<tr><td><small>{{.At}}</small></td><td><code>{{.Kind}}</code></td><td class="summary">{{.Summary}}</td></tr>{{end}}</tbody>
+    <thead><tr><th>When</th><th>Kind</th><th>Summary</th></tr></thead>
+    <tbody>{{range .LogEntries}}<tr><td><small>{{formatTime .At $.Timezone}}</small></td><td><code>{{.Kind}}</code></td><td class="summary">{{.Summary}}</td></tr>{{end}}</tbody>
   </table>
   <p><a href="/log">Full decision log</a></p>
   {{end}}
@@ -129,7 +129,7 @@
   <p>This instrument is no longer in the store.</p>
   {{else}}
   <p><small>ID <code>{{.ID}}</code> · market <code>{{.MarketID}}</code>{{if .EventID}} · event <code>{{.EventID}}</code>{{end}}</small></p>
-  <p><small>{{.Category}} · {{.Status}} · closes {{formatTime .Close $.Timezone}}</small></p>
+  <p><small>{{.Category}} · {{.Status}} · closes {{formatTime .Close .Tz}}</small></p>
   <details>
     <summary>Rules text</summary>
     <p class="rules">{{.Rules}}</p>
@@ -143,7 +143,7 @@
 <tr>
   <td><span class="venue">{{.Venue}}</span></td>
   {{if .Present}}
-  <td>{{.BestBid}}</td><td>{{.BestAsk}}</td><td>{{.Mid}}</td><td>{{.BidLevels}}/{{.AskLevels}}</td><td>{{formatTime .FetchedAt $.Timezone}}</td><td>{{if .VenueTS}}{{formatTime .VenueTS $.Timezone}}{{else}}{{.VenueTSStr}}{{end}}</td>
+  <td>{{.BestBid}}</td><td>{{.BestAsk}}</td><td>{{.Mid}}</td><td>{{.BidLevels}}/{{.AskLevels}}</td><td>{{formatTime .FetchedAt .Tz}}</td><td>{{if .VenueTS}}{{formatTime .VenueTS .Tz}}{{else}}{{.VenueTSStr}}{{end}}</td>
   <td>{{if .Quality}}{{range .Quality}}<code>{{.Flag}}</code> {{end}}{{else}}ok{{end}}</td>
   {{else}}
   <td colspan="7">No quote for this instrument in the round.</td>

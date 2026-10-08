@@ -2,6 +2,7 @@ package web
 
 import (
 	"net/http"
+	"net/url"
 )
 
 // handleTimezone answers POST /timezone: sets the user's timezone preference
@@ -32,13 +33,22 @@ func (s *Server) handleTimezone(w http.ResponseWriter, r *http.Request) {
 	})
 
 	// Redirect back to the referrer, or home if no referrer or if referer is not same-origin.
-	// Only accept relative URLs to prevent open redirects (AB-08).
+	// Parse the referer URL and only accept same-host paths to prevent open redirects (AB-08, Cursor round 1).
 	referer := r.Header.Get("Referer")
 	target := "/"
-	if referer != "" && len(referer) > 0 && referer[0] == '/' && (len(referer) == 1 || referer[1] != '/') {
-		// Relative URL starting with single / (not //)
-		target = referer
+	if referer != "" {
+		refURL, err := url.Parse(referer)
+		if err == nil && refURL.Host == r.Host {
+			// Same-host: use the path and query, but guard against // and \ to prevent protocol-relative URLs
+			path := refURL.Path
+			if path != "" && path[0] == '/' && (len(path) == 1 || (path[1] != '/' && path[1] != '\\')) {
+				target = path
+				if refURL.RawQuery != "" {
+					target += "?" + refURL.RawQuery
+				}
+			}
+		}
 	}
-	//nolint:gosec // G710: target is validated to be a relative URL only
+	//nolint:gosec // G710: target is validated to be same-host path only
 	http.Redirect(w, r, target, http.StatusSeeOther)
 }

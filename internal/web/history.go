@@ -35,7 +35,7 @@ type historyChart struct {
 	XTicks         []chartTick
 	Points         int
 	Rounds         int
-	From, To       string
+	From, To       time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
 	Empty          bool
 	Rows           []historyRow
 }
@@ -64,7 +64,7 @@ type chartTick struct {
 
 // historyRow is one point of the data table under the chart.
 type historyRow struct {
-	At      string
+	At      time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
 	RoundID int64
 	Venue   string
 	Bid     string
@@ -95,7 +95,7 @@ func buildHistoryChart(aID, bID string, pts []store.QuotePoint) historyChart {
 		}
 		rounds[p.RoundID] = true
 	}
-	c.Points, c.Rounds, c.From, c.To = len(pts), len(rounds), formatUTC(first), formatUTC(last)
+	c.Points, c.Rounds, c.From, c.To = len(pts), len(rounds), first, last
 	span := last.Sub(first)
 	xOf := func(t time.Time) float64 {
 		w := float64(chartWidth - chartLeft - chartRight)
@@ -120,7 +120,7 @@ func buildHistoryChart(aID, bID string, pts []store.QuotePoint) historyChart {
 				sr.Last = p.Mid.Decimal.StringFixed(4)
 				sr.Dots = append(sr.Dots, chartPt{X: fpx(x), Y: fpx(yOf(p.Mid.Decimal))})
 			}
-			c.Rows = append(c.Rows, historyRow{At: formatUTC(p.FetchedAt), RoundID: p.RoundID, Venue: sr.Venue,
+			c.Rows = append(c.Rows, historyRow{At: p.FetchedAt, RoundID: p.RoundID, Venue: sr.Venue,
 				Bid: nullPrice(p.BestBid), Ask: nullPrice(p.BestAsk), Mid: nullPrice(p.Mid)})
 		}
 		sr.Mid, sr.Bid, sr.Ask = string(mid), string(bid), string(ask)

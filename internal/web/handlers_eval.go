@@ -76,7 +76,7 @@ type evalPage struct {
 	Target   string
 	Equiv    *evalRow // the equivalent tier, if present
 	Notes    []string
-	Produced string
+	Produced time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
 }
 
 // evalRow is one relationship type's metrics, formatted.
@@ -110,7 +110,7 @@ func (s *Server) handleEval(w http.ResponseWriter, r *http.Request) {
 		data.Broken = "The eval artifact could not be read; see the server log."
 	default:
 		data.Summary = sum
-		data.Produced = formatUTC(sum.GeneratedAt)
+		data.Produced = sum.GeneratedAt
 		data.Notes = sum.Notes
 		for _, m := range sum.Types {
 			row := newEvalRow(m)

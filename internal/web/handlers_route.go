@@ -147,8 +147,8 @@ type routePage struct {
 type decisionView struct {
 	RoundID      int64
 	TargetID     string
-	DecidedAt    string
-	Snapshot     string
+	DecidedAt    time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
+	Snapshot     time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
 	OrderLine    string
 	Chosen       []canonical.Leg
 	Alternatives []canonical.Alternative
@@ -159,13 +159,9 @@ type decisionView struct {
 }
 
 func newDecisionView(d canonical.Decision, partners int, snapshot time.Time) *decisionView {
-	snapshotStr := ""
-	if !snapshot.IsZero() {
-		snapshotStr = formatUTC(snapshot)
-	}
 	return &decisionView{
-		RoundID: d.RoundID, TargetID: d.TargetID, DecidedAt: formatUTC(d.DecidedAt),
-		Snapshot: snapshotStr, OrderLine: orderLine(d.Order),
+		RoundID: d.RoundID, TargetID: d.TargetID, DecidedAt: d.DecidedAt,
+		Snapshot: snapshot, OrderLine: orderLine(d.Order),
 		Chosen: d.Chosen, Alternatives: d.Alternatives, Exclusions: d.Exclusions, Warnings: d.Warnings,
 		Explanation: d.Explanation, Partners: partners,
 	}
