@@ -72,3 +72,4 @@ Add one line per action, newest at the bottom: `YYYY-MM-DD HH:MM UTC · actor ·
 2026-10-07 23:5x UTC · operator · Cancelled pipeline 40937 (d7443fe, tree identical to failed 5c2314d) and 40995 (!36, human-owned-file MR awaiting label). Opened !35 (manual MR pipelines via ci-gate; human review) and !36 (NFR-09 requirements wording; human review).
 2026-10-07 23:3x UTC · operator · Re-scope (Tier 1): worker peak6-equinox-28 out of context; partial commit preserved; session killed; peak6-equinox-32 (Sonnet) took over M3-01 / !34. Spawned peak6-equinox-30 (M3-06 #26) and peak6-equinox-31 (M3-09 #29) on Sonnet, pulled forward from wave 5 at the operator's direction.
 2026-10-08 00:02 UTC · operator · Merged MR !37 (M3-09 public rate limiting) at b29b328c; pipeline 41199 green; Cursor approved c2a692c. D-076 awaiting human veto.
+2026-10-07 20:05 UTC · M3-01 worker · Synced MR !34 with main (9e5adf3, merged MR !37 rate limiting). · MR!34

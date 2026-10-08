@@ -156,20 +156,22 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 		pending = append(pending, pendingCandidate{cand: p, route: RouteDirect})
 	}
 
-	// Skew check: exclude all quotes older than (freshest - SkewMax), warn for (freshest - SkewWarn).
-	// This ensures partner-vs-partner skew is enforced, not just target-vs-partner (reviewer fix).
+	// Skew check: use Skew() to check each candidate against the freshest quote.
+	// This ensures partner-vs-partner skew is enforced per M3-01 AC.
 	var cands []candidate
 	if len(pending) > 1 {
-		var freshest time.Time
+		// Find the freshest quote as reference.
+		var freshest canonical.Quote
 		for _, pc := range pending {
-			if pc.cand.Quote.FetchedAt.After(freshest) {
-				freshest = pc.cand.Quote.FetchedAt
+			if pc.cand.Quote.FetchedAt.After(freshest.FetchedAt) {
+				freshest = pc.cand.Quote
 			}
 		}
+		// Check each candidate against the reference.
 		for _, pc := range pending {
-			gap := freshest.Sub(pc.cand.Quote.FetchedAt)
-			gapSec := int(gap.Seconds())
-			if gap > cfg.Eligibility.SkewMax {
+			excludeOlder, warnings := Skew(freshest, pc.cand.Quote, cfg.Eligibility)
+			if excludeOlder {
+				gapSec := int(freshest.FetchedAt.Sub(pc.cand.Quote.FetchedAt).Seconds())
 				d.Exclusions = append(d.Exclusions, canonical.Exclusion{
 					InstrumentID: pc.cand.Instrument.ID,
 					Venue:        pc.cand.Instrument.Venue,
@@ -177,9 +179,7 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 					Detail:       SkewDetail(gapSec),
 				})
 			} else {
-				if gap > cfg.Eligibility.SkewWarn {
-					d.Warnings = append(d.Warnings, fmt.Sprintf("skew_warning: %s is %d s behind the freshest quote", pc.cand.Instrument.ID, gapSec))
-				}
+				d.Warnings = append(d.Warnings, warnings...)
 				cands = append(cands, candidate{Candidate: pc.cand, route: pc.route})
 			}
 		}

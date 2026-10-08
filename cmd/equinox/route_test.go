@@ -197,6 +197,10 @@ func TestRouteCommandEndToEnd(t *testing.T) {
 			t.Errorf("output lacks %q:\n%s", want, out.String())
 		}
 	}
+	// The fixture round snapshot is old (2026-10-06 12:01), so the stale-round warning should appear (M3-01, NFR-09).
+	if !strings.Contains(out.String(), "WARNING: Data is") {
+		t.Errorf("output lacks stale-round warning (snapshot is old):\n%s", out.String())
+	}
 
 	out.Reset()
 	args = append(args, "--json", "--round", "0", "--tif", "FOK")
@@ -275,5 +279,25 @@ func TestRouteCommandNoDatabase(t *testing.T) {
 	var out, errOut bytes.Buffer
 	if code := run(context.Background(), []string{"route", "--target", routeKalshiID, "--qty", "1"}, &out, &errOut); code != 1 {
 		t.Fatalf("exit %d, stderr %s", code, errOut.String())
+	}
+}
+
+// TestRouteCommandStaleWarningAbsent verifies the stale-round warning is suppressed
+// when STALE_ROUND_WARN_MINUTES is set very high (M3-01, NFR-09).
+func TestRouteCommandStaleWarningAbsent(t *testing.T) {
+	setAppEnv(t, tdb.DSN(t))
+	t.Setenv("STALE_ROUND_WARN_MINUTES", "10000") // Set threshold to max (10000 min = ~7 days), so the old fixture snapshot won't trigger a warning.
+	tdb.Reset(t)
+	ctx := context.Background()
+	s := store.New(tdb.Pool(t))
+	seedRouteRound(t, s)
+
+	var out, errOut bytes.Buffer
+	if code := run(ctx, []string{"route", "--target", routeKalshiID, "--qty", "100"}, &out, &errOut); code != 0 {
+		t.Fatalf("exit %d, stderr %s", code, errOut.String())
+	}
+	// With a very high threshold, no warning should appear even though the snapshot is old.
+	if strings.Contains(out.String(), "WARNING:") {
+		t.Errorf("output has stale warning when threshold is very high:\n%s", out.String())
 	}
 }
