@@ -173,8 +173,6 @@ func TestPublicMatchesPage(t *testing.T) {
 		`<h2 id="routable">Routable pairs (1)</h2>`, // UI-03: routable section with count
 		seedTitleA, seedTitleB, seedTitleC,
 		"0.97", "0.40",
-		// UI-03 Cursor round 1 issue 1: round appears in each row.
-		"2026-10-06 13:03:00 EDT", // seedNow+3min (17:03 UTC) in ET (M3-08 Cursor round 2)
 		`href="/pairs/`+strconv.FormatInt(sd.eqID, 10)+`"`,
 		`href="/pairs/`+strconv.FormatInt(sd.relID, 10)+`"`,
 		// UI-03: strip replaces the old paragraph with round info.
@@ -190,6 +188,9 @@ func TestPublicMatchesPage(t *testing.T) {
 		`<span class="chip chip-warn">related</span>`,
 		`0.40 low`,
 	)
+	// UI-03 Cursor round 2 issue 2: assert round id appears in a row (not bare substring from strip).
+	// The strip also contains the round ID, so we need to check it's in a data-label="Round" cell.
+	wantContains(t, body, `data-label="Round"><small>round `+strconv.FormatInt(sd.round.ID, 10)+`</small>`)
 	// UI-03: routable section comes before related details.
 	if strings.Index(body, `id="routable"`) > strings.Index(body, `<summary>related`) {
 		t.Error("routable section should come before related")

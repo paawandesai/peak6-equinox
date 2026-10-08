@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/match"
@@ -20,7 +21,7 @@ func TestRoutableGroupingAndOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := st.FinishRound(ctx, round.ID, store.RoundOK, nil, seedNow.Add(60000)); err != nil {
+	if err := st.FinishRound(ctx, round.ID, store.RoundOK, nil, seedNow.Add(60*time.Second)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -79,8 +80,26 @@ func TestRoutableGroupingAndOrder(t *testing.T) {
 		t.Errorf("routable type chips not in correct order: complement at %d, equivalent_given_facts at %d, equivalent at %d", idx1, idx2, idx3)
 	}
 
-	// Cursor round 1 issue 1: assert round appears inside a row.
-	wantContains(t, body, "2026-10-06 13:01:00 EDT") // seedNow+60s in ET
+	// Cursor round 2 issue 2: assert round id appears inside a row (not bare substring from strip).
+	// Find a tbody row (not thead) and verify it contains "round N" text.
+	tbodyStart := strings.Index(body, `<tbody>`)
+	if tbodyStart < 0 {
+		t.Fatal("no tbody found")
+	}
+	rowStart := strings.Index(body[tbodyStart:], `<tr>`)
+	if rowStart < 0 {
+		t.Fatal("no tr in tbody found")
+	}
+	rowStart += tbodyStart
+	rowEnd := strings.Index(body[rowStart:], `</tr>`)
+	if rowEnd < 0 {
+		t.Fatal("no closing tr found")
+	}
+	firstDataRow := body[rowStart : rowStart+rowEnd]
+	wantRoundText := "round " + strconv.FormatInt(round.ID, 10)
+	if !strings.Contains(firstDataRow, wantRoundText) {
+		t.Errorf("first data row lacks round text %q; row content: %s", wantRoundText, firstDataRow[:200])
+	}
 
 	// 2-click path: / contains /pairs/{id}#route for a routable pair.
 	wantContains(t, body, `href="/pairs/`+strconv.FormatInt(eqID, 10)+`#route"`, "<strong>Route</strong>")
@@ -95,7 +114,7 @@ func TestConfidenceBucketWords(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := st.FinishRound(ctx, round.ID, store.RoundOK, nil, seedNow.Add(60000)); err != nil {
+	if err := st.FinishRound(ctx, round.ID, store.RoundOK, nil, seedNow.Add(60*time.Second)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -142,7 +161,7 @@ func TestVetoPhraseForFactsClosedPair(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := st.FinishRound(ctx, round.ID, store.RoundOK, nil, seedNow.Add(60000)); err != nil {
+	if err := st.FinishRound(ctx, round.ID, store.RoundOK, nil, seedNow.Add(60*time.Second)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -186,7 +205,7 @@ func TestRelatedCountAndDetails(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := st.FinishRound(ctx, round.ID, store.RoundOK, nil, seedNow.Add(60000)); err != nil {
+	if err := st.FinishRound(ctx, round.ID, store.RoundOK, nil, seedNow.Add(60*time.Second)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -267,7 +286,7 @@ func TestSectionOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := st.FinishRound(ctx, round.ID, store.RoundOK, nil, seedNow.Add(60000)); err != nil {
+	if err := st.FinishRound(ctx, round.ID, store.RoundOK, nil, seedNow.Add(60*time.Second)); err != nil {
 		t.Fatal(err)
 	}
 
