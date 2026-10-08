@@ -14,15 +14,22 @@
 <p>No decision-log entries{{if .Kind}} of kind <code>{{.Kind}}</code>{{end}} yet.</p>
 {{else}}
 <p>Latest {{len .Entries}} entr{{if eq (len .Entries) 1}}y{{else}}ies{{end}} (at most {{.Limit}}).</p>
-<table class="log">
+<table class="data stack">
   <thead><tr><th>When</th><th>Kind</th><th>About</th><th>Summary</th></tr></thead>
   <tbody>
   {{range .Entries}}
     <tr>
-      <td><small>{{formatTime .At $.Timezone}}</small></td>
-      <td><code>{{.Kind}}</code></td>
-      <td>{{if .Link}}<a href="{{.Link}}">{{.LinkLabel}}</a>{{else if .LinkLabel}}{{.LinkLabel}}{{else}}<small>{{.Ref}}</small>{{end}}</td>
-      <td class="summary">{{.Summary}}</td>
+      <td data-label="When"><small>{{formatTime .At $.Timezone}}</small></td>
+      <td data-label="Kind"><span class="chip {{.KindChipClass}}">{{.Kind}}</span></td>
+      <td data-label="About">{{if .Link}}<a href="{{.Link}}">{{.About}}</a>{{else if .About}}{{.About}}{{else}}<small>{{.Ref}}</small>{{end}}</td>
+      <td data-label="Summary">
+        {{if .Summary}}
+          <details>
+            <summary class="clamp-2" title="{{.Summary}}">{{.Summary}}</summary>
+            <p>{{.Summary}}</p>
+          </details>
+        {{end}}
+      </td>
     </tr>
   {{end}}
   </tbody>

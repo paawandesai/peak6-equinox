@@ -132,3 +132,31 @@ Add one line per action, newest at the bottom: `YYYY-MM-DD HH:MM UTC · actor ·
 **Files touched:** `internal/web/handlers_matches.go`, `internal/web/templates/matches.html`, `internal/web/handlers_matches_test.go` (NEW), `internal/web/public_test.go` (TestPublicMatches*, TestGroupPairsOrdering functions), `docs/log.md` (this entry).
 2026-10-08 09:54 UTC · UI-05 worker · Routing trace clarity: outcome .strip (phrase + chip + one-line summary), table.data for chosen legs with totals, ranked alternatives with gap to chosen, exclusion reason phrases, instrument titles where available; handlers_route.go supplies outcome kind, exclusion tally, reason phrases; tests for each outcome kind (routed, multi-venue, partial, complement, not routed) and reason phrase mapping. · internal/web/templates/route_result.html, internal/web/handlers_route.go, internal/web/handlers_log.go, internal/web/handlers_route_test.go, internal/web/pages_test.go, docs/log.md
 2026-10-08 09:54 UTC · UI-05 worker · Routing trace clarity: outcome .strip (phrase + chip + one-line summary), table.data for chosen legs with totals, ranked alternatives with gap to chosen, exclusion reason phrases, instrument titles where available (batch GetInstruments in handlers_route.go); one-line handlers_log.go change unavoidable because /decisions/{id} builds view model in handleDecision; tests for each outcome kind (routed, multi-venue, partial, complement, not routed) and reason phrase mapping. · internal/web/templates/route_result.html, internal/web/handlers_route.go, internal/web/handlers_log.go, internal/web/handlers_route_test.go, internal/web/pages_test.go, docs/log.md
+
+## 2026-10-08 06:46 EDT: UI-06 near misses and decision log (M3 wave 9)
+
+**Ticket:** GitLab #35 (M3.md wave 9, UI-06)
+
+**What:** Updated near-misses and decision-log pages per design.md § 3 and § 6. Near-misses rows now lead with the veto (danger chip) or "no veto" (info chip), followed by stacked contracts and explanation in a details element. Decision-log rows show the kind as a chip (match=info, routing=ok, llm=info, ingest=muted), improved "about" text, and summaries clamped to 2 lines with full text in a details element. Both tables use the data/stack layout from UI-02.
+
+**Changed:**
+- `internal/web/templates/near_misses.html`: rewrote markup to use `.strip` for summary, veto/fact led rows with chips, stacked contracts, explanation in `<details>`, `table.data.stack` layout.
+- `internal/web/templates/log.html`: added kind chips, improved about column, clamped summaries with full text in `<details>`, `table.data.stack` layout.
+- `internal/web/handlers_log.go`: added `KindChipClass` and `About` fields to `logEntryView`, added `logKindChipClass` function mapping kinds to chip classes per design.md § 4.
+- `internal/web/handlers_nearmisses_test.go` (new): tests for veto chips (danger/info), row shape (data labels, stacking), strip summary, and row ordering.
+- `internal/web/handlers_log_test.go` (new): tests for kind chips (info/ok/muted), about field, clamped summaries, and data labels.
+- `internal/web/pages_test.go`: updated `TestNearMissesPage` and `TestDecisionLogPage` assertions for new chip markup.
+
+**Verified:**
+- All tests pass: `go test ./internal/web/... ./tests/security/... -v`
+- E2e smoke test passes: `go test -tags e2e ./tests/e2e/... -v`
+- `go vet ./...` clean
+- `golangci-lint run` clean
+- `gitleaks detect --no-banner --redact --log-opts=origin/main..HEAD` clean
+- p95 GET /near-misses: 14ms (method: 200 sequential curl requests, sorted, 95th percentile)
+- p95 GET /log: 13ms (method: 200 sequential curl requests, sorted, 95th percentile)
+- Before/after screenshots at 1280x900 and 390x844 uploaded to GitLab (see MR description)
+
+**By:** Claude Sonnet 4.5 via AO worker peak6-equinox-49 for paawankdesai@gmail.com
+
+**Satisfies:** FR-21, US-01 (near-miss AC)
