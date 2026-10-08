@@ -67,7 +67,7 @@ func TestLoadUniverseRepoFiles(t *testing.T) {
 	}
 	k := us.For(canonical.VenueKalshi)
 	wantK := map[canonical.Category][]string{
-		canonical.CategoryCrypto: {"KXBTCD", "KXETHD"}, canonical.CategoryFed: {"KXFED"},
+		canonical.CategoryCrypto: {"KXBTCD", "KXETHD"}, canonical.CategoryFed: {"KXFED", "KXFEDDECISION", "KXRATECUTCOUNT", "KXRATECUT"},
 		canonical.CategoryPolitics: {"KXPRESPERSON", "KXPRESNOMD", "KXPRESNOMR"},
 	}
 	for c, want := range wantK {

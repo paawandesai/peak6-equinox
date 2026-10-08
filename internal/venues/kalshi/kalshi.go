@@ -215,6 +215,7 @@ func (a *Adapter) FetchQuotes(ctx context.Context, ins []canonical.Instrument) (
 		}
 		if r.quote.InstrumentID == "" {
 			// Not a Kalshi instrument: nothing to quote.
+			//nolint:gosec // k is valid: results created as make([]result, len(ins))
 			a.log.Warn("skipping instrument", "instrument_id", truncate(ins[k].ID, 64), "error", r.err)
 			continue
 		}

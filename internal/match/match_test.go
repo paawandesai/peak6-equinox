@@ -174,36 +174,37 @@ func TestVetoBetweenBounds(t *testing.T) {
 }
 
 func TestBlockReasons(t *testing.T) {
+	f := facts.Set{}
 	a, b := pair()
-	if r := block(a, b); r != nil {
+	if r, _ := block(a, b, f); r != nil {
 		t.Fatalf("clean pair blocked: %+v", r)
 	}
 	b.Category = canonical.CategoryFed
-	if r := block(a, b); r == nil || r.field != "category" {
+	if r, _ := block(a, b, f); r == nil || r.field != "category" {
 		t.Errorf("category: %+v", r)
 	}
 	a, b = pair()
 	b.Terms.Subject = "ETH"
-	if r := block(a, b); r == nil || r.field != "subject" || strings.Contains(r.detail, "unknown") {
+	if r, _ := block(a, b, f); r == nil || r.field != "subject" || strings.Contains(r.detail, "unknown") {
 		t.Errorf("subject: %+v", r)
 	}
 	b.Terms.Subject = canonical.Unknown
-	if r := block(a, b); r == nil || r.field != "subject" || !strings.Contains(r.detail, "unknown") {
+	if r, _ := block(a, b, f); r == nil || r.field != "subject" || !strings.Contains(r.detail, "unknown") {
 		t.Errorf("unknown subject: %+v", r)
 	}
 	a, b = pair()
 	b.Terms.Deadline = nil
-	if r := block(a, b); r == nil || r.field != "deadline" {
+	if r, _ := block(a, b, f); r == nil || r.field != "deadline" {
 		t.Errorf("nil deadline: %+v", r)
 	}
 	edge := t0.Add(BlockWindow)
 	b.Terms.Deadline = &edge
-	if r := block(a, b); r != nil {
+	if r, _ := block(a, b, f); r != nil {
 		t.Errorf("exactly 7 days blocked: %+v", r)
 	}
 	beyond := t0.Add(BlockWindow + time.Second)
 	b.Terms.Deadline = &beyond
-	if r := block(a, b); r == nil || r.field != "deadline" {
+	if r, _ := block(a, b, f); r == nil || r.field != "deadline" {
 		t.Errorf("beyond 7 days: %+v", r)
 	}
 }
