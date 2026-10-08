@@ -23,7 +23,9 @@
 | `SKEW_WARN_SECONDS` | Cross-venue skew warning | no | `5` |
 | `SKEW_MAX_SECONDS` | Cross-venue skew exclusion | no | `30` |
 | `MIN_ROUTE_CONFIDENCE` | Minimum relationship confidence for routing | no | `0.9` |
+| `MIN_BOOK_DEPTH` | Minimum total book depth (contracts) for eligibility | no | `1` |
 | `PUBLIC_RATE_LIMIT_PER_MIN` | Per-IP limit on public routes | no | `60` |
+| `STALE_ROUND_WARN_MINUTES` | Stale-round warning threshold (minutes); when latest round snapshot is older, public pages show a banner | no | `10` |
 | `LLM_ENABLED` | Enables the verifier | no (default `false`) | `false` |
 | `ANTHROPIC_API_KEY` | Anthropic key; the verifier is disabled if empty | only if `LLM_ENABLED=true` | `sk-ant-REPLACE_ME` |
 | `LLM_MODEL` | Model ID | no | `claude-haiku-4-5-20251001` |
