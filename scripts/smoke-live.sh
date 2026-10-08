@@ -14,13 +14,12 @@
 set -euo pipefail
 
 LIVE_URL="https://equinox-o5hdimw5rq-uc.a.run.app"
-BASE_URL="${1:-$LIVE_URL}"
+BASE_URL="$LIVE_URL"
 PINNED_ROUND=""
 TIMEOUT=20
 FAIL_COUNT=0
 
-# Parse --pinned <round-id> flag
-shift || true
+# Parse arguments: [base-url] [--pinned round-id]
 while [[ $# -gt 0 ]]; do
 	case "$1" in
 		--pinned)
@@ -28,8 +27,8 @@ while [[ $# -gt 0 ]]; do
 			shift 2
 			;;
 		*)
-			echo "unknown flag: $1" >&2
-			exit 2
+			BASE_URL="$1"
+			shift
 			;;
 	esac
 done
@@ -48,18 +47,18 @@ check() {
 	end=$(date +%s%3N)
 	elapsed=$((end - start))
 	if [[ $ret -ne 0 ]]; then
-		echo "FAIL: $name ($url) — curl failed (exit $ret) — ${elapsed}ms"
+		echo "FAIL: $name ($url) — curl failed (exit $ret) — ${elapsed}ms" >&2
 		((FAIL_COUNT++)) || true
 		return 1
 	fi
 	status=$(echo "$body" | tail -n1)
 	body=$(echo "$body" | head -n -1)
 	if [[ "$status" != "200" ]]; then
-		echo "FAIL: $name ($url) — HTTP $status — ${elapsed}ms"
+		echo "FAIL: $name ($url) — HTTP $status — ${elapsed}ms" >&2
 		((FAIL_COUNT++)) || true
 		return 1
 	fi
-	echo "PASS: $name ($url) — ${elapsed}ms"
+	echo "PASS: $name ($url) — ${elapsed}ms" >&2
 	echo "$body"
 }
 
@@ -77,16 +76,16 @@ check_status() {
 	end=$(date +%s%3N)
 	elapsed=$((end - start))
 	if [[ $ret -ne 0 && "$expected" != "000" ]]; then
-		echo "FAIL: $name ($url) — curl failed (exit $ret) — ${elapsed}ms"
+		echo "FAIL: $name ($url) — curl failed (exit $ret) — ${elapsed}ms" >&2
 		((FAIL_COUNT++)) || true
 		return 1
 	fi
 	if [[ "$status" != "$expected" ]]; then
-		echo "FAIL: $name ($url) — HTTP $status, want $expected — ${elapsed}ms"
+		echo "FAIL: $name ($url) — HTTP $status, want $expected — ${elapsed}ms" >&2
 		((FAIL_COUNT++)) || true
 		return 1
 	fi
-	echo "PASS: $name ($url) — ${elapsed}ms"
+	echo "PASS: $name ($url) — ${elapsed}ms" >&2
 }
 
 # p95 <name> <url> [curl-args...]
@@ -120,26 +119,26 @@ check "health" "$BASE_URL/health" >/dev/null
 home_file=$(mktemp)
 check "home" "$BASE_URL/" > "$home_file"
 if ! grep -q 'class="asof"' "$home_file"; then
-	echo "FAIL: home ($BASE_URL/) — no asof paragraph"
+	echo "FAIL: home ($BASE_URL/) — no asof paragraph" >&2
 	((FAIL_COUNT++))
 fi
 # Extract round id from asof paragraph (format: "round 123" or "round 123, pinned")
-if ! round_id=$(grep -oP 'round \K[0-9]+' "$home_file" | head -n1); then
-	echo "FAIL: home ($BASE_URL/) — no round id in asof"
+round_id=$(grep -oP 'round \K[0-9]+' "$home_file" | head -n1 || true)
+if [[ -z "$round_id" ]]; then
+	echo "FAIL: home ($BASE_URL/) — no round id in asof" >&2
 	((FAIL_COUNT++))
-	round_id=""
 fi
 if [[ -n "$round_id" ]]; then
 	echo "# Round id: $round_id"
 	if [[ -n "$PINNED_ROUND" ]]; then
 		if [[ "$round_id" != "$PINNED_ROUND" ]]; then
-			echo "FAIL: home ($BASE_URL/) — round $round_id, want pinned round $PINNED_ROUND"
+			echo "FAIL: home ($BASE_URL/) — round $round_id, want pinned round $PINNED_ROUND" >&2
 			((FAIL_COUNT++))
 		else
-			echo "PASS: pinned round $PINNED_ROUND matches served round"
+			echo "PASS: pinned round $PINNED_ROUND matches served round" >&2
 		fi
 		if ! grep -q 'pinned' "$home_file"; then
-			echo "FAIL: home ($BASE_URL/) — pinned round $PINNED_ROUND but no 'pinned' in asof"
+			echo "FAIL: home ($BASE_URL/) — pinned round $PINNED_ROUND but no 'pinned' in asof" >&2
 			((FAIL_COUNT++))
 		fi
 	fi
@@ -151,17 +150,17 @@ check "log" "$BASE_URL/log" >/dev/null
 check "eval" "$BASE_URL/eval" >/dev/null
 
 # 4. First /pairs/<id> linked from / is 200 and contains the diff table
-if ! pair_id=$(grep -oP 'href="/pairs/\K[0-9]+' "$home_file" | head -n1); then
-	echo "FAIL: home ($BASE_URL/) — no /pairs/<id> link"
+pair_id=$(grep -oP 'href="/pairs/\K[0-9]+' "$home_file" | head -n1 || true)
+if [[ -z "$pair_id" ]]; then
+	echo "FAIL: home ($BASE_URL/) — no /pairs/<id> link" >&2
 	((FAIL_COUNT++))
-	pair_id=""
 fi
 if [[ -n "$pair_id" ]]; then
 	echo "# First pair: $pair_id"
 	pair_file=$(mktemp)
 	check "pair" "$BASE_URL/pairs/$pair_id" > "$pair_file"
 	if ! grep -q '<table class="data diff">' "$pair_file"; then
-		echo "FAIL: pair ($BASE_URL/pairs/$pair_id) — no diff table"
+		echo "FAIL: pair ($BASE_URL/pairs/$pair_id) — no diff table" >&2
 		((FAIL_COUNT++))
 	fi
 fi
@@ -170,10 +169,10 @@ fi
 #    either a chosen venue or "not routed" with a reason
 if [[ -n "$pair_id" ]]; then
 	# Extract the target instrument from the pair page (first instrument ID in a code tag).
-	if ! target=$(grep -oP 'ID <code>\K[^<]+' "$pair_file" | head -n1); then
-		echo "FAIL: pair ($BASE_URL/pairs/$pair_id) — no instrument id"
+	target=$(grep -oP 'ID <code>\K[^<]+' "$pair_file" | head -n1 || true)
+	if [[ -z "$target" ]]; then
+		echo "FAIL: pair ($BASE_URL/pairs/$pair_id) — no instrument id" >&2
 		((FAIL_COUNT++))
-		target=""
 	fi
 	if [[ -n "$target" ]]; then
 		echo "# Target instrument: $target"
@@ -184,16 +183,20 @@ if [[ -n "$pair_id" ]]; then
 			-d "type=market" -d "tif=IOC" > "$route_file"
 		if grep -q '<h3>Chosen legs</h3>' "$route_file"; then
 			if ! grep -qP '<span class="venue">[a-z]+</span>' "$route_file"; then
-				echo "FAIL: route ($BASE_URL/route) — chosen legs but no venue"
+				echo "FAIL: route ($BASE_URL/route) — chosen legs but no venue" >&2
 				((FAIL_COUNT++))
+			else
+				echo "PASS: route ($BASE_URL/route) — chosen venue found" >&2
 			fi
-		elif grep -q 'The order was not routed' "$route_file"; then
+		elif grep -qi 'not routed' "$route_file"; then
 			if ! grep -q '<p class="explanation">' "$route_file"; then
-				echo "FAIL: route ($BASE_URL/route) — not routed but no explanation"
+				echo "FAIL: route ($BASE_URL/route) — not routed but no explanation" >&2
 				((FAIL_COUNT++))
+			else
+				echo "PASS: route ($BASE_URL/route) — not routed with explanation" >&2
 			fi
 		else
-			echo "FAIL: route ($BASE_URL/route) — no chosen venue or 'not routed' message"
+			echo "FAIL: route ($BASE_URL/route) — no chosen venue or 'not routed' message" >&2
 			((FAIL_COUNT++))
 		fi
 		rm -f "$route_file"
@@ -204,16 +207,20 @@ rm -f "$home_file"
 
 # 6. Every public page sends the CSP header
 for page in "/" "/near-misses" "/log" "/eval"; do
-	if [[ -n "$pair_id" && "$page" == "/" ]]; then
-		# Also check the pair page
-		page="/pairs/$pair_id"
-	fi
 	csp=$(curl -fsS --max-time "$TIMEOUT" -I "$BASE_URL$page" 2>/dev/null | grep -i '^Content-Security-Policy:' || true)
 	if [[ -z "$csp" ]]; then
-		echo "FAIL: CSP header ($BASE_URL$page) — no Content-Security-Policy header"
+		echo "FAIL: CSP header ($BASE_URL$page) — no Content-Security-Policy header" >&2
 		((FAIL_COUNT++))
 	fi
 done
+# Also check the pair page if we have one
+if [[ -n "$pair_id" ]]; then
+	csp=$(curl -fsS --max-time "$TIMEOUT" -I "$BASE_URL/pairs/$pair_id" 2>/dev/null | grep -i '^Content-Security-Policy:' || true)
+	if [[ -z "$csp" ]]; then
+		echo "FAIL: CSP header ($BASE_URL/pairs/$pair_id) — no Content-Security-Policy header" >&2
+		((FAIL_COUNT++))
+	fi
+fi
 
 # 7. /admin without auth is 401
 check_status "admin without auth" "$BASE_URL/admin" "401"
