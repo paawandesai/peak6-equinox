@@ -26,21 +26,22 @@ type MockVerifier struct {
 }
 
 // Verify returns the next scripted verdict or the scripted error.
-func (m *MockVerifier) Verify(_ context.Context, _, _ canonical.Instrument, _ canonical.Relationship) (canonical.LLMVerdict, error) {
+// Mocks return zero usage (no actual API call).
+func (m *MockVerifier) Verify(_ context.Context, _, _ canonical.Instrument, _ canonical.Relationship) (VerifyResult, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	i := m.calls
 	m.calls++
 	if m.Err != nil {
-		return canonical.LLMVerdict{}, m.Err
+		return VerifyResult{}, m.Err
 	}
 	if len(m.Verdicts) == 0 {
-		return canonical.LLMVerdict{}, errors.New("mock verifier has no scripted verdicts")
+		return VerifyResult{}, errors.New("mock verifier has no scripted verdicts")
 	}
 	if i >= len(m.Verdicts) {
 		i = len(m.Verdicts) - 1
 	}
-	return m.Verdicts[i], nil
+	return VerifyResult{Verdict: m.Verdicts[i], Usage: Usage{}}, nil
 }
 
 // Calls reports how many times Verify ran.
@@ -61,21 +62,22 @@ type ScriptedModel struct {
 }
 
 // Complete returns the next scripted response.
-func (m *ScriptedModel) Complete(_ context.Context, p Prompt) (string, error) {
+// Mocks return zero usage (no actual API call).
+func (m *ScriptedModel) Complete(_ context.Context, p Prompt) (ModelResult, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	i := len(m.prompts)
 	m.prompts = append(m.prompts, p)
 	if m.Err != nil {
-		return "", m.Err
+		return ModelResult{}, m.Err
 	}
 	if len(m.Responses) == 0 {
-		return "", errors.New("scripted model has no responses")
+		return ModelResult{}, errors.New("scripted model has no responses")
 	}
 	if i >= len(m.Responses) {
 		i = len(m.Responses) - 1
 	}
-	return ExpandPayload(m.Responses[i]), nil
+	return ModelResult{Text: ExpandPayload(m.Responses[i]), Usage: Usage{}}, nil
 }
 
 // Prompts returns a copy of every prompt the model received.
@@ -108,7 +110,8 @@ func NewAdversarialMock(demand, response string) *AdversarialMock {
 }
 
 // Complete obeys the first matching demand found in the prompt's user turn.
-func (m *AdversarialMock) Complete(_ context.Context, p Prompt) (string, error) {
+// Mocks return zero usage (no actual API call).
+func (m *AdversarialMock) Complete(_ context.Context, p Prompt) (ModelResult, error) {
 	user := NormalizeText(p.User)
 	for _, demand := range slices.Sorted(maps.Keys(m.Demands)) {
 		needle := NormalizeText(demand)
@@ -116,13 +119,14 @@ func (m *AdversarialMock) Complete(_ context.Context, p Prompt) (string, error) 
 			m.mu.Lock()
 			m.obeyed = append(m.obeyed, demand)
 			m.mu.Unlock()
-			return ExpandPayload(m.Demands[demand]), nil
+			return ModelResult{Text: ExpandPayload(m.Demands[demand]), Usage: Usage{}}, nil
 		}
 	}
-	if m.Honest == "" {
-		return HonestResponse, nil
+	text := m.Honest
+	if text == "" {
+		text = HonestResponse
 	}
-	return m.Honest, nil
+	return ModelResult{Text: text, Usage: Usage{}}, nil
 }
 
 // Obeyed returns the demands the mock has followed so far.

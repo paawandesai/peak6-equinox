@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -49,6 +50,14 @@ type Deps struct {
 	Logger   *slog.Logger
 	Store    *store.Store
 	Ingester Ingester
+	// AnthropicAPIKey is the key for LLM verification. Empty means disabled.
+	AnthropicAPIKey string
+	// LLMModel is the Anthropic model ID for verification (default claude-haiku-4-5-20251001).
+	LLMModel string
+	// LLMDailyCallCap is the maximum LLM calls per UTC day (default 200).
+	LLMDailyCallCap int
+	// LLMMaxOutputTokens caps each LLM response (default 400).
+	LLMMaxOutputTokens int
 	// Now overrides the clock (tests). It must return UTC.
 	Now func() time.Time
 	// DBSize overrides the database-size query behind the AB-15 growth alert
@@ -63,7 +72,8 @@ type Server struct {
 	log               *slog.Logger
 	limiter           *failureLimiter
 	publicRateLimiter *publicRateLimiter
-	trustProxy        bool // read the client IP from X-Forwarded-For (behind Cloud Run)
+	trustProxy        bool       // read the client IP from X-Forwarded-For (behind Cloud Run)
+	llmVerifyMutex    sync.Mutex // single-flight lock for /admin/llm-verify (AO review issue #4)
 }
 
 // New returns a Server. A nil Logger is replaced with one that discards output.
