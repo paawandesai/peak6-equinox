@@ -31,7 +31,7 @@ type logKindOption struct {
 // built by this package from a validated numeric ref, never from free text.
 type logEntryView struct {
 	ID        int64
-	At        string
+	At        time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
 	Kind      string
 	Ref       string
 	Link      string
@@ -63,16 +63,16 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 
 	kind := store.LogKind(r.URL.Query().Get("kind"))
 	if kind != "" && !kind.Valid() {
-		s.renderError(w, http.StatusNotFound, "No such decision-log kind.")
+		s.renderErrorWithContext(w, r, http.StatusNotFound, "No such decision-log kind.")
 		return
 	}
+
+	round := roundFromContext(r.Context())
+	tz := timezoneFromRequest(r)
 	data := logPage{
-		page: page{
-			Title:    "Decision log",
-			Question: "What did Equinox decide recently, and why?",
-			Assets:   pinnedAssets,
-		},
-		Kind: string(kind), Limit: maxLogRows,
+		page:  s.pageBase(round, "Decision log", "What did Equinox decide recently, and why?", tz),
+		Kind:  string(kind),
+		Limit: maxLogRows,
 	}
 	for _, k := range logKinds {
 		data.Kinds = append(data.Kinds, logKindOption{Value: string(k.kind), Label: k.label, Selected: k.kind == kind})
@@ -90,7 +90,7 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 }
 
 func newLogEntryView(e store.LogEntry) logEntryView {
-	v := logEntryView{ID: e.ID, At: formatUTC(e.CreatedAt), Kind: string(e.Kind), Ref: e.Ref, Summary: e.Summary}
+	v := logEntryView{ID: e.ID, At: e.CreatedAt, Kind: string(e.Kind), Ref: e.Ref, Summary: e.Summary}
 	v.Link, v.LinkLabel = logEntryLink(e.Kind, e.Ref)
 	return v
 }
@@ -117,7 +117,7 @@ func logEntryLink(kind store.LogKind, ref string) (href, label string) {
 // rendered with the same trace as POST /route.
 type decisionPage struct {
 	routePage
-	CreatedAt string
+	CreatedAt time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
 }
 
 // handleDecision answers GET /decisions/{id}: a stored routing decision
@@ -125,7 +125,7 @@ type decisionPage struct {
 func (s *Server) handleDecision(w http.ResponseWriter, r *http.Request) {
 	id, ok := parseID(r.PathValue("id"))
 	if !ok {
-		s.renderError(w, http.StatusNotFound, "No such routing decision.")
+		s.renderErrorWithContext(w, r, http.StatusNotFound, "No such routing decision.")
 		return
 	}
 	st, ok := s.storeOrFail(w)
@@ -138,7 +138,7 @@ func (s *Server) handleDecision(w http.ResponseWriter, r *http.Request) {
 	rd, err := st.GetRoutingDecision(ctx, id)
 	switch {
 	case isNotFound(err):
-		s.renderError(w, http.StatusNotFound, "No such routing decision.")
+		s.renderErrorWithContext(w, r, http.StatusNotFound, "No such routing decision.")
 		return
 	case err != nil:
 		s.dbError(w, "loading routing decision", err)
@@ -150,23 +150,20 @@ func (s *Server) handleDecision(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	snapshot := time.Time{}
-	var roundInfo *roundInfo
 	if err == nil {
 		snapshot = round.SnapshotAt()
-		roundInfo = newRoundInfo(round)
 	}
+
+	// Use current round from context for the page banner (not the decision's own round)
+	currentRound := roundFromContext(r.Context())
+	tz := timezoneFromRequest(r)
 	data := decisionPage{
 		routePage: routePage{
-			page: page{
-				Title:    "Decision " + r.PathValue("id"),
-				Question: "What did this simulated order do, and why did the router choose that venue?",
-				Assets:   pinnedAssets,
-				Round:    roundInfo,
-			},
+			page:       s.pageBase(currentRound, "Decision "+r.PathValue("id"), "What did this simulated order do, and why did the router choose that venue?", tz),
 			DecisionID: rd.ID,
 			Decision:   newDecisionView(rd.Decision, countPartners(rd.Decision), snapshot),
 		},
-		CreatedAt: formatUTC(rd.CreatedAt),
+		CreatedAt: rd.CreatedAt,
 	}
 	s.render(w, http.StatusOK, "decision", data)
 }

@@ -42,22 +42,16 @@ func (s *Server) handleNearMisses(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), dbTimeout)
 	defer cancel()
 
-	data := nearMissesPage{page: page{
-		Title:    "Near misses",
-		Question: "Which pairs looked like the same bet but were rejected, and by which rule?",
-		Assets:   pinnedAssets,
-	}}
-	round, err := st.CurrentRound(ctx)
-	switch {
-	case isNotFound(err):
+	round := roundFromContext(r.Context())
+	tz := timezoneFromRequest(r)
+	data := nearMissesPage{
+		page: s.pageBase(round, "Near misses", "Which pairs looked like the same bet but were rejected, and by which rule?", tz),
+	}
+	if round.ID == 0 {
 		data.NoRound = true
 		s.render(w, http.StatusOK, "near_misses", data)
 		return
-	case err != nil:
-		s.dbError(w, "loading current round", err)
-		return
 	}
-	data.Round = newRoundInfo(round)
 
 	rels, err := st.ListRelationships(ctx, store.RelationshipFilter{RoundID: round.ID, Type: canonical.RelRelated, Limit: maxMatchRows + 1})
 	if err != nil {

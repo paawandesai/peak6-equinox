@@ -26,7 +26,7 @@
         <td>{{.Confidence}}</td>
         <td>{{.Method}}</td>
         <td>{{.Vetoes}}</td>
-        <td><small>{{.AsOf}}</small></td>
+        <td><small>{{formatTime .AsOf $.Timezone}}</small></td>
       </tr>
     {{end}}
     </tbody>

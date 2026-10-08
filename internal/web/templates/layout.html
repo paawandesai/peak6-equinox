@@ -10,6 +10,7 @@
   <script src="{{.Assets.HtmxURL}}" integrity="{{.Assets.HtmxSRI}}" crossorigin="anonymous" defer></script>
 </head>
 <body>
+  {{if .Banner.Show}}<div class="banner">{{if .Banner.Pinned}}Demo mode: data as of {{.Banner.AsOf}} (round {{.Banner.RoundID}}). <a href="/admin">Unpin</a>{{else}}No data available yet. Run ingest from <a href="/admin">/admin</a>.{{end}}</div>{{end}}
   <header>
     <nav>
       <ul><li><strong><a href="/">Equinox</a></strong> cross-venue contract matcher and router</li></ul>
@@ -23,12 +24,22 @@
     </nav>
     {{if .StaleWarning}}<p role="alert"><mark>{{.StaleWarning}}</mark></p>{{end}}
     <p class="question">{{.Question}}</p>
+    <form method="post" action="/timezone" class="timezone-selector">
+      <label>Timezone:
+        <select name="tz">
+          <option value="ET"{{if eq .Timezone "ET"}} selected{{end}}>ET</option>
+          <option value="CT"{{if eq .Timezone "CT"}} selected{{end}}>CT</option>
+          <option value="UTC"{{if eq .Timezone "UTC"}} selected{{end}}>UTC</option>
+        </select>
+      </label>
+      <button type="submit">Change</button>
+    </form>
   </header>
   <main>
 {{template "content" .}}
   </main>
   <footer>
-    <small>Everything here is a simulation over recorded venue data. Equinox never places orders. Prices are per $1 payout, in [0,1]; times are UTC.</small>
+    <small>Everything here is a simulation over recorded venue data. Equinox never places orders. Prices are per $1 payout, in [0,1].</small>
   </footer>
 </body>
 </html>

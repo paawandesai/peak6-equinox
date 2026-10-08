@@ -76,7 +76,7 @@ type evalPage struct {
 	Target   string
 	Equiv    *evalRow // the equivalent tier, if present
 	Notes    []string
-	Produced string
+	Produced time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
 }
 
 // evalRow is one relationship type's metrics, formatted.
@@ -93,13 +93,11 @@ type evalRow struct {
 
 // handleEval answers GET /eval: the latest `equinox eval` summary from the
 // configured artifact, read-only.
-func (s *Server) handleEval(w http.ResponseWriter, _ *http.Request) {
+func (s *Server) handleEval(w http.ResponseWriter, r *http.Request) {
+	round := roundFromContext(r.Context())
+	tz := timezoneFromRequest(r)
 	data := evalPage{
-		page: page{
-			Title:    "Eval",
-			Question: "How accurate is the matcher on human-labelled pairs, per relationship type?",
-			Assets:   pinnedAssets,
-		},
+		page:   s.pageBase(round, "Eval", "How accurate is the matcher on human-labelled pairs, per relationship type?", tz),
 		File:   s.cfg.EvalSummaryFile,
 		Target: equivalentPrecisionTarget.StringFixed(2),
 	}
@@ -112,7 +110,7 @@ func (s *Server) handleEval(w http.ResponseWriter, _ *http.Request) {
 		data.Broken = "The eval artifact could not be read; see the server log."
 	default:
 		data.Summary = sum
-		data.Produced = formatUTC(sum.GeneratedAt)
+		data.Produced = sum.GeneratedAt
 		data.Notes = sum.Notes
 		for _, m := range sum.Types {
 			row := newEvalRow(m)
