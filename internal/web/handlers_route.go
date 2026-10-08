@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -145,26 +146,235 @@ type routePage struct {
 
 // decisionView is a Decision prepared for the template.
 type decisionView struct {
-	RoundID      int64
-	TargetID     string
-	DecidedAt    time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
-	Snapshot     time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
-	OrderLine    string
-	Chosen       []canonical.Leg
-	Alternatives []canonical.Alternative
-	Exclusions   []canonical.Exclusion
-	Warnings     []string
-	Explanation  string
-	Partners     int
+	RoundID          int64
+	TargetID         string
+	DecidedAt        time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
+	Snapshot         time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
+	OrderLine        string
+	Chosen           []canonical.Leg
+	Alternatives     []alternativeView
+	Exclusions       []exclusionView
+	Warnings         []string
+	Explanation      string
+	Partners         int
+	OutcomePhrase    string
+	OutcomeChipClass string
+	OutcomeSummary   string // One-line summary for the strip
+	TotalFilled      decimal.Decimal
+	TotalRequested   decimal.Decimal
+	AverageAllIn     decimal.Decimal
+	BasisMultiplier  decimal.Decimal   // For display in template
+	InstrumentTitles map[string]string // instrument ID -> short title
 }
 
-func newDecisionView(d canonical.Decision, partners int, snapshot time.Time) *decisionView {
+// alternativeView extends Alternative with the gap to the chosen all-in.
+type alternativeView struct {
+	canonical.Alternative
+	GapToChosen decimal.Decimal
+}
+
+// exclusionView extends Exclusion with a human-readable reason phrase.
+type exclusionView struct {
+	canonical.Exclusion
+	ReasonPhrase string
+}
+
+func newDecisionView(d canonical.Decision, partners int, snapshot time.Time, instrumentTitles map[string]string, basisMult decimal.Decimal) *decisionView {
+	chosen := len(d.Chosen) > 0
+	partial := chosen && d.Order.Quantity != nil && totalFilled(d.Chosen).LessThan(*d.Order.Quantity)
+	isComplement := hasComplement(d.Chosen)
+	venueCount := countVenues(d.Chosen)
+
+	phrase, chipClass := OutcomePhrase(chosen, partial, isComplement, venueCount)
+
+	// For complement routes, include venue and outcome per design.md § 4
+	// Only override when fill is complete AND every leg is a complement (not mixed, not partial)
+	if isComplement && !partial && len(d.Chosen) > 0 && allComplements(d.Chosen) {
+		for _, leg := range d.Chosen {
+			if leg.Route == "complement" {
+				phrase = fmt.Sprintf("Routed as %s on %s (complement)", strings.ToUpper(string(leg.Outcome)), leg.Venue)
+				break
+			}
+		}
+	}
+
+	totalReq := decimal.Zero
+	if d.Order.Quantity != nil {
+		totalReq = *d.Order.Quantity
+	}
+	totalFill := totalFilled(d.Chosen)
+	avgAllIn := averageAllIn(d.Chosen)
+
+	// Build outcome summary for the strip
+	summary := buildOutcomeSummary(d, totalFill, totalReq, avgAllIn)
+
+	// Map alternatives with gap
+	chosenAllIn := avgAllIn
+	alts := make([]alternativeView, len(d.Alternatives))
+	for i, alt := range d.Alternatives {
+		gap := alt.AllInPerContract.Sub(chosenAllIn)
+		alts[i] = alternativeView{Alternative: alt, GapToChosen: gap}
+	}
+
+	// Map exclusions with reason phrases
+	excls := make([]exclusionView, len(d.Exclusions))
+	for i, excl := range d.Exclusions {
+		excls[i] = exclusionView{Exclusion: excl, ReasonPhrase: exclusionReasonPhrase(excl.Reason)}
+	}
+
 	return &decisionView{
 		RoundID: d.RoundID, TargetID: d.TargetID, DecidedAt: d.DecidedAt,
 		Snapshot: snapshot, OrderLine: orderLine(d.Order),
-		Chosen: d.Chosen, Alternatives: d.Alternatives, Exclusions: d.Exclusions, Warnings: d.Warnings,
+		Chosen: d.Chosen, Alternatives: alts, Exclusions: excls, Warnings: d.Warnings,
 		Explanation: d.Explanation, Partners: partners,
+		OutcomePhrase: phrase, OutcomeChipClass: chipClass, OutcomeSummary: summary,
+		TotalFilled: totalFill, TotalRequested: totalReq, AverageAllIn: avgAllIn,
+		BasisMultiplier:  basisMult,
+		InstrumentTitles: instrumentTitles,
 	}
+}
+
+// exclusionReasonPhrase maps a reason code to a human-readable phrase per design.md § 4.
+func exclusionReasonPhrase(reason string) string {
+	switch reason {
+	case "stale":
+		return "stale"
+	case "skew":
+		return "skew"
+	case "no_book":
+		return "no book"
+	case "insufficient_depth":
+		return "too shallow"
+	case "not_routable":
+		return "not routable"
+	case "low_confidence":
+		return "low confidence"
+	case "limit_not_reachable":
+		return "limit not reachable"
+	default:
+		return reason // fallback: show the code as-is
+	}
+}
+
+// buildOutcomeSummary creates the one-line summary for the outcome strip.
+func buildOutcomeSummary(d canonical.Decision, totalFill, totalReq, avgAllIn decimal.Decimal) string {
+	if len(d.Chosen) == 0 {
+		// Not routed: show reason tally
+		tally := tallyExclusionReasons(d.Exclusions)
+		if tally == "" {
+			return "every candidate was excluded"
+		}
+		return tally
+	}
+	// Routed: show filled quantity and average all-in
+	var fillMsg string
+	if d.Order.Quantity != nil {
+		if totalFill.Equal(totalReq) {
+			fillMsg = fmt.Sprintf("filled %s contracts", totalFill.String())
+		} else {
+			fillMsg = fmt.Sprintf("filled %s of %s", totalFill.String(), totalReq.String())
+		}
+	} else {
+		// Notional order: just show contracts filled
+		fillMsg = fmt.Sprintf("filled %s contracts", totalFill.String())
+	}
+	if len(d.Chosen) == 1 {
+		leg := d.Chosen[0]
+		// Use leg outcome for complements (not order outcome)
+		outcome := strings.ToUpper(string(leg.Outcome))
+		return fmt.Sprintf("%s %s %s on %s at %s all-in per contract, %s",
+			d.Order.Side, totalFill.String(), outcome,
+			leg.Venue, avgAllIn.StringFixed(4), fillMsg)
+	}
+	// Multi-leg: just show total and average
+	return fmt.Sprintf("%s, average all-in %s per contract", fillMsg, avgAllIn.StringFixed(4))
+}
+
+// tallyExclusionReasons returns a one-line summary of exclusion reasons, sorted for determinism.
+func tallyExclusionReasons(exclusions []canonical.Exclusion) string {
+	counts := make(map[string]int)
+	for _, excl := range exclusions {
+		phrase := exclusionReasonPhrase(excl.Reason)
+		counts[phrase]++
+	}
+	if len(counts) == 0 {
+		return ""
+	}
+	// Sort phrases for deterministic output
+	phrases := make([]string, 0, len(counts))
+	for phrase := range counts {
+		phrases = append(phrases, phrase)
+	}
+	sort.Strings(phrases)
+
+	var parts []string
+	for _, phrase := range phrases {
+		count := counts[phrase]
+		if count == 1 {
+			parts = append(parts, "1 "+phrase)
+		} else {
+			parts = append(parts, fmt.Sprintf("%d %s", count, phrase))
+		}
+	}
+	return strings.Join(parts, ", ")
+}
+
+// hasComplement reports whether any chosen leg is a complement route.
+func hasComplement(legs []canonical.Leg) bool {
+	for _, leg := range legs {
+		if leg.Route == "complement" {
+			return true
+		}
+	}
+	return false
+}
+
+// allComplements reports whether every chosen leg is a complement route.
+func allComplements(legs []canonical.Leg) bool {
+	if len(legs) == 0 {
+		return false
+	}
+	for _, leg := range legs {
+		if leg.Route != "complement" {
+			return false
+		}
+	}
+	return true
+}
+
+// countVenues returns the number of distinct venues in the chosen legs.
+func countVenues(legs []canonical.Leg) int {
+	venues := make(map[canonical.Venue]bool)
+	for _, leg := range legs {
+		venues[leg.Venue] = true
+	}
+	return len(venues)
+}
+
+// totalFilled sums the quantity filled across all chosen legs.
+func totalFilled(legs []canonical.Leg) decimal.Decimal {
+	total := decimal.Zero
+	for _, leg := range legs {
+		total = total.Add(leg.Quantity)
+	}
+	return total
+}
+
+// averageAllIn computes the size-weighted average all-in cost per contract.
+func averageAllIn(legs []canonical.Leg) decimal.Decimal {
+	if len(legs) == 0 {
+		return decimal.Zero
+	}
+	totalCost := decimal.Zero
+	totalQty := decimal.Zero
+	for _, leg := range legs {
+		totalCost = totalCost.Add(leg.AllInPerContract.Mul(leg.Quantity))
+		totalQty = totalQty.Add(leg.Quantity)
+	}
+	if totalQty.IsZero() {
+		return decimal.Zero
+	}
+	return totalCost.Div(totalQty)
 }
 
 // orderLine is the order in one line, FIX-style (FR-27).
@@ -297,11 +507,19 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 	tz := timezoneFromRequest(r)
 	p := s.routePageHeader(in.PairID, round, tz)
 	p.StaleWarning = s.staleRoundWarning(round)
+
+	// Build instrument titles map from candidates
+	titles := make(map[string]string)
+	titles[target.Instrument.ID] = target.Instrument.Title
+	for _, c := range partners {
+		titles[c.Instrument.ID] = c.Instrument.Title
+	}
+
 	data := routePage{
 		page:       p,
 		PairID:     in.PairID,
 		DecisionID: id,
-		Decision:   newDecisionView(dec, len(partners), round.SnapshotAt()),
+		Decision:   newDecisionView(dec, len(partners), round.SnapshotAt(), titles, s.cfg.BasisPenaltyMult),
 	}
 	s.renderRoute(w, r, http.StatusOK, data)
 }
@@ -390,4 +608,45 @@ func routeLogSummary(dec canonical.Decision) string {
 	l := dec.Chosen[0]
 	return fmt.Sprintf("route %s %s %s on %s: %s %s at %s per contract", dec.Order.Side, size, dec.Order.Outcome, dec.TargetID,
 		l.Venue, l.InstrumentID, l.AllInPerContract.StringFixed(4))
+}
+
+// loadDecisionInstrumentTitles loads the titles for all instruments mentioned in a decision
+// using batch GetInstruments to avoid N+1 queries. If an instrument is not found, its title is empty.
+func (s *Server) loadDecisionInstrumentTitles(ctx context.Context, st *store.Store, d canonical.Decision) map[string]string {
+	ids := collectInstrumentIDs(d)
+	if len(ids) == 0 {
+		return nil
+	}
+	idList := make([]string, 0, len(ids))
+	for id := range ids {
+		idList = append(idList, id)
+	}
+	recs, err := st.GetInstruments(ctx, idList)
+	if err != nil {
+		s.log.Warn("loading instrument titles for decision", "count", len(idList), "err", err.Error())
+		return nil
+	}
+	titles := make(map[string]string, len(recs))
+	for _, rec := range recs {
+		titles[rec.ID] = rec.Title
+	}
+	return titles
+}
+
+// collectInstrumentIDs returns all instrument IDs mentioned in a decision.
+func collectInstrumentIDs(d canonical.Decision) map[string]bool {
+	ids := make(map[string]bool)
+	ids[d.TargetID] = true
+	for _, leg := range d.Chosen {
+		ids[leg.InstrumentID] = true
+	}
+	for _, alt := range d.Alternatives {
+		for _, leg := range alt.Legs {
+			ids[leg.InstrumentID] = true
+		}
+	}
+	for _, ex := range d.Exclusions {
+		ids[ex.InstrumentID] = true
+	}
+	return ids
 }
