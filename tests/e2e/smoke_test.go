@@ -261,24 +261,37 @@ var (
 	chosenRe      = regexp.MustCompile(`(?s)<h3>Chosen legs</h3>\s*<table[^>]*>.*?<span class="venue">([a-z]+)</span>`)
 )
 
-// firstEquivalentPair finds the equivalent section of the matches page and
-// returns the ID of its first pair.
+// firstEquivalentPair finds the routable section (UI-03 markup change) and
+// returns the ID of the first equivalent pair within it.
 func firstEquivalentPair(t *testing.T, body string) int64 {
 	t.Helper()
-	start := strings.Index(body, `<h2 id="type-equivalent">`)
+	// UI-03: routable pairs (equivalent, equivalent_given_facts, complement) are now
+	// grouped under <h2 id="routable">, not separate type sections.
+	start := strings.Index(body, `<h2 id="routable">`)
 	if start < 0 {
-		t.Fatalf("GET /: no equivalent pairs listed\n%s", excerpt(body))
+		t.Fatalf("GET /: no routable section found\n%s", excerpt(body))
 	}
 	section := body[start:]
-	if end := strings.Index(section[1:], `<h2 id="type-`); end >= 0 {
+	// Find the end of the routable section (next <section> or <h2>).
+	if end := strings.Index(section[1:], `</section>`); end >= 0 {
 		section = section[:end+1]
 	}
-	if n := strings.Count(section, `<td class="type-equivalent">`); n < 1 {
-		t.Fatalf("GET /: the equivalent section lists %d pairs, want at least 1", n)
+	// Look for the first row with type chip "equivalent" (not equivalent_given_facts).
+	// The chip is: <span class="chip chip-ok">equivalent</span>
+	chipStart := strings.Index(section, `<span class="chip chip-ok">equivalent</span>`)
+	if chipStart < 0 {
+		t.Fatalf("GET /: no equivalent pairs listed in routable section\n%s", excerpt(body))
 	}
-	m := pairLinkRe.FindStringSubmatch(section)
+	// Find the <tr> containing this chip and extract its pair link.
+	// Walk backwards from chipStart to find the opening <tr>.
+	rowStart := strings.LastIndex(section[:chipStart], `<tr>`)
+	if rowStart < 0 {
+		t.Fatal("GET /: found equivalent chip but no <tr> before it")
+	}
+	rowSection := section[rowStart:]
+	m := pairLinkRe.FindStringSubmatch(rowSection)
 	if m == nil {
-		t.Fatal("GET /: the equivalent section has no pair link")
+		t.Fatal("GET /: the equivalent row has no pair link")
 	}
 	id, err := strconv.ParseInt(m[1], 10, 64)
 	if err != nil {
