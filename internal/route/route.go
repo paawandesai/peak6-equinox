@@ -48,7 +48,7 @@ const (
 	ReasonNoRelationship        = "no_relationship"
 	ReasonRelationshipMismatch  = "relationship_mismatch"
 	ReasonNotRoutable           = "not_routable"
-	ReasonComplementUnsupported = "complement_unsupported"
+	ReasonComplementUnsupported = "complement_unsupported" // Deprecated (M3-04): complements are now routable; kept for backward compatibility with old decision logs
 	ReasonLowConfidence         = "low_confidence"
 	ReasonQuoteMismatch         = "quote_mismatch"
 	ReasonNotOpen               = "not_open"
@@ -614,11 +614,31 @@ func explainSweep(d canonical.Decision, legs []canonical.Leg, opts []option, sz 
 			fillDesc = fmt.Sprintf("all %s", filled)
 		}
 
-		// For complement routes, explain the opposite-side trade (M3-04)
+		// For complement routes, explain the opposite-side trade and compare to best direct (M3-04 AC)
 		routeDesc := ""
 		if legs[0].Route == RouteComplement {
-			routeDesc = fmt.Sprintf(" Chose %s on %s (complement of %s) at %s",
-				strings.ToUpper(string(legs[0].Outcome)), legs[0].InstrumentID, d.TargetID, legs[0].Venue)
+			// Find the best direct (non-complement) option to compare against
+			var bestDirectCost decimal.Decimal
+			var bestDirectVenue string
+			var bestDirectID string
+			foundDirect := false
+			for _, opt := range opts {
+				if opt.leg.Route == RouteDirect {
+					if !foundDirect || opt.leg.AllInPerContract.LessThan(bestDirectCost) {
+						bestDirectCost = opt.leg.AllInPerContract
+						bestDirectVenue = string(opt.leg.Venue)
+						bestDirectID = opt.leg.InstrumentID
+						foundDirect = true
+					}
+				}
+			}
+
+			routeDesc = fmt.Sprintf(" Chose %s on %s (complement of %s) at %s because the all-in cost (VWAP + fee + basis) was %s per contract",
+				strings.ToUpper(string(legs[0].Outcome)), legs[0].InstrumentID, d.TargetID, legs[0].Venue, money(legs[0].AllInPerContract))
+			if foundDirect {
+				routeDesc += fmt.Sprintf(", vs %s for %s on %s at %s",
+					money(bestDirectCost), strings.ToUpper(string(d.Order.Outcome)), bestDirectID, bestDirectVenue)
+			}
 		} else {
 			routeDesc = fmt.Sprintf(" Best route: %s (%s)", legs[0].Venue, legs[0].InstrumentID)
 		}

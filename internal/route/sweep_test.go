@@ -419,7 +419,7 @@ func TestSweepGreedyProperty(t *testing.T) {
 		p2Dec := d(p2Str)
 		if p1Dec.GreaterThanOrEqual(p2Dec) {
 			p1Str, p2Str = p2Str, p1Str
-			p1Dec, p2Dec = p2Dec, p1Dec
+			p1Dec = d(p1Str) // Reload after swap
 		}
 
 		sz1 := rapid.IntRange(1, 100).Draw(rt, "sz1")

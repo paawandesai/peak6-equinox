@@ -32,10 +32,10 @@ func Sweep(order canonical.Order, candidates []canonical.Candidate, cfg Config) 
 	// evaluate() but for ranking purposes). We need full option details for
 	// proper tie-breaking (depth, basis, full vs partial).
 	type rankedCandidate struct {
-		cand      canonical.Candidate
-		opt       option
-		route     string
-		evalSide  canonical.Side
+		cand        canonical.Candidate
+		opt         option
+		route       string
+		evalSide    canonical.Side
 		evalOutcome canonical.Outcome
 	}
 	var ranked []rankedCandidate

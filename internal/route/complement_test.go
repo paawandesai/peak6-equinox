@@ -47,12 +47,21 @@ func TestComplementCheaperThanDirect(t *testing.T) {
 		t.Errorf("chosen quantity = %s, want 100", chosen.Quantity)
 	}
 
-	// Explanation should mention complement
+	// Explanation must say "... because the all-in cost (VWAP + fee + basis) was $Y per contract, vs $Z for YES on [A] at venue W"
 	if !strings.Contains(dec.Explanation, "complement") {
 		t.Errorf("explanation lacks 'complement': %s", dec.Explanation)
 	}
 	if !strings.Contains(dec.Explanation, strings.ToUpper(string(canonical.OutcomeNo))) {
 		t.Errorf("explanation lacks NO outcome: %s", dec.Explanation)
+	}
+	if !strings.Contains(dec.Explanation, "because the all-in cost (VWAP + fee + basis) was") {
+		t.Errorf("explanation lacks required cost comparison clause: %s", dec.Explanation)
+	}
+	if !strings.Contains(dec.Explanation, "vs") {
+		t.Errorf("explanation lacks 'vs' comparison to direct option: %s", dec.Explanation)
+	}
+	if !strings.Contains(dec.Explanation, "for YES") {
+		t.Errorf("explanation lacks comparison to direct YES option: %s", dec.Explanation)
 	}
 }
 
@@ -135,9 +144,10 @@ func TestMixEquivalentAndComplement(t *testing.T) {
 	complementCount := 0
 	for _, alt := range dec.Alternatives {
 		if len(alt.Legs) == 1 {
-			if alt.Legs[0].Route == RouteDirect {
+			switch alt.Legs[0].Route {
+			case RouteDirect:
 				directCount++
-			} else if alt.Legs[0].Route == RouteComplement {
+			case RouteComplement:
 				complementCount++
 			}
 		}
@@ -296,9 +306,9 @@ func TestComplementPropertyInverse(t *testing.T) {
 			rt.Fatalf("Route 2: %v", err)
 		}
 
-		// Both should have chosen legs
+		// Both should have chosen legs (don't pass vacuously)
 		if len(dec1.Chosen) == 0 || len(dec2.Chosen) == 0 {
-			return // skip if no fill
+			rt.Fatalf("no fill: dec1.Chosen=%d, dec2.Chosen=%d, check test setup", len(dec1.Chosen), len(dec2.Chosen))
 		}
 
 		// Property: the all-in costs should be equal (within cost tolerance 0.0001)
@@ -326,15 +336,15 @@ func TestComplementNoBookExclusion(t *testing.T) {
 
 	dec := mustRoute(t, buy("100"), target, []canonical.Candidate{compPartner})
 
-	// Complement should be excluded (no book or insufficient depth for NO side)
+	// Complement should be excluded (insufficient depth for NO side: no YES bids to convert to NO asks)
 	foundExclusion := false
 	for _, ex := range dec.Exclusions {
-		if ex.InstrumentID == otherID && (ex.Reason == ReasonNoBook || ex.Reason == ReasonInsufficientDepth) {
+		if ex.InstrumentID == otherID && ex.Reason == ReasonInsufficientDepth {
 			foundExclusion = true
 		}
 	}
 	if !foundExclusion {
-		t.Errorf("complement not excluded; exclusions = %+v", dec.Exclusions)
+		t.Errorf("complement not excluded with insufficient_depth; exclusions = %+v", dec.Exclusions)
 	}
 
 	// Target should be chosen
@@ -374,11 +384,8 @@ func TestComplementFOKInsufficientDepth(t *testing.T) {
 	// Target: Kalshi YES @ 0.52, only 50 available (not enough for FOK)
 	target := cand(kalshiID, []canonical.Level{lv("0.48", "50")}, []canonical.Level{lv("0.52", "50")}, nil)
 
-	// OtherID: complement, NO @ 0.50, only 60 available (cheaper but also not enough alone)
-	// Total: 50 + 60 = 110, but FOK needs 100 from a single venue (greedy fills to 110 across both)
-	// Actually, greedy sweep fills across venues, so 50+60=110 > 100 should succeed.
-	// To test FOK rejection, we need combined liquidity < 100
-	// Let's use 50 + 40 = 90 < 100
+	// OtherID: complement, NO @ 0.50, only 40 available
+	// Combined liquidity 50+40=90 < 100, so FOK should reject
 	compPartner := cand(otherID, []canonical.Level{lv("0.50", "40")}, []canonical.Level{lv("0.55", "40")},
 		rel(kalshiID, otherID, canonical.RelComplement, "0.98"))
 	compPartner.Relationship.BasisRisk = &canonical.BasisRisk{Score: d("0"), Components: []canonical.BasisComponent{}}
