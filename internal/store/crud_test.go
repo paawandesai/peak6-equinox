@@ -490,3 +490,103 @@ func TestDecisionLog(t *testing.T) {
 		t.Errorf("GetLog missing = %v", err)
 	}
 }
+
+func TestDailyRoundHistory(t *testing.T) {
+	s := newStore(t)
+
+	// Create rounds across multiple days.
+	now := time.Now().UTC()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 12, 0, 0, 0, time.UTC)
+	yesterday := today.Add(-24 * time.Hour)
+	threeDaysAgo := today.Add(-72 * time.Hour)
+
+	// Today: 2 ok, 1 partial
+	r1, _ := s.CreateRound(ctx, today)
+	s.FinishRound(ctx, r1.ID, store.RoundOK, nil, today.Add(time.Minute))
+	r2, _ := s.CreateRound(ctx, today.Add(5*time.Minute))
+	s.FinishRound(ctx, r2.ID, store.RoundOK, nil, today.Add(6*time.Minute))
+	r3, _ := s.CreateRound(ctx, today.Add(10*time.Minute))
+	s.FinishRound(ctx, r3.ID, store.RoundPartial, nil, today.Add(11*time.Minute))
+
+	// Yesterday: 1 failed, 1 ok
+	r4, _ := s.CreateRound(ctx, yesterday)
+	s.FinishRound(ctx, r4.ID, store.RoundFailed, nil, yesterday.Add(time.Minute))
+	r5, _ := s.CreateRound(ctx, yesterday.Add(5*time.Minute))
+	s.FinishRound(ctx, r5.ID, store.RoundOK, nil, yesterday.Add(6*time.Minute))
+
+	// Two days ago: no rounds (missing)
+	// Three days ago: 1 ok
+	r6, _ := s.CreateRound(ctx, threeDaysAgo)
+	s.FinishRound(ctx, r6.ID, store.RoundOK, nil, threeDaysAgo.Add(time.Minute))
+
+	// Query 7 days of history.
+	history, err := s.DailyRoundHistory(ctx, 7)
+	if err != nil {
+		t.Fatalf("DailyRoundHistory: %v", err)
+	}
+	if len(history) != 7 {
+		t.Fatalf("len(history) = %d, want 7", len(history))
+	}
+
+	// Check today's counts (newest first, so index 0).
+	todaySummary := history[0]
+	if todaySummary.OK != 2 {
+		t.Errorf("today OK = %d, want 2", todaySummary.OK)
+	}
+	if todaySummary.Partial != 1 {
+		t.Errorf("today Partial = %d, want 1", todaySummary.Partial)
+	}
+	if todaySummary.Failed != 0 {
+		t.Errorf("today Failed = %d, want 0", todaySummary.Failed)
+	}
+	if todaySummary.Missing {
+		t.Error("today marked as Missing")
+	}
+
+	// Check yesterday's counts.
+	yesterdaySummary := history[1]
+	if yesterdaySummary.OK != 1 {
+		t.Errorf("yesterday OK = %d, want 1", yesterdaySummary.OK)
+	}
+	if yesterdaySummary.Failed != 1 {
+		t.Errorf("yesterday Failed = %d, want 1", yesterdaySummary.Failed)
+	}
+	if yesterdaySummary.Partial != 0 {
+		t.Errorf("yesterday Partial = %d, want 0", yesterdaySummary.Partial)
+	}
+	if yesterdaySummary.Missing {
+		t.Error("yesterday marked as Missing")
+	}
+
+	// Check two days ago (no rounds).
+	twoDaysAgoSummary := history[2]
+	if !twoDaysAgoSummary.Missing {
+		t.Error("two days ago not marked as Missing")
+	}
+	if twoDaysAgoSummary.OK != 0 || twoDaysAgoSummary.Partial != 0 || twoDaysAgoSummary.Failed != 0 {
+		t.Errorf("two days ago counts non-zero: %+v", twoDaysAgoSummary)
+	}
+
+	// Check three days ago.
+	threeDaysAgoSummary := history[3]
+	if threeDaysAgoSummary.OK != 1 {
+		t.Errorf("three days ago OK = %d, want 1", threeDaysAgoSummary.OK)
+	}
+	if threeDaysAgoSummary.Missing {
+		t.Error("three days ago marked as Missing")
+	}
+
+	// Check that the days are in descending order.
+	if !history[0].Date.After(history[1].Date) {
+		t.Errorf("history not in descending order: %v, %v", history[0].Date, history[1].Date)
+	}
+
+	// Test with a larger range.
+	history90, err := s.DailyRoundHistory(ctx, 90)
+	if err != nil {
+		t.Fatalf("DailyRoundHistory(90): %v", err)
+	}
+	if len(history90) != 90 {
+		t.Fatalf("len(history90) = %d, want 90", len(history90))
+	}
+}

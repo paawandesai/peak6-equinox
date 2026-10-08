@@ -262,3 +262,46 @@ func TestCrossVenuePairsOrder(t *testing.T) {
 		t.Errorf("order changed: %s %s %s", pairs[0].a.ID, pairs[1].a.ID, pairs[2].a.ID)
 	}
 }
+
+func TestMatchRunRecorded(t *testing.T) {
+	st := store.New(tdb.Pool(t))
+	tdb.Reset(t)
+	ctx := context.Background()
+	round := seedMatchRound(t, st, store.RoundOK)
+
+	// Before running match, there should be no match runs.
+	_, err := st.GetLatestMatchRun(ctx)
+	if err == nil {
+		t.Error("GetLatestMatchRun succeeded before any match run")
+	}
+
+	// Run match.
+	sum, err := matchRound(ctx, st, round.ID, false, testFacts(t), slog.New(slog.DiscardHandler))
+	if err != nil {
+		t.Fatalf("matchRound: %v", err)
+	}
+	if sum.Stored == 0 {
+		t.Error("no relationships stored")
+	}
+
+	// After running match, there should be one match run.
+	run, err := st.GetLatestMatchRun(ctx)
+	if err != nil {
+		t.Fatalf("GetLatestMatchRun: %v", err)
+	}
+	if run.RoundID != round.ID {
+		t.Errorf("run.RoundID = %d, want %d", run.RoundID, round.ID)
+	}
+	if run.Outcome != store.MatchRunOK {
+		t.Errorf("run.Outcome = %q, want %q", run.Outcome, store.MatchRunOK)
+	}
+	if run.PairsCompared != sum.Pairs {
+		t.Errorf("run.PairsCompared = %d, want %d", run.PairsCompared, sum.Pairs)
+	}
+	if run.RelationshipsStored != sum.Stored {
+		t.Errorf("run.RelationshipsStored = %d, want %d", run.RelationshipsStored, sum.Stored)
+	}
+	if run.DurationMS <= 0 {
+		t.Errorf("run.DurationMS = %d, want > 0", run.DurationMS)
+	}
+}

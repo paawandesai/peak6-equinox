@@ -186,3 +186,61 @@ func (s *Store) UnpinRounds(ctx context.Context) error {
 	}
 	return nil
 }
+
+// DailyRoundSummary is one day's rollup of round outcomes.
+type DailyRoundSummary struct {
+	Date    time.Time
+	OK      int
+	Partial int
+	Failed  int
+	Missing bool // true if no rounds were started on this day
+}
+
+// DailyRoundHistory returns a 90-day daily rollup of round outcomes, newest day first.
+// Each day is in UTC. A day with no started rounds is marked as Missing with zero counts.
+// This is a read-time query over fetch_rounds (Tier 1), not a persisted rollup table.
+func (s *Store) DailyRoundHistory(ctx context.Context, days int) ([]DailyRoundSummary, error) {
+	if days <= 0 || days > 365 {
+		days = 90
+	}
+
+	// Generate a series of the last N days in UTC, then left join to the daily counts.
+	query := `
+		WITH day_series AS (
+			SELECT date::date AS day
+			FROM generate_series(
+				(CURRENT_DATE - $1::integer + 1),
+				CURRENT_DATE,
+				'1 day'::interval
+			) AS date
+		)
+		SELECT
+			day_series.day,
+			COALESCE(SUM(CASE WHEN fr.status = 'ok' THEN 1 ELSE 0 END), 0) AS ok_count,
+			COALESCE(SUM(CASE WHEN fr.status = 'partial' THEN 1 ELSE 0 END), 0) AS partial_count,
+			COALESCE(SUM(CASE WHEN fr.status = 'failed' THEN 1 ELSE 0 END), 0) AS failed_count,
+			COUNT(fr.id) = 0 AS missing
+		FROM day_series
+		LEFT JOIN fetch_rounds fr ON DATE(fr.started_at) = day_series.day
+		GROUP BY day_series.day
+		ORDER BY day_series.day DESC
+	`
+	rows, err := s.pool.Query(ctx, query, days)
+	if err != nil {
+		return nil, fmt.Errorf("querying daily round history: %w", err)
+	}
+	defer rows.Close()
+
+	var out []DailyRoundSummary
+	for rows.Next() {
+		var d DailyRoundSummary
+		if err := rows.Scan(&d.Date, &d.OK, &d.Partial, &d.Failed, &d.Missing); err != nil {
+			return nil, fmt.Errorf("scanning daily round history: %w", err)
+		}
+		out = append(out, d)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("querying daily round history: %w", err)
+	}
+	return out, nil
+}

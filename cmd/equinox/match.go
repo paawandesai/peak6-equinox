@@ -87,7 +87,7 @@ func (s matchSummary) String() string {
 }
 
 // matchRound runs the matcher over one round with the given facts and
-// persists the results.
+// persists the results. It also records a match_runs row.
 func matchRound(ctx context.Context, st *store.Store, roundID int64, storeAll bool, fs facts.Set, logger *slog.Logger) (matchSummary, error) {
 	start := time.Now()
 	round, err := resolveRound(ctx, st, roundID)
@@ -100,9 +100,11 @@ func matchRound(ctx context.Context, st *store.Store, roundID int64, storeAll bo
 	}
 	sum := matchSummary{RoundID: round.ID, Instruments: len(instruments), ByType: map[canonical.RelationshipType]int{}}
 	dlog := decisionlog.New(st)
+	matchErr := error(nil)
 	for _, p := range crossVenuePairs(instruments) {
 		if err := ctx.Err(); err != nil {
-			return sum, fmt.Errorf("matching round %d: %w", round.ID, err)
+			matchErr = fmt.Errorf("matching round %d: %w", round.ID, err)
+			break
 		}
 		rel := match.Compare(p.a, p.b, fs)
 		rel.RoundID = round.ID
@@ -117,17 +119,42 @@ func matchRound(ctx context.Context, st *store.Store, roundID int64, storeAll bo
 		}
 		rel.ID, err = st.UpsertRelationship(ctx, rel)
 		if err != nil {
-			return sum, fmt.Errorf("matching round %d: %w", round.ID, err)
+			matchErr = fmt.Errorf("matching round %d: %w", round.ID, err)
+			break
 		}
 		sum.Stored++
 		if _, err := dlog.Relationship(ctx, rel); err != nil {
-			return sum, fmt.Errorf("matching round %d: %w", round.ID, err)
+			matchErr = fmt.Errorf("matching round %d: %w", round.ID, err)
+			break
 		}
 		sum.Logged++
 		logger.Info("relationship", "round", round.ID, "a", rel.AID, "b", rel.BID, "type", rel.Type,
 			"confidence", rel.Confidence.String(), "vetoes", len(rel.Vetoes), "facts_used", len(rel.FactsUsed), "basis_risk", basisScore(rel))
 	}
 	sum.Duration = time.Since(start)
+
+	// Record the match run.
+	outcome := store.MatchRunOK
+	if matchErr != nil {
+		outcome = store.MatchRunFailed
+	}
+	run := store.MatchRun{
+		RoundID:             round.ID,
+		StartedAt:           start,
+		FinishedAt:          time.Now(),
+		DurationMS:          int(sum.Duration.Milliseconds()),
+		PairsCompared:       sum.Pairs,
+		RelationshipsStored: sum.Stored,
+		Outcome:             outcome,
+	}
+	if _, runErr := st.InsertMatchRun(ctx, run); runErr != nil {
+		logger.Error("failed to record match run", "error", runErr)
+	}
+
+	if matchErr != nil {
+		return sum, matchErr
+	}
+
 	logger.Info("match finished", "round", round.ID, "instruments", sum.Instruments, "pairs", sum.Pairs,
 		"equivalent", sum.ByType[canonical.RelEquivalent], "equivalent_given_facts", sum.ByType[canonical.RelEquivalentGivenFacts],
 		"complement", sum.ByType[canonical.RelComplement], "implies", sum.ByType[canonical.RelImplies],
