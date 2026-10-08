@@ -19,6 +19,9 @@
   </div>
 </dl>
 
+{{/* AB-15 alert banner when DB size exceeds threshold */}}
+{{if .DBAlert}}<div class="banner banner-danger" role="alert">ALERT: database size is above the {{.DBThreshold}} growth threshold (AB-15).</div>{{end}}
+
 {{/* Detail lines for test compatibility */}}
 <h2>Collector success, trailing {{.Collector.Window}} (NFR-05)</h2>
 <p>Since {{.Collector.Since}}: <strong>{{.Collector.Rate}}</strong> of {{.Collector.Attempts}} expected {{.Collector.Cadence}} ticks succeeded (target {{.Collector.Target}}): <strong>{{if .Collector.Meets}}MEETS TARGET{{else}}BELOW TARGET{{end}}</strong>.

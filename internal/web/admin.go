@@ -86,10 +86,9 @@ type adminPage struct {
 	PinnedRound *roundView // M3-07: pinned round info for demo mode section
 	HasPinned   bool       // M3-07: whether a round is currently pinned
 	// UI-08: LLM verifier state (design.md § 4)
-	LLMVerifierState       string // "disabled", "ready", "cap_reached", "last_run"
+	LLMVerifierState       string // "disabled", "ready", "cap_reached"
 	LLMVerifierStateChip   string // chip class for the state
 	LLMVerifierStateText   string // human-readable state text
-	LLMVerifierSummary     string // last run summary (when state is "last_run")
 	LLMVerifierButtonLabel string // button label
 }
 

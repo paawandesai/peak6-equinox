@@ -546,7 +546,7 @@ func TestAdminUnpinRouteOrder(t *testing.T) {
 	}
 }
 
-// TestAdminLLMVerifierStates: admin page shows the four verifier states (UI-08 AC).
+// TestAdminLLMVerifierStates: admin page shows the three verifier states (UI-08).
 func TestAdminLLMVerifierStates(t *testing.T) {
 	st := store.New(tdb.Pool(t))
 	tdb.Reset(t)
@@ -665,5 +665,36 @@ func TestAdminPinnedUnpinnedStrip(t *testing.T) {
 	}
 	if !strings.Contains(body, "no round pinned") {
 		t.Error("health strip lacks 'no round pinned' text")
+	}
+}
+
+// TestAdminAB15Banner: breach renders banner banner-danger with role="alert", below threshold no banner (operator review round 2).
+func TestAdminAB15Banner(t *testing.T) {
+	st := store.New(tdb.Pool(t))
+	tdb.Reset(t)
+
+	// Above threshold: banner present
+	s, _ := newAdminServer(t, Deps{Store: st, DBSize: func(context.Context) (int64, error) { return 5<<30 + 1, nil }}, "ci")
+	rec := do(s.Handler(), request(http.MethodGet, "/admin", withAuth(testUser, testPass)))
+	body := rec.Body.String()
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d", rec.Code)
+	}
+	if !strings.Contains(body, `class="banner banner-danger"`) {
+		t.Error("breach: body lacks banner banner-danger class")
+	}
+	if !strings.Contains(body, `role="alert"`) {
+		t.Error("breach: body lacks role=alert")
+	}
+
+	// Below threshold: no banner
+	s, _ = newAdminServer(t, Deps{Store: st, DBSize: func(context.Context) (int64, error) { return 5 << 30, nil }}, "ci")
+	rec = do(s.Handler(), request(http.MethodGet, "/admin", withAuth(testUser, testPass)))
+	body = rec.Body.String()
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d", rec.Code)
+	}
+	if strings.Contains(body, `class="banner banner-danger"`) {
+		t.Error("below threshold: banner present")
 	}
 }
