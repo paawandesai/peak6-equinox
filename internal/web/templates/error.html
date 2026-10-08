@@ -1,5 +1,8 @@
 {{define "content"}}
+<div class="error-page">
+<span class="badge b-danger badge-l"><span class="g" aria-hidden="true">✕</span>{{.Status}}</span>
 <h1>{{.Status}} {{.Title}}</h1>
 <p>{{.Message}}</p>
-<p><a href="/">Back to the matches page</a></p>
+<a href="/" class="btn btn-block">Back to the matches page</a>
+</div>
 {{end}}

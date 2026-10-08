@@ -430,5 +430,13 @@ func TestFormatPercentAndHTTPURL(t *testing.T) {
 
 func TestLayoutNavLinksNewPages(t *testing.T) {
 	body := get(New(Config{}, Deps{}).Handler(), "/eval").Body.String()
-	wantContains(t, body, `<a href="/near-misses">Near misses</a>`, `<a href="/log">Decision log</a>`, `<a href="/eval">Eval</a>`)
+	// UI-10: nav links now include aria-current on the active page
+	wantContains(t, body,
+		`<a href="/near-misses"`,
+		`>Near misses</a>`,
+		`<a href="/log"`,
+		`>Decision log</a>`,
+		`<a href="/eval"`,
+		`aria-current="page"`,
+		`>Eval</a>`)
 }

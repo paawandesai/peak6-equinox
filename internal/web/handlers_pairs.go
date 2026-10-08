@@ -171,7 +171,7 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := pairPage{
-		page:           s.pageBase(round, "Pair "+r.PathValue("id"), "Why does Equinox think these two contracts are, or are not, the same bet, and where would an order fill best?", tz),
+		page:           s.pageBase(round, "Pair "+r.PathValue("id"), "Why does Equinox think these two contracts are, or are not, the same bet, and where would an order fill best?", tz, "pair"),
 		ID:             rel.ID,
 		Type:           string(rel.Type),
 		TypeLabel:      typeLabels[rel.Type],

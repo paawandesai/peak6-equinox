@@ -6,7 +6,8 @@ import (
 
 // pageBase builds the common page fields from the current round (M3-07: centralizes round loading and banner logic).
 // The timezone parameter (ET/CT/UTC) controls how times are formatted in templates (M3-08).
-func (s *Server) pageBase(r store.Round, title, question, timezone string) page {
+// The pageName parameter sets .Page for aria-current navigation highlighting (UI-10).
+func (s *Server) pageBase(r store.Round, title, question, timezone, pageName string) page {
 	var round *roundInfo
 	var bnr banner
 
@@ -33,5 +34,6 @@ func (s *Server) pageBase(r store.Round, title, question, timezone string) page 
 		Round:    round,
 		Banner:   bnr,
 		Timezone: timezone,
+		Page:     pageName,
 	}
 }
