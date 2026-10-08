@@ -15,6 +15,10 @@ const (
 // timezoneCookie is the cookie name for the user's timezone preference.
 const timezoneCookie = "tz"
 
+// loadLocation is the timezone loader used by formatTime. It can be overridden
+// in tests to inject failures and verify the UTC fallback path.
+var loadLocation = time.LoadLocation
+
 // timezoneFromRequest reads the user's timezone preference from the tz cookie.
 // Returns ET (America/New_York) as the default when the cookie is missing or invalid.
 func timezoneFromRequest(r *http.Request) string {
@@ -43,14 +47,14 @@ func formatTime(t time.Time, tz string) string {
 
 	switch tz {
 	case TzET:
-		loc, err = time.LoadLocation("America/New_York")
+		loc, err = loadLocation("America/New_York")
 	case TzCT:
-		loc, err = time.LoadLocation("America/Chicago")
+		loc, err = loadLocation("America/Chicago")
 	case TzUTC:
 		loc = time.UTC
 	default:
 		// Unknown timezone defaults to ET (M3-08)
-		loc, err = time.LoadLocation("America/New_York")
+		loc, err = loadLocation("America/New_York")
 	}
 
 	// If time.LoadLocation fails (e.g., timezone database unavailable), fall back to UTC.

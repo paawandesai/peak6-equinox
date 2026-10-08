@@ -1,6 +1,8 @@
 package web
 
 import (
+	"crypto/tls"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -242,29 +244,128 @@ func TestHandleTimezone(t *testing.T) {
 	}
 }
 
-// TestFormatTimeLoadLocationFallback tests that formatTime falls back to UTC when LoadLocation fails.
-// This verifies the error handling noted in M3-07 banner.go is working (M3-08 Cursor round 2).
-func TestFormatTimeLoadLocationFallback(t *testing.T) {
-	// formatTime uses time.LoadLocation which cannot be directly mocked without build tags,
-	// but we can test the behavior with an invalid timezone that falls back to UTC.
-	// The function is designed to handle LoadLocation errors by formatting in UTC.
-	// An invalid timezone name that isn't caught by our validation would trigger this path.
+// TestHandleTimezoneSecureFlag tests that the Secure cookie flag is set correctly
+// based on TLS and X-Forwarded-Proto header (M3-08 follow-up, Cursor round 1).
+func TestHandleTimezoneSecureFlag(t *testing.T) {
+	s := &Server{}
 
-	// Test the current fallback behavior: unknown tz defaults to ET, but if LoadLocation
-	// itself fails (e.g., corrupted tzdata), formatTime falls back to UTC.
-	// We can't easily inject a LoadLocation failure without mocking, so this test
-	// documents the expected behavior and verifies the default-to-ET path works.
-	tm := time.Date(2026, 10, 8, 12, 0, 0, 0, time.UTC)
-
-	// Unknown timezone: defaults to ET per formatTime logic
-	got := formatTime(tm, "invalid-tz-name")
-	want := "2026-10-08 08:00:00 EDT" // ET (EDT in October)
-	if got != want {
-		t.Errorf("formatTime with invalid tz = %q, want %q (ET default)", got, want)
+	tests := []struct {
+		name           string
+		useTLS         bool
+		forwardedProto string
+		wantSecure     bool
+	}{
+		{
+			name:           "Secure with X-Forwarded-Proto: https",
+			useTLS:         false,
+			forwardedProto: "https",
+			wantSecure:     true,
+		},
+		{
+			name:           "Secure with r.TLS set",
+			useTLS:         true,
+			forwardedProto: "",
+			wantSecure:     true,
+		},
+		{
+			name:           "Secure with both TLS and X-Forwarded-Proto",
+			useTLS:         true,
+			forwardedProto: "https",
+			wantSecure:     true,
+		},
+		{
+			name:           "not Secure with X-Forwarded-Proto: http",
+			useTLS:         false,
+			forwardedProto: "http",
+			wantSecure:     false,
+		},
+		{
+			name:           "not Secure with no header and no TLS",
+			useTLS:         false,
+			forwardedProto: "",
+			wantSecure:     false,
+		},
 	}
 
-	// Note: The UTC fallback inside the LoadLocation error path cannot be easily tested
-	// without mocking time.LoadLocation or corrupting the system's tzdata. The code path
-	// exists (formatTime falls back to t.UTC().Format if loc.String() != tz after LoadLocation),
-	// but integration-testing a LoadLocation failure would require a broken environment.
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest("POST", "/timezone", nil)
+			req.Host = "example.com"
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			if tt.forwardedProto != "" {
+				req.Header.Set("X-Forwarded-Proto", tt.forwardedProto)
+			}
+			if tt.useTLS {
+				req.TLS = &tls.ConnectionState{}
+			}
+			req.PostForm = map[string][]string{
+				"tz": {TzET},
+			}
+			w := httptest.NewRecorder()
+
+			s.handleTimezone(w, req)
+
+			cookies := w.Result().Cookies()
+			found := false
+			var cookieSecure bool
+			for _, c := range cookies {
+				if c.Name == timezoneCookie {
+					found = true
+					cookieSecure = c.Secure
+					break
+				}
+			}
+			if !found {
+				t.Fatalf("handleTimezone() did not set timezone cookie")
+			}
+			if cookieSecure != tt.wantSecure {
+				t.Errorf("handleTimezone() cookie.Secure = %v, want %v", cookieSecure, tt.wantSecure)
+			}
+		})
+	}
+}
+
+// TestFormatTimeUTCFallback tests that formatTime falls back to UTC when LoadLocation fails.
+// This test injects a failing loadLocation to verify the UTC fallback path (M3-08 follow-up).
+func TestFormatTimeUTCFallback(t *testing.T) {
+	// Save the original loadLocation function and restore it after the test
+	origLoadLocation := loadLocation
+	t.Cleanup(func() {
+		loadLocation = origLoadLocation
+	})
+
+	// Inject a loadLocation that always fails
+	loadLocation = func(_ string) (*time.Location, error) {
+		return nil, errors.New("injected LoadLocation failure for testing")
+	}
+
+	tm := time.Date(2026, 10, 8, 12, 0, 0, 0, time.UTC)
+
+	// With a failing loadLocation, formatTime should fall back to UTC
+	got := formatTime(tm, TzET)
+	want := "2026-10-08 12:00:00 UTC"
+	if got != want {
+		t.Errorf("formatTime(ET) with failing loadLocation = %q, want %q (UTC fallback)", got, want)
+	}
+
+	// Test CT also falls back to UTC
+	got = formatTime(tm, TzCT)
+	want = "2026-10-08 12:00:00 UTC"
+	if got != want {
+		t.Errorf("formatTime(CT) with failing loadLocation = %q, want %q (UTC fallback)", got, want)
+	}
+
+	// Test that unknown tz also falls back to UTC when loadLocation fails
+	got = formatTime(tm, "invalid")
+	want = "2026-10-08 12:00:00 UTC"
+	if got != want {
+		t.Errorf("formatTime(invalid) with failing loadLocation = %q, want %q (UTC fallback)", got, want)
+	}
+
+	// UTC timezone doesn't use loadLocation, so it should still work
+	got = formatTime(tm, TzUTC)
+	want = "2026-10-08 12:00:00 UTC"
+	if got != want {
+		t.Errorf("formatTime(UTC) = %q, want %q (UTC never needs loadLocation)", got, want)
+	}
 }

@@ -21,6 +21,8 @@ func (s *Server) handleTimezone(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Set the timezone cookie (expires in 1 year)
+	// Secure flag is set when serving over HTTPS (X-Forwarded-Proto behind Cloud Run proxy)
+	secure := r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https"
 	//nolint:gosec // G124: All required security attributes (Secure, HttpOnly, SameSite) are set
 	http.SetCookie(w, &http.Cookie{
 		Name:     timezoneCookie,
@@ -28,7 +30,7 @@ func (s *Server) handleTimezone(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		MaxAge:   365 * 24 * 60 * 60, // 1 year in seconds
 		HttpOnly: true,
-		Secure:   r.TLS != nil, // Secure only on HTTPS
+		Secure:   secure,
 		SameSite: http.SameSiteLaxMode,
 	})
 

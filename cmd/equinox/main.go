@@ -13,6 +13,7 @@ import (
 	"os/signal"
 	"sort"
 	"syscall"
+	_ "time/tzdata" // Embed timezone database for Cloud Run (M3-08 follow-up)
 )
 
 // command runs one subcommand. args excludes the subcommand name.
