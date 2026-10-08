@@ -246,7 +246,7 @@ func TestAB04_AdminRouteWithMockAPI(t *testing.T) {
 	}
 
 	// Create a fake Anthropic API server
-	apiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(200)
 		_, _ = w.Write([]byte(`{"id":"msg_test","type":"message","role":"assistant","content":[{"type":"text","text":"related\n0.8"}],"model":"claude-haiku-4-5-20251001","usage":{"input_tokens":50,"output_tokens":5}}`))

@@ -14,52 +14,68 @@ var ErrBudgetExhausted = errors.New("llm daily call cap reached")
 
 // UsageStore is the subset of store.Store needed for budget tracking.
 type UsageStore interface {
-	GetLLMUsage(ctx context.Context, day time.Time) (calls, inputTokens, outputTokens int64, err error)
-	IncrementLLMUsage(ctx context.Context, day time.Time, calls int, inputTokens, outputTokens int64) error
+	ReserveLLMCall(ctx context.Context, day time.Time, dailyCap int) (bool, error)
+	RecordLLMTokens(ctx context.Context, day time.Time, inputTokens, outputTokens int64) error
+}
+
+// TokenSource exposes token usage from the last API call.
+type TokenSource interface {
+	LastUsage() Usage
 }
 
 // BudgetedVerifier wraps a Verifier with a daily call cap. When the cap is
 // reached, Verify returns ErrBudgetExhausted and the caller leaves the rules
 // verdict unchanged.
 type BudgetedVerifier struct {
-	verifier Verifier
-	store    UsageStore
-	dailyCap int
-	nowFunc  func() time.Time
+	verifier    Verifier
+	store       UsageStore
+	tokenSource TokenSource // nil for mocks that don't expose usage
+	dailyCap    int
+	nowFunc     func() time.Time
 }
 
 // NewBudgetedVerifier creates a verifier that enforces a daily call cap.
-func NewBudgetedVerifier(v Verifier, store UsageStore, dailyCap int) *BudgetedVerifier {
+// tokenSource may be nil for test mocks; if non-nil, token usage is recorded.
+func NewBudgetedVerifier(v Verifier, store UsageStore, dailyCap int, tokenSource TokenSource) *BudgetedVerifier {
 	return &BudgetedVerifier{
-		verifier: v,
-		store:    store,
-		dailyCap: dailyCap,
-		nowFunc:  time.Now,
+		verifier:    v,
+		store:       store,
+		tokenSource: tokenSource,
+		dailyCap:    dailyCap,
+		nowFunc:     time.Now,
 	}
 }
 
-// Verify checks the budget, calls the wrapped verifier if under the cap, then
-// increments usage. If the cap is reached, returns ErrBudgetExhausted.
+// Verify atomically reserves a call slot, calls the wrapped verifier if the
+// reservation succeeded, then records token usage. If the cap is reached,
+// returns ErrBudgetExhausted (AO review issue #1: atomic reserve prevents
+// concurrent overshoots).
 func (bv *BudgetedVerifier) Verify(ctx context.Context, a, b canonical.Instrument, r canonical.Relationship) (canonical.LLMVerdict, error) {
 	today := bv.nowFunc().UTC()
-	calls, _, _, err := bv.store.GetLLMUsage(ctx, today)
+
+	// Atomically reserve a call slot (AO review issue #1)
+	reserved, err := bv.store.ReserveLLMCall(ctx, today, bv.dailyCap)
 	if err != nil {
-		return canonical.LLMVerdict{}, fmt.Errorf("checking llm budget: %w", err)
+		return canonical.LLMVerdict{}, fmt.Errorf("reserving llm call: %w", err)
 	}
-	if calls >= int64(bv.dailyCap) {
+	if !reserved {
 		return canonical.LLMVerdict{}, ErrBudgetExhausted
 	}
 
 	verdict, err := bv.verifier.Verify(ctx, a, b, r)
 	if err != nil {
+		// Call was reserved but failed; the reserved slot is kept (failed calls
+		// still count toward the cap to prevent hammering a failing API).
 		return canonical.LLMVerdict{}, err
 	}
 
-	// Increment usage. Token counts are approximations; the real count comes
-	// from the Anthropic API response, but we don't expose that in the Model
-	// interface for M3-06. The cap is on calls, not tokens.
-	if err := bv.store.IncrementLLMUsage(ctx, today, 1, 0, 0); err != nil {
-		return canonical.LLMVerdict{}, fmt.Errorf("recording llm usage: %w", err)
+	// Record token usage if available (AO review issue #5)
+	if bv.tokenSource != nil {
+		usage := bv.tokenSource.LastUsage()
+		if err := bv.store.RecordLLMTokens(ctx, today, usage.InputTokens, usage.OutputTokens); err != nil {
+			// AO review issue #2: log the error but return the verdict (don't discard paid work)
+			fmt.Printf("WARNING: failed to record token usage: %v\n", err)
+		}
 	}
 
 	return verdict, nil

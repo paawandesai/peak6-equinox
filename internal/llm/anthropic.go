@@ -21,6 +21,7 @@ type AnthropicClient struct {
 	temperature float64
 	httpClient  *http.Client
 	baseURL     string // defaults to anthropicAPIURL, overrideable for tests
+	lastUsage   Usage  // token counts from the most recent successful call
 }
 
 // NewAnthropicClient creates a client for the given model ID. apiKey must not
@@ -66,6 +67,7 @@ type anthropicResponse struct {
 	Role    string             `json:"role"`
 	Content []anthropicContent `json:"content"`
 	Model   string             `json:"model"`
+	Usage   *anthropicUsage    `json:"usage,omitempty"`
 	Error   *anthropicError    `json:"error,omitempty"`
 }
 
@@ -74,9 +76,20 @@ type anthropicContent struct {
 	Text string `json:"text"`
 }
 
+type anthropicUsage struct {
+	InputTokens  int64 `json:"input_tokens"`
+	OutputTokens int64 `json:"output_tokens"`
+}
+
 type anthropicError struct {
 	Type    string `json:"type"`
 	Message string `json:"message"`
+}
+
+// Usage holds the token counts from the last API call.
+type Usage struct {
+	InputTokens  int64
+	OutputTokens int64
 }
 
 // Complete sends the prompt to the Anthropic API and returns the raw text
@@ -121,7 +134,12 @@ func (c *AnthropicClient) Complete(ctx context.Context, p Prompt) (string, error
 		if err := json.Unmarshal(respBody, &apiErr); err == nil && apiErr.Error != nil {
 			return "", fmt.Errorf("anthropic api error (%d): %s", resp.StatusCode, apiErr.Error.Message)
 		}
-		return "", fmt.Errorf("anthropic api returned %d: %s", resp.StatusCode, string(respBody))
+		// Truncate response body to 200 bytes to avoid logging large bodies (AO review issue #3)
+		truncated := string(respBody)
+		if len(truncated) > 200 {
+			truncated = truncated[:200] + "... (truncated)"
+		}
+		return "", fmt.Errorf("anthropic api returned %d: %s", resp.StatusCode, truncated)
 	}
 
 	var apiResp anthropicResponse
@@ -146,5 +164,19 @@ func (c *AnthropicClient) Complete(ctx context.Context, p Prompt) (string, error
 		return "", errors.New("anthropic returned no text content")
 	}
 
+	// Record token usage from this call (AO review issue #5)
+	if apiResp.Usage != nil {
+		c.lastUsage = Usage{
+			InputTokens:  apiResp.Usage.InputTokens,
+			OutputTokens: apiResp.Usage.OutputTokens,
+		}
+	}
+
 	return text, nil
+}
+
+// LastUsage returns the token counts from the most recent successful Complete call.
+// Returns zero values if no successful call has been made yet.
+func (c *AnthropicClient) LastUsage() Usage {
+	return c.lastUsage
 }

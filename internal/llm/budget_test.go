@@ -16,22 +16,19 @@ import (
 func TestCacheHitDoesNotIncrementUsage(t *testing.T) {
 	ctx := context.Background()
 
-	// Mock usage store that tracks increments
-	var incrementCalls int
+	// Mock usage store that tracks reservations
+	var reserveCalls int
 	mockStore := &mockUsageStore{
-		getFunc: func(context.Context, time.Time) (int64, int64, int64, error) {
-			return 0, 0, 0, nil // under cap
-		},
-		incrementFunc: func(context.Context, time.Time, int, int64, int64) error {
-			incrementCalls++
-			return nil
+		reserveFunc: func(context.Context, time.Time, int) (bool, error) {
+			reserveCalls++
+			return true, nil // always under cap
 		},
 	}
 
 	// Build verifier stack: Model -> Budget -> Cache
 	mockModel := &ScriptedModel{Responses: []string{HonestResponse}}
 	verifier := NewVerifier(mockModel)
-	budgetedVerifier := NewBudgetedVerifier(verifier, mockStore, 10)
+	budgetedVerifier := NewBudgetedVerifier(verifier, mockStore, 10, nil)
 
 	var memCache MemoryCache
 	cachedVerifier := NewCachedVerifier(budgetedVerifier, &memCache, "test-model", PromptVersion)
@@ -47,23 +44,23 @@ func TestCacheHitDoesNotIncrementUsage(t *testing.T) {
 		Explanation: "test",
 	}
 
-	// First call: cache miss, should hit budget and model
+	// First call: cache miss, should reserve and call model
 	_, err := cachedVerifier.Verify(ctx, a, b, rel)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if incrementCalls != 1 {
-		t.Errorf("first call (cache miss): got %d increment calls, want 1", incrementCalls)
+	if reserveCalls != 1 {
+		t.Errorf("first call (cache miss): got %d reserve calls, want 1", reserveCalls)
 	}
 
-	// Second call: cache hit, should NOT increment usage
-	incrementCalls = 0
+	// Second call: cache hit, should NOT reserve
+	reserveCalls = 0
 	_, err = cachedVerifier.Verify(ctx, a, b, rel)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if incrementCalls != 0 {
-		t.Errorf("second call (cache hit): got %d increment calls, want 0", incrementCalls)
+	if reserveCalls != 0 {
+		t.Errorf("second call (cache hit): got %d reserve calls, want 0", reserveCalls)
 	}
 
 	// Verify the model was only called once (cache hit didn't reach it)
@@ -83,20 +80,20 @@ func TestCacheHitDoesNotIncrementUsage(t *testing.T) {
 
 // mockUsageStore is a test double for UsageStore.
 type mockUsageStore struct {
-	getFunc       func(context.Context, time.Time) (int64, int64, int64, error)
-	incrementFunc func(context.Context, time.Time, int, int64, int64) error
+	reserveFunc      func(context.Context, time.Time, int) (bool, error)
+	recordTokensFunc func(context.Context, time.Time, int64, int64) error
 }
 
-func (m *mockUsageStore) GetLLMUsage(ctx context.Context, day time.Time) (int64, int64, int64, error) {
-	if m.getFunc != nil {
-		return m.getFunc(ctx, day)
+func (m *mockUsageStore) ReserveLLMCall(ctx context.Context, day time.Time, dailyCap int) (bool, error) {
+	if m.reserveFunc != nil {
+		return m.reserveFunc(ctx, day, dailyCap)
 	}
-	return 0, 0, 0, nil
+	return true, nil
 }
 
-func (m *mockUsageStore) IncrementLLMUsage(ctx context.Context, day time.Time, calls int, inTokens, outTokens int64) error {
-	if m.incrementFunc != nil {
-		return m.incrementFunc(ctx, day, calls, inTokens, outTokens)
+func (m *mockUsageStore) RecordLLMTokens(ctx context.Context, day time.Time, inTokens, outTokens int64) error {
+	if m.recordTokensFunc != nil {
+		return m.recordTokensFunc(ctx, day, inTokens, outTokens)
 	}
 	return nil
 }

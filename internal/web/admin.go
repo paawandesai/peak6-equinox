@@ -285,6 +285,13 @@ func (s *Server) handleAdminLLMVerify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// AO review issue #4: single-flight lock to prevent concurrent runs
+	if !s.llmVerifyMutex.TryLock() {
+		s.writeJSON(w, http.StatusConflict, llmVerifyResponse{Error: "LLM verification already in progress"})
+		return
+	}
+	defer s.llmVerifyMutex.Unlock()
+
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Minute)
 	defer cancel()
 
@@ -344,12 +351,14 @@ func (s *Server) handleAdminLLMVerify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	verifier := llm.NewVerifier(client)
-	budgetedVerifier := llm.NewBudgetedVerifier(verifier, s.deps.Store, dailyCap)
+	budgetedVerifier := llm.NewBudgetedVerifier(verifier, s.deps.Store, dailyCap, client)
 	cache := llm.NewPGCache(s.deps.Store, model, llm.PromptVersion)
 	cachedVerifier := llm.NewCachedVerifier(budgetedVerifier, cache, model, llm.PromptVersion)
 
 	var verified, downgraded int
 	var budgetExhausted bool
+	var consecutiveErrors int
+	const maxConsecutiveErrors = 10 // AO review issue #4: stop after N transport errors
 
 	// Verify each pair and update the relationship
 	for _, rel := range pairs {
@@ -378,8 +387,18 @@ func (s *Server) handleAdminLLMVerify(w http.ResponseWriter, r *http.Request) {
 			if _, err := s.deps.Store.UpsertRelationship(ctx, result.Relationship); err != nil {
 				s.log.Error("updating relationship after llm error", "error", err, "a_id", rel.AID, "b_id", rel.BID)
 			}
+
+			// AO review issue #4: stop after N consecutive transport errors
+			consecutiveErrors++
+			if consecutiveErrors >= maxConsecutiveErrors {
+				s.log.Error("stopping llm verification after consecutive errors", "count", consecutiveErrors, "round_id", rd.ID)
+				break
+			}
 			continue
 		}
+
+		// Reset error counter on success
+		consecutiveErrors = 0
 
 		// Apply the guard (downgrade-only)
 		result := llm.Guard(ctx, s.log, rel, verdict)

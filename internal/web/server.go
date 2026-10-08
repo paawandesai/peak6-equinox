@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -58,7 +59,8 @@ type Server struct {
 	log               *slog.Logger
 	limiter           *failureLimiter
 	publicRateLimiter *publicRateLimiter
-	trustProxy        bool // read the client IP from X-Forwarded-For (behind Cloud Run)
+	trustProxy        bool       // read the client IP from X-Forwarded-For (behind Cloud Run)
+	llmVerifyMutex    sync.Mutex // single-flight lock for /admin/llm-verify (AO review issue #4)
 }
 
 // New returns a Server. A nil Logger is replaced with one that discards output.

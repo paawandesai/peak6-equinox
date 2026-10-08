@@ -27,6 +27,44 @@ func (s *Store) GetLLMUsage(ctx context.Context, day time.Time) (calls, inputTok
 	return calls, inputTokens, outputTokens, nil
 }
 
+// ReserveLLMCall atomically reserves a call slot if under the dailyCap, returning
+// true if the reservation succeeded. The cap check and increment happen in one
+// transaction to prevent concurrent overshoots (AO review issue #1).
+func (s *Store) ReserveLLMCall(ctx context.Context, day time.Time, dailyCap int) (bool, error) {
+	d := day.UTC().Truncate(24 * time.Hour).Format("2006-01-02")
+
+	// Try to increment only if current calls < dailyCap
+	result, err := s.pool.Exec(ctx, `
+		INSERT INTO llm_usage (day, calls, input_tokens, output_tokens)
+		VALUES ($1, 1, 0, 0)
+		ON CONFLICT (day) DO UPDATE
+		SET calls = llm_usage.calls + 1
+		WHERE llm_usage.calls < $2
+	`, d, dailyCap)
+	if err != nil {
+		return false, fmt.Errorf("reserving llm call for %s: %w", d, err)
+	}
+
+	// If RowsAffected is 0, we hit the cap (WHERE clause failed)
+	return result.RowsAffected() > 0, nil
+}
+
+// RecordLLMTokens records token usage for a previously reserved call. This is
+// called after a successful API response to update the token counts.
+func (s *Store) RecordLLMTokens(ctx context.Context, day time.Time, inputTokens, outputTokens int64) error {
+	d := day.UTC().Truncate(24 * time.Hour).Format("2006-01-02")
+	_, err := s.pool.Exec(ctx, `
+		UPDATE llm_usage
+		SET input_tokens = input_tokens + $2,
+		    output_tokens = output_tokens + $3
+		WHERE day = $1
+	`, d, inputTokens, outputTokens)
+	if err != nil {
+		return fmt.Errorf("recording llm tokens for %s: %w", d, err)
+	}
+	return nil
+}
+
 // IncrementLLMUsage atomically increments the counters for a given UTC day,
 // creating the record if it does not exist.
 func (s *Store) IncrementLLMUsage(ctx context.Context, day time.Time, calls int, inputTokens, outputTokens int64) error {
