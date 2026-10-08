@@ -10,7 +10,7 @@
   <script src="{{.Assets.HtmxURL}}" integrity="{{.Assets.HtmxSRI}}" crossorigin="anonymous" defer></script>
 </head>
 <body>
-  {{if .Banner.Show}}<div class="banner">{{if .Banner.Pinned}}Demo mode: data as of {{.Banner.AsOf}} (round {{.Banner.RoundID}}). <a href="/admin">Unpin</a>{{else}}No data available yet. Run ingest from <a href="/admin">/admin</a>.{{end}}</div>{{end}}
+  {{if .Banner.Show}}<div class="banner" {{if .Banner.Pinned}}role="status"{{else}}role="alert"{{end}}>{{if .Banner.Pinned}}Demo mode: data as of {{.Banner.AsOf}} (round {{.Banner.RoundID}}). <a href="/admin">Unpin</a>{{else}}No data available yet. Run ingest from <a href="/admin">/admin</a>.{{end}}</div>{{end}}
   <header>
     <nav>
       <ul><li><strong><a href="/">Equinox</a></strong> cross-venue contract matcher and router</li></ul>
@@ -19,10 +19,10 @@
         <li><a href="/near-misses">Near misses</a></li>
         <li><a href="/log">Decision log</a></li>
         <li><a href="/eval">Eval</a></li>
-        {{if .Round}}<li><small>round {{.Round.ID}} ({{.Round.Status}}{{if .Round.Pinned}}, pinned{{end}}) as of {{.Round.AsOf}}</small></li>{{end}}
       </ul>
     </nav>
-    {{if .StaleWarning}}<p role="alert"><mark>{{.StaleWarning}}</mark></p>{{end}}
+    {{if .Round}}<p class="asof">Data as of {{.Round.AsOf}} (round {{.Round.ID}}{{if .Round.Pinned}}, pinned{{end}})</p>{{end}}
+    {{if .StaleWarning}}<div class="banner" role="alert">{{.StaleWarning}}</div>{{end}}
     <p class="question">{{.Question}}</p>
     <form method="post" action="/timezone" class="timezone-selector">
       <label>Timezone:

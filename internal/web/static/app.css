@@ -1,25 +1,191 @@
 /* Equinox: small additions over Pico.css (classless). No inline styles anywhere
    (the CSP has no 'unsafe-inline'); every rule lives here. */
-.banner { background: #fff3cd; color: #856404; padding: 1rem; text-align: center; font-weight: 600; border-bottom: 2px solid #ffc107; }
+
+/* Design tokens (UI-02, design.md § 5): semantic colours, spacing, type steps */
+:root {
+  --eq-ok: #1b6e3a;       /* routable, match, pass */
+  --eq-info: #1a56a8;     /* implies, facts, demo mode */
+  --eq-warn: #8a5a00;     /* related, stale, partial, approximate */
+  --eq-danger: #b3261e;   /* veto, excluded, fail, not routed */
+  --eq-muted: var(--pico-muted-color); /* unknown, unrelated, not scored */
+  --eq-ok-bg: #e6f4ea;
+  --eq-info-bg: #e8f0fb;
+  --eq-warn-bg: #fff3d6;
+  --eq-danger-bg: #fbe9e7;
+  --eq-space-1: 0.25rem;
+  --eq-space-2: 0.5rem;
+  --eq-space-3: 1rem;
+  --eq-space-4: 2rem;
+  --eq-text-s: 0.875rem;
+  --eq-text-m: 1rem;
+  --eq-text-l: 1.25rem;
+  --eq-text-xl: 1.75rem;
+  --eq-table-pad: 0.4rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme=light]) {
+    --eq-ok: #6fd08c;
+    --eq-info: #8ab4f8;
+    --eq-warn: #f2c14e;
+    --eq-danger: #ff8a80;
+    --eq-ok-bg: #12301c;
+    --eq-info-bg: #142338;
+    --eq-warn-bg: #3a2c05;
+    --eq-danger-bg: #3b1512;
+  }
+}
+
+[data-theme=dark] {
+  --eq-ok: #6fd08c;
+  --eq-info: #8ab4f8;
+  --eq-warn: #f2c14e;
+  --eq-danger: #ff8a80;
+  --eq-ok-bg: #12301c;
+  --eq-info-bg: #142338;
+  --eq-warn-bg: #3a2c05;
+  --eq-danger-bg: #3b1512;
+}
+
+/* Banner component (UI-02, M3-07 base markup) */
+.banner {
+  padding: 1rem;
+  text-align: center;
+  font-weight: 600;
+  border-bottom: 2px solid;
+}
+.banner[role="status"] { background: var(--eq-info-bg); color: var(--eq-info); border-color: var(--eq-info); }
+.banner[role="alert"] { background: var(--eq-warn-bg); color: var(--eq-warn); border-color: var(--eq-warn); }
+/* Chip component (UI-02, design.md § 5): text + colour, five variants */
+.chip {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  font-size: var(--eq-text-s);
+  font-weight: 600;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.chip-ok { background: var(--eq-ok-bg); color: var(--eq-ok); }
+.chip-info { background: var(--eq-info-bg); color: var(--eq-info); }
+.chip-warn { background: var(--eq-warn-bg); color: var(--eq-warn); }
+.chip-danger { background: var(--eq-danger-bg); color: var(--eq-danger); }
+.chip-muted { background: transparent; color: var(--eq-muted); }
+
+/* Chip links inherit focus outline */
+a.chip:focus-visible {
+  outline: 2px solid var(--pico-primary);
+  outline-offset: 2px;
+}
+
+/* Strip component (UI-02, design.md § 5): dl of label/value pairs, inline layout */
+.strip {
+  margin: 0 0 var(--eq-space-3);
+  padding: var(--eq-space-2);
+  background: var(--pico-card-background-color, #f9f9f9);
+  border-left: 4px solid var(--eq-info);
+  font-size: var(--eq-text-s);
+}
+.strip > div {
+  display: inline-block;
+  margin-right: var(--eq-space-3);
+}
+.strip dt {
+  display: inline;
+  font-weight: 600;
+  margin-right: var(--eq-space-1);
+}
+.strip dd {
+  display: inline;
+  margin: 0;
+}
+
+/* As-of line in header (UI-02, design.md § 5) */
+.asof {
+  font-size: var(--eq-text-s);
+  color: var(--eq-muted);
+  margin: 0;
+}
+
+/* Data table component (UI-02, design.md § 5): compact, numeric right-aligned, code wraps */
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+}
+table.data th,
+table.data td {
+  padding: var(--eq-table-pad);
+  text-align: left;
+  vertical-align: top;
+}
+table.data td.num {
+  text-align: right;
+}
+table.data code {
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+/* Stacked rows under 640px (UI-02, design.md § 5): rows become blocks, cells show labels */
+@media (max-width: 640px) {
+  table.data.stack,
+  table.data.stack thead,
+  table.data.stack tbody,
+  table.data.stack tr,
+  table.data.stack th,
+  table.data.stack td {
+    display: block;
+  }
+  table.data.stack thead {
+    display: none;
+  }
+  table.data.stack tr {
+    margin-bottom: var(--eq-space-3);
+    border: 1px solid var(--pico-muted-border-color);
+    padding: var(--eq-space-2);
+  }
+  table.data.stack td {
+    text-align: left !important;
+    padding-left: 50%;
+    position: relative;
+  }
+  table.data.stack td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: var(--eq-space-2);
+    font-weight: 600;
+  }
+}
+
+/* Two-line clamp (UI-02, design.md § 5) */
+.clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .question { font-size: 1.1rem; margin: 0 0 1rem; color: var(--pico-muted-color); }
 .venue { font-variant: small-caps; font-weight: 600; letter-spacing: 0.02em; }
 table.pairs td, table.diff td { vertical-align: top; }
-.diff-match td:last-child { color: #2e7d32; font-weight: 600; }
-.diff-differ td:last-child { color: #c62828; font-weight: 600; }
-.diff-unknown td:last-child { color: var(--pico-muted-color); font-style: italic; }
-.type-equivalent, .type-equivalent_given_facts { color: #2e7d32; font-weight: 600; }
-.type-complement, .type-implies { color: #1565c0; font-weight: 600; }
-.type-related { color: #ef6c00; font-weight: 600; }
-.type-unrelated { color: var(--pico-muted-color); }
+
+/* Existing type/diff/pass/fail rules re-expressed on tokens (UI-02) */
+.diff-match td:last-child { color: var(--eq-ok); font-weight: 600; }
+.diff-differ td:last-child { color: var(--eq-danger); font-weight: 600; }
+.diff-unknown td:last-child { color: var(--eq-muted); font-style: italic; }
+.type-equivalent, .type-equivalent_given_facts { color: var(--eq-ok); font-weight: 600; }
+.type-complement, .type-implies { color: var(--eq-info); font-weight: 600; }
+.type-related { color: var(--eq-warn); font-weight: 600; }
+.type-unrelated { color: var(--eq-muted); }
+.pass { color: var(--eq-ok); font-weight: 600; }
+.fail { color: var(--eq-danger); font-weight: 600; }
+
 .explanation { white-space: pre-wrap; }
 .rules { white-space: pre-wrap; max-height: 20rem; overflow: auto; font-size: 0.9rem; }
 .trace { margin-top: 1rem; }
-.trace ul[role="alert"] { color: #c62828; }
+.trace ul[role="alert"] { color: var(--eq-danger); }
 .vetoes { margin: 0; padding-left: 1rem; font-size: 0.9rem; }
 .vetoes li { margin: 0; }
 table.log td.summary { font-size: 0.9rem; white-space: pre-wrap; word-break: break-word; }
-.pass { color: #2e7d32; font-weight: 600; }
-.fail { color: #c62828; font-weight: 600; }
 details.types .plain { color: var(--pico-color); font-weight: 400; }
 /* Price-history chart: server-rendered SVG, every colour and stroke here. */
 figure.history { margin: 0 0 1rem; }

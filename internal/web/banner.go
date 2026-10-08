@@ -9,6 +9,7 @@ import (
 func (s *Server) pageBase(r store.Round, title, question, timezone string) page {
 	var round *roundInfo
 	var bnr banner
+	var staleWarn string
 
 	if r.ID == 0 {
 		// No round available: show the no-round fallback banner
@@ -23,15 +24,18 @@ func (s *Server) pageBase(r store.Round, title, question, timezone string) page 
 			}
 			bnr = banner{Show: true, Pinned: true, AsOf: formatTime(asOf, timezone), RoundID: r.ID}
 		}
+		// Check for stale round warning (UI-02: stale warning banner)
+		staleWarn = s.staleRoundWarning(r)
 		// else: unpinned round, no banner (bnr is zero value)
 	}
 
 	return page{
-		Title:    title,
-		Question: question,
-		Assets:   pinnedAssets,
-		Round:    round,
-		Banner:   bnr,
-		Timezone: timezone,
+		Title:        title,
+		Question:     question,
+		Assets:       pinnedAssets,
+		Round:        round,
+		Banner:       bnr,
+		Timezone:     timezone,
+		StaleWarning: staleWarn,
 	}
 }
