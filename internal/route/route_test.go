@@ -215,6 +215,15 @@ func TestRouteIOCPartialWhenNothingFillsFully(t *testing.T) {
 	if len(dec.Chosen) != 0 || !strings.Contains(dec.Explanation, "No venue can fill") {
 		t.Errorf("FOK 500: chosen = %+v explanation = %s", dec.Chosen, dec.Explanation)
 	}
+	// Round 3 #3: FOK should exclude both candidates (insufficient combined depth)
+	if len(dec.Exclusions) != 2 {
+		t.Errorf("FOK 500: expected 2 exclusions, got %d: %+v", len(dec.Exclusions), dec.Exclusions)
+	}
+	for _, ex := range dec.Exclusions {
+		if ex.Reason != ReasonInsufficientDepth {
+			t.Errorf("FOK 500 exclusion: reason = %s, want %s: %+v", ex.Reason, ReasonInsufficientDepth, ex)
+		}
+	}
 }
 
 // TestRouteLimit: a 0.51 limit excludes Kalshi (best ask 0.52) outright and

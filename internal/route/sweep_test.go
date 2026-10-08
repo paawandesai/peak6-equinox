@@ -316,6 +316,44 @@ func TestRouteFOKInsufficientDepth(t *testing.T) {
 	}
 }
 
+// TestRouteFOKMultiVenueFullFill: FOK fills completely from multiple venues.
+// Round 3 #1: verify chosen instruments are not in Exclusions.
+func TestRouteFOKMultiVenueFullFill(t *testing.T) {
+	// FOK 100: kalshi 60, polymarket 80 -> fills 60+40=100 from both venues
+	target := cand(kalshiID, nil, []canonical.Level{lv("0.50", "60")}, nil)
+	partner := cand(polymarketID, nil, []canonical.Level{lv("0.52", "80")},
+		rel(kalshiID, polymarketID, canonical.RelEquivalent, "0.97"))
+	partner.Relationship.BasisRisk = &canonical.BasisRisk{Score: d("0"), Components: []canonical.BasisComponent{}}
+
+	o := buy("100")
+	o.TIF = canonical.TIFFOK
+	dec, err := Route(o, target, []canonical.Candidate{partner}, cfg, t0)
+	if err != nil {
+		t.Fatalf("Route: %v", err)
+	}
+
+	// FOK should fill completely from both venues
+	if len(dec.Chosen) != 2 {
+		t.Fatalf("FOK multi-venue fill should have 2 legs, got %d: %+v", len(dec.Chosen), dec.Chosen)
+	}
+
+	totalFilled := dec.Chosen[0].Quantity.Add(dec.Chosen[1].Quantity)
+	if !totalFilled.Equal(d("100")) {
+		t.Errorf("total filled = %s, want 100", totalFilled)
+	}
+
+	// Round 3 #1: verify no chosen instrument is in Exclusions
+	chosenIDs := make(map[string]bool)
+	for _, leg := range dec.Chosen {
+		chosenIDs[leg.InstrumentID] = true
+	}
+	for _, ex := range dec.Exclusions {
+		if chosenIDs[ex.InstrumentID] {
+			t.Errorf("chosen instrument %s appears in Exclusions: %+v", ex.InstrumentID, ex)
+		}
+	}
+}
+
 // TestRouteSellSideGreedySweep: sell-side greedy sweep (M3-03 #7: sell test).
 func TestRouteSellSideGreedySweep(t *testing.T) {
 	// Sell 100: kalshi bids 0.48 (100), polymarket bids 0.49 (80)

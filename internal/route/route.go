@@ -252,7 +252,15 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 			} else {
 				// FOK filled completely from one or more venues
 				// Add exclusions for candidates that couldn't fill the full order alone
+				// (Round 3 #1: skip candidates whose InstrumentID is in chosen legs)
+				chosenIDs := make(map[string]bool)
+				for _, leg := range legs {
+					chosenIDs[leg.InstrumentID] = true
+				}
 				for _, opt := range opts {
+					if chosenIDs[opt.leg.InstrumentID] {
+						continue // Skip chosen candidates
+					}
 					if opt.leg.Quantity.LessThan(sz.qty) {
 						reason := ReasonInsufficientDepth
 						detail := fmt.Sprintf("FOK requires %s contracts; %s can fill %s", sz.qty, opt.leg.InstrumentID, opt.leg.Quantity)
@@ -316,7 +324,8 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 		}
 		note := NoteChosen
 		if sz.ok && totalQty.LessThan(sz.qty) {
-			note = fmt.Sprintf("%s (%s: %s of %s contracts)", NoteChosen, NotePartial, totalQty, sz.qty)
+			// Round 3 #2: match single-leg format "partial fill: N of M (chosen)"
+			note = fmt.Sprintf("%s: %s of %s contracts (%s)", NotePartial, totalQty, sz.qty, NoteChosen)
 		}
 		sweepAlt := canonical.Alternative{
 			Rank:             1,
