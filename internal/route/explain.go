@@ -14,9 +14,6 @@ const pricePlaces = 4
 
 func money(d decimal.Decimal) string { return d.StringFixed(pricePlaces) }
 
-// explain and related functions are replaced by explainSweep in route.go (M3-03).
-// Kept here for backwards compatibility and potential future use.
-
 func orderSentence(o canonical.Order, targetID string, sz sizing) string {
 	kind := "market"
 	if o.Type == canonical.OrderLimit {

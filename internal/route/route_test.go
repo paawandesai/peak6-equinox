@@ -187,19 +187,27 @@ func TestRouteFOKNeverPartiallyFills(t *testing.T) {
 }
 
 // TestRouteIOCPartialWhenNothingFillsFully: wanting 500, every book is short;
-// IOC picks the lowest all-in partial and says so.
+// M3-03 greedy sweep fills across venues (one leg per venue, not per price level).
 func TestRouteIOCPartialWhenNothingFillsFully(t *testing.T) {
 	target, partners := scenario()
 	dec := mustRoute(t, buy("500"), target, partners)
-	if len(dec.Chosen) != 1 || dec.Chosen[0].InstrumentID != polymarketID || !dec.Chosen[0].Quantity.Equal(d("150")) {
-		t.Fatalf("chosen = %+v", dec.Chosen)
+	// Greedy sweep creates one leg per venue: poly (150 total) + kalshi (100) = 250
+	if len(dec.Chosen) != 2 {
+		t.Fatalf("chosen should have 2 legs (one per venue), got %d: %+v", len(dec.Chosen), dec.Chosen)
 	}
-	if !hasWarning(dec, "fills 150 of 500") || !strings.Contains(dec.Explanation, "only 150 of 500") {
-		t.Errorf("warnings = %v\nexplanation = %s", dec.Warnings, dec.Explanation)
+	totalFilled := decimal.Zero
+	for _, leg := range dec.Chosen {
+		totalFilled = totalFilled.Add(leg.Quantity)
+	}
+	if !totalFilled.Equal(d("250")) {
+		t.Errorf("total filled = %s, want 250 (greedy sweep across venues)", totalFilled)
+	}
+	if !hasWarning(dec, "fills 250 of 500") {
+		t.Errorf("warnings = %v (should mention partial fill)", dec.Warnings)
 	}
 	dec = mustRoute(t, fok(buy("500")), target, partners)
-	if len(dec.Chosen) != 0 || len(dec.Exclusions) != 2 || !strings.Contains(dec.Explanation, "No venue can fill") {
-		t.Errorf("FOK 500: chosen = %+v exclusions = %+v", dec.Chosen, dec.Exclusions)
+	if len(dec.Chosen) != 0 || !strings.Contains(dec.Explanation, "No venue can fill") {
+		t.Errorf("FOK 500: chosen = %+v explanation = %s", dec.Chosen, dec.Explanation)
 	}
 }
 

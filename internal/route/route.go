@@ -223,9 +223,13 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 	}
 
 	// Build Alternatives: show single-venue options that were considered
+	// FOK excludes partials from Alternatives (M3-03 #3: FOK partials out of Alternatives)
 	for i, opt := range opts {
 		alt := canonical.Alternative{Rank: i + 1, Legs: []canonical.Leg{opt.leg}, AllInPerContract: opt.leg.AllInPerContract}
 		if !opt.full {
+			if o.TIF == canonical.TIFFOK {
+				continue // FOK: skip partial alternatives
+			}
 			alt.Note = fmt.Sprintf("%s: %s of %s contracts", NotePartial, opt.leg.Quantity, sz.qty)
 		}
 		d.Alternatives = append(d.Alternatives, alt)
@@ -244,7 +248,7 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 			}
 		}
 	} else if len(legs) > 1 {
-		// Multi-venue fill: add it as rank 1 Alternative with NoteChosen
+		// Multi-venue fill: add it as rank 1 Alternative with NoteChosen (+ NotePartial if partial)
 		totalQty := decimal.Zero
 		totalNotional := decimal.Zero
 		for _, leg := range legs {
@@ -255,11 +259,15 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 		if totalQty.IsPositive() {
 			avgAllIn = totalNotional.Div(totalQty)
 		}
+		note := NoteChosen
+		if sz.ok && totalQty.LessThan(sz.qty) {
+			note = fmt.Sprintf("%s (%s: %s of %s contracts)", NoteChosen, NotePartial, totalQty, sz.qty)
+		}
 		sweepAlt := canonical.Alternative{
 			Rank:             1,
 			Legs:             legs,
 			AllInPerContract: avgAllIn,
-			Note:             NoteChosen,
+			Note:             note,
 		}
 		// Prepend the multi-venue alternative and re-rank the rest
 		d.Alternatives = append([]canonical.Alternative{sweepAlt}, d.Alternatives...)
@@ -271,7 +279,7 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 		}
 	}
 
-	d.Warnings = append(d.Warnings, warnings(o, opts, sz)...)
+	d.Warnings = append(d.Warnings, warnings(o, opts, legs, sz)...)
 	if !sz.ok && len(legs) == 0 && len(opts) == 0 {
 		// No candidate could convert the notional (no touch anywhere)
 		d.Explanation = orderSentence(o, d.TargetID, sz) + " No venue can fill this order: every candidate was excluded."
@@ -279,7 +287,7 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 			d.Explanation = orderSentence(o, d.TargetID, sz) + " Notional order could not be converted: no candidate has a touch."
 		}
 	} else {
-		d.Explanation = explainSweep(d, legs, sz, cfg)
+		d.Explanation = explainSweep(d, legs, opts, sz, cfg)
 	}
 	return d, nil
 }
@@ -359,11 +367,7 @@ func evaluate(c candidate, o canonical.Order, sz sizing, cfg Config) (option, ca
 	switch {
 	case f.Quantity.IsZero():
 		return fail(ReasonLimitNotReachable, fmt.Sprintf("best %s is %s, outside the %s limit", sideName(o.Side), levels[0].Price, o.LimitPrice))
-	case f.Quantity.LessThan(sz.qty) && o.TIF == canonical.TIFFOK:
-		if f.Depth.GreaterThanOrEqual(sz.qty) {
-			return fail(ReasonLimitNotReachable, fmt.Sprintf("only %s of %s contracts within the %s limit; FOK needs all", f.Quantity, sz.qty, o.LimitPrice))
-		}
-		return fail(ReasonInsufficientDepth, fmt.Sprintf("only %s of %s contracts available; FOK needs all", f.Quantity, sz.qty))
+		// FOK partial-fill check removed: Sweep handles FOK by checking combined fill (M3-03 #2)
 	}
 
 	fee, err := totalFee(c.Instrument.FeeSchedule, o.Side, f)
@@ -464,15 +468,22 @@ func better(side canonical.Side, a, b option) bool {
 }
 
 // warnings lists what a reader should know beyond the ranking.
-func warnings(o canonical.Order, opts []option, sz sizing) []string {
+func warnings(o canonical.Order, opts []option, legs []canonical.Leg, sz sizing) []string {
 	w := []string{}
 	for _, opt := range opts {
 		if !opt.verified {
 			w = append(w, fmt.Sprintf("fees: approximate for %s (schedule not verified against official docs)", opt.leg.Venue))
 		}
 	}
-	if len(opts) > 0 && !opts[0].full {
-		w = append(w, fmt.Sprintf("%s: chosen route fills %s of %s contracts (%s)", NotePartial, opts[0].leg.Quantity, sz.qty, o.TIF))
+	// Derive partial warning from swept legs, not opts[0] (M3-03 #3: multi-venue partials)
+	if len(legs) > 0 && sz.ok {
+		totalFilled := decimal.Zero
+		for _, leg := range legs {
+			totalFilled = totalFilled.Add(leg.Quantity)
+		}
+		if totalFilled.LessThan(sz.qty) {
+			w = append(w, fmt.Sprintf("%s: chosen route fills %s of %s contracts (%s)", NotePartial, totalFilled, sz.qty, o.TIF))
+		}
 	}
 	if sz.notional != nil && sz.ok {
 		w = append(w, fmt.Sprintf("quantity %s derived from notional %s at the %s touch", sz.qty, sz.notional, sz.touch))
@@ -490,36 +501,46 @@ func sideName(s canonical.Side) string {
 
 // explainSweep generates explanation for a sweep result (M3-03).
 // It handles both single-venue and multi-venue fills.
-func explainSweep(d canonical.Decision, legs []canonical.Leg, sz sizing, cfg Config) string {
+func explainSweep(d canonical.Decision, legs []canonical.Leg, opts []option, sz sizing, cfg Config) string {
 	var b strings.Builder
 	b.WriteString(orderSentence(d.Order, d.TargetID, sz))
 
 	if len(legs) == 0 {
 		b.WriteString(" No venue can fill this order: every candidate was excluded.")
 	} else if len(legs) == 1 {
-		// Single-venue fill: use the existing detailed explanation
+		// Single-venue fill: include explicit "filled N of M" and shortfall (M3-03 #6)
+		filled := legs[0].Quantity
+		fillDesc := fmt.Sprintf("%s of %s", filled, sz.qty)
+		if filled.Equal(sz.qty) {
+			fillDesc = fmt.Sprintf("all %s", filled)
+		}
 		fmt.Fprintf(&b, " Best route: %s (%s) fills %s contracts at a VWAP of %s %s.",
-			legs[0].Venue, legs[0].InstrumentID, legs[0].Quantity, money(legs[0].VWAP), costClause(legs[0]))
+			legs[0].Venue, legs[0].InstrumentID, fillDesc, money(legs[0].VWAP), costClause(legs[0]))
+		if filled.LessThan(sz.qty) {
+			shortfall := sz.qty.Sub(filled)
+			fmt.Fprintf(&b, " Shortfall: %s contracts (%s).", shortfall, d.Order.TIF)
+		}
 	} else {
-		// Multi-venue sweep fill
+		// Multi-venue sweep fill: include total cost and explicit "filled N of M" (M3-03 #6)
 		totalQty := decimal.Zero
-		totalNotional := decimal.Zero
+		totalCost := decimal.Zero
 		for _, leg := range legs {
 			totalQty = totalQty.Add(leg.Quantity)
-			totalNotional = totalNotional.Add(leg.Quantity.Mul(leg.AllInPerContract))
+			legCost := leg.Quantity.Mul(leg.AllInPerContract)
+			totalCost = totalCost.Add(legCost)
 		}
 		avgAllIn := decimal.Zero
 		if totalQty.IsPositive() {
-			avgAllIn = totalNotional.Div(totalQty)
+			avgAllIn = totalCost.Div(totalQty)
 		}
 
-		fillDesc := "all"
-		if totalQty.LessThan(sz.qty) {
-			fillDesc = "partial"
+		fillDesc := fmt.Sprintf("%s of %s", totalQty, sz.qty)
+		if totalQty.Equal(sz.qty) {
+			fillDesc = "all"
 		}
 
-		fmt.Fprintf(&b, " Best route: %s fill across %d venues at average all-in %s per contract.",
-			fillDesc, len(legs), money(avgAllIn))
+		fmt.Fprintf(&b, " Best route: %s fill across %d venues (%s contracts at average all-in %s, total cost %s).",
+			fillDesc, len(legs), totalQty, money(avgAllIn), money(totalCost))
 
 		// List each leg in cost order
 		for i, leg := range legs {
@@ -563,13 +584,17 @@ func explainSweep(d canonical.Decision, legs []canonical.Leg, sz sizing, cfg Con
 		b.WriteString(" Excluded: " + strings.Join(parts, "; ") + ".")
 	}
 
-	// Fee verification status
+	// Fee verification status from all opts (chosen + alternatives), not just chosen legs
+	// (M3-03 #5: use FeeSchedule.Verified, not venue name)
 	var verified, approx []string
-	for _, leg := range legs {
-		v := string(leg.Venue)
-		// Need to look up verification status from the original candidates
-		// For now, use a simplified check (will be correct if Kalshi unverified, Polymarket verified per domain.md)
-		if leg.Venue == canonical.VenuePolymarket {
+	seenVenues := make(map[canonical.Venue]bool)
+	for _, opt := range opts {
+		if seenVenues[opt.leg.Venue] {
+			continue // already added
+		}
+		seenVenues[opt.leg.Venue] = true
+		v := string(opt.leg.Venue)
+		if opt.verified {
 			verified = append(verified, v)
 		} else {
 			approx = append(approx, v)

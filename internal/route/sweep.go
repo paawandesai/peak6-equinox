@@ -1,7 +1,6 @@
 package route
 
 import (
-	"fmt"
 	"sort"
 
 	"github.com/shopspring/decimal"
@@ -109,13 +108,20 @@ func Sweep(order canonical.Order, candidates []canonical.Candidate, cfg Config) 
 	// venue could fill completely. The only optimization is: if the absolute
 	// cheapest venue can fill completely, use it alone (it's optimal).
 	//
-	// To determine "cheapest", we need to find the candidate with lowest quantized cost.
+	// To determine "cheapest", we need to find the candidate with lowest quantized cost (buy)
+	// or highest net proceeds (sell). Side-aware comparison per M3-03 #4.
 	cheapestIdx := 0
 	if len(ranked) > 1 {
 		cheapestCost := quantizeCost(ranked[0].opt.leg.AllInPerContract)
 		for i := 1; i < len(ranked); i++ {
 			cost := quantizeCost(ranked[i].opt.leg.AllInPerContract)
-			if cost.LessThan(cheapestCost) {
+			isBetter := false
+			if order.Side == canonical.SideBuy {
+				isBetter = cost.LessThan(cheapestCost) // lower cost is better for buys
+			} else {
+				isBetter = cost.GreaterThan(cheapestCost) // higher proceeds are better for sells
+			}
+			if isBetter {
 				cheapestCost = cost
 				cheapestIdx = i
 			}
@@ -199,42 +205,4 @@ func Sweep(order canonical.Order, candidates []canonical.Candidate, cfg Config) 
 	}
 
 	return legs
-}
-
-// SweepExplanation generates a human-readable explanation for a multi-venue
-// sweep result. It lists legs in cost order, shows the total filled, total
-// cost, average all-in price, and any shortfall.
-func SweepExplanation(order canonical.Order, legs []canonical.Leg, _ Config) string {
-	if len(legs) == 0 {
-		return "No venue could fill any of the order."
-	}
-
-	totalQty := decimal.Zero
-	totalNotional := decimal.Zero
-	for _, leg := range legs {
-		totalQty = totalQty.Add(leg.Quantity)
-		totalNotional = totalNotional.Add(leg.Quantity.Mul(leg.AllInPerContract))
-	}
-
-	avgAllIn := decimal.Zero
-	if totalQty.IsPositive() {
-		avgAllIn = totalNotional.Div(totalQty)
-	}
-
-	out := fmt.Sprintf("Filled %s of %s contracts across %d venue(s) at average all-in %s per contract.",
-		totalQty, *order.Quantity, len(legs), avgAllIn)
-
-	if totalQty.LessThan(*order.Quantity) {
-		shortfall := (*order.Quantity).Sub(totalQty)
-		out += fmt.Sprintf(" Shortfall: %s contracts (%s).", shortfall, order.TIF)
-	}
-
-	out += " Legs in cost order:"
-	for i, leg := range legs {
-		out += fmt.Sprintf(" [%d] %s %s %s contracts at VWAP %s + fee %s + basis %s = %s",
-			i+1, leg.Venue, leg.InstrumentID, leg.Quantity,
-			leg.VWAP, leg.FeePerContract, leg.BasisPenaltyPerContract, leg.AllInPerContract)
-	}
-
-	return out
 }

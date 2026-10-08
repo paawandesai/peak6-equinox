@@ -236,56 +236,96 @@ func TestSweepWithLimit(t *testing.T) {
 	}
 }
 
-// TestSweepExplanation: explanation contains expected details.
-func TestSweepExplanation(t *testing.T) {
-	o := buy("100")
-	cand1 := cand(kalshiID, nil, []canonical.Level{lv("0.50", "60")}, nil)
-	cand2 := cand(polymarketID, nil, []canonical.Level{lv("0.52", "100")},
+// TestRouteIOCPartialSweep: IOC partial sweep across venues (Route-level).
+func TestRouteIOCPartialSweep(t *testing.T) {
+	// 200 order, 60 @ kalshi, 80 @ polymarket = 140 total
+	target := cand(kalshiID, nil, []canonical.Level{lv("0.50", "60")}, nil)
+	partner := cand(polymarketID, nil, []canonical.Level{lv("0.52", "80")},
 		rel(kalshiID, polymarketID, canonical.RelEquivalent, "0.97"))
+	partner.Relationship.BasisRisk = &canonical.BasisRisk{Score: d("0"), Components: []canonical.BasisComponent{}}
 
-	legs := Sweep(o, []canonical.Candidate{cand1, cand2}, cfg)
-	expl := SweepExplanation(o, legs, cfg)
-
-	// Check that explanation contains key details
-	wantPhrases := []string{
-		"Filled 100",
-		"across 2 venue(s)",
-		"Legs in cost order",
-		"kalshi",
-		"polymarket",
+	dec, err := Route(buy("200"), target, []canonical.Candidate{partner}, cfg, t0)
+	if err != nil {
+		t.Fatalf("Route: %v", err)
 	}
-	for _, want := range wantPhrases {
-		if !strings.Contains(expl, want) {
-			t.Errorf("explanation missing %q: %s", want, expl)
+
+	// Should have 2 legs (greedy sweep)
+	if len(dec.Chosen) != 2 {
+		t.Fatalf("chosen = %+v (want 2 legs)", dec.Chosen)
+	}
+
+	totalFilled := dec.Chosen[0].Quantity.Add(dec.Chosen[1].Quantity)
+	if !totalFilled.Equal(d("140")) {
+		t.Errorf("total filled = %s, want 140", totalFilled)
+	}
+
+	// Check warnings include partial fill
+	foundPartial := false
+	for _, w := range dec.Warnings {
+		if strings.Contains(w, "fills 140 of 200") {
+			foundPartial = true
 		}
+	}
+	if !foundPartial {
+		t.Errorf("warnings missing partial fill: %v", dec.Warnings)
 	}
 }
 
-// TestSweepExplanationPartial: partial fill explanation includes shortfall.
-func TestSweepExplanationPartial(t *testing.T) {
-	o := buy("200")
-	cand1 := cand(kalshiID, nil, []canonical.Level{lv("0.50", "60")}, nil)
-	cand2 := cand(polymarketID, nil, []canonical.Level{lv("0.52", "80")},
+// TestRouteFOKInsufficientDepth: FOK rejects partial with empty Chosen.
+func TestRouteFOKInsufficientDepth(t *testing.T) {
+	// 200 order FOK, but only 140 available total
+	target := cand(kalshiID, nil, []canonical.Level{lv("0.50", "60")}, nil)
+	partner := cand(polymarketID, nil, []canonical.Level{lv("0.52", "80")},
 		rel(kalshiID, polymarketID, canonical.RelEquivalent, "0.97"))
+	partner.Relationship.BasisRisk = &canonical.BasisRisk{Score: d("0"), Components: []canonical.BasisComponent{}}
 
-	legs := Sweep(o, []canonical.Candidate{cand1, cand2}, cfg)
-	expl := SweepExplanation(o, legs, cfg)
-
-	// Check shortfall mentioned
-	wantPhrases := []string{
-		"Filled 140",
-		"Shortfall: 60",
-		"IOC",
+	o := buy("200")
+	o.TIF = canonical.TIFFOK
+	dec, err := Route(o, target, []canonical.Candidate{partner}, cfg, t0)
+	if err != nil {
+		t.Fatalf("Route: %v", err)
 	}
-	for _, want := range wantPhrases {
-		if !strings.Contains(expl, want) {
-			t.Errorf("partial explanation missing %q: %s", want, expl)
-		}
+
+	// FOK should reject partial (no chosen)
+	if len(dec.Chosen) != 0 {
+		t.Errorf("FOK partial should be rejected, got chosen = %+v", dec.Chosen)
+	}
+}
+
+// TestRouteSellSideGreedySweep: sell-side greedy sweep (M3-03 #7: sell test).
+func TestRouteSellSideGreedySweep(t *testing.T) {
+	// Sell 100: kalshi bids 0.48 (100), polymarket bids 0.49 (80)
+	// Greedy: sell to highest bidder first (0.49, then 0.48)
+	target := cand(kalshiID, []canonical.Level{lv("0.48", "100")}, nil, nil)
+	partner := cand(polymarketID, []canonical.Level{lv("0.49", "80")}, nil,
+		rel(kalshiID, polymarketID, canonical.RelEquivalent, "0.97"))
+	partner.Relationship.BasisRisk = &canonical.BasisRisk{Score: d("0"), Components: []canonical.BasisComponent{}}
+
+	o := canonical.Order{Side: canonical.SideSell, Outcome: canonical.OutcomeYes,
+		Quantity: ptr("100"), Type: canonical.OrderMarket, TIF: canonical.TIFIOC}
+	dec, err := Route(o, target, []canonical.Candidate{partner}, cfg, t0)
+	if err != nil {
+		t.Fatalf("Route: %v", err)
+	}
+
+	// Should have 2 legs: 80 @ polymarket (0.49), 20 @ kalshi (0.48)
+	if len(dec.Chosen) != 2 {
+		t.Fatalf("sell sweep should have 2 legs, got %d: %+v", len(dec.Chosen), dec.Chosen)
+	}
+
+	// First leg should be polymarket (higher bid)
+	if dec.Chosen[0].InstrumentID != polymarketID || !dec.Chosen[0].Quantity.Equal(d("80")) {
+		t.Errorf("first leg = %+v, want polymarket 80", dec.Chosen[0])
+	}
+
+	// Second leg should be kalshi (remaining 20)
+	if dec.Chosen[1].InstrumentID != kalshiID || !dec.Chosen[1].Quantity.Equal(d("20")) {
+		t.Errorf("second leg = %+v, want kalshi 20", dec.Chosen[1])
 	}
 }
 
 // TestSweepGreedyProperty: greedy never leaves a cheaper unfilled contract when
-// a more expensive one was filled (within the same venue, monotonic book walk).
+// a more expensive one was filled (M3-03 #7: non-vacuous property test).
 func TestSweepGreedyProperty(t *testing.T) {
 	rapid.Check(t, func(rt *rapid.T) {
 		qty := rapid.IntRange(1, 200).Draw(rt, "qty")
@@ -293,8 +333,8 @@ func TestSweepGreedyProperty(t *testing.T) {
 		// Generate two price levels at different prices
 		p1 := rapid.Float64Range(0.01, 0.99).Draw(rt, "p1")
 		p2 := rapid.Float64Range(0.01, 0.99).Draw(rt, "p2")
-		if p1 > p2 {
-			p1, p2 = p2, p1 // ensure p1 < p2 (cheaper first)
+		if p1 >= p2 {
+			p1, p2 = p2, p1+0.01 // ensure p1 < p2 with gap
 		}
 
 		sz1 := rapid.IntRange(1, 100).Draw(rt, "sz1")
@@ -309,21 +349,19 @@ func TestSweepGreedyProperty(t *testing.T) {
 		legs := Sweep(o, []canonical.Candidate{cand}, cfg)
 
 		if len(legs) == 0 {
-			return // no fill is valid (e.g., closed instrument)
+			return // no fill
 		}
 
-		// If we filled any quantity, verify monotonic walk:
-		// - If we filled from the second level (p2), we must have exhausted the first (p1)
+		// Property: if filled > sz1, VWAP must reflect both levels
 		totalFilled := legs[0].Quantity
-		if totalFilled.GreaterThan(d(fmt.Sprintf("%d", sz1))) {
-			// We consumed into the second level, so the cheaper first level must be exhausted
-			// Verify that the fill is within the available liquidity
-			if totalFilled.GreaterThan(d(fmt.Sprintf("%d", sz1+sz2))) {
-				rt.Fatalf("filled %s exceeds available %d", totalFilled, sz1+sz2)
+		availableAtP1 := d(fmt.Sprintf("%d", sz1))
+		if totalFilled.GreaterThan(availableAtP1) {
+			vwap := legs[0].VWAP
+			// VWAP must be > p1 (consumed into more expensive p2)
+			if vwap.LessThanOrEqual(d(fmt.Sprintf("%.4f", p1))) {
+				rt.Fatalf("filled %s (> %s), but VWAP %s <= p1 %.4f",
+					totalFilled, availableAtP1, vwap, p1)
 			}
 		}
 	})
 }
-
-// Helper functions are imported from route_test.go and walk_test.go
-// (lv, d, ptr, hasWarning, contains are already defined)
