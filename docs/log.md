@@ -154,7 +154,7 @@ Added `Inputs []DecisionInput` to `canonical.Decision` (UI-25, D-098 call 3). Th
 
 Stored in the same `routing_decisions.decision` jsonb; no SQL migration needed. Old decisions decode with empty `Inputs` (omitempty). Size is bounded: levels capped at 10, candidates capped by the number of partners.
 
-**Tests:** Added `inputs_test.go` with 8 tests: single-venue fill, two-venue sweep, complement route, excluded candidates, not-routed order, depth cap, old decision decode, and in-process JSON round-trip. Added store round-trip test in `internal/store/crud_test.go` to verify `GetRoutingDecision`/`ListRoutingDecisions` round-trip the Inputs field through Postgres. Updated `docs_examples_test.go` to verify inputs are recorded. All tests pass.
+**Tests:** Added `inputs_test.go` with 8 tests: single-venue fill, two-venue sweep, complement route, excluded candidates, not-routed order, depth cap, old decision decode, and in-process JSON round-trip. Added store round-trip test in `internal/store/crud_test.go` TestRoutingDecisions to verify both `GetRoutingDecision` and `ListRoutingDecisions` round-trip the Inputs field through Postgres. Updated `docs_examples_test.go` to verify inputs are recorded. All tests pass.
 
 **Cursor review round 1:** Fixed false claims: removed TargetType field (was never populated), corrected "self" claim (target relationship type is empty string), moved D-099 to correct table in status.md (was in Security findings instead of Awaiting human veto), added actual store round-trip test, corrected test count from 7 to 8, removed p95 claim (not measured for HTTP endpoint).
 

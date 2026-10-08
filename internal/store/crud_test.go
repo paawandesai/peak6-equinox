@@ -497,6 +497,24 @@ func TestRoutingDecisions(t *testing.T) {
 			t.Errorf("input[1] = %+v", inp)
 		}
 	}
+	// Verify ListRoutingDecisions also round-trips Inputs
+	listWithInputs, err := s.ListRoutingDecisions(ctx, 10)
+	if err != nil {
+		t.Fatalf("ListRoutingDecisions: %v", err)
+	}
+	var foundWithInputs bool
+	for _, rd := range listWithInputs {
+		if rd.ID == idWithInputs {
+			foundWithInputs = true
+			if len(rd.Decision.Inputs) != 2 {
+				t.Errorf("ListRoutingDecisions inputs count = %d, want 2", len(rd.Decision.Inputs))
+			}
+			break
+		}
+	}
+	if !foundWithInputs {
+		t.Error("decision with inputs not found in ListRoutingDecisions")
+	}
 }
 
 func TestDecisionLog(t *testing.T) {
