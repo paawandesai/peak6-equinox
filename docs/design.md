@@ -198,18 +198,18 @@ Paawan's rule (2026-10-07 8:55 PM CT, superseding the cut order in the UI brief)
 
 ## 9. What was proposed and not built
 
-Recorded in [status.md](status.md) under "Open questions" (Q-9): the frontend-design plugin's method asks for a distinctive typeface and palette. A new web font would be a new CDN asset (Tier 2, D-082 reserved) and is polish the brief does not grade (D-031); the recommendation is to keep Pico's system font stack. The palette above is semantic, not decorative.
+Recorded in [status.md](status.md) under "Open questions" (Q-10): the frontend-design plugin's method asks for a distinctive typeface and palette. A new web font would be a new CDN asset (Tier 2, needing its own D- entry) and is polish the brief does not grade (D-031); the recommendation is to keep Pico's system font stack. The palette above is semantic, not decorative.
 
 ## 10. The UI-02 onward split
 
-Tickets live in [tickets/M3.md](tickets/M3.md) as wave 9. Summary of ownership so no two in-flight tickets share a file:
+Tickets live in [tickets/M3.md](tickets/M3.md) as wave 9. Summary of ownership so no two in-flight tickets share a file. The shared Go helpers (confidence bucket word, basis-risk word, type-chip class, outcome phrase) live in `internal/web/viewmodel.go`, owned by UI-02 and merged before any page ticket starts; page tickets fill view-model fields from them and add no template functions, so `public.go` (M3-08's `templateFuncs`) is untouched. Existing assertions in `pages_test.go` and `public_test.go` are assigned by test function to the ticket whose page they pin; updating them for an intentional change is in scope for that ticket.
 
 | Ticket | Owns | After |
 |---|---|---|
-| UI-02 layout, tokens, shared components | `internal/web/templates/layout.html`, `internal/web/static/app.css`, `internal/web/templates_test.go`, `internal/web/layout_test.go` (new) | M3-07, M3-08 |
-| UI-03 matches | `templates/matches.html`, `handlers_matches.go`, `handlers_matches_test.go` | UI-02 |
-| UI-04 pair | `templates/pair.html`, `handlers_pairs.go`, `handlers_pairs_test.go` | UI-02 |
-| UI-05 route trace | `templates/route.html`, `templates/route_result.html`, `templates/decision.html`, `handlers_route.go`, `handlers_route_test.go` | UI-02, M3-02, M3-03, M3-04 |
-| UI-06 near misses and decision log | `templates/near_misses.html`, `templates/log.html`, `handlers_nearmisses.go`, `handlers_log.go`, their tests | UI-02 |
-| UI-07 eval | `templates/eval.html`, `handlers_eval.go`, its test | UI-02, M3-06 |
+| UI-02 layout, tokens, shared components, view-model helpers | `internal/web/templates/layout.html`, `internal/web/static/app.css`, `internal/web/viewmodel.go` + `viewmodel_test.go` (new: `ConfidenceWord`, `BasisRiskWord`, `TypeChipClass`, `OutcomePhrase`), `internal/web/layout_test.go` (new), `templates_test.go`, and the `TestLayoutNavLinksNewPages` / `TestStaticCSS` assertions | M3-07, M3-08 |
+| UI-03 matches | `templates/matches.html`, `handlers_matches.go`, `handlers_matches_test.go`, the `TestPublicMatches*` / `TestGroupPairsOrdering` assertions in `public_test.go` | UI-02 |
+| UI-04 pair | `templates/pair.html`, `handlers_pairs.go`, `handlers_pairs_test.go`, `TestPublicPairPage` in `public_test.go`, `TestPairPageShowsHistoryFactsBasisAndLog` in `pages_test.go` | UI-02 |
+| UI-05 route trace | `templates/route.html`, `templates/route_result.html`, `templates/decision.html`, `handlers_route.go`, `handlers_route_test.go`, `TestDecisionPage` / `TestCountPartners` in `pages_test.go` | UI-02, M3-02, M3-03, M3-04 |
+| UI-06 near misses and decision log | `templates/near_misses.html`, `templates/log.html`, `handlers_nearmisses.go`, `handlers_log.go`, their new tests, the `TestNearMiss*` / `TestDecisionLogPage` / `TestLogEntryLink` assertions in `pages_test.go` | UI-02 |
+| UI-07 eval | `templates/eval.html`, `handlers_eval.go`, its new test, `TestEvalPage` in `pages_test.go` | UI-02, M3-06 |
 | UI-08 admin | `templates/admin.html`, `admin.go`, `admin_test.go` | UI-02, M3-06, M3-07 |

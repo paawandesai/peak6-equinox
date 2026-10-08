@@ -36,7 +36,7 @@ func explain(d canonical.Decision, opts []option, sz sizing, cfg Config) string 
 		b.WriteString(" Excluded: " + strings.Join(parts, "; ") + ".")
 	}
 	b.WriteString(" " + feeSentence(opts))
-	fmt.Fprintf(&b, " No basis-risk penalty is applied in v0, and partners below a relationship confidence of %s are excluded.", cfg.MinRouteConfidence)
+	fmt.Fprintf(&b, " Basis-risk penalty is applied as score × %s per contract, and partners below a relationship confidence of %s are excluded.", cfg.BasisPenaltyMultiplier, cfg.MinRouteConfidence)
 	return b.String()
 }
 
@@ -75,9 +75,17 @@ func chosenSentence(opt option, sz sizing) string {
 // costClause spells out the per-contract terms that make up the all-in figure.
 func costClause(l canonical.Leg) string {
 	if l.Side == canonical.SideBuy {
-		return fmt.Sprintf("plus a fee of %s per contract, an all-in cost of %s per $1 payout", money(l.FeePerContract), money(l.AllInPerContract))
+		if l.BasisPenaltyPerContract.IsZero() {
+			return fmt.Sprintf("plus a fee of %s per contract, an all-in cost of %s per $1 payout", money(l.FeePerContract), money(l.AllInPerContract))
+		}
+		return fmt.Sprintf("plus a fee of %s and basis penalty of %s per contract, an all-in cost of %s per $1 payout",
+			money(l.FeePerContract), money(l.BasisPenaltyPerContract), money(l.AllInPerContract))
 	}
-	return fmt.Sprintf("less a fee of %s per contract, net proceeds of %s per contract", money(l.FeePerContract), money(l.AllInPerContract))
+	if l.BasisPenaltyPerContract.IsZero() {
+		return fmt.Sprintf("less a fee of %s per contract, net proceeds of %s per contract", money(l.FeePerContract), money(l.AllInPerContract))
+	}
+	return fmt.Sprintf("less a fee of %s and basis penalty of %s per contract, net proceeds of %s per contract",
+		money(l.FeePerContract), money(l.BasisPenaltyPerContract), money(l.AllInPerContract))
 }
 
 func alternativeSentence(rank int, opt, best option, sz sizing) string {
@@ -86,8 +94,14 @@ func alternativeSentence(rank int, opt, best option, sz sizing) string {
 	if l.Side == canonical.SideSell {
 		gap = gap.Neg()
 	}
-	s := fmt.Sprintf("%s (%s) ranks #%d at %s per contract (VWAP %s, fee %s; %s worse)",
-		l.Venue, l.InstrumentID, rank, money(l.AllInPerContract), money(l.VWAP), money(l.FeePerContract), money(gap))
+	var breakdown string
+	if l.BasisPenaltyPerContract.IsZero() {
+		breakdown = fmt.Sprintf("VWAP %s, fee %s", money(l.VWAP), money(l.FeePerContract))
+	} else {
+		breakdown = fmt.Sprintf("VWAP %s, fee %s, basis %s (score %s)", money(l.VWAP), money(l.FeePerContract), money(l.BasisPenaltyPerContract), money(opt.basisScore))
+	}
+	s := fmt.Sprintf("%s (%s) ranks #%d at %s per contract (%s; %s worse)",
+		l.Venue, l.InstrumentID, rank, money(l.AllInPerContract), breakdown, money(gap))
 	if !opt.full {
 		s += fmt.Sprintf(", filling only %s of %s contracts", l.Quantity, sz.qty)
 	}

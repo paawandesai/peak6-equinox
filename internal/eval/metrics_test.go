@@ -28,7 +28,7 @@ func TestEvaluateFixture(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r := Evaluate(labels, fixturePredictor(t))
+	r := Evaluate(labels, fixturePredictor(t), canonical.MethodRules)
 	if r.Method != canonical.MethodRules || r.Evaluated != 6 || r.Correct != 4 || len(r.Missing) != 1 || len(r.Outcomes) != 6 {
 		t.Fatalf("report = %+v", r)
 	}
@@ -101,14 +101,14 @@ func TestEvaluateTargetMetAndUnmeasured(t *testing.T) {
 			return canonical.RelEquivalent, true
 		}
 		return canonical.RelRelated, true
-	})
+	}, canonical.MethodRules)
 	if met, measured := r.MeetsTarget(); !met || !measured {
 		t.Errorf("MeetsTarget = %v %v", met, measured)
 	}
 	if !strings.Contains(r.String(), "equivalent precision 1.0000 on 1 predictions: target >= 0.95 met") {
 		t.Errorf("report:\n%s", r.String())
 	}
-	r = Evaluate(l, all(canonical.RelRelated))
+	r = Evaluate(l, all(canonical.RelRelated), canonical.MethodRules)
 	if met, measured := r.MeetsTarget(); met || measured {
 		t.Errorf("MeetsTarget = %v %v", met, measured)
 	}
@@ -116,12 +116,12 @@ func TestEvaluateTargetMetAndUnmeasured(t *testing.T) {
 		t.Errorf("report:\n%s", r.String())
 	}
 	// A type this build does not know counts as a miss, never as a crash.
-	r = Evaluate(l, all("future_type"))
+	r = Evaluate(l, all("future_type"), canonical.MethodRules)
 	if r.Correct != 0 || r.Metrics(canonical.RelEquivalent).FN != 1 || r.Metrics(canonical.RelRelated).FN != 1 {
 		t.Errorf("unknown prediction: %+v", r.ByType)
 	}
 	// Nothing to evaluate.
-	r = Evaluate(Labels{Version: 1}, all(canonical.RelEquivalent))
+	r = Evaluate(Labels{Version: 1}, all(canonical.RelEquivalent), canonical.MethodRules)
 	if _, ok := r.Accuracy(); ok || r.Evaluated != 0 {
 		t.Errorf("empty report = %+v", r)
 	}
@@ -147,7 +147,7 @@ func TestEvaluateCountsAddUp(t *testing.T) {
 		r := Evaluate(l, func(a, b string) (canonical.RelationshipType, bool) {
 			typ, ok := preds[PairKey(a, b)]
 			return typ, ok
-		})
+		}, canonical.MethodRules)
 		if r.Evaluated+len(r.Missing) != n || r.Evaluated != len(r.Outcomes) {
 			rt.Fatalf("evaluated %d + missing %d != %d", r.Evaluated, len(r.Missing), n)
 		}
