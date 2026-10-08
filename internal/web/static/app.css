@@ -54,8 +54,10 @@
   font-weight: 600;
   border-bottom: 2px solid;
 }
-.banner[role="status"] { background: var(--eq-info-bg); color: var(--eq-info); border-color: var(--eq-info); }
-.banner[role="alert"] { background: var(--eq-warn-bg); color: var(--eq-warn); border-color: var(--eq-warn); }
+.banner-ok { background: var(--eq-ok-bg); color: var(--eq-ok); border-color: var(--eq-ok); }
+.banner-info { background: var(--eq-info-bg); color: var(--eq-info); border-color: var(--eq-info); }
+.banner-warn { background: var(--eq-warn-bg); color: var(--eq-warn); border-color: var(--eq-warn); }
+.banner-danger { background: var(--eq-danger-bg); color: var(--eq-danger); border-color: var(--eq-danger); }
 /* Chip component (UI-02, design.md § 5): text + colour, five variants */
 .chip {
   display: inline-block;
@@ -195,8 +197,8 @@ svg.hist { max-width: 100%; height: auto; display: block; }
 .hist-label { font-size: 11px; fill: var(--pico-muted-color, #666); }
 polyline.hist-mid { fill: none; stroke-width: 2; stroke-linejoin: round; }
 polyline.hist-side { fill: none; stroke-width: 1; opacity: 0.6; }
-polyline.hist-a, circle.hist-a, .hist-swatch.hist-a { stroke: #1565c0; fill: #1565c0; background: #1565c0; }
-polyline.hist-b, circle.hist-b, .hist-swatch.hist-b { stroke: #ef6c00; fill: #ef6c00; background: #ef6c00; }
+polyline.hist-a, circle.hist-a, .hist-swatch.hist-a { stroke: var(--eq-info); fill: var(--eq-info); background: var(--eq-info); }
+polyline.hist-b, circle.hist-b, .hist-swatch.hist-b { stroke: var(--eq-warn); fill: var(--eq-warn); background: var(--eq-warn); }
 polyline.hist-mid, polyline.hist-side { fill: none; }
 .hist-legend { list-style: none; padding: 0; margin: 0.5rem 0 0; font-size: 0.9rem; }
 .hist-swatch { display: inline-block; width: 1.5rem; height: 0.3rem; vertical-align: middle; }

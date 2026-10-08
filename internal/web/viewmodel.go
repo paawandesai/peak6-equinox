@@ -11,10 +11,10 @@ import (
 // ConfidenceWord maps a confidence score to its bucket word per design.md § 4.
 // "high" ≥ 0.90 (the MIN_ROUTE_CONFIDENCE floor), "medium" 0.70 to 0.89, "low" below.
 func ConfidenceWord(confidence decimal.Decimal) string {
-	if confidence.GreaterThanOrEqual(decimal.NewFromFloat(0.90)) {
+	if confidence.GreaterThanOrEqual(decimal.RequireFromString("0.90")) {
 		return "high"
 	}
-	if confidence.GreaterThanOrEqual(decimal.NewFromFloat(0.70)) {
+	if confidence.GreaterThanOrEqual(decimal.RequireFromString("0.70")) {
 		return "medium"
 	}
 	return "low"
@@ -26,10 +26,10 @@ func BasisRiskWord(br *canonical.BasisRisk) string {
 	if br == nil {
 		return "not scored"
 	}
-	if br.Score.LessThan(decimal.NewFromFloat(0.20)) {
+	if br.Score.LessThan(decimal.RequireFromString("0.20")) {
 		return "low"
 	}
-	if br.Score.LessThan(decimal.NewFromFloat(0.50)) {
+	if br.Score.LessThan(decimal.RequireFromString("0.50")) {
 		return "moderate"
 	}
 	return "high"
@@ -51,9 +51,17 @@ func TypeChipClass(t canonical.RelationshipType) string {
 	}
 }
 
-// OutcomePhrase returns the human-readable outcome phrase for a routing decision per design.md § 4.
-// chosen is true when the decision has at least one chosen leg; partial is true when the fill is incomplete (IOC);
-// isComplement is true when any chosen leg is a complement route; venueCount is the number of distinct venues in chosen legs.
+// OutcomePhrase returns the human-readable outcome phrase and chip class for a routing decision (design.md § 4).
+// It maps the decision state into a phrase and a CSS chip class for display.
+//
+// Parameters:
+//   - chosen: true when the decision has at least one chosen leg (order was routed, fully or partially)
+//   - partial: true when the fill is incomplete (IOC filled less than requested)
+//   - isComplement: true when any chosen leg is a complement route (bought NO on the complement instrument)
+//   - venueCount: the number of distinct venues in chosen legs (1 for single-venue, >1 for sweep)
+//
+// Returns a phrase ("Routed", "Partially routed", etc.) and a chip class ("chip-ok", "chip-warn", "chip-danger").
+// The phrase is used in the routing trace header strip; the chip class determines the visual treatment.
 func OutcomePhrase(chosen bool, partial bool, isComplement bool, venueCount int) (phrase, chipClass string) {
 	if !chosen {
 		return "Not routed", "chip-danger"
