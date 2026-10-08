@@ -5,7 +5,7 @@
 
 | Layer | Choice | Version | Why (decision) |
 |---|---|---|---|
-| Language | Go | **1.27.1** (latest stable on go.dev/dl at M1-01, 2026-10-06): `go 1.27.0` + `toolchain go1.27.1` in go.mod; CI image `golang:1.27.1` | PEAK6's internal stack (D-001, D-050) |
+| Language | Go | **1.27.2** (security update 2026-10-08, fixes 11 stdlib vulns): `go 1.27.0` + `toolchain go1.27.2` in go.mod; CI image `golang:1.27.2` | PEAK6's internal stack (D-001, D-050) |
 | HTTP / UI | `net/http`, `html/template`, htmx, Pico.css (classless) | htmx 2.x, Pico 2.x, pinned with SRI in M1-08 | No JS build; UI polish is not graded but clarity matters (D-004, D-031) |
 | Database | PostgreSQL | 16 (Cloud SQL `POSTGRES_16`, `postgres:16` locally) | Persistent history across fetch rounds; relational joins; JSONB for raw payloads (D-016) |
 | DB driver / migrations | `jackc/pgx/v5`, `pressly/goose/v3` | latest v5 / v3 | Boring, standard |
