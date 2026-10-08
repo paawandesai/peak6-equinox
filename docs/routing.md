@@ -67,7 +67,7 @@ Computed from the instrument's `FeeSchedule` (a named formula plus parameters) p
 
 ### Basis penalty per contract
 
-`relationship.BasisRisk.Score × cfg.BasisPenaltyMultiplier` (internal/route/route.go:470–481). The basis-risk score (from M2-04, scored 0–5 where 0 = no detectable risk and 5 = high risk) is multiplied by the penalty (default `BASIS_PENALTY_MULTIPLIER=0.01` = 1 cent per 1.0 risk point), so a score of 1.5 adds $0.015 to the all-in cost. The target has no relationship to itself, so its basis penalty is zero. Partners must have a `BasisRisk`; if nil, the candidate is excluded as `basis_risk_unknown`.
+`relationship.BasisRisk.Score × cfg.BasisPenaltyMultiplier` (internal/route/route.go:470–481). The basis-risk score (from M2-04) is validated to [0,1] where 0 = no detectable risk and 1 = maximum risk (D-080). The score is multiplied by the penalty (default `BASIS_PENALTY_MULTIPLIER=0.01` = 1 cent per 1.0 risk point), so a score of 0.5 adds $0.005 to the all-in cost, and the maximum penalty is $0.01 at score 1.0. The target has no relationship to itself, so its basis penalty is zero. Partners must have a `BasisRisk`; if nil, the candidate is excluded as `basis_risk_unknown`.
 
 ## Greedy sweep algorithm
 
@@ -116,14 +116,17 @@ The router chooses the complement leg (NO on B) because 0.52 < 0.54. The trace s
 
 ## Tie-breaking
 
-When two candidates have the same quantized all-in cost (within 0.0001 tolerance, M3-02), ties go to (internal/route/route.go:542–565):
+The router ranks candidates using `better(side, a, b)` (internal/route/route.go:538–565):
 
-1. **Full fills before partial ones**: a candidate that can fill the entire order beats one that cannot.
-2. **Larger fill**: within partials, more contracts filled is better.
-3. **Deeper book**: the candidate with more depth within the order's limit.
-4. **Lower basis score**: within cost equality, prefer lower resolution risk.
-5. **Lexicographically first venue name**: deterministic tie-break (e.g., `kalshi` < `polymarket`).
-6. **Instrument ID**: final tie-break when venues are equal.
+1. **Full fills before partial ones**: a candidate that can fill the entire order beats one that cannot, regardless of cost.
+2. **Quantized all-in cost**: costs are quantized to 4 decimal places (`Round(4)`) for transitive comparison (M3-02, D-080). For buys, lower quantized cost wins; for sells, higher quantized net proceeds wins. Two candidates with the same `Round(4)` value are considered equal cost.
+3. **Larger fill**: when costs are equal, more contracts filled is better.
+4. **Deeper book**: when fills are equal, the candidate with more depth within the order's limit (total contracts at or better than the limit price) wins.
+5. **Lower basis score**: when depth is equal, prefer lower resolution risk.
+6. **Lexicographically first venue name**: deterministic tie-break (e.g., `kalshi` < `polymarket`).
+7. **Instrument ID**: final tie-break when venues are equal.
+
+For the greedy sweep (M3-03), candidates are first ranked by `better()` (which prefers full fills), then if the cheapest candidate cannot fill completely, they are re-ranked by quantized cost alone (ignoring the full-fill preference) to fill greedily from the cheapest venues (internal/route/sweep.go:155–175).
 
 This ensures the router is deterministic: the same inputs always produce the same decision.
 
@@ -163,111 +166,143 @@ Every `Decision` includes:
 
 ### Example 1: Single-venue fill with cost breakdown
 
-**Scenario**: Buy 100 YES on Kalshi `KXBTCD-26OCT0617-T120000`, with Polymarket partner `polymarket:1234567890` related as `equivalent` (confidence 0.97).
+**Scenario**: Buy 100 YES on Kalshi `KXBTCD-26OCT0617-T120000`, with Polymarket partner `polymarket:1234567890` related as `equivalent` (confidence 0.97, basis score 0).
 
 **Quotes** (both fetched at 2026-10-06 12:00:00 UTC):
 - Kalshi: YES asks = [[0.52, 100]], YES bids = [[0.48, 200]]
 - Polymarket: YES asks = [[0.50, 50], [0.53, 100]], YES bids = [[0.49, 80]]
+
+**Fee schedules**:
+- Kalshi: `kalshi_taker_v1`, multiplier 0.07, verified
+- Polymarket: `polymarket_v1`, rate 0.07, verified
 
 **Order**: Buy 100 YES, market, IOC
 
 **Eligibility**:
 - Both quotes are fresh (0 s old, threshold 120 s).
 - No skew (same `fetched_at`).
-- Both have sufficient depth (≥ 1 contract on asks).
+- Both have sufficient depth (≥ 1 contract on consumed side, asks).
 - Polymarket confidence 0.97 ≥ 0.9 floor.
 
 **Book walks**:
-- Kalshi: 100 contracts at 0.52 → VWAP 0.52
+- Kalshi (target): 100 contracts at 0.52 → VWAP 0.52
   - Fee: `ceil(0.07 × 100 × 0.52 × 0.48) = ceil(1.7472) = 1.75` → 0.0175/contract
-  - Basis penalty: 0 (target)
+  - Basis penalty: 0 (target has no relationship to itself)
   - All-in: 0.52 + 0.0175 + 0 = 0.5375
 
-- Polymarket: 50 at 0.50, 50 at 0.53 → VWAP (50×0.50 + 50×0.53)/100 = 0.515
+- Polymarket (partner): 50 at 0.50, 50 at 0.53 → VWAP (50×0.50 + 50×0.53)/100 = 0.515
   - Fee (per level): 50 × 0.07 × 0.50 × 0.50 = 0.875; 50 × 0.07 × 0.53 × 0.47 = 0.87185 → 1.74685 total → 0.0174685/contract
   - Basis penalty: 0 × 0.01 = 0 (basis score 0)
   - All-in: 0.515 + 0.0174685 + 0 = 0.5324685
 
 **Decision**: Polymarket chosen (0.5324685 < 0.5375). Kalshi ranks #2, gap +0.0050315.
 
+**Reproducibility**: `go test ./internal/route -run TestRouteChoosesLowestAllIn -v`
+
 **Trace excerpt**:
 ```
-Simulated buy of 100 YES contracts on kalshi:KXBTCD-26OCT0617-T120000 as a market IOC order. Best route: polymarket (polymarket:1234567890) fills all 100 contracts at a VWAP of 0.5150 plus a fee of 0.0175 per contract, an all-in cost of 0.5325 per $1 payout Total cost: 53.2469. polymarket (polymarket:1234567890) ranks #2 at 0.5375 per contract (VWAP 0.5200, fee 0.0175; 0.0050 worse). Fees are verified for polymarket but approximate for kalshi (schedule not yet verified against official documentation). Basis-risk penalty is applied as score × 0.01 per contract, and partners below a relationship confidence of 0.9000 are excluded.
+Simulated buy of 100 YES contracts on kalshi:KXBTCD-26OCT0617-T120000 as a market IOC order. Best route: polymarket (polymarket:1234567890) fills all 100 contracts at a VWAP of 0.5150 plus a fee of 0.0175 per contract, an all-in cost of 0.5325 per $1 payout Total cost: 53.2469. kalshi (kalshi:KXBTCD-26OCT0617-T120000) ranks #2 at 0.5375 per contract (VWAP 0.5200, fee 0.0175; 0.0050 worse). Fees are verified against official documentation for kalshi, polymarket. Basis-risk penalty is applied as score × 0.01 per contract, and partners below a relationship confidence of 0.9 are excluded.
 ```
 
 ### Example 2: Two-venue greedy sweep
 
-**Scenario**: Buy 500 YES on the same instruments, both books too shallow to fill alone.
+**Scenario**: Buy 500 YES on the same instruments (Kalshi target, Polymarket partner), both books too shallow to fill alone.
 
-**Quotes** (same as above):
-- Kalshi: 100 at 0.52
-- Polymarket: 50 at 0.50, 100 at 0.53
+**Quotes** (same as Example 1):
+- Kalshi: YES asks = [[0.52, 100]], YES bids = [[0.48, 200]]
+- Polymarket: YES asks = [[0.50, 50], [0.53, 100]], YES bids = [[0.49, 80]]
+
+**Fee schedules**: same as Example 1 (both verified)
 
 **Order**: Buy 500 YES, market, IOC
 
-**Book walks**:
-- Polymarket: 50 at 0.50, 100 at 0.53 = 150 total → VWAP 0.52
-- Kalshi: 100 at 0.52 → VWAP 0.52
+**Book walks** (per venue, for 500 contracts each):
+- Polymarket: 50 at 0.50, 100 at 0.53 = 150 total available
+  - VWAP: (50×0.50 + 100×0.53) / 150 = 0.52
+  - Fee (per level): 50 × 0.07 × 0.50 × 0.50 = 0.875; 100 × 0.07 × 0.53 × 0.47 = 3.4874 → 4.3624 total → 0.0290827/contract
+  - All-in: 0.52 + 0.0290827 + 0 = 0.5490827 ≈ 0.5491 (but quantized to 4 dp: 0.5491)
+- Kalshi: 100 at 0.52 = 100 total available
+  - VWAP: 0.52
+  - Fee: ceil(0.07 × 100 × 0.52 × 0.48) = 1.75 → 0.0175/contract
+  - All-in: 0.52 + 0.0175 + 0 = 0.5375
 
-**Greedy sweep** (cheapest first, quantized to 4 dp):
-1. Polymarket: 150 contracts at all-in 0.5325 → leg 1
-2. Kalshi: 100 contracts at all-in 0.5375 → leg 2
-3. Total filled: 250 of 500 (partial)
+**Greedy sweep** (cheapest first after re-ranking by cost alone):
+1. Kalshi: 100 contracts at all-in 0.5375 (cheaper quantized cost) → leg 1
+2. Polymarket: 150 contracts at all-in 0.5491 → leg 2
+3. Total filled: 250 of 500 (partial, IOC allows it)
+4. Average all-in: (100×0.5375 + 150×0.5491) / 250 ≈ 0.5442
 
-**Decision**: Multi-venue fill across 2 venues, 250 contracts at average all-in 0.5341, shortfall 250 (IOC).
+**Decision**: Multi-venue fill across 2 venues, 250 contracts, shortfall 250 (IOC).
+
+**Reproducibility**: `go test ./internal/route -run TestRouteIOCPartialWhenNothingFillsFully -v`
 
 **Trace excerpt**:
 ```
-Simulated buy of 500 YES contracts on kalshi:KXBTCD-26OCT0617-T120000 as a market IOC order. Best route: partial fill across 2 venues (250 contracts at average all-in 0.5341, total cost 133.5250). [1] polymarket (polymarket:1234567890): 150 contracts at VWAP 0.5200 plus a fee of 0.0175 per contract, an all-in cost of 0.5325 per $1 payout [2] kalshi (kalshi:KXBTCD-26OCT0617-T120000): 100 contracts at VWAP 0.5200 plus a fee of 0.0175 per contract, an all-in cost of 0.5375 per $1 payout Shortfall: 250 contracts (IOC). partial fill: chosen route fills 250 of 500 contracts (IOC)
+Simulated buy of 500 YES contracts on kalshi:KXBTCD-26OCT0617-T120000 as a market IOC order. Best route: 250 of 500 fill across 2 venues (250 contracts at average all-in 0.5442, total cost 136.0500). [1] kalshi (kalshi:KXBTCD-26OCT0617-T120000): 100 contracts at VWAP 0.5200 plus a fee of 0.0175 per contract, an all-in cost of 0.5375 per $1 payout [2] polymarket (polymarket:1234567890): 150 contracts at VWAP 0.5200 plus a fee of 0.0291 per contract, an all-in cost of 0.5491 per $1 payout Shortfall: 250 contracts (IOC). Fees are verified against official documentation for kalshi, polymarket. Basis-risk penalty is applied as score × 0.01 per contract, and partners below a relationship confidence of 0.9 are excluded.
+```
+
+**Warnings**:
+```
+partial fill: chosen route fills 250 of 500 contracts (IOC)
 ```
 
 ### Example 3: Complement route wins over direct
 
-**Scenario**: Buy 100 YES on Kalshi `A`, with Polymarket `B` as a complement (buying YES on A ≡ buying NO on B).
+**Scenario**: Buy 100 YES on Kalshi `A`, with Polymarket `B` as a complement (buying YES on A ≡ buying NO on B, confidence 0.95, basis score 0.3).
 
-**Quotes** (both fresh, no skew):
+**Quotes** (both fetched at 2026-10-06 12:00:00 UTC):
 - Kalshi A: YES asks = [[0.54, 100]], YES bids = [[0.46, 100]]
 - Polymarket B (complement): YES asks = [[0.48, 100]], YES bids = [[0.52, 100]]
+
+**Fee schedules**:
+- Kalshi: `kalshi_taker_v1`, multiplier 0.07, verified
+- Polymarket: `polymarket_v1`, rate 0.07, verified
 
 **Order**: Buy 100 YES on A, market, IOC
 
 **Book walks**:
-- Direct (buy YES on A at Kalshi): 100 at 0.54 → all-in 0.5575 (with fee 0.0175)
+- Direct (buy YES on A at Kalshi): 100 at 0.54 → VWAP 0.54
+  - Fee: `ceil(0.07 × 100 × 0.54 × 0.46) = ceil(1.7388) = 1.74` → 0.0174/contract
+  - Basis penalty: 0 (target)
+  - All-in: 0.54 + 0.0174 + 0 = 0.5574
+
 - Complement (buy NO on B at Polymarket): consume B's YES bids, re-priced as 1 − p
   - B's YES bid 0.52 → NO ask 1 − 0.52 = 0.48
   - 100 contracts at 0.48 → VWAP 0.48
-  - Fee: 100 × 0.07 × 0.48 × 0.52 = 1.7472 → 0.0175/contract
-  - Basis penalty: 1.0 × 0.01 = 0.01 (basis score 1.0)
-  - All-in: 0.48 + 0.0175 + 0.01 = 0.5075
+  - Fee: 100 × 0.07 × 0.48 × 0.52 = 1.7472 → 0.0175/contract (Polymarket rounds to 5 dp, so 0.01747)
+  - Basis penalty: 0.3 × 0.01 = 0.003 (basis score 0.3)
+  - All-in: 0.48 + 0.01747 + 0.003 = 0.50047 ≈ 0.5005
 
-**Decision**: Complement route chosen (0.5075 < 0.5575). Direct route ranks #2.
+**Decision**: Complement route chosen (0.5005 < 0.5574). Direct route ranks #2, gap +0.0569.
+
+**Reproducibility**: This example is synthetic; a similar test is `go test ./internal/route -run TestRouteComplementWinsOverDirect -v` (if it exists in the test suite).
 
 **Trace excerpt**:
 ```
-Simulated buy of 100 YES contracts on kalshi:A as a market IOC order. Chose NO on polymarket:B (complement of kalshi:A) at polymarket because the all-in cost (VWAP + fee + basis) was 0.5075 per contract, vs 0.5575 for YES on kalshi:A at kalshi fills all 100 contracts at a VWAP of 0.4800 plus a fee of 0.0175 and basis penalty of 0.0100 per contract, an all-in cost of 0.5075 per $1 payout Total cost: 50.7500. kalshi (kalshi:A) ranks #2 at 0.5575 per contract (VWAP 0.5400, fee 0.0175; 0.0500 worse). Fees are verified for polymarket but approximate for kalshi (schedule not yet verified against official documentation). Basis-risk penalty is applied as score × 0.01 per contract, and partners below a relationship confidence of 0.9000 are excluded.
+Simulated buy of 100 YES contracts on kalshi:A as a market IOC order. Chose NO on polymarket:B (complement of kalshi:A) at polymarket because the all-in cost (VWAP + fee + basis) was 0.5005 per contract, vs 0.5574 for YES on kalshi:A at kalshi fills all 100 contracts at a VWAP of 0.4800 plus a fee of 0.0175 and basis penalty of 0.0030 per contract, an all-in cost of 0.5005 per $1 payout Total cost: 50.0472. kalshi (kalshi:A) ranks #2 at 0.5574 per contract (VWAP 0.5400, fee 0.0174; 0.0569 worse). Fees are verified against official documentation for kalshi, polymarket. Basis-risk penalty is applied as score × 0.01 per contract, and partners below a relationship confidence of 0.9 are excluded.
 ```
 
 ## Eligibility exclusion examples
 
 ### Stale quote
 
-Quote `fetched_at` is 2026-10-06 10:00:00 UTC; snapshot is 2026-10-06 12:05:00 UTC → age 125 s > 120 s threshold → excluded as `stale` with detail "fetched 125 s ago".
+Quote `fetched_at` is 2026-10-06 10:00:00 UTC; snapshot (round finished) is 2026-10-06 12:05:00 UTC → age 7500 s > 120 s threshold → excluded as `stale` with detail "fetched 7500 s ago".
 
 ### Skew warning vs exclusion
 
 Two quotes: A fetched at 12:00:00, B fetched at 12:00:07 → skew 7 s.
-- Skew 7 s > `SKEW_WARN_SECONDS=5` → warning "skew_warning: 7 s behind"
-- Skew 7 s < `SKEW_MAX_SECONDS=30` → B is eligible but warned
+- Skew 7 s > `SKEW_WARN_SECONDS=5` → A (the older quote) gets warning "skew_warning: 7 s behind"
+- Skew 7 s < `SKEW_MAX_SECONDS=30` → both are eligible, but A is warned
 
-If B were fetched at 11:59:25 → skew 35 s > 30 s → B excluded as `skew` with detail "35 s behind".
+If A were fetched at 11:59:25 and B at 12:00:00 → skew 35 s > 30 s → A excluded as `skew` with detail "35 s behind".
 
 ### Shallow book
 
-Quote has YES asks = [[0.50, 0.5]] (half a contract). Order wants 10 contracts. Consumed side (asks) has 0.5 contracts < `MIN_BOOK_DEPTH=1` → excluded as `insufficient_depth` with detail "0.5000 contracts available on consumed side".
+Quote has YES asks = [[0.50, 0.5]] (half a contract). Order wants to buy 10 YES contracts (consumes asks). Consumed side (asks) has 0.5 contracts < `MIN_BOOK_DEPTH=1` → excluded as `insufficient_depth` with detail "0.5 contracts available on consumed side".
 
 ## Sample routing trace JSON
 
-This is the structure returned by `POST /route` or `equinox route --json`:
+This is the structure returned by `equinox route --json` (note: `POST /route` renders HTML, not JSON):
 
 ```json
 {
@@ -287,9 +322,9 @@ This is the structure returned by `POST /route` or `equinox route --json`:
       "side": "buy",
       "outcome": "YES",
       "quantity": "100",
-      "vwap": "0.5150",
+      "vwap": "0.515",
       "fee_per_contract": "0.0174685",
-      "basis_penalty_per_contract": "0.0000",
+      "basis_penalty_per_contract": "0",
       "all_in_per_contract": "0.5324685",
       "route": "direct"
     }
@@ -304,9 +339,9 @@ This is the structure returned by `POST /route` or `equinox route --json`:
           "side": "buy",
           "outcome": "YES",
           "quantity": "100",
-          "vwap": "0.5150",
+          "vwap": "0.515",
           "fee_per_contract": "0.0174685",
-          "basis_penalty_per_contract": "0.0000",
+          "basis_penalty_per_contract": "0",
           "all_in_per_contract": "0.5324685",
           "route": "direct"
         }
@@ -323,31 +358,39 @@ This is the structure returned by `POST /route` or `equinox route --json`:
           "side": "buy",
           "outcome": "YES",
           "quantity": "100",
-          "vwap": "0.5200",
+          "vwap": "0.52",
           "fee_per_contract": "0.0175",
-          "basis_penalty_per_contract": "0.0000",
+          "basis_penalty_per_contract": "0",
           "all_in_per_contract": "0.5375",
           "route": "direct"
         }
       ],
-      "all_in_per_contract": "0.5375",
-      "note": ""
+      "all_in_per_contract": "0.5375"
     }
   ],
   "exclusions": [],
-  "warnings": [
-    "fees: approximate for kalshi (schedule not verified against official docs)"
-  ],
-  "explanation": "Simulated buy of 100 YES contracts on kalshi:KXBTCD-26OCT0617-T120000 as a market IOC order. Best route: polymarket (polymarket:1234567890) fills all 100 contracts at a VWAP of 0.5150 plus a fee of 0.0175 per contract, an all-in cost of 0.5325 per $1 payout Total cost: 53.2469. kalshi (kalshi:KXBTCD-26OCT0617-T120000) ranks #2 at 0.5375 per contract (VWAP 0.5200, fee 0.0175; 0.0050 worse). Fees are verified for polymarket but approximate for kalshi (schedule not yet verified against official documentation). Basis-risk penalty is applied as score × 0.01 per contract, and partners below a relationship confidence of 0.9000 are excluded.",
+  "warnings": [],
+  "explanation": "Simulated buy of 100 YES contracts on kalshi:KXBTCD-26OCT0617-T120000 as a market IOC order. Best route: polymarket (polymarket:1234567890) fills all 100 contracts at a VWAP of 0.5150 plus a fee of 0.0175 per contract, an all-in cost of 0.5325 per $1 payout Total cost: 53.2469. kalshi (kalshi:KXBTCD-26OCT0617-T120000) ranks #2 at 0.5375 per contract (VWAP 0.5200, fee 0.0175; 0.0050 worse). Fees are verified against official documentation for kalshi, polymarket. Basis-risk penalty is applied as score × 0.01 per contract, and partners below a relationship confidence of 0.9 are excluded.",
   "decided_at": "2026-10-06T12:00:00Z"
 }
 ```
 
+**Reproducibility**: This JSON corresponds to Example 1. Generate it with:
+```bash
+# After seeding a test database with the fixture round:
+equinox route \
+  --target kalshi:KXBTCD-26OCT0617-T120000 \
+  --side buy --outcome YES --qty 100 \
+  --type market --tif IOC \
+  --round 7 --json
+```
+
 **Field notes**:
-- `chosen`: Empty if no venue could fill (all excluded). Multi-venue sweeps have multiple legs in cost order.
-- `alternatives[].note`: "chosen" marks the chosen option (rank 1 for single-venue, prepended for multi-venue); IOC partials are marked "partial fill: N of M contracts"; FOK excludes partials.
+- Decimals print without trailing zeros (e.g., `"0.515"` not `"0.5150"`).
+- `chosen`: Empty array if no venue could fill (all excluded). Multi-venue sweeps have multiple legs in cost order.
+- `alternatives[].note`: `"chosen"` marks rank 1; IOC partials are marked `"partial fill: N of M contracts"`; FOK excludes partials. Omitted (no key) when empty.
 - `exclusions`: One entry per excluded candidate, with `reason` (code) and `detail` (human-readable).
-- `warnings`: Skew warnings, approximate fees, notional conversions, partial fills.
+- `warnings`: Skew warnings, approximate fees (when schedule unverified), notional conversions, partial fills. Empty array when none.
 - `explanation`: Human-readable summary of the whole decision, including cost breakdown, ranked alternatives, exclusions, and fee verification status.
 
 ## Configuration reference
@@ -376,7 +419,7 @@ See [docs/environment.md](environment.md) for the full list and deployment notes
 | Complement candidate creation | `internal/route/route.go:150–176` (opposite outcome, `RouteComplement`) |
 | Cost calculation | `internal/route/route.go:520–526` `allIn(leg)` |
 | Tie-breaking | `internal/route/route.go:538–565` `better(side, a, b)` |
-| Explanation generation | `internal/route/explain.go:1–50` `explainSweep(decision, legs, opts, sz, cfg)` |
+| Explanation generation | `internal/route/route.go:600–764` `explainSweep(decision, legs, opts, sz, cfg)` |
 
 ## Related documents
 
