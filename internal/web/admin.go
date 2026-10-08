@@ -12,6 +12,8 @@ import (
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/collector"
+	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/decisionlog"
+	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/llm"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/store"
 )
 
@@ -42,6 +44,7 @@ func (s *Server) adminRoutes(mux *http.ServeMux) {
 	mux.Handle("/admin", index)
 	mux.Handle("/admin/{$}", index)
 	mux.Handle("/admin/ingest", s.adminAuth(http.HandlerFunc(s.handleAdminIngest)))
+	mux.Handle("/admin/llm-verify", s.adminAuth(http.HandlerFunc(s.handleAdminLLMVerify)))
 	mux.Handle("/admin/", s.adminAuth(http.NotFoundHandler()))
 }
 
@@ -252,4 +255,185 @@ func sanitizeID(s string) string {
 		return "?"
 	}
 	return b.String()
+}
+
+// llmVerifyResponse is the JSON body of POST /admin/llm-verify.
+type llmVerifyResponse struct {
+	RoundID         int64  `json:"round_id,omitempty"`
+	Verified        int    `json:"verified"`
+	Downgraded      int    `json:"downgraded"`
+	BudgetExhausted bool   `json:"budget_exhausted"`
+	Error           string `json:"error,omitempty"`
+}
+
+// handleAdminLLMVerify runs the LLM verifier on all rules-equivalent pairs from
+// the current or pinned round. It updates relationships.method='rules+llm' and
+// downgrades relationships.type when the LLM says so, logs each verdict to
+// decision_log, and returns a summary. If ANTHROPIC_API_KEY is missing, returns
+// HTTP 503.
+func (s *Server) handleAdminLLMVerify(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", "POST")
+		s.writeJSON(w, http.StatusMethodNotAllowed, llmVerifyResponse{Error: "use POST"})
+		return
+	}
+	if s.deps.Store == nil {
+		s.writeJSON(w, http.StatusServiceUnavailable, llmVerifyResponse{Error: "database not configured"})
+		return
+	}
+	if s.deps.AnthropicAPIKey == "" {
+		s.writeJSON(w, http.StatusServiceUnavailable, llmVerifyResponse{Error: "LLM verifier unavailable: ANTHROPIC_API_KEY not set"})
+		return
+	}
+
+	// AO review issue #4: single-flight lock to prevent concurrent runs
+	if !s.llmVerifyMutex.TryLock() {
+		s.writeJSON(w, http.StatusConflict, llmVerifyResponse{Error: "LLM verification already in progress"})
+		return
+	}
+	defer s.llmVerifyMutex.Unlock()
+
+	// AO review: extend write deadline to prevent client disconnect mid-run (like ingest handler)
+	const llmTimeout = 5 * time.Minute
+	_ = http.NewResponseController(w).SetWriteDeadline(s.now().Add(llmTimeout + 10*time.Second))
+	// Use WithoutCancel so client disconnect doesn't leave round partly verified
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), llmTimeout)
+	defer cancel()
+
+	// Get the current or pinned round
+	rd, err := s.deps.Store.CurrentRound(ctx)
+	if err != nil {
+		s.log.Error("getting current round for llm verification", "error", err)
+		s.writeJSON(w, http.StatusInternalServerError, llmVerifyResponse{Error: "database unavailable"})
+		return
+	}
+
+	// Get all rules-equivalent pairs
+	candidates, err := s.deps.Store.ListRelationships(ctx, store.RelationshipFilter{
+		RoundID: rd.ID,
+		Limit:   10000,
+	})
+	if err != nil {
+		s.log.Error("listing relationships for llm verification", "error", err, "round_id", rd.ID)
+		s.writeJSON(w, http.StatusInternalServerError, llmVerifyResponse{Error: "database unavailable"})
+		return
+	}
+
+	// Filter to rules-only equivalent or equivalent_given_facts
+	var pairs []canonical.Relationship
+	for _, rel := range candidates {
+		if rel.Method == canonical.MethodRules && (rel.Type == canonical.RelEquivalent || rel.Type == canonical.RelEquivalentGivenFacts) {
+			pairs = append(pairs, rel)
+		}
+	}
+
+	if len(pairs) == 0 {
+		s.writeJSON(w, http.StatusOK, llmVerifyResponse{RoundID: rd.ID, Verified: 0, Downgraded: 0})
+		return
+	}
+
+	// Build the verifier stack: Anthropic client -> cache -> budget
+	model := s.deps.LLMModel
+	if model == "" {
+		model = "claude-haiku-4-5-20251001"
+	}
+	maxTokens := s.deps.LLMMaxOutputTokens
+	if maxTokens <= 0 {
+		maxTokens = 400
+	}
+	dailyCap := s.deps.LLMDailyCallCap
+	if dailyCap <= 0 {
+		dailyCap = 200
+	}
+
+	// Build verifier stack: Anthropic client -> Budget -> Cache
+	// Cache wraps budget so cache hits don't burn the daily cap
+	client, err := llm.NewAnthropicClient(s.deps.AnthropicAPIKey, model, maxTokens)
+	if err != nil {
+		s.log.Error("creating anthropic client", "error", err)
+		s.writeJSON(w, http.StatusInternalServerError, llmVerifyResponse{Error: "failed to initialize LLM client"})
+		return
+	}
+
+	verifier := llm.NewVerifier(client)
+	budgetedVerifier := llm.NewBudgetedVerifier(verifier, s.deps.Store, dailyCap, s.log)
+	cache := llm.NewPGCache(s.deps.Store, model, llm.PromptVersion)
+	cachedVerifier := llm.NewCachedVerifier(budgetedVerifier, cache, model, llm.PromptVersion, s.log)
+
+	// FR-17: log every relationship verdict to decision_log
+	dlog := decisionlog.New(s.deps.Store)
+
+	var verified, downgraded int
+	var budgetExhausted bool
+	var consecutiveErrors int
+	const maxConsecutiveErrors = 10 // AO review issue #4: stop after N transport errors
+
+	// Verify each pair and update the relationship
+	for _, rel := range pairs {
+		// Get instruments
+		aRec, err := s.deps.Store.GetInstrument(ctx, rel.AID)
+		if err != nil {
+			s.log.Error("getting instrument for llm verification", "error", err, "id", rel.AID)
+			continue
+		}
+		bRec, err := s.deps.Store.GetInstrument(ctx, rel.BID)
+		if err != nil {
+			s.log.Error("getting instrument for llm verification", "error", err, "id", rel.BID)
+			continue
+		}
+
+		// Verify with the cached+budgeted stack
+		verifyResult, err := cachedVerifier.Verify(ctx, aRec.Instrument, bRec.Instrument, rel)
+		if err != nil {
+			if errors.Is(err, llm.ErrBudgetExhausted) {
+				budgetExhausted = true
+				s.log.Warn("llm daily budget exhausted", "round_id", rd.ID, "verified_so_far", verified)
+				break
+			}
+			// Record the error and keep the rules verdict
+			result := llm.GuardError(ctx, s.log, rel, err)
+			if _, err := s.deps.Store.UpsertRelationship(ctx, result.Relationship); err != nil {
+				s.log.Error("updating relationship after llm error", "error", err, "a_id", rel.AID, "b_id", rel.BID)
+			}
+
+			// AO review issue #4: stop after N consecutive transport errors
+			consecutiveErrors++
+			if consecutiveErrors >= maxConsecutiveErrors {
+				s.log.Error("stopping llm verification after consecutive errors", "count", consecutiveErrors, "round_id", rd.ID)
+				break
+			}
+			continue
+		}
+
+		// Reset error counter on success
+		consecutiveErrors = 0
+
+		// Apply the guard (downgrade-only)
+		result := llm.Guard(ctx, s.log, rel, verifyResult.Verdict)
+		verified++
+		if result.Outcome == llm.OutcomeDowngraded {
+			downgraded++
+		}
+
+		// Update the relationship in the database
+		relID, err := s.deps.Store.UpsertRelationship(ctx, result.Relationship)
+		if err != nil {
+			s.log.Error("updating relationship after llm verification", "error", err, "a_id", rel.AID, "b_id", rel.BID)
+			continue
+		}
+
+		// FR-17: log the verdict to decision_log (Cursor: actually write each verdict)
+		result.Relationship.ID = relID // Need ID for logging
+		if _, err := dlog.Relationship(ctx, result.Relationship); err != nil {
+			s.log.Warn("logging relationship verdict", "error", err, "relationship_id", relID)
+			// Don't fail the verification on log error - verdict is already saved
+		}
+	}
+
+	s.writeJSON(w, http.StatusOK, llmVerifyResponse{
+		RoundID:         rd.ID,
+		Verified:        verified,
+		Downgraded:      downgraded,
+		BudgetExhausted: budgetExhausted,
+	})
 }

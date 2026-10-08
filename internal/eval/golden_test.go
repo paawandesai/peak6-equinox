@@ -14,7 +14,7 @@ import (
 const (
 	fixtureLabels     = "../../testdata/golden/testdata/labels_small.yaml"
 	fixtureCandidates = "../../testdata/golden/testdata/candidates_small.yaml"
-	starterLabels     = "../../testdata/golden/labels.yaml"
+	shippedLabels     = "../../testdata/golden/labels.yaml"
 	realCandidates    = "../../testdata/golden/candidates.yaml"
 )
 
@@ -31,16 +31,25 @@ func TestLoadLabelsFixture(t *testing.T) {
 	}
 }
 
-// The shipped starter file is valid and holds no labels: nothing invented.
-func TestStarterLabelsIsEmptyAndValid(t *testing.T) {
-	l, err := LoadLabels(starterLabels)
+// The shipped labels file is valid under the strict schema, and every entry
+// names the human who confirmed it (Q-7: the first labels landed 2026-10-07).
+func TestShippedLabelsAreValidAndHumanConfirmed(t *testing.T) {
+	l, err := LoadLabels(shippedLabels)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(l.Labels) != 0 {
-		t.Fatalf("starter labels.yaml has %d labels; it must ship empty until a human confirms pairs", len(l.Labels))
+	if len(l.Labels) > 0 && l.RoundID <= 0 {
+		t.Errorf("labels.yaml has %d labels but round_id %d: name the round the pairs were drafted from", len(l.Labels), l.RoundID)
 	}
-	raw, _ := os.ReadFile(starterLabels)
+	for i, e := range l.Labels {
+		if e.ConfirmedBy == "" || e.ConfirmedOn == "" {
+			t.Errorf("labels[%d] (%s, %s) lacks confirmed_by or confirmed_on", i, e.AID, e.BID)
+		}
+		if strings.TrimSpace(e.Note) == "" {
+			t.Errorf("labels[%d] (%s, %s) has no note: record what decided the label", i, e.AID, e.BID)
+		}
+	}
+	raw, _ := os.ReadFile(shippedLabels)
 	for _, want := range []string{"confirmed_by", "confirmed_on", "Tier 3", "equivalent_given_facts"} {
 		if !strings.Contains(string(raw), want) {
 			t.Errorf("starter labels.yaml header does not document %q", want)

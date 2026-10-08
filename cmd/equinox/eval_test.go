@@ -16,7 +16,6 @@ import (
 const (
 	fixtureLabels     = "../../testdata/golden/testdata/labels_small.yaml"
 	fixtureCandidates = "../../testdata/golden/testdata/candidates_small.yaml"
-	starterLabels     = "../../testdata/golden/labels.yaml"
 )
 
 func TestEvalOfflineFromCandidates(t *testing.T) {
@@ -57,9 +56,15 @@ func TestEvalOfflineFromCandidates(t *testing.T) {
 }
 
 func TestEvalEmptyLabels(t *testing.T) {
+	// An empty labels file in the shipped schema (the real labels.yaml now
+	// holds human-confirmed labels, Q-7).
+	emptyLabels := filepath.Join(t.TempDir(), "labels.yaml")
+	if err := os.WriteFile(emptyLabels, []byte("version: 1\nround_id: 0\nlabels: []\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	out := filepath.Join(t.TempDir(), "eval_summary.json")
 	var stdout, stderr bytes.Buffer
-	if code := run(context.Background(), []string{"eval", "--labels", starterLabels, "--out", out}, &stdout, &stderr); code != 0 {
+	if code := run(context.Background(), []string{"eval", "--labels", emptyLabels, "--out", out}, &stdout, &stderr); code != 0 {
 		t.Fatalf("exit %d: %s", code, stderr.String())
 	}
 	if !strings.Contains(stdout.String(), "has no confirmed labels yet; nothing to evaluate") || !strings.Contains(stdout.String(), "summary written to "+out) {
@@ -76,7 +81,7 @@ func TestEvalEmptyLabels(t *testing.T) {
 	// --require-labels fails before anything is written.
 	out2 := filepath.Join(t.TempDir(), "eval_summary.json")
 	stdout.Reset()
-	if code := run(context.Background(), []string{"eval", "--labels", starterLabels, "--require-labels", "--out", out2}, &stdout, &stderr); code != 1 {
+	if code := run(context.Background(), []string{"eval", "--labels", emptyLabels, "--require-labels", "--out", out2}, &stdout, &stderr); code != 1 {
 		t.Errorf("exit %d with --require-labels, want 1", code)
 	}
 	if !strings.Contains(stderr.String(), "has no confirmed labels (--require-labels)") || stdout.Len() != 0 {
@@ -170,6 +175,59 @@ labels:
 	}
 	if sum.Labels != 4 || sum.RoundID != 1 || sum.Types[0].Type != "equivalent" || sum.Types[0].Support != 1 || sum.Types[0].TP != 1 ||
 		!strings.Contains(strings.Join(sum.Notes, "\n"), "meets the 0.95 target") || !strings.Contains(strings.Join(sum.Notes, "\n"), "polymarket:9999") {
+		t.Errorf("summary = %+v", sum)
+	}
+}
+
+func TestEvalRulesLLMFallsBackToRules(t *testing.T) {
+	st := store.New(tdb.Pool(t))
+	tdb.Reset(t)
+	seedMatchRound(t, st, store.RoundOK)
+	setEvalEnv(t)
+
+	labels := filepath.Join(t.TempDir(), "labels.yaml")
+	body := `version: 1
+round_id: 1
+labels:
+  # Pair from seeded round - no LLM verdict exists, so eval falls back to rules (related)
+  - a_id: kalshi:KXBTCD-26OCT0618-T76599.99
+    b_id: polymarket:1002
+    label: related
+    confirmed_by: test
+    confirmed_on: 2026-10-07
+  # Pair from seeded round - no LLM verdict exists, so eval falls back to rules (equivalent)
+  - a_id: kalshi:KXBTCD-26OCT0618-T76599.99
+    b_id: polymarket:1001
+    label: equivalent
+    confirmed_by: test
+    confirmed_on: 2026-10-07
+`
+	if err := os.WriteFile(labels, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	out := filepath.Join(t.TempDir(), "eval_summary.json")
+	if code := run(context.Background(), []string{"eval", "--method", "rules+llm", "--labels", labels, "--out", out}, &stdout, &stderr); code != 0 {
+		t.Fatalf("exit %d: %s", code, stderr.String())
+	}
+
+	// Verify output mentions rules+llm and shows 2 correct predictions
+	for _, want := range []string{"golden set (rules+llm): 2 labels evaluated, 2 correct"} {
+		if !strings.Contains(stdout.String(), want) {
+			t.Errorf("stdout lacks %q:\n%s", want, stdout.String())
+		}
+	}
+
+	// Verify summary JSON has method="rules+llm"
+	sum, err := eval.LoadSummary(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sum.Method != "rules+llm" {
+		t.Errorf("summary method = %q, want rules+llm", sum.Method)
+	}
+	if sum.Labels != 2 || sum.RoundID != 1 {
 		t.Errorf("summary = %+v", sum)
 	}
 }
