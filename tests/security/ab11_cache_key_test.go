@@ -116,14 +116,14 @@ func TestAB11_CachedVerifierNeverUpgrades(t *testing.T) {
 
 	// Verify a pair the rules call "related"
 	rulesRel := llm.InjectionCase{Rules: canonical.RelRelated, Field: "rules", VenueText: "x"}.RulesRelationship()
-	verdict, err := cachedVerifier.Verify(ctx, a, b, rulesRel)
+	result, err := cachedVerifier.Verify(ctx, a, b, rulesRel)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// The verdict should be the cached "equivalent" (cache hit)
-	if verdict.Relationship != canonical.RelEquivalent {
-		t.Errorf("cache returned %s, want equivalent", verdict.Relationship)
+	if result.Verdict.Relationship != canonical.RelEquivalent {
+		t.Errorf("cache returned %s, want equivalent", result.Verdict.Relationship)
 	}
 
 	// But when passed through Guard, it must be rejected (no upgrade)

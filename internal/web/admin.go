@@ -12,6 +12,7 @@ import (
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/collector"
+	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/decisionlog"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/llm"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/store"
 )
@@ -351,9 +352,12 @@ func (s *Server) handleAdminLLMVerify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	verifier := llm.NewVerifier(client)
-	budgetedVerifier := llm.NewBudgetedVerifier(verifier, s.deps.Store, dailyCap, client, s.log)
+	budgetedVerifier := llm.NewBudgetedVerifier(verifier, s.deps.Store, dailyCap, s.log)
 	cache := llm.NewPGCache(s.deps.Store, model, llm.PromptVersion)
 	cachedVerifier := llm.NewCachedVerifier(budgetedVerifier, cache, model, llm.PromptVersion, s.log)
+
+	// FR-17: log every relationship verdict to decision_log
+	dlog := decisionlog.New(s.deps.Store)
 
 	var verified, downgraded int
 	var budgetExhausted bool
@@ -375,7 +379,7 @@ func (s *Server) handleAdminLLMVerify(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Verify with the cached+budgeted stack
-		verdict, err := cachedVerifier.Verify(ctx, aRec.Instrument, bRec.Instrument, rel)
+		verifyResult, err := cachedVerifier.Verify(ctx, aRec.Instrument, bRec.Instrument, rel)
 		if err != nil {
 			if errors.Is(err, llm.ErrBudgetExhausted) {
 				budgetExhausted = true
@@ -401,16 +405,23 @@ func (s *Server) handleAdminLLMVerify(w http.ResponseWriter, r *http.Request) {
 		consecutiveErrors = 0
 
 		// Apply the guard (downgrade-only)
-		result := llm.Guard(ctx, s.log, rel, verdict)
+		result := llm.Guard(ctx, s.log, rel, verifyResult.Verdict)
 		verified++
 		if result.Outcome == llm.OutcomeDowngraded {
 			downgraded++
 		}
 
 		// Update the relationship in the database
-		if _, err := s.deps.Store.UpsertRelationship(ctx, result.Relationship); err != nil {
+		updatedRel, err := s.deps.Store.UpsertRelationship(ctx, result.Relationship)
+		if err != nil {
 			s.log.Error("updating relationship after llm verification", "error", err, "a_id", rel.AID, "b_id", rel.BID)
 			continue
+		}
+
+		// FR-17: log the verdict to decision_log (Cursor: actually write each verdict)
+		if _, err := dlog.Relationship(ctx, updatedRel); err != nil {
+			s.log.Warn("logging relationship verdict", "error", err, "relationship_id", updatedRel.ID)
+			// Don't fail the verification on log error - verdict is already saved
 		}
 	}
 

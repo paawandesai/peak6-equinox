@@ -22,9 +22,9 @@ func TestMockVerifier(t *testing.T) {
 	m := &MockVerifier{Verdicts: []canonical.LLMVerdict{verdict(canonical.RelEquivalent, "0.9"), verdict(canonical.RelRelated, "0.5")}}
 	want := []canonical.RelationshipType{canonical.RelEquivalent, canonical.RelRelated, canonical.RelRelated}
 	for i, w := range want {
-		v, err := m.Verify(ctx, a, b, r)
-		if err != nil || v.Relationship != w {
-			t.Fatalf("call %d = %s, %v; want %s", i, v.Relationship, err, w)
+		result, err := m.Verify(ctx, a, b, r)
+		if err != nil || result.Verdict.Relationship != w {
+			t.Fatalf("call %d = %s, %v; want %s", i, result.Verdict.Relationship, err, w)
 		}
 	}
 	if m.Calls() != 3 {
