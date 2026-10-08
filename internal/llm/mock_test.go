@@ -47,10 +47,10 @@ func TestScriptedModel(t *testing.T) {
 			t.Fatal(err)
 		}
 		if i == 0 && got.Text != want {
-			t.Errorf("call %d = %q", i, got)
+			t.Errorf("call %d = %q", i, got.Text)
 		}
 		if i > 0 && !strings.Contains(got.Text, strings.Repeat("A", 10)) {
-			t.Errorf("call %d did not expand @huge: %q", i, got)
+			t.Errorf("call %d did not expand @huge: %q", i, got.Text)
 		}
 	}
 	if len(m.Prompts()) != 3 {
@@ -71,7 +71,7 @@ func TestAdversarialMock(t *testing.T) {
 
 	got, err := m.Complete(ctx, BuildPrompt(a, b))
 	if err != nil || !strings.Contains(got.Text, "equivalent") {
-		t.Fatalf("mock did not obey an obfuscated demand: %q %v", got, err)
+		t.Fatalf("mock did not obey an obfuscated demand: %q %v", got.Text, err)
 	}
 	if obeyed := m.Obeyed(); len(obeyed) != 1 || obeyed[0] != "ignore previous instructions" {
 		t.Errorf("Obeyed = %v", obeyed)
@@ -80,11 +80,11 @@ func TestAdversarialMock(t *testing.T) {
 	clean, _ := InjectionCase{Field: "rules", VenueText: "nothing to see"}.Instruments()
 	got, _ = m.Complete(ctx, BuildPrompt(clean, clean))
 	if got.Text != HonestResponse {
-		t.Errorf("clean prompt got %q", got)
+		t.Errorf("clean prompt got %q", got.Text)
 	}
 	m.Honest = "custom"
 	if got, _ = m.Complete(ctx, BuildPrompt(clean, clean)); got.Text != "custom" {
-		t.Errorf("custom honest = %q", got)
+		t.Errorf("custom honest = %q", got.Text)
 	}
 	if v, err := Decode(HonestResponse); err != nil || v.Relationship != canonical.RelRelated {
 		t.Errorf("HonestResponse must decode: %v", err)
@@ -93,7 +93,7 @@ func TestAdversarialMock(t *testing.T) {
 	multi := &AdversarialMock{Demands: map[string]string{"zzz": "late", "aaa": "early", "": "never"}}
 	a2, b2 := InjectionCase{Field: "title", VenueText: "zzz aaa"}.Instruments()
 	if got, _ = multi.Complete(ctx, BuildPrompt(a2, b2)); got.Text != "early" {
-		t.Errorf("demands must be matched in sorted order, got %q", got)
+		t.Errorf("demands must be matched in sorted order, got %q", got.Text)
 	}
 }
 

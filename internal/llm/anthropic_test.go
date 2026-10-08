@@ -32,15 +32,15 @@ func TestAnthropicClientSuccess(t *testing.T) {
 	}
 	client.baseURL = server.URL // override for test
 
-	resp, err := client.Complete(context.Background(), Prompt{
+	result, err := client.Complete(context.Background(), Prompt{
 		System: "You are a test",
 		User:   "Respond with: equivalent",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp != "equivalent" {
-		t.Errorf("response: got %q, want %q", resp, "equivalent")
+	if result.Text != "equivalent" {
+		t.Errorf("response: got %q, want %q", result.Text, "equivalent")
 	}
 }
 

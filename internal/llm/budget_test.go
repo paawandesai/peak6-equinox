@@ -28,7 +28,7 @@ func TestCacheHitDoesNotIncrementUsage(t *testing.T) {
 	// Build verifier stack: Model -> Budget -> Cache
 	mockModel := &ScriptedModel{Responses: []string{HonestResponse}}
 	verifier := NewVerifier(mockModel)
-	budgetedVerifier := NewBudgetedVerifier(verifier, mockStore, 10, nil, nil)
+	budgetedVerifier := NewBudgetedVerifier(verifier, mockStore, 10, nil)
 
 	var memCache MemoryCache
 	cachedVerifier := NewCachedVerifier(budgetedVerifier, &memCache, "test-model", PromptVersion, nil)
