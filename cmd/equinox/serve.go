@@ -97,7 +97,15 @@ func buildDeps(ctx context.Context, cfg config.Config, logger *slog.Logger) (web
 		pool.Close()
 		return web.Deps{}, nil, err
 	}
-	return web.Deps{Logger: logger, Store: st, Ingester: col}, pool.Close, nil
+	return web.Deps{
+		Logger:             logger,
+		Store:              st,
+		Ingester:           col,
+		AnthropicAPIKey:    cfg.AnthropicAPIKey,
+		LLMModel:           cfg.LLMModel,
+		LLMDailyCallCap:    cfg.LLMDailyCallCap,
+		LLMMaxOutputTokens: cfg.LLMMaxOutputTokens,
+	}, pool.Close, nil
 }
 
 // utcTime renders log timestamps in UTC.
@@ -122,6 +130,12 @@ func newServerWith(cfg config.Config, logger *slog.Logger, deps web.Deps) *web.S
 		PublicRateLimitPerMin: cfg.PublicRateLimitPerMin,
 		MinRouteConfidence:    cfg.MinRouteConfidence,
 		EvalSummaryFile:       cfg.EvalSummaryFile,
+		StaleAfter:            cfg.StaleAfter,
+		SkewWarn:              cfg.SkewWarn,
+		SkewMax:               cfg.SkewMax,
+		MinBookDepth:          cfg.MinBookDepth,
+		BasisPenaltyMult:      cfg.BasisPenaltyMult,
+		StaleRoundWarnMinutes: cfg.StaleRoundWarnMinutes,
 	}, deps)
 }
 

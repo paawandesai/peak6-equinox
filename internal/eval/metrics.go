@@ -57,11 +57,11 @@ type Report struct {
 	Missing []Label
 }
 
-// Evaluate scores labels against predict, rules only (rules+LLM is M3).
+// Evaluate scores labels against predict for the given method.
 // Labels whose pair predict cannot classify are listed in Missing and
 // excluded from every count, so a stale label never counts as a miss.
-func Evaluate(labels Labels, predict Predictor) Report {
-	r := Report{Method: canonical.MethodRules}
+func Evaluate(labels Labels, predict Predictor, method canonical.Method) Report {
+	r := Report{Method: method}
 	byType := map[canonical.RelationshipType]*TypeMetrics{}
 	for _, t := range canonical.RelationshipTypes() {
 		byType[t] = &TypeMetrics{Type: t}

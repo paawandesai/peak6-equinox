@@ -27,7 +27,7 @@ func TestSummaryRoundTripsAgainstTheContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r := Evaluate(labels, fixturePredictor(t))
+	r := Evaluate(labels, fixturePredictor(t), canonical.MethodRules)
 	s := r.Summary(summaryNow, "equinox eval --labels x.yaml", 7, fixtureLabels, len(labels.Labels))
 	if s.Labels != 7 || s.RoundID != 7 || s.Method != "rules" || !s.GeneratedAt.Equal(summaryNow.Truncate(time.Second)) || len(s.Types) != 6 {
 		t.Fatalf("summary = %+v", s)
@@ -93,7 +93,7 @@ func TestSummaryRoundTripsAgainstTheContract(t *testing.T) {
 }
 
 func TestSummaryEmptyLabelsAndTargetMet(t *testing.T) {
-	s := Evaluate(Labels{Version: 1}, nil).Summary(summaryNow, "equinox eval", 0, "labels.yaml", 0)
+	s := Evaluate(Labels{Version: 1}, nil, canonical.MethodRules).Summary(summaryNow, "equinox eval", 0, "labels.yaml", 0)
 	if s.Labels != 0 || len(s.Types) != 6 || s.Types[0].Precision != nil {
 		t.Errorf("empty = %+v", s)
 	}
@@ -104,7 +104,7 @@ func TestSummaryEmptyLabelsAndTargetMet(t *testing.T) {
 		t.Error(err)
 	}
 	l := Labels{Version: 1, Labels: []Label{{AID: "kalshi:A", BID: "polymarket:1", Label: canonical.RelEquivalent, ConfirmedBy: "h", ConfirmedOn: "2026-10-07"}}}
-	met := Evaluate(l, func(string, string) (canonical.RelationshipType, bool) { return canonical.RelEquivalent, true }).
+	met := Evaluate(l, func(string, string) (canonical.RelationshipType, bool) { return canonical.RelEquivalent, true }, canonical.MethodRules).
 		Summary(summaryNow, "equinox eval", 3, "labels.yaml", 1)
 	if !strings.Contains(met.Notes[0], "meets the 0.95 target") || met.Types[0].Recall == nil || !met.Types[0].Recall.Equal(decimal.NewFromInt(1)) {
 		t.Errorf("met = %+v", met)

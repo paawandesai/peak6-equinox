@@ -33,7 +33,10 @@ const (
 	DefaultSkewWarnSeconds       = 5
 	DefaultSkewMaxSeconds        = 30
 	DefaultMinRouteConfidence    = "0.9"
+	DefaultMinBookDepth          = "1"
+	DefaultBasisPenaltyMult      = "0.01"
 	DefaultPublicRateLimitPerMin = 60
+	DefaultStaleRoundWarnMinutes = 10
 	DefaultLLMModel              = "claude-haiku-4-5-20251001"
 	DefaultLLMDailyCallCap       = 200
 	DefaultLLMMaxOutputTokens    = 400
@@ -75,7 +78,10 @@ type Config struct {
 	SkewMax      time.Duration
 
 	MinRouteConfidence    decimal.Decimal
+	MinBookDepth          decimal.Decimal
+	BasisPenaltyMult      decimal.Decimal
 	PublicRateLimitPerMin int
+	StaleRoundWarnMinutes int
 
 	LLMEnabled         bool
 	AnthropicAPIKey    string
@@ -120,7 +126,10 @@ func Load(lookup LookupFunc) (Config, error) {
 		SkewMax:      l.seconds("SKEW_MAX_SECONDS", DefaultSkewMaxSeconds),
 
 		MinRouteConfidence:    l.probability("MIN_ROUTE_CONFIDENCE", DefaultMinRouteConfidence),
+		MinBookDepth:          l.positiveDecimal("MIN_BOOK_DEPTH", DefaultMinBookDepth),
+		BasisPenaltyMult:      l.positiveDecimal("BASIS_PENALTY_MULTIPLIER", DefaultBasisPenaltyMult),
 		PublicRateLimitPerMin: l.integer("PUBLIC_RATE_LIMIT_PER_MIN", DefaultPublicRateLimitPerMin, 1, 1_000_000),
+		StaleRoundWarnMinutes: l.integer("STALE_ROUND_WARN_MINUTES", DefaultStaleRoundWarnMinutes, 1, 10_000),
 
 		LLMEnabled:         l.boolean("LLM_ENABLED", false),
 		AnthropicAPIKey:    l.optional("ANTHROPIC_API_KEY", ""),
@@ -178,6 +187,8 @@ func (c Config) LogValue() slog.Value {
 		slog.Duration("skew_warn", c.SkewWarn),
 		slog.Duration("skew_max", c.SkewMax),
 		slog.String("min_route_confidence", c.MinRouteConfidence.String()),
+		slog.String("min_book_depth", c.MinBookDepth.String()),
+		slog.String("basis_penalty_mult", c.BasisPenaltyMult.String()),
 		slog.Int("public_rate_limit_per_min", c.PublicRateLimitPerMin),
 		slog.Bool("llm_enabled", c.LLMEnabled),
 		slog.String("anthropic_api_key", redactIfSet(c.AnthropicAPIKey)),
@@ -272,6 +283,23 @@ func (l *loader) probability(key, def string) decimal.Decimal {
 	}
 	if d.LessThan(decimal.Zero) || d.GreaterThan(decimal.NewFromInt(1)) {
 		l.fail("%s must be between 0 and 1; got %s", key, d)
+		return decimal.RequireFromString(def)
+	}
+	return d
+}
+
+func (l *loader) positiveDecimal(key, def string) decimal.Decimal {
+	v, ok := l.get(key)
+	if !ok {
+		v = def
+	}
+	d, err := decimal.NewFromString(v)
+	if err != nil {
+		l.fail("%s must be a decimal; got %q", key, v)
+		return decimal.RequireFromString(def)
+	}
+	if !d.IsPositive() {
+		l.fail("%s must be positive; got %s", key, d)
 		return decimal.RequireFromString(def)
 	}
 	return d

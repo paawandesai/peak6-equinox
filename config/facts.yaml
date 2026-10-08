@@ -55,3 +55,20 @@ facts:
     notes: >-
       Percentage points. Read from the "Open Market Operations" history of
       target range changes; every entry is a multiple of 0.25.
+
+  # Decision days of the scheduled FOMC meetings that the golden-set Fed pairs
+  # rely on (D-083, Paawan 2026-10-07 9:30 PM CT). Kalshi KXFEDDECISION and
+  # Polymarket "Fed Decision in <month>?" pay the same only if each meeting
+  # is held on its scheduled date: a meeting moved off its date resolves
+  # "Fed maintains rate" on Kalshi but waits for the statement on Polymarket.
+  # Those pairs are therefore labelled equivalent_given_facts with this fact
+  # and fed_rate_step. Record-only: the matcher does not read this id yet.
+  - id: fed_meeting_dates
+    value: "2026-10-28,2026-12-09,2027-01-27"
+    source: https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+    as_of: 2026-10-07
+    notes: >-
+      Comma-separated calendar dates (UTC) of the second day of the October
+      27-28, 2026, December 8-9, 2026 and January 26-27, 2027 FOMC meetings,
+      as scheduled on the official calendar. If a meeting is cancelled or
+      moved, update this fact and revisit the golden labels that cite it.

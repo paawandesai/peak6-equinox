@@ -82,14 +82,15 @@ func parsePage(files ...string) *template.Template {
 
 // publicRoutes registers the open, read-only pages (D-035). The only public
 // POST is /route, a simulation whose only write is its own decision (AB-14).
+// All routes except /static are rate-limited per client IP (AB-03).
 func (s *Server) publicRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("GET /{$}", s.handleMatches)
-	mux.HandleFunc("GET /near-misses", s.handleNearMisses)
-	mux.HandleFunc("GET /pairs/{id}", s.handlePair)
-	mux.HandleFunc("POST /route", s.handleRoute)
-	mux.HandleFunc("GET /decisions/{id}", s.handleDecision)
-	mux.HandleFunc("GET /log", s.handleLog)
-	mux.HandleFunc("GET /eval", s.handleEval)
+	mux.Handle("GET /{$}", s.rateLimitMiddleware(http.HandlerFunc(s.handleMatches)))
+	mux.Handle("GET /near-misses", s.rateLimitMiddleware(http.HandlerFunc(s.handleNearMisses)))
+	mux.Handle("GET /pairs/{id}", s.rateLimitMiddleware(http.HandlerFunc(s.handlePair)))
+	mux.Handle("POST /route", s.rateLimitMiddleware(http.HandlerFunc(s.handleRoute)))
+	mux.Handle("GET /decisions/{id}", s.rateLimitMiddleware(http.HandlerFunc(s.handleDecision)))
+	mux.Handle("GET /log", s.rateLimitMiddleware(http.HandlerFunc(s.handleLog)))
+	mux.Handle("GET /eval", s.rateLimitMiddleware(http.HandlerFunc(s.handleEval)))
 	mux.HandleFunc("GET /static/app.css", s.handleAppCSS)
 }
 
@@ -104,10 +105,11 @@ func (s *Server) handleAppCSS(w http.ResponseWriter, _ *http.Request) {
 // page is the data every full page shares. Question is the one line that
 // states what the page answers (NFR-16).
 type page struct {
-	Title    string
-	Question string
-	Assets   assets
-	Round    *roundInfo
+	Title        string
+	Question     string
+	Assets       assets
+	Round        *roundInfo
+	StaleWarning string // "Data is N minutes old" when round is stale (NFR-09, D-077)
 }
 
 // roundInfo is the round a page reads from, as shown in headers.
