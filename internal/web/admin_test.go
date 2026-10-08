@@ -132,6 +132,10 @@ func TestAdminIndexWithoutStore(t *testing.T) {
 		if rec.Code != http.StatusOK || !strings.Contains(rec.Header().Get("Content-Type"), "text/html") {
 			t.Fatalf("%s: status %d, type %q", path, rec.Code, rec.Header().Get("Content-Type"))
 		}
+		// UI-08: noindex via X-Robots-Tag header
+		if got := rec.Header().Get("X-Robots-Tag"); got != "noindex" {
+			t.Errorf("%s: X-Robots-Tag = %q, want noindex", path, got)
+		}
 		// UI-08: updated markup expectations for layout and chips
 		for _, want := range []string{"database not configured", "round 3 running", "No rounds yet", `action="/admin/ingest"`, "disabled"} {
 			if !strings.Contains(body, want) {

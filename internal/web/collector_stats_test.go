@@ -137,16 +137,16 @@ func TestAdminCollectorSuccessFromStore(t *testing.T) {
 		t.Fatalf("status %d", rec.Code)
 	}
 	body := rec.Body.String()
-	// UI-08: collector success is in the health strip with chips for state
 	// 19 successes of 288 expected ticks = 6.59%; 268 ticks missing.
-	for _, want := range []string{"Collector success", "6.59%", "288", "95.00%",
-		"chip-danger", "below target", "5.0 GB"} {
+	for _, want := range []string{"Collector success, trailing 24h0m0s (NFR-05)", "<strong>6.59%</strong> of 288 expected 5m0s ticks succeeded (target 95.00%)",
+		"<strong>BELOW TARGET</strong>", "ok 18, partial 1, failed 1, running 0, missing ticks 268 (20 rounds observed of 288 scheduled)",
+		"alert threshold 5.0 GB", ", below the threshold"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("body lacks %q", want)
 		}
 	}
-	if strings.Contains(body, "banner-danger") {
-		t.Error("growth alert banner shown below the threshold")
+	if strings.Contains(body, "ALERT:") {
+		t.Error("growth alert shown below the threshold")
 	}
 }
 
@@ -165,8 +165,7 @@ func TestAdminDBGrowthAlert(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status %d", rec.Code)
 	}
-	// UI-08: DB size is in the health strip, alert is in a banner
-	for _, want := range []string{"5.0 GB", "banner banner-danger", "ALERT:", "database size is above the 5.0 GB growth threshold (AB-15)"} {
+	for _, want := range []string{"Database size: <strong>5.0 GB</strong>", "ALERT: database size is above the 5.0 GB growth threshold (AB-15)"} {
 		if !strings.Contains(rec.Body.String(), want) {
 			t.Errorf("body lacks %q", want)
 		}
@@ -187,14 +186,11 @@ func TestAdminDBGrowthAlert(t *testing.T) {
 		buf.Reset()
 		size = n
 		rec = do(s.Handler(), request(http.MethodGet, "/admin", withAuth(testUser, testPass)))
-		body := rec.Body.String()
-		if strings.Contains(body, "ALERT:") || strings.Contains(buf.String(), "db_growth") {
+		if strings.Contains(rec.Body.String(), "ALERT:") || strings.Contains(buf.String(), "db_growth") {
 			t.Errorf("size %d: alert fired", n)
 		}
-		// UI-08: health strip shows DB size without explicit "below the threshold" text,
-		// but the banner should be absent (no banner-danger class)
-		if !strings.Contains(body, "Database size") || strings.Contains(body, "banner-danger") {
-			t.Errorf("size %d: page lacks the all-clear or shows alert", n)
+		if !strings.Contains(rec.Body.String(), "below the threshold") {
+			t.Errorf("size %d: page lacks the all-clear", n)
 		}
 	}
 

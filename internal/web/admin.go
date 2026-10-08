@@ -162,36 +162,43 @@ func (s *Server) handleAdminIndex(w http.ResponseWriter, r *http.Request) {
 		}
 		p.Collector = collectorSuccess(recent, s.now())
 
-		// UI-08: LLM verifier state (design.md § 4)
-		p.LLMVerifierButtonLabel = "Verify equivalent pairs with LLM"
-		if s.deps.AnthropicAPIKey == "" {
-			p.LLMVerifierState = "disabled"
-			p.LLMVerifierStateChip = "chip-muted"
-			p.LLMVerifierStateText = "disabled: ANTHROPIC_API_KEY not set"
+	}
+
+	// UI-08: LLM verifier state (design.md § 4)
+	p.LLMVerifierButtonLabel = "Verify equivalent pairs with LLM"
+	if s.deps.AnthropicAPIKey == "" {
+		p.LLMVerifierState = "disabled"
+		p.LLMVerifierStateChip = "chip-muted"
+		p.LLMVerifierStateText = "disabled: ANTHROPIC_API_KEY not set"
+	} else if s.deps.Store == nil {
+		// Default state when Store is nil
+		p.LLMVerifierState = "ready"
+		p.LLMVerifierStateChip = "chip-ok"
+		p.LLMVerifierStateText = "ready: 0 of 200 calls used today"
+	} else {
+		// Check daily usage
+		dailyCap := s.deps.LLMDailyCallCap
+		if dailyCap <= 0 {
+			dailyCap = 200
+		}
+		calls, _, _, err := s.deps.Store.GetLLMUsage(ctx, s.now())
+		if err != nil {
+			s.log.Error("getting LLM usage for admin page", "error", err)
+			p.LLMVerifierState = "ready"
+			p.LLMVerifierStateChip = "chip-ok"
+			p.LLMVerifierStateText = fmt.Sprintf("ready: 0 of %d calls used today", dailyCap)
+		} else if calls >= int64(dailyCap) {
+			p.LLMVerifierState = "cap_reached"
+			p.LLMVerifierStateChip = "chip-danger"
+			p.LLMVerifierStateText = fmt.Sprintf("cap reached: %d of %d", calls, dailyCap)
 		} else {
-			// Check daily usage
-			dailyCap := s.deps.LLMDailyCallCap
-			if dailyCap <= 0 {
-				dailyCap = 200
-			}
-			calls, _, _, err := s.deps.Store.GetLLMUsage(ctx, s.now())
-			if err != nil {
-				s.log.Error("getting LLM usage for admin page", "error", err)
-				p.LLMVerifierState = "ready"
-				p.LLMVerifierStateChip = "chip-ok"
-				p.LLMVerifierStateText = fmt.Sprintf("ready: 0 of %d calls used today", dailyCap)
-			} else if calls >= int64(dailyCap) {
-				p.LLMVerifierState = "cap_reached"
-				p.LLMVerifierStateChip = "chip-danger"
-				p.LLMVerifierStateText = fmt.Sprintf("cap reached: %d of %d", calls, dailyCap)
-			} else {
-				p.LLMVerifierState = "ready"
-				p.LLMVerifierStateChip = "chip-ok"
-				p.LLMVerifierStateText = fmt.Sprintf("ready: %d of %d calls used today", calls, dailyCap)
-			}
+			p.LLMVerifierState = "ready"
+			p.LLMVerifierStateChip = "chip-ok"
+			p.LLMVerifierStateText = fmt.Sprintf("ready: %d of %d calls used today", calls, dailyCap)
 		}
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("X-Robots-Tag", "noindex") // UI-08: noindex via header, not meta tag
 	// UI-08: render through layout template
 	if err := adminTmpl.ExecuteTemplate(w, "layout", p); err != nil {
 		s.log.Error("rendering admin page", "error", err)
