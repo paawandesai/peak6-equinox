@@ -16,7 +16,6 @@ import (
 const (
 	fixtureLabels     = "../../testdata/golden/testdata/labels_small.yaml"
 	fixtureCandidates = "../../testdata/golden/testdata/candidates_small.yaml"
-	starterLabels     = "../../testdata/golden/labels.yaml"
 )
 
 func TestEvalOfflineFromCandidates(t *testing.T) {
@@ -57,9 +56,15 @@ func TestEvalOfflineFromCandidates(t *testing.T) {
 }
 
 func TestEvalEmptyLabels(t *testing.T) {
+	// An empty labels file in the shipped schema (the real labels.yaml now
+	// holds human-confirmed labels, Q-7).
+	emptyLabels := filepath.Join(t.TempDir(), "labels.yaml")
+	if err := os.WriteFile(emptyLabels, []byte("version: 1\nround_id: 0\nlabels: []\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	out := filepath.Join(t.TempDir(), "eval_summary.json")
 	var stdout, stderr bytes.Buffer
-	if code := run(context.Background(), []string{"eval", "--labels", starterLabels, "--out", out}, &stdout, &stderr); code != 0 {
+	if code := run(context.Background(), []string{"eval", "--labels", emptyLabels, "--out", out}, &stdout, &stderr); code != 0 {
 		t.Fatalf("exit %d: %s", code, stderr.String())
 	}
 	if !strings.Contains(stdout.String(), "has no confirmed labels yet; nothing to evaluate") || !strings.Contains(stdout.String(), "summary written to "+out) {
@@ -76,7 +81,7 @@ func TestEvalEmptyLabels(t *testing.T) {
 	// --require-labels fails before anything is written.
 	out2 := filepath.Join(t.TempDir(), "eval_summary.json")
 	stdout.Reset()
-	if code := run(context.Background(), []string{"eval", "--labels", starterLabels, "--require-labels", "--out", out2}, &stdout, &stderr); code != 1 {
+	if code := run(context.Background(), []string{"eval", "--labels", emptyLabels, "--require-labels", "--out", out2}, &stdout, &stderr); code != 1 {
 		t.Errorf("exit %d with --require-labels, want 1", code)
 	}
 	if !strings.Contains(stderr.String(), "has no confirmed labels (--require-labels)") || stdout.Len() != 0 {

@@ -1,444 +1,400 @@
 # ============================================================================
-# OPERATOR-DRAFTED GOLDEN LABELS — AWAITING HUMAN REVIEW
+# OPERATOR-DRAFTED GOLDEN LABELS: AWAITING HUMAN REVIEW (Q-7)
 # ============================================================================
 #
-# THIS FILE IS A DRAFT. Q-7 remains OPEN. These proposed labels are NOT
-# confirmed and MUST NOT be used for the `equinox eval` precision exit gate
-# (NFR-06). Only labels in labels.yaml (human-owned, currently EMPTY) count
-# toward the M2 exit criteria.
+# This file is a draft. Nothing here counts for `equinox eval`; only
+# labels.yaml does. History:
+#   - 2026-10-07 17:30 UTC: the operator drafted 40 proposals from
+#     candidates.yaml round 2.
+#   - 2026-10-07 8:38 PM CT: Paawan approved them in operator chat, on
+#     condition that each one was checked against the venues' rules. The
+#     operator checked all 40: 34 were CONFIRMED and 6 CORRECTED; none were
+#     UNVERIFIABLE. At 9:30 PM CT Paawan accepted the 6 corrections, so all 40
+#     round-2 pairs are now in labels.yaml and none remain here.
+#   - 2026-10-07: the operator added 33 new cross-venue drafts (below), rules
+#     already checked. Paawan has NOT reviewed these pairs one by one. Their
+#     labels follow his D-083 decision (9:30 PM CT): Fed pairs that match
+#     except on edge cases (a rescheduled meeting, rounding of odd-sized moves,
+#     25 bp steps) are equivalent_given_facts, with the facts named in `why`
+#     and recorded in config/facts.yaml; the 2028 nominee pairs stay
+#     equivalent.
 #
-# Human review process (Q-7):
-#   1. For each proposal below, read BOTH contracts' full text (not just titles)
-#   2. Confirm or correct the proposed_label based on your own judgment
-#   3. Promote confirmed entries into labels.yaml with your confirmed_by/confirmed_on
-#   4. See labels.yaml header for the strict schema required for eval
+# Review: for each entry, accept or change proposed_label, then move it into
+# labels.yaml (strict schema, confirmed_by/confirmed_on). These pairs come
+# from live venue data (2026-10-07), not from round 2. Several use Kalshi
+# series that are not in config/universe/kalshi.yaml (KXFEDDECISION,
+# KXRATECUTCOUNT, KXRATECUT), so `equinox eval` cannot score them until those
+# series are ingested (D-083 follow-up).
 #
-# This file uses a looser schema to aid review:
-#   - a_title, b_title: for quick reference (not in labels.yaml schema)
-#   - suggested_by_matcher: the matcher's verdict from candidates.yaml
-#   - proposed_label: operator's reading of the matcher's explanation
-#   - why: operator's reasoning (not in labels.yaml)
-#   - review_status: pending_human (all entries)
-#
-# Drafted: 2026-10-07 by operator from candidates.yaml round 2.
-# See docs/status.md Q-7 for next steps.
+# Loose schema (this file only): a_id, b_id, a_title, b_title, category,
+# suggested_by_matcher, proposed_label, why, rules_checked, review_status.
 #
 version: 1
 proposals:
   # =========================================================================
-  # EQUIVALENT_GIVEN_FACTS (1) — Fed demo pair
+  # NEW DRAFTS (33), 2026-10-07, from live venue APIs; rules checked by the operator
+  #    equivalent_given_facts 18 (fed) · equivalent 9 (politics) · complement 1 (fed) · related 5 (politics 2, crypto 3)
+  #    Labels follow D-083 (Paawan 2026-10-07 9:30 PM CT)
   # =========================================================================
-  - a_id: kalshi:KXFED-26OCT-T4.25
-    b_id: polymarket:18246296022868501258060085368606280205967114341141276439803424448463050819498
-    a_title: "Will the upper bound of the federal funds rate be above 4.25% following the Fed's Oct 28, 2026 meeting? — Above 4.25%"
-    b_title: "Will the Fed increase interest rates by 50+ bps after the October 2026 meeting?"
-    category: fed
-    suggested_by_matcher: equivalent_given_facts
-    proposed_label: equivalent_given_facts
-    why: "Given fed_upper_bound=4.00, Polymarket ≥0.5 bps change translates to level ≥4.5; on the 0.25 grid (fed_rate_step), Kalshi >4.25 is ≥4.5, and ≥4.5 is ≥4.5: the same set. Arithmetic checks out."
-    review_status: pending_human
-
-  # =========================================================================
-  # COMPLEMENT (1) — Fed demo complement
-  # =========================================================================
-  - a_id: kalshi:KXFED-26OCT-T3.50
+  - a_id: kalshi:KXFEDDECISION-26OCT-C26
     b_id: polymarket:17010377994663817312158123655937348199252960045746746128731746451645055725586
-    a_title: "Will the upper bound of the federal funds rate be above 3.50% following the Fed's Oct 28, 2026 meeting? — Above 3.50%"
+    a_title: "Will the Federal Reserve Cut rates by >25bps at their October 2026 meeting? — Cut >25bps"
     b_title: "Will the Fed decrease interest rates by 50+ bps after the October 2026 meeting?"
     category: fed
-    suggested_by_matcher: complement
-    proposed_label: complement
-    why: "Given fed_upper_bound=4.00, Polymarket ≤-0.5 bps change translates to level ≤3.5. YES on Kalshi >3.5 pays exactly when NO on Polymarket ≤3.5 pays. Complement is correct."
+    suggested_by_matcher: not_drafted
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Oct 27-28, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26OCT-C26 (Cut >25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
+    rules_checked: "Kalshi KXFEDDECISION-26OCT-C26 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 2589810 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Cut of [>]25bps (the API text drops the > sign; yes_sub_title and rules_secondary give >25bps) on October 28, 2026, then the market resolves to Yes."
     review_status: pending_human
 
-  # =========================================================================
-  # IMPLIED (14) — Fed rate implication pairs
-  # =========================================================================
-  - a_id: kalshi:KXFED-26OCT-T2.75
-    b_id: polymarket:111061902544814266207267295505639408607400625795891618462682726460921782993748
-    a_title: "Will the upper bound of the federal funds rate be above 2.75% following the Fed's Oct 28, 2026 meeting? — Above 2.75%"
-    b_title: "Will there be no change in Fed interest rates after the October 2026 meeting?"
-    category: fed
-    suggested_by_matcher: implies
-    proposed_label: implies
-    why: "Polymarket eq 0 → level eq 4.00 → forces Kalshi >2.75. One-way implication is sound."
-    review_status: pending_human
-
-  - a_id: kalshi:KXFED-26OCT-T3.00
+  - a_id: kalshi:KXFEDDECISION-26OCT-C25
     b_id: polymarket:33268510350568915228897273528353467773422190590579607471427765079749830445947
-    a_title: "Will the upper bound of the federal funds rate be above 3.00% following the Fed's Oct 28, 2026 meeting? — Above 3.00%"
+    a_title: "Will the Federal Reserve Cut rates by 25bps at their October 2026 meeting? — Cut 25bps"
     b_title: "Will the Fed decrease interest rates by 25 bps after the October 2026 meeting?"
     category: fed
-    suggested_by_matcher: implies
-    proposed_label: implies
-    why: "Polymarket eq -0.25 → level eq 3.75 → forces Kalshi >3.00."
+    suggested_by_matcher: not_drafted
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Oct 27-28, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26OCT-C25 (Cut 25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
+    rules_checked: "Kalshi KXFEDDECISION-26OCT-C25 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 2589811 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Cut of 25bps on October 28, 2026, then the market resolves to Yes."
     review_status: pending_human
 
-  - a_id: kalshi:KXFED-26OCT-T3.25
-    b_id: polymarket:55159722761418013044126414276680602270318000841690689684819994448621694923050
-    a_title: "Will the upper bound of the federal funds rate be above 3.25% following the Fed's Oct 28, 2026 meeting? — Above 3.25%"
-    b_title: "Will the Fed increase interest rates by 25 bps after the October 2026 meeting?"
-    category: fed
-    suggested_by_matcher: implies
-    proposed_label: implies
-    why: "Polymarket eq +0.25 → level eq 4.25 → forces Kalshi >3.25."
-    review_status: pending_human
-
-  - a_id: kalshi:KXFED-26OCT-T2.75
-    b_id: polymarket:18246296022868501258060085368606280205967114341141276439803424448463050819498
-    a_title: "Will the upper bound of the federal funds rate be above 2.75% following the Fed's Oct 28, 2026 meeting? — Above 2.75%"
-    b_title: "Will the Fed increase interest rates by 50+ bps after the October 2026 meeting?"
-    category: fed
-    suggested_by_matcher: implies
-    proposed_label: implies
-    why: "Polymarket ≥0.5 → level ≥4.5 → forces Kalshi >2.75."
-    review_status: pending_human
-
-  - a_id: kalshi:KXFED-26OCT-T2.75
-    b_id: polymarket:33268510350568915228897273528353467773422190590579607471427765079749830445947
-    a_title: "Will the upper bound of the federal funds rate be above 2.75% following the Fed's Oct 28, 2026 meeting? — Above 2.75%"
-    b_title: "Will the Fed decrease interest rates by 25 bps after the October 2026 meeting?"
-    category: fed
-    suggested_by_matcher: implies
-    proposed_label: implies
-    why: "Polymarket eq -0.25 → level eq 3.75 → forces Kalshi >2.75."
-    review_status: pending_human
-
-  - a_id: kalshi:KXFED-26OCT-T2.75
-    b_id: polymarket:55159722761418013044126414276680602270318000841690689684819994448621694923050
-    a_title: "Will the upper bound of the federal funds rate be above 2.75% following the Fed's Oct 28, 2026 meeting? — Above 2.75%"
-    b_title: "Will the Fed increase interest rates by 25 bps after the October 2026 meeting?"
-    category: fed
-    suggested_by_matcher: implies
-    proposed_label: implies
-    why: "Polymarket eq +0.25 → level eq 4.25 → forces Kalshi >2.75."
-    review_status: pending_human
-
-  - a_id: kalshi:KXFED-26OCT-T3.00
+  - a_id: kalshi:KXFEDDECISION-26OCT-H0
     b_id: polymarket:111061902544814266207267295505639408607400625795891618462682726460921782993748
-    a_title: "Will the upper bound of the federal funds rate be above 3.00% following the Fed's Oct 28, 2026 meeting? — Above 3.00%"
+    a_title: "Will the Federal Reserve Hike rates by 0bps at their October 2026 meeting? — Fed maintains rate"
     b_title: "Will there be no change in Fed interest rates after the October 2026 meeting?"
     category: fed
-    suggested_by_matcher: implies
-    proposed_label: implies
-    why: "Polymarket eq 0 → level eq 4.00 → forces Kalshi >3.00."
+    suggested_by_matcher: not_drafted
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Oct 27-28, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26OCT-H0 (Fed maintains rate): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
+    rules_checked: "Kalshi KXFEDDECISION-26OCT-H0 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 2589812 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Hike of 0bps on October 28, 2026, then the market resolves to Yes."
     review_status: pending_human
 
-  - a_id: kalshi:KXFED-26OCT-T3.00
-    b_id: polymarket:18246296022868501258060085368606280205967114341141276439803424448463050819498
-    a_title: "Will the upper bound of the federal funds rate be above 3.00% following the Fed's Oct 28, 2026 meeting? — Above 3.00%"
-    b_title: "Will the Fed increase interest rates by 50+ bps after the October 2026 meeting?"
-    category: fed
-    suggested_by_matcher: implies
-    proposed_label: implies
-    why: "Polymarket ≥0.5 → level ≥4.5 → forces Kalshi >3.00."
-    review_status: pending_human
-
-  - a_id: kalshi:KXFED-26OCT-T3.00
+  - a_id: kalshi:KXFEDDECISION-26OCT-H25
     b_id: polymarket:55159722761418013044126414276680602270318000841690689684819994448621694923050
-    a_title: "Will the upper bound of the federal funds rate be above 3.00% following the Fed's Oct 28, 2026 meeting? — Above 3.00%"
+    a_title: "Will the Federal Reserve Hike rates by 25bps at their October 2026 meeting? — Hike 25bps"
     b_title: "Will the Fed increase interest rates by 25 bps after the October 2026 meeting?"
     category: fed
-    suggested_by_matcher: implies
-    proposed_label: implies
-    why: "Polymarket eq +0.25 → level eq 4.25 → forces Kalshi >3.00."
+    suggested_by_matcher: not_drafted
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Oct 27-28, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26OCT-H25 (Hike 25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
+    rules_checked: "Kalshi KXFEDDECISION-26OCT-H25 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 2589813 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Hike of 25bps on October 28, 2026, then the market resolves to Yes."
     review_status: pending_human
 
-  - a_id: kalshi:KXFED-26OCT-T3.25
-    b_id: polymarket:111061902544814266207267295505639408607400625795891618462682726460921782993748
-    a_title: "Will the upper bound of the federal funds rate be above 3.25% following the Fed's Oct 28, 2026 meeting? — Above 3.25%"
-    b_title: "Will there be no change in Fed interest rates after the October 2026 meeting?"
-    category: fed
-    suggested_by_matcher: implies
-    proposed_label: implies
-    why: "Polymarket eq 0 → level eq 4.00 → forces Kalshi >3.25."
-    review_status: pending_human
-
-  - a_id: kalshi:KXFED-26OCT-T3.25
+  - a_id: kalshi:KXFEDDECISION-26OCT-H26
     b_id: polymarket:18246296022868501258060085368606280205967114341141276439803424448463050819498
-    a_title: "Will the upper bound of the federal funds rate be above 3.25% following the Fed's Oct 28, 2026 meeting? — Above 3.25%"
+    a_title: "Will the Federal Reserve Hike rates by >25bps at their October 2026 meeting? — Hike >25bps"
     b_title: "Will the Fed increase interest rates by 50+ bps after the October 2026 meeting?"
     category: fed
-    suggested_by_matcher: implies
-    proposed_label: implies
-    why: "Polymarket ≥0.5 → level ≥4.5 → forces Kalshi >3.25."
+    suggested_by_matcher: not_drafted
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Oct 27-28, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26OCT-H26 (Hike >25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
+    rules_checked: "Kalshi KXFEDDECISION-26OCT-H26 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 2589814 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Hike of [>]25bps (the API text drops the > sign; yes_sub_title and rules_secondary give >25bps) on October 28, 2026, then the market resolves to Yes."
     review_status: pending_human
 
-  - a_id: kalshi:KXFED-26OCT-T3.25
-    b_id: polymarket:33268510350568915228897273528353467773422190590579607471427765079749830445947
-    a_title: "Will the upper bound of the federal funds rate be above 3.25% following the Fed's Oct 28, 2026 meeting? — Above 3.25%"
-    b_title: "Will the Fed decrease interest rates by 25 bps after the October 2026 meeting?"
+  - a_id: kalshi:KXFEDDECISION-26DEC-C26
+    b_id: polymarket:17640596861394454242836532536014033416733783473450136742726948856144855149507
+    a_title: "Will the Federal Reserve Cut rates by >25bps at their December 2026 meeting? — Cut >25bps"
+    b_title: "Will the Fed decrease interest rates by 50+ bps after the December 2026 meeting?"
     category: fed
-    suggested_by_matcher: implies
-    proposed_label: implies
-    why: "Polymarket eq -0.25 → level eq 3.75 → forces Kalshi >3.25."
+    suggested_by_matcher: not_drafted
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Dec 8-9, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26DEC-C26 (Cut >25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
+    rules_checked: "Kalshi KXFEDDECISION-26DEC-C26 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 3215005 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Cut of [>]25bps (the API text drops the > sign; yes_sub_title and rules_secondary give >25bps) on December 09, 2026, then the market resolves to Yes."
     review_status: pending_human
 
-  - a_id: kalshi:KXFED-26OCT-T3.50
-    b_id: polymarket:111061902544814266207267295505639408607400625795891618462682726460921782993748
-    a_title: "Will the upper bound of the federal funds rate be above 3.50% following the Fed's Oct 28, 2026 meeting? — Above 3.50%"
-    b_title: "Will there be no change in Fed interest rates after the October 2026 meeting?"
+  - a_id: kalshi:KXFEDDECISION-26DEC-C25
+    b_id: polymarket:77367448845023382525249480243608609306658725883285195065573683809293972009019
+    a_title: "Will the Federal Reserve Cut rates by 25bps at their December 2026 meeting? — Cut 25bps"
+    b_title: "Will the Fed decrease interest rates by 25 bps after the December 2026 meeting?"
     category: fed
-    suggested_by_matcher: implies
-    proposed_label: implies
-    why: "Polymarket eq 0 → level eq 4.00 → forces Kalshi >3.50."
+    suggested_by_matcher: not_drafted
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Dec 8-9, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26DEC-C25 (Cut 25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
+    rules_checked: "Kalshi KXFEDDECISION-26DEC-C25 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 3215006 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Cut of 25bps on December 09, 2026, then the market resolves to Yes."
     review_status: pending_human
 
-  - a_id: kalshi:KXFED-26OCT-T3.50
-    b_id: polymarket:18246296022868501258060085368606280205967114341141276439803424448463050819498
-    a_title: "Will the upper bound of the federal funds rate be above 3.50% following the Fed's Oct 28, 2026 meeting? — Above 3.50%"
-    b_title: "Will the Fed increase interest rates by 50+ bps after the October 2026 meeting?"
+  - a_id: kalshi:KXFEDDECISION-26DEC-H0
+    b_id: polymarket:42865728742506860386768556888821101266630139112044622335353850919229585308601
+    a_title: "Will the Federal Reserve Hike rates by 0bps at their December 2026 meeting? — Fed maintains rate"
+    b_title: "Will there be no change in Fed interest rates after the December 2026 meeting?"
     category: fed
-    suggested_by_matcher: implies
-    proposed_label: implies
-    why: "Polymarket ≥0.5 → level ≥4.5 → forces Kalshi >3.50."
+    suggested_by_matcher: not_drafted
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Dec 8-9, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26DEC-H0 (Fed maintains rate): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
+    rules_checked: "Kalshi KXFEDDECISION-26DEC-H0 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 3215007 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Hike of 0bps on December 09, 2026, then the market resolves to Yes."
     review_status: pending_human
 
-  # =========================================================================
-  # RELATED (19) — near-misses: vetoed but close or fact-consulted
-  # =========================================================================
+  - a_id: kalshi:KXFEDDECISION-26DEC-H25
+    b_id: polymarket:111662129652828266889360374468657435151479595863413519836161861837506140152890
+    a_title: "Will the Federal Reserve Hike rates by 25bps at their December 2026 meeting? — Hike 25bps"
+    b_title: "Will the Fed increase interest rates by 25 bps after the December 2026 meeting?"
+    category: fed
+    suggested_by_matcher: not_drafted
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Dec 8-9, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26DEC-H25 (Hike 25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
+    rules_checked: "Kalshi KXFEDDECISION-26DEC-H25 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 3215008 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Hike of 25bps on December 09, 2026, then the market resolves to Yes."
+    review_status: pending_human
 
-  # Fed Jan 2027 — fact doesn't apply (later meeting)
-  - a_id: kalshi:KXFED-27JAN-T0.00
+  - a_id: kalshi:KXFEDDECISION-26DEC-H26
+    b_id: polymarket:35090254409399344650860070211816464534198960801264823587796928404808383727584
+    a_title: "Will the Federal Reserve Hike rates by >25bps at their December 2026 meeting? — Hike >25bps"
+    b_title: "Will the Fed increase interest rates by 50+ bps after the December 2026 meeting?"
+    category: fed
+    suggested_by_matcher: not_drafted
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Dec 8-9, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26DEC-H26 (Hike >25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
+    rules_checked: "Kalshi KXFEDDECISION-26DEC-H26 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 3215009 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Hike of [>]25bps (the API text drops the > sign; yes_sub_title and rules_secondary give >25bps) on December 09, 2026, then the market resolves to Yes."
+    review_status: pending_human
+
+  - a_id: kalshi:KXFEDDECISION-27JAN-C26
+    b_id: polymarket:45053521911672808043600263178798111402897730682087979734684574823004307023433
+    a_title: "Will the Federal Reserve Cut rates by >25bps at their January 2027 meeting? — Cut >25bps"
+    b_title: "Will the Fed decrease interest rates by 50+ bps after the January 2027 meeting?"
+    category: fed
+    suggested_by_matcher: not_drafted
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Jan 26-27, 2027 meeting, in the same bucket. Kalshi KXFEDDECISION-27JAN-C26 (Cut >25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
+    rules_checked: "Kalshi KXFEDDECISION-27JAN-C26 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 3215010 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Cut of [>]25bps (the API text drops the > sign; yes_sub_title and rules_secondary give >25bps) on January 27, 2027, then the market resolves to Yes."
+    review_status: pending_human
+
+  - a_id: kalshi:KXFEDDECISION-27JAN-C25
+    b_id: polymarket:55531205670373260499988385930313327116586167390725681551489621136380793885916
+    a_title: "Will the Federal Reserve Cut rates by 25bps at their January 2027 meeting? — Cut 25bps"
+    b_title: "Will the Fed decrease interest rates by 25 bps after the January 2027 meeting?"
+    category: fed
+    suggested_by_matcher: not_drafted
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Jan 26-27, 2027 meeting, in the same bucket. Kalshi KXFEDDECISION-27JAN-C25 (Cut 25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
+    rules_checked: "Kalshi KXFEDDECISION-27JAN-C25 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 3215011 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Cut of 25bps on January 27, 2027, then the market resolves to Yes."
+    review_status: pending_human
+
+  - a_id: kalshi:KXFEDDECISION-27JAN-H0
     b_id: polymarket:63563009510989471204377539732457086916124654411092982704760023438039220215330
-    a_title: "Will the upper bound of the federal funds rate be above 0.00% following the Fed's Jan 27, 2027 meeting? — Above 0.00%"
+    a_title: "Will the Federal Reserve Hike rates by 0bps at their January 2027 meeting? — Fed maintains rate"
     b_title: "Will there be no change in Fed interest rates after the January 2027 meeting?"
     category: fed
-    suggested_by_matcher: related
-    proposed_label: related
-    why: "Same subject, fact consulted but doesn't apply (Jan 2027 meeting vs Oct 2026 fact). Vetoed on metric and comparator."
+    suggested_by_matcher: not_drafted
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Jan 26-27, 2027 meeting, in the same bucket. Kalshi KXFEDDECISION-27JAN-H0 (Fed maintains rate): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
+    rules_checked: "Kalshi KXFEDDECISION-27JAN-H0 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 3215012 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Hike of 0bps on January 27, 2027, then the market resolves to Yes."
     review_status: pending_human
 
-  - a_id: kalshi:KXFED-27JAN-T0.25
+  - a_id: kalshi:KXFEDDECISION-27JAN-H25
     b_id: polymarket:58421987972100586826330616250690474504359298033602990223828098109695719571344
-    a_title: "Will the upper bound of the federal funds rate be above 0.25% following the Fed's Jan 27, 2027 meeting? — Above 0.25%"
+    a_title: "Will the Federal Reserve Hike rates by 25bps at their January 2027 meeting? — Hike 25bps"
     b_title: "Will the Fed increase interest rates by 25 bps after the January 2027 meeting?"
     category: fed
-    suggested_by_matcher: related
-    proposed_label: related
-    why: "Same subject, fact consulted but doesn't apply (Jan 2027 meeting vs Oct 2026 fact). Vetoed on metric and comparator."
+    suggested_by_matcher: not_drafted
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Jan 26-27, 2027 meeting, in the same bucket. Kalshi KXFEDDECISION-27JAN-H25 (Hike 25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
+    rules_checked: "Kalshi KXFEDDECISION-27JAN-H25 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 3215013 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Hike of 25bps on January 27, 2027, then the market resolves to Yes."
     review_status: pending_human
 
-  - a_id: kalshi:KXFED-27JAN-T0.50
+  - a_id: kalshi:KXFEDDECISION-27JAN-H26
     b_id: polymarket:42452047366442275682382090045397807109079755041679563479952649068752467853296
-    a_title: "Will the upper bound of the federal funds rate be above 0.50% following the Fed's Jan 27, 2027 meeting? — Above 0.50%"
+    a_title: "Will the Federal Reserve Hike rates by >25bps at their January 2027 meeting? — Hike >25bps"
     b_title: "Will the Fed increase interest rates by 50+ bps after the January 2027 meeting?"
     category: fed
-    suggested_by_matcher: related
-    proposed_label: related
-    why: "Same subject, fact consulted but doesn't apply (Jan 2027 meeting vs Oct 2026 fact). Vetoed on metric and comparator."
+    suggested_by_matcher: not_drafted
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Jan 26-27, 2027 meeting, in the same bucket. Kalshi KXFEDDECISION-27JAN-H26 (Hike >25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
+    rules_checked: "Kalshi KXFEDDECISION-27JAN-H26 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 3215014 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Hike of [>]25bps (the API text drops the > sign; yes_sub_title and rules_secondary give >25bps) on January 27, 2027, then the market resolves to Yes."
     review_status: pending_human
 
-  # Crypto — threshold/deadline/source near-misses
-  - a_id: kalshi:KXBTCD-26OCT0618-T76699.99
-    b_id: polymarket:100185403350267155386341199712915055705179878891606575463769617454294511388358
-    a_title: "Bitcoin price on Oct 6, 2026? — $76,700 or above"
-    b_title: "Will the price of Bitcoin be above $82,000 on October 10?"
-    category: crypto
-    suggested_by_matcher: related
-    proposed_label: related
-    why: "Same subject BTC, but threshold differs ($76.7k vs $82k), deadline 90h apart (>24h veto for crypto), different sources (CF vs Binance). Hard negative per matcher."
-    review_status: pending_human
-
-  - a_id: kalshi:KXBTCD-26OCT0618-T76799.99
-    b_id: polymarket:10028560817328439091287345817781494578924455844768660780135978081903535146808
-    a_title: "Bitcoin price on Oct 6, 2026? — $76,800 or above"
-    b_title: "Will the price of Bitcoin be above $86,000 on October 10?"
-    category: crypto
-    suggested_by_matcher: related
-    proposed_label: related
-    why: "Same subject BTC, threshold differs ($76.8k vs $86k), deadline 90h apart, different sources. Hard negative."
-    review_status: pending_human
-
-  - a_id: kalshi:KXBTCD-26OCT0618-T76899.99
-    b_id: polymarket:102213575204902074760005916744838468334765332333994096763253127452371697884776
-    a_title: "Bitcoin price on Oct 6, 2026? — $76,900 or above"
-    b_title: "Will the price of Bitcoin be above $84,000 on October 12?"
-    category: crypto
-    suggested_by_matcher: related
-    proposed_label: related
-    why: "Same subject BTC, threshold differs ($76.9k vs $84k), deadline 138h apart, different sources. Hard negative."
-    review_status: pending_human
-
-  - a_id: kalshi:KXBTCD-26OCT0618-T76999.99
-    b_id: polymarket:103859404789311093235506940881605202929661897822734537621299315222240048152974
-    a_title: "Bitcoin price on Oct 6, 2026? — $77,000 or above"
-    b_title: "Will the price of Bitcoin be above $94,000 on October 7?"
-    category: crypto
-    suggested_by_matcher: related
-    proposed_label: related
-    why: "Same subject BTC, threshold differs ($77k vs $94k), deadline 18h apart (crypto exact veto), different sources. Hard negative."
-    review_status: pending_human
-
-  - a_id: kalshi:KXBTCD-26OCT0618-T77099.99
-    b_id: polymarket:105408180158893292490017390271613327537614788203882236057777017554863813982997
-    a_title: "Bitcoin price on Oct 6, 2026? — $77,100 or above"
-    b_title: "Will the price of Bitcoin be above $76,000 on October 10?"
-    category: crypto
-    suggested_by_matcher: related
-    proposed_label: related
-    why: "Same subject BTC, threshold differs ($77.1k vs $76k), deadline 90h apart, different sources. Hard negative."
-    review_status: pending_human
-
-  - a_id: kalshi:KXBTCD-26OCT0618-T77999.99
-    b_id: polymarket:16598363009235347286916760788518519639479429965831389385438637439430901253751
-    a_title: "Bitcoin price on Oct 6, 2026? — $78,000 or above"
-    b_title: "Will the price of Bitcoin be above $78,000 on October 12?"
-    category: crypto
-    suggested_by_matcher: related
-    proposed_label: related
-    why: "Same subject BTC, thresholds within 0.01% ($78k vs $78k), but deadline 138h apart, different sources. Near-miss on threshold."
-    review_status: pending_human
-
-  - a_id: kalshi:KXBTCD-26OCT0618-T79999.99
-    b_id: polymarket:22248712962079319450417067102036039452563816152881685719209990911110593172178
-    a_title: "Bitcoin price on Oct 6, 2026? — $80,000 or above"
-    b_title: "Will the price of Bitcoin be above $80,000 on October 10?"
-    category: crypto
-    suggested_by_matcher: related
-    proposed_label: related
-    why: "Same subject BTC, thresholds within 0.01% ($80k vs $80k), deadline 90h apart, different sources. Near-miss on threshold."
-    review_status: pending_human
-
-  - a_id: kalshi:KXBTCD-26OCT0618-T81999.99
-    b_id: polymarket:58100326529466815661410944022020977939794449485588814468318733550215282047446
-    a_title: "Bitcoin price on Oct 6, 2026? — $82,000 or above"
-    b_title: "Will the price of Bitcoin be above $82,000 on October 12?"
-    category: crypto
-    suggested_by_matcher: related
-    proposed_label: related
-    why: "Same subject BTC, thresholds within 0.01% ($82k vs $82k), deadline 138h apart, different sources. Near-miss on threshold."
-    review_status: pending_human
-
-  - a_id: kalshi:KXBTCD-26OCT0618-T83999.99
-    b_id: polymarket:19237762638725087250431461906504177217210669994224395220619355341866160991623
-    a_title: "Bitcoin price on Oct 6, 2026? — $84,000 or above"
-    b_title: "Will the price of Bitcoin be above $84,000 on October 9?"
-    category: crypto
-    suggested_by_matcher: related
-    proposed_label: related
-    why: "Same subject BTC, thresholds within 0.01% ($84k vs $84k), deadline 66h apart, different sources. Near-miss on threshold."
-    review_status: pending_human
-
-  - a_id: kalshi:KXBTCD-26OCT0618-T85999.99
-    b_id: polymarket:111011310183365094358362017447202533181946750125663899150123756370710791740925
-    a_title: "Bitcoin price on Oct 6, 2026? — $86,000 or above"
-    b_title: "Will the price of Bitcoin be above $86,000 on October 12?"
-    category: crypto
-    suggested_by_matcher: related
-    proposed_label: related
-    why: "Same subject BTC, thresholds within 0.01% ($86k vs $86k), deadline 138h apart, different sources. Near-miss on threshold."
-    review_status: pending_human
-
-  - a_id: kalshi:KXBTCD-26OCT0618-T87999.99
-    b_id: polymarket:105589724003080100803412935658600436479802204395220085111135708089827949726481
-    a_title: "Bitcoin price on Oct 6, 2026? — $88,000 or above"
-    b_title: "Will the price of Bitcoin be above $88,000 on October 9?"
-    category: crypto
-    suggested_by_matcher: related
-    proposed_label: related
-    why: "Same subject BTC, thresholds within 0.01% ($88k vs $88k), deadline 66h apart, different sources. Near-miss on threshold."
-    review_status: pending_human
-
-  - a_id: kalshi:KXBTCD-26OCT0618-T89999.99
-    b_id: polymarket:12623735082940725132244113806888303048952230805983476777293815826015310613871
-    a_title: "Bitcoin price on Oct 6, 2026? — $90,000 or above"
-    b_title: "Will the price of Bitcoin be above $90,000 on October 8?"
-    category: crypto
-    suggested_by_matcher: related
-    proposed_label: related
-    why: "Same subject BTC, thresholds within 0.01% ($90k vs $90k), deadline 42h apart, different sources. Near-miss on threshold."
-    review_status: pending_human
-
-  - a_id: kalshi:KXBTCD-26OCT0618-T91999.99
-    b_id: polymarket:114133472419289424694347093470084941298231282893005921899014407374667805150802
-    a_title: "Bitcoin price on Oct 6, 2026? — $92,000 or above"
-    b_title: "Will the price of Bitcoin be above $92,000 on October 13?"
-    category: crypto
-    suggested_by_matcher: related
-    proposed_label: related
-    why: "Same subject BTC, thresholds within 0.01% ($92k vs $92k), deadline 162h apart, different sources. Near-miss on threshold."
-    review_status: pending_human
-
-  - a_id: kalshi:KXBTCD-26OCT0618-T93999.99
-    b_id: polymarket:109996532530988617378994822231191266689686464368373802860902777846614732732791
-    a_title: "Bitcoin price on Oct 6, 2026? — $94,000 or above"
-    b_title: "Will the price of Bitcoin be greater than $94,000 on October 8?"
-    category: crypto
-    suggested_by_matcher: related
-    proposed_label: related
-    why: "Same subject BTC, thresholds within 0.01% ($94k vs $94k), deadline 42h apart, different sources. Near-miss on threshold."
-    review_status: pending_human
-
-  - a_id: kalshi:KXBTCD-26OCT0717-T75999.99
-    b_id: polymarket:38763845066534679924437973749316418212546344504468860507354215523953316186679
-    a_title: "Bitcoin price on Oct 7, 2026? — $76,000 or above"
-    b_title: "Will the price of Bitcoin be above $76,000 on October 9?"
-    category: crypto
-    suggested_by_matcher: related
-    proposed_label: related
-    why: "Same subject BTC, thresholds within 0.01% ($76k vs $76k), deadline 43h apart, different sources. Near-miss on threshold."
-    review_status: pending_human
-
-  - a_id: kalshi:KXBTCD-26OCT0717-T77999.99
-    b_id: polymarket:2835445683557365895963410649908857115066546839275774543214248831686655490726
-    a_title: "Bitcoin price on Oct 7, 2026? — $78,000 or above"
-    b_title: "Will the price of Bitcoin be above $78,000 on October 11?"
-    category: crypto
-    suggested_by_matcher: related
-    proposed_label: related
-    why: "Same subject BTC, thresholds within 0.01% ($78k vs $78k), deadline 91h apart, different sources. Near-miss on threshold."
-    review_status: pending_human
-
-  # =========================================================================
-  # UNRELATED (5) — deadline mismatch >168h (7 days)
-  # =========================================================================
-  - a_id: kalshi:KXFED-26DEC-T2.75
-    b_id: polymarket:10021099765479877880206130084102113471770375449510519368096296649508325006675
-    a_title: "Will the upper bound of the federal funds rate be above 2.75% following the Fed's Dec 9, 2026 meeting? — Above 2.75%"
-    b_title: "Will the upper bound of the target federal funds rate be 2.75% at the end of 2026?"
+  - a_id: kalshi:KXRATECUTCOUNT-26DEC31-T0
+    b_id: polymarket:12403602920039269077597917340921667997547115084613238528792639013246536343316
+    a_title: "Will the Fed cut rates 0 times? — Exactly 0 cuts"
+    b_title: "Will no Fed rate cuts happen in 2026?"
     category: fed
-    suggested_by_matcher: unrelated
-    proposed_label: unrelated
-    why: "Deadlines 537h apart (>168h blocking threshold). Same subject, but temporal mismatch makes them unrelated."
+    suggested_by_matcher: not_drafted
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the count of 25 bp cuts in calendar 2026, emergency cuts included. Kalshi KXRATECUTCOUNT-26DEC31-T0: 'Fed cuts 0 times starting Jan 1, 2026 and before 2027', 25 bp = one cut (RATECUTS terms, source openmarket.htm). Polymarket: exact number of 25 bp cuts in 2026, emergency cuts count, cuts of 1-24 bps count as one, closes Dec 31, 2026 11:59 PM ET. Same close instant (2027-01-01T04:59Z). Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT). Fact relied on: fed_rate_step=0.25 (every cut is a whole number of 25 bp steps, config/facts.yaml); emergency cuts count on both venues, so meeting dates do not matter here. If the fact fails: Kalshi's terms count a cut of more than 25 bps as two and more than 50 as three, while PM counts whole 25 bp steps (1-24 bps = one cut); the two agree for every 25 bp multiple up to 75 bps. No cuts so far in 2026 (openmarket.htm)."
+    rules_checked: "Kalshi KXRATECUTCOUNT-26DEC31-T0 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 616902 description; fetched 2026-10-07. Kalshi rules: If the Fed cuts 0 times starting Jan 1, 2026 and before 2027, then the market resolves to Yes."
     review_status: pending_human
 
-  - a_id: kalshi:KXFED-26DEC-T3.00
-    b_id: polymarket:22030816399818413560467152256926658656366292051273475071688151582132139764281
-    a_title: "Will the upper bound of the federal funds rate be above 3.00% following the Fed's Dec 9, 2026 meeting? — Above 3.00%"
-    b_title: "Will the upper bound of the target federal funds rate be 3.0% at the end of 2026?"
+  - a_id: kalshi:KXRATECUTCOUNT-26DEC31-T1
+    b_id: polymarket:113379839734351069617987084078322474966003108854908079701423911002443710490196
+    a_title: "Will the Fed cut rates 1 times? — Exactly 1 cut"
+    b_title: "Will 1 Fed rate cut happen in 2026?"
     category: fed
-    suggested_by_matcher: unrelated
-    proposed_label: unrelated
-    why: "Deadlines 537h apart (>168h blocking threshold)."
+    suggested_by_matcher: not_drafted
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the count of 25 bp cuts in calendar 2026, emergency cuts included. Kalshi KXRATECUTCOUNT-26DEC31-T1: 'Fed cuts 1 times starting Jan 1, 2026 and before 2027', 25 bp = one cut (RATECUTS terms, source openmarket.htm). Polymarket: exact number of 25 bp cuts in 2026, emergency cuts count, cuts of 1-24 bps count as one, closes Dec 31, 2026 11:59 PM ET. Same close instant (2027-01-01T04:59Z). Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT). Fact relied on: fed_rate_step=0.25 (every cut is a whole number of 25 bp steps, config/facts.yaml); emergency cuts count on both venues, so meeting dates do not matter here. If the fact fails: Kalshi's terms count a cut of more than 25 bps as two and more than 50 as three, while PM counts whole 25 bp steps (1-24 bps = one cut); the two agree for every 25 bp multiple up to 75 bps. No cuts so far in 2026 (openmarket.htm)."
+    rules_checked: "Kalshi KXRATECUTCOUNT-26DEC31-T1 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 616903 description; fetched 2026-10-07. Kalshi rules: If the Fed cuts 1 times starting Jan 1, 2026 and before 2027, then the market resolves to Yes."
     review_status: pending_human
 
-  - a_id: kalshi:KXFED-26DEC-T3.25
-    b_id: polymarket:16971068639386640502659657646781431904217162229211786665483266631137687560030
-    a_title: "Will the upper bound of the federal funds rate be above 3.25% following the Fed's Dec 9, 2026 meeting? — Above 3.25%"
-    b_title: "Will the Fed's lower bound reach 3.25% or lower before 2027?"
+  - a_id: kalshi:KXRATECUTCOUNT-26DEC31-T2
+    b_id: polymarket:72535544017897924722695722172278828562733090748474862987195303914909938482758
+    a_title: "Will the Fed cut rates 2 times? — Exactly 2 cuts"
+    b_title: "Will 2 Fed rate cuts happen in 2026?"
     category: fed
-    suggested_by_matcher: unrelated
-    proposed_label: unrelated
-    why: "Deadlines 526h apart (>168h blocking threshold). Also metric unknown on Polymarket side."
+    suggested_by_matcher: not_drafted
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the count of 25 bp cuts in calendar 2026, emergency cuts included. Kalshi KXRATECUTCOUNT-26DEC31-T2: 'Fed cuts 2 times starting Jan 1, 2026 and before 2027', 25 bp = one cut (RATECUTS terms, source openmarket.htm). Polymarket: exact number of 25 bp cuts in 2026, emergency cuts count, cuts of 1-24 bps count as one, closes Dec 31, 2026 11:59 PM ET. Same close instant (2027-01-01T04:59Z). Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT). Fact relied on: fed_rate_step=0.25 (every cut is a whole number of 25 bp steps, config/facts.yaml); emergency cuts count on both venues, so meeting dates do not matter here. If the fact fails: Kalshi's terms count a cut of more than 25 bps as two and more than 50 as three, while PM counts whole 25 bp steps (1-24 bps = one cut); the two agree for every 25 bp multiple up to 75 bps. No cuts so far in 2026 (openmarket.htm)."
+    rules_checked: "Kalshi KXRATECUTCOUNT-26DEC31-T2 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 616904 description; fetched 2026-10-07. Kalshi rules: If the Fed cuts 2 times starting Jan 1, 2026 and before 2027, then the market resolves to Yes."
     review_status: pending_human
 
-  - a_id: kalshi:KXFED-26DEC-T3.50
-    b_id: polymarket:13469338817388460729834022714290521037522577154587934145079627411549531574027
-    a_title: "Will the upper bound of the federal funds rate be above 3.50% following the Fed's Dec 9, 2026 meeting? — Above 3.50%"
-    b_title: "Will the upper bound of the target federal funds rate be 3.5% at the end of 2027?"
+  - a_id: kalshi:KXRATECUT-26DEC31
+    b_id: polymarket:12403602920039269077597917340921667997547115084613238528792639013246536343316
+    a_title: "Will the Federal Reserve cut rates before 2027? — Cuts"
+    b_title: "Will no Fed rate cuts happen in 2026?"
     category: fed
-    suggested_by_matcher: unrelated
-    proposed_label: unrelated
-    why: "Deadlines 9297h apart (~1 year; >>168h blocking threshold)."
+    suggested_by_matcher: not_drafted
+    proposed_label: complement
+    why: "Kalshi KXRATECUT-26DEC31 pays if the Fed cuts at least once between Feb 26 and Dec 31, 2026 (RATECUT terms, federalreserve.gov). Polymarket 'no Fed rate cuts in 2026' pays if there are zero cuts in all of 2026. The only gap is Jan 1 to Feb 25, 2026, and that window is already settled: openmarket.htm shows no 2026 cut (the only 2026 change is the Sep 17 hike). So in every reachable world Kalshi YES is exactly PM NO: complement. Fact relied on: no cut between Jan 1 and Feb 25, 2026 (openmarket.htm, as of 2026-10-07; already settled history, so not a forward assumption). Both count emergency cuts and any cut size."
+    rules_checked: "Kalshi KXRATECUT-26DEC31 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 616902 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve cuts its target federal funds rate range at least once between February 26, 2026 and December 31, 2026, then the market resolves to Yes."
     review_status: pending_human
 
-  - a_id: kalshi:KXFED-26DEC-T3.75
-    b_id: polymarket:61078851078420927336908319350034407566038974210410444154944749944889389332268
-    a_title: "Will the upper bound of the federal funds rate be above 3.75% following the Fed's Dec 9, 2026 meeting? — Above 3.75%"
-    b_title: "Will the upper bound of the target federal funds rate be 3.75% at the end of 2027?"
-    category: fed
-    suggested_by_matcher: unrelated
-    proposed_label: unrelated
-    why: "Deadlines 9297h apart (~1 year; >>168h blocking threshold)."
+  - a_id: kalshi:KXPRESNOMD-28-GN
+    b_id: polymarket:54533043819946592547517511176940999955633860128497669742211153063842200957669
+    a_title: "Will Gavin Newsom be the Democratic Presidential nominee in 2028? — Gavin Newsom"
+    b_title: "Will Gavin Newsom win the 2028 Democratic presidential nomination?"
+    category: politics
+    suggested_by_matcher: not_drafted
+    proposed_label: equivalent
+    why: "Same proposition: Gavin Newsom wins and accepts the 2028 Democratic presidential nomination. Kalshi KXPRESNOMD-28-GN: PRESNOM terms, 'the first person to have been nominated by the party and to have accepted the nomination', source the party. Polymarket: 'wins and accepts the 2028 nomination', source a consensus of official party sources, and a later replacement does not change the result. Both read 'first accepted nominee', so they agree on the replacement edge case. Expiry: Kalshi at 10 AM ET after the nomination or on election day; PM end 2028-11-08 04:59Z. Both settle on the convention outcome, about 14 h apart at the latest."
+    rules_checked: "Kalshi KXPRESNOMD-28-GN rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 559652 description; fetched 2026-10-07. Kalshi rules: If Gavin Newsom wins and accepts the nomination for the Presidency for the Democratic party in 2028, then the market resolves to Yes."
+    review_status: pending_human
+
+  - a_id: kalshi:KXPRESNOMD-28-AOC
+    b_id: polymarket:107064985435494333113391038470401719113272800530429703182710416066774068907304
+    a_title: "Will Alexandria Ocasio-Cortez be the Democratic Presidential nominee in 2028? — Alexandria Ocasio-Cortez"
+    b_title: "Will Alexandria Ocasio-Cortez win the 2028 Democratic presidential nomination?"
+    category: politics
+    suggested_by_matcher: not_drafted
+    proposed_label: equivalent
+    why: "Same proposition: Alexandria Ocasio-Cortez wins and accepts the 2028 Democratic presidential nomination. Kalshi KXPRESNOMD-28-AOC: PRESNOM terms, 'the first person to have been nominated by the party and to have accepted the nomination', source the party. Polymarket: 'wins and accepts the 2028 nomination', source a consensus of official party sources, and a later replacement does not change the result. Both read 'first accepted nominee', so they agree on the replacement edge case. Expiry: Kalshi at 10 AM ET after the nomination or on election day; PM end 2028-11-08 04:59Z. Both settle on the convention outcome, about 14 h apart at the latest."
+    rules_checked: "Kalshi KXPRESNOMD-28-AOC rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 559653 description; fetched 2026-10-07. Kalshi rules: If Alexandria Ocasio-Cortez wins and accepts the nomination for the Presidency for the Democratic party in 2028, then the market resolves to Yes."
+    review_status: pending_human
+
+  - a_id: kalshi:KXPRESNOMD-28-JOSS
+    b_id: polymarket:70071592420137476676935286377781779672157004436137616627487590484756055232944
+    a_title: "Will Jon Ossoff be the Democratic Presidential nominee in 2028? — Jon Ossoff"
+    b_title: "Will Jon Ossoff win the 2028 Democratic presidential nomination?"
+    category: politics
+    suggested_by_matcher: not_drafted
+    proposed_label: equivalent
+    why: "Same proposition: Jon Ossoff wins and accepts the 2028 Democratic presidential nomination. Kalshi KXPRESNOMD-28-JOSS: PRESNOM terms, 'the first person to have been nominated by the party and to have accepted the nomination', source the party. Polymarket: 'wins and accepts the 2028 nomination', source a consensus of official party sources, and a later replacement does not change the result. Both read 'first accepted nominee', so they agree on the replacement edge case. Expiry: Kalshi at 10 AM ET after the nomination or on election day; PM end 2028-11-08 04:59Z. Both settle on the convention outcome, about 14 h apart at the latest."
+    rules_checked: "Kalshi KXPRESNOMD-28-JOSS rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 559661 description; fetched 2026-10-07. Kalshi rules: If Jon Ossoff wins and accepts the nomination for the Presidency for the Democratic party in 2028, then the market resolves to Yes."
+    review_status: pending_human
+
+  - a_id: kalshi:KXPRESNOMD-28-KH
+    b_id: polymarket:38171024903091354977195167437673496224420673639143973968032407064172828043588
+    a_title: "Will Kamala Harris be the Democratic Presidential nominee in 2028? — Kamala Harris"
+    b_title: "Will Kamala Harris win the 2028 Democratic presidential nomination?"
+    category: politics
+    suggested_by_matcher: not_drafted
+    proposed_label: equivalent
+    why: "Same proposition: Kamala Harris wins and accepts the 2028 Democratic presidential nomination. Kalshi KXPRESNOMD-28-KH: PRESNOM terms, 'the first person to have been nominated by the party and to have accepted the nomination', source the party. Polymarket: 'wins and accepts the 2028 nomination', source a consensus of official party sources, and a later replacement does not change the result. Both read 'first accepted nominee', so they agree on the replacement edge case. Expiry: Kalshi at 10 AM ET after the nomination or on election day; PM end 2028-11-08 04:59Z. Both settle on the convention outcome, about 14 h apart at the latest."
+    rules_checked: "Kalshi KXPRESNOMD-28-KH rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 559658 description; fetched 2026-10-07. Kalshi rules: If Kamala Harris wins and accepts the nomination for the Presidency for the Democratic party in 2028, then the market resolves to Yes."
+    review_status: pending_human
+
+  - a_id: kalshi:KXPRESNOMD-28-JS
+    b_id: polymarket:71169839497420596285841847514123589847893415750912355173877524195175834054354
+    a_title: "Will Josh Shapiro be the Democratic Presidential nominee in 2028? — Josh Shapiro"
+    b_title: "Will Josh Shapiro win the 2028 Democratic presidential nomination?"
+    category: politics
+    suggested_by_matcher: not_drafted
+    proposed_label: equivalent
+    why: "Same proposition: Josh Shapiro wins and accepts the 2028 Democratic presidential nomination. Kalshi KXPRESNOMD-28-JS: PRESNOM terms, 'the first person to have been nominated by the party and to have accepted the nomination', source the party. Polymarket: 'wins and accepts the 2028 nomination', source a consensus of official party sources, and a later replacement does not change the result. Both read 'first accepted nominee', so they agree on the replacement edge case. Expiry: Kalshi at 10 AM ET after the nomination or on election day; PM end 2028-11-08 04:59Z. Both settle on the convention outcome, about 14 h apart at the latest."
+    rules_checked: "Kalshi KXPRESNOMD-28-JS rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 559655 description; fetched 2026-10-07. Kalshi rules: If Josh Shapiro wins and accepts the nomination for the Presidency for the Democratic party in 2028, then the market resolves to Yes."
+    review_status: pending_human
+
+  - a_id: kalshi:KXPRESNOMD-28-PB
+    b_id: polymarket:91031279171981959197361710127213577102576826515163085396576756946418341946256
+    a_title: "Will Pete Buttigieg be the Democratic Presidential nominee in 2028? — Pete Buttigieg"
+    b_title: "Will Pete Buttigieg win the 2028 Democratic presidential nomination?"
+    category: politics
+    suggested_by_matcher: not_drafted
+    proposed_label: equivalent
+    why: "Same proposition: Pete Buttigieg wins and accepts the 2028 Democratic presidential nomination. Kalshi KXPRESNOMD-28-PB: PRESNOM terms, 'the first person to have been nominated by the party and to have accepted the nomination', source the party. Polymarket: 'wins and accepts the 2028 nomination', source a consensus of official party sources, and a later replacement does not change the result. Both read 'first accepted nominee', so they agree on the replacement edge case. Expiry: Kalshi at 10 AM ET after the nomination or on election day; PM end 2028-11-08 04:59Z. Both settle on the convention outcome, about 14 h apart at the latest."
+    rules_checked: "Kalshi KXPRESNOMD-28-PB rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 559654 description; fetched 2026-10-07. Kalshi rules: If Pete Buttigieg wins and accepts the nomination for the Presidency for the Democratic party in 2028, then the market resolves to Yes."
+    review_status: pending_human
+
+  - a_id: kalshi:KXPRESNOMR-28-JDV
+    b_id: polymarket:40081275558852222228080198821361202017557872256707631666334039001378518619916
+    a_title: "Will J.D. Vance be the nominee for the Presidency for the Republican party? — J.D. Vance"
+    b_title: "Will J.D. Vance win the 2028 Republican presidential nomination?"
+    category: politics
+    suggested_by_matcher: not_drafted
+    proposed_label: equivalent
+    why: "Same proposition: J.D. Vance wins and accepts the 2028 Republican presidential nomination. Kalshi KXPRESNOMR-28-JDV: PRESNOM terms, 'the first person to have been nominated by the party and to have accepted the nomination', source the party. Polymarket: 'wins and accepts the 2028 nomination', source a consensus of official party sources, and a later replacement does not change the result. Both read 'first accepted nominee', so they agree on the replacement edge case. Expiry: Kalshi at 10 AM ET after the nomination or on election day; PM end 2028-11-08 04:59Z. Both settle on the convention outcome, about 14 h apart at the latest."
+    rules_checked: "Kalshi KXPRESNOMR-28-JDV rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 561974 description; fetched 2026-10-07. Kalshi rules: If J.D. Vance wins and accepts the nomination for the Presidency for the Republican party in 2028, then the market resolves to Yes."
+    review_status: pending_human
+
+  - a_id: kalshi:KXPRESNOMR-28-MR
+    b_id: polymarket:13565458761220145250977753098276900790902214604876327357986816739576288755859
+    a_title: "Will Marco Rubio be the nominee for the Presidency for the Republican party? — Marco Rubio"
+    b_title: "Will Marco Rubio win the 2028 Republican presidential nomination?"
+    category: politics
+    suggested_by_matcher: not_drafted
+    proposed_label: equivalent
+    why: "Same proposition: Marco Rubio wins and accepts the 2028 Republican presidential nomination. Kalshi KXPRESNOMR-28-MR: PRESNOM terms, 'the first person to have been nominated by the party and to have accepted the nomination', source the party. Polymarket: 'wins and accepts the 2028 nomination', source a consensus of official party sources, and a later replacement does not change the result. Both read 'first accepted nominee', so they agree on the replacement edge case. Expiry: Kalshi at 10 AM ET after the nomination or on election day; PM end 2028-11-08 04:59Z. Both settle on the convention outcome, about 14 h apart at the latest."
+    rules_checked: "Kalshi KXPRESNOMR-28-MR rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 561975 description; fetched 2026-10-07. Kalshi rules: If Marco Rubio wins and accepts the nomination for the Presidency for the Republican party in 2028, then the market resolves to Yes."
+    review_status: pending_human
+
+  - a_id: kalshi:KXPRESNOMR-28-RDS
+    b_id: polymarket:12127975650736113116407758794754973741525044713193258995588171654429754588610
+    a_title: "Will Ron DeSantis be the nominee for the Presidency for the Republican party? — Ron DeSantis"
+    b_title: "Will Ron DeSantis win the 2028 Republican presidential nomination?"
+    category: politics
+    suggested_by_matcher: not_drafted
+    proposed_label: equivalent
+    why: "Same proposition: Ron DeSantis wins and accepts the 2028 Republican presidential nomination. Kalshi KXPRESNOMR-28-RDS: PRESNOM terms, 'the first person to have been nominated by the party and to have accepted the nomination', source the party. Polymarket: 'wins and accepts the 2028 nomination', source a consensus of official party sources, and a later replacement does not change the result. Both read 'first accepted nominee', so they agree on the replacement edge case. Expiry: Kalshi at 10 AM ET after the nomination or on election day; PM end 2028-11-08 04:59Z. Both settle on the convention outcome, about 14 h apart at the latest."
+    rules_checked: "Kalshi KXPRESNOMR-28-RDS rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 561979 description; fetched 2026-10-07. Kalshi rules: If Ron DeSantis wins and accepts the nomination for the Presidency for the Republican party in 2028, then the market resolves to Yes."
+    review_status: pending_human
+
+  - a_id: kalshi:KXPRESPERSON-28-JVAN
+    b_id: polymarket:16040015440196279900485035793550429453516625694844857319147506590755961451627
+    a_title: "Who will win the next presidential election? — J.D. Vance"
+    b_title: "Will JD Vance win the 2028 US Presidential Election?"
+    category: politics
+    suggested_by_matcher: not_drafted
+    proposed_label: related
+    why: "NOT equivalent; included as a hard negative the matcher could wrongly call equivalent. Kalshi KXPRESPERSON-28-JVAN: 'J.D. Vance is the next person inaugurated as President for the term beginning in 2029' (PRESPERSON terms). Polymarket: the person AP, Fox News and NBC all call as the winner of the 2028 election; inauguration is used only if they have not agreed by Jan 20, 2029. Diverges when the called winner is not inaugurated (death, incapacity, disqualification or a contested count). Same event, different payout: related."
+    rules_checked: "Kalshi KXPRESPERSON-28-JVAN rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 561229 description; fetched 2026-10-07. Kalshi rules: If J.D. Vance is the next person inaugurated as President for the term beginning in 2029, then the market resolves to Yes."
+    review_status: pending_human
+
+  - a_id: kalshi:KXPRESPERSON-28-GNEWS
+    b_id: polymarket:98250445447699368679516529207365255018790721464590833209064266254238063117329
+    a_title: "Who will win the next presidential election? — Gavin Newsom"
+    b_title: "Will Gavin Newsom win the 2028 US Presidential Election?"
+    category: politics
+    suggested_by_matcher: not_drafted
+    proposed_label: related
+    why: "NOT equivalent; included as a hard negative the matcher could wrongly call equivalent. Kalshi KXPRESPERSON-28-GNEWS: 'Gavin Newsom is the next person inaugurated as President for the term beginning in 2029' (PRESPERSON terms). Polymarket: the person AP, Fox News and NBC all call as the winner of the 2028 election; inauguration is used only if they have not agreed by Jan 20, 2029. Diverges when the called winner is not inaugurated (death, incapacity, disqualification or a contested count). Same event, different payout: related."
+    rules_checked: "Kalshi KXPRESPERSON-28-GNEWS rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 561230 description; fetched 2026-10-07. Kalshi rules: If Gavin Newsom is the next person inaugurated as President for the term beginning in 2029, then the market resolves to Yes."
+    review_status: pending_human
+
+  - a_id: kalshi:KXBTCD-26OCT0812-T77999.99
+    b_id: polymarket:77443519844770925744859368185756294247896766669594679461676958360391934252270
+    a_title: "Bitcoin price on Oct 8, 2026? — $78,000 or above"
+    b_title: "Will the price of Bitcoin be above $78,000 on October 8?"
+    category: crypto
+    suggested_by_matcher: not_drafted
+    proposed_label: related
+    why: "Closest crypto pair available: same date and the same noon-ET instant. Kalshi KXBTCD-26OCT0812-T77999.99: 60-second average of CF Benchmarks BRTI before 12 PM EDT Oct 8, 2026 above 77999.99. Polymarket: Binance BTC/USDT 1-minute candle close at 12:00 ET Oct 8 above $78,000. Still differs on resolution source (CF BRTI vs Binance), statistic (60 s average vs one candle close) and a one-cent strike (77999.99 vs 78000). Related under business rule 1 and Q-4 option (a). Every Kalshi crypto series settles on CF Benchmarks and every Polymarket BTC/ETH price market on Binance, so no crypto pair can be equivalent without a documented source equivalence (D-083)."
+    rules_checked: "Kalshi KXBTCD-26OCT0812-T77999.99 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 5179252 description; fetched 2026-10-07. Kalshi rules: If the simple average of the sixty seconds of CF Benchmarks' Bitcoin Real-Time Index (BRTI) before 12 PM EDT is above 77999.99 at 12 PM EDT on Oct 8, 2026, then the market resolves to Yes."
+    review_status: pending_human
+
+  - a_id: kalshi:KXBTCD-26OCT0812-T79999.99
+    b_id: polymarket:40485584554428668469241611958393793104417692929486209319873780168120657704330
+    a_title: "Bitcoin price on Oct 8, 2026? — $80,000 or above"
+    b_title: "Will the price of Bitcoin be above $80,000 on October 8?"
+    category: crypto
+    suggested_by_matcher: not_drafted
+    proposed_label: related
+    why: "Closest crypto pair available: same date and the same noon-ET instant. Kalshi KXBTCD-26OCT0812-T79999.99: 60-second average of CF Benchmarks BRTI before 12 PM EDT Oct 8, 2026 above 79999.99. Polymarket: Binance BTC/USDT 1-minute candle close at 12:00 ET Oct 8 above $80,000. Still differs on resolution source (CF BRTI vs Binance), statistic (60 s average vs one candle close) and a one-cent strike (79999.99 vs 80000). Related under business rule 1 and Q-4 option (a). Every Kalshi crypto series settles on CF Benchmarks and every Polymarket BTC/ETH price market on Binance, so no crypto pair can be equivalent without a documented source equivalence (D-083)."
+    rules_checked: "Kalshi KXBTCD-26OCT0812-T79999.99 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 5179254 description; fetched 2026-10-07. Kalshi rules: If the simple average of the sixty seconds of CF Benchmarks' Bitcoin Real-Time Index (BRTI) before 12 PM EDT is above 79999.99 at 12 PM EDT on Oct 8, 2026, then the market resolves to Yes."
+    review_status: pending_human
+
+  - a_id: kalshi:KXBTCD-26OCT0812-T83999.99
+    b_id: polymarket:99840292577531731449891596325895669575651759409921193062689463594788231461506
+    a_title: "Bitcoin price on Oct 8, 2026? — $84,000 or above"
+    b_title: "Will the price of Bitcoin be above $84,000 on October 8?"
+    category: crypto
+    suggested_by_matcher: not_drafted
+    proposed_label: related
+    why: "Closest crypto pair available: same date and the same noon-ET instant. Kalshi KXBTCD-26OCT0812-T83999.99: 60-second average of CF Benchmarks BRTI before 12 PM EDT Oct 8, 2026 above 83999.99. Polymarket: Binance BTC/USDT 1-minute candle close at 12:00 ET Oct 8 above $84,000. Still differs on resolution source (CF BRTI vs Binance), statistic (60 s average vs one candle close) and a one-cent strike (83999.99 vs 84000). Related under business rule 1 and Q-4 option (a). Every Kalshi crypto series settles on CF Benchmarks and every Polymarket BTC/ETH price market on Binance, so no crypto pair can be equivalent without a documented source equivalence (D-083)."
+    rules_checked: "Kalshi KXBTCD-26OCT0812-T83999.99 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 5179259 description; fetched 2026-10-07. Kalshi rules: If the simple average of the sixty seconds of CF Benchmarks' Bitcoin Real-Time Index (BRTI) before 12 PM EDT is above 83999.99 at 12 PM EDT on Oct 8, 2026, then the market resolves to Yes."
     review_status: pending_human
