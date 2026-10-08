@@ -53,11 +53,12 @@ type Deps struct {
 
 // Server owns the HTTP routes. Create it with New.
 type Server struct {
-	cfg        Config
-	deps       Deps
-	log        *slog.Logger
-	limiter    *failureLimiter
-	trustProxy bool // read the client IP from X-Forwarded-For (behind Cloud Run)
+	cfg               Config
+	deps              Deps
+	log               *slog.Logger
+	limiter           *failureLimiter
+	publicRateLimiter *publicRateLimiter
+	trustProxy        bool // read the client IP from X-Forwarded-For (behind Cloud Run)
 }
 
 // New returns a Server. A nil Logger is replaced with one that discards output.
@@ -71,8 +72,9 @@ func New(cfg Config, deps Deps) *Server {
 	}
 	return &Server{
 		cfg: cfg, deps: deps, log: logger,
-		limiter:    newFailureLimiter(deps.Now),
-		trustProxy: cfg.AppEnv == "staging" || cfg.AppEnv == "prod",
+		limiter:           newFailureLimiter(deps.Now),
+		publicRateLimiter: newPublicRateLimiter(cfg.PublicRateLimitPerMin, deps.Now, logger),
+		trustProxy:        cfg.AppEnv == "staging" || cfg.AppEnv == "prod",
 	}
 }
 
