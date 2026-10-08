@@ -30,6 +30,7 @@
         <th>Confidence</th>
         <th>Method</th>
         <th>Vetoes</th>
+        <th>Round</th>
         <th>Route</th>
       </tr>
     </thead>
@@ -46,6 +47,7 @@
         <td data-label="Confidence">{{.Confidence}} {{.ConfidenceWord}}</td>
         <td data-label="Method">{{.Method}}</td>
         <td data-label="Vetoes">{{if .VetoPhrase}}<a href="/pairs/{{.ID}}#diff">{{.VetoPhrase}}</a>{{else}}—{{end}}</td>
+        <td data-label="Round"><small>{{formatTime .AsOf $.Timezone}}</small></td>
         <td data-label="Route"><a href="/pairs/{{.ID}}#route"><strong>Route</strong></a></td>
       </tr>
       {{end}}
@@ -68,6 +70,7 @@
         <th>Confidence</th>
         <th>Method</th>
         <th>Vetoes</th>
+        <th>Round</th>
       </tr>
     </thead>
     <tbody>
@@ -82,6 +85,7 @@
         <td data-label="Confidence">{{.Confidence}} {{.ConfidenceWord}}</td>
         <td data-label="Method">{{.Method}}</td>
         <td data-label="Vetoes">{{if .VetoPhrase}}<a href="/pairs/{{.ID}}#diff">{{.VetoPhrase}}</a>{{else}}—{{end}}</td>
+        <td data-label="Round"><small>{{formatTime .AsOf $.Timezone}}</small></td>
       </tr>
     {{end}}
     </tbody>
@@ -101,6 +105,7 @@
         <th>Confidence</th>
         <th>Method</th>
         <th>Vetoes</th>
+        <th>Round</th>
       </tr>
     </thead>
     <tbody>
@@ -115,6 +120,7 @@
         <td data-label="Confidence">{{.Confidence}} {{.ConfidenceWord}}</td>
         <td data-label="Method">{{.Method}}</td>
         <td data-label="Vetoes">{{if .VetoPhrase}}<a href="/pairs/{{.ID}}#diff">{{.VetoPhrase}}</a>{{else}}—{{end}}</td>
+        <td data-label="Round"><small>{{formatTime .AsOf $.Timezone}}</small></td>
       </tr>
     {{end}}
     </tbody>

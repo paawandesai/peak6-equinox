@@ -172,7 +172,9 @@ func TestPublicMatchesPage(t *testing.T) {
 		"Which Kalshi and Polymarket contracts are the same bet",
 		`<h2 id="routable">Routable pairs (1)</h2>`, // UI-03: routable section with count
 		seedTitleA, seedTitleB, seedTitleC,
-		"0.97", "0.40", "2026-10-06 13:03:00 EDT", // seedNow+3min (17:03 UTC) in ET (M3-08 Cursor round 2)
+		"0.97", "0.40",
+		// UI-03 Cursor round 1 issue 1: round appears in each row.
+		"2026-10-06 13:03:00 EDT", // seedNow+3min (17:03 UTC) in ET (M3-08 Cursor round 2)
 		`href="/pairs/`+strconv.FormatInt(sd.eqID, 10)+`"`,
 		`href="/pairs/`+strconv.FormatInt(sd.relID, 10)+`"`,
 		// UI-03: strip replaces the old paragraph with round info.

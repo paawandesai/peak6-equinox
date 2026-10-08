@@ -79,6 +79,9 @@ func TestRoutableGroupingAndOrder(t *testing.T) {
 		t.Errorf("routable type chips not in correct order: complement at %d, equivalent_given_facts at %d, equivalent at %d", idx1, idx2, idx3)
 	}
 
+	// Cursor round 1 issue 1: assert round appears inside a row.
+	wantContains(t, body, "2026-10-06 13:01:00 EDT") // seedNow+60s in ET
+
 	// 2-click path: / contains /pairs/{id}#route for a routable pair.
 	wantContains(t, body, `href="/pairs/`+strconv.FormatInt(eqID, 10)+`#route"`, "<strong>Route</strong>")
 }
@@ -197,7 +200,7 @@ func TestRelatedCountAndDetails(t *testing.T) {
 	}
 
 	// Insert two related pairs.
-	_, err = st.UpsertRelationship(ctx, canonical.Relationship{
+	relID1, err := st.UpsertRelationship(ctx, canonical.Relationship{
 		RoundID: round.ID, AID: "kalshi:A", BID: "polymarket:B", Type: canonical.RelRelated, Confidence: dec("0.40"),
 		Method: canonical.MethodRules, Diff: match.Diff(a.Terms, b.Terms), Explanation: "Related 1",
 		Vetoes: []canonical.Veto{{Code: "threshold_mismatch", Field: "threshold", Detail: ""}},
@@ -224,10 +227,21 @@ func TestRelatedCountAndDetails(t *testing.T) {
 	// The summary contains the count and the phrase.
 	wantContains(t, body, `<summary>related (2): same event, different payout; never routed</summary>`)
 
-	// The related rows are inside the details element.
-	if !strings.Contains(body, "<details>") {
-		t.Error("related pairs should be inside a <details> element")
+	// Cursor round 1 issue 3: assert related rows sit inside details element without "open".
+	detailsStart := strings.Index(body, "<details>")
+	detailsEnd := strings.Index(body, "</details>")
+	if detailsStart < 0 || detailsEnd < 0 {
+		t.Fatal("related pairs should be inside a <details> element")
 	}
+	if strings.Contains(body[detailsStart:detailsStart+10], "open") {
+		t.Error("details element should not have 'open' attribute (collapsed by default)")
+	}
+	// Verify related rows are inside the details element.
+	relatedSection := body[detailsStart:detailsEnd]
+	wantContains(t, relatedSection, `<span class="chip chip-warn">related</span>`)
+
+	// Cursor round 1 issue 3: veto phrase "1 veto" with link to #diff.
+	wantContains(t, body, `<a href="/pairs/`+strconv.FormatInt(relID1, 10)+`#diff">1 veto</a>`)
 }
 
 // TestTwoClickPath verifies that the landing page contains a direct link to /pairs/{id}#route
@@ -243,4 +257,69 @@ func TestTwoClickPath(t *testing.T) {
 	// The matches page contains a link to /pairs/{id}#route for the equivalent pair.
 	wantContains(t, body, `href="/pairs/`+strconv.FormatInt(sd.eqID, 10)+`#route"`)
 	wantContains(t, body, "<strong>Route</strong>")
+}
+
+// TestSectionOrder verifies that sections appear in the correct order: routable, then implies, then related (Cursor round 1 issue 3).
+func TestSectionOrder(t *testing.T) {
+	s, st := newTestServer(t)
+	ctx := context.Background()
+	round, err := st.CreateRound(ctx, seedNow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.FinishRound(ctx, round.ID, store.RoundOK, nil, seedNow.Add(60000)); err != nil {
+		t.Fatal(err)
+	}
+
+	a := seedInstrument("kalshi:A", canonical.VenueKalshi, "A", "rules", "BTC", "source", kalshiFee)
+	b := seedInstrument("polymarket:B", canonical.VenuePolymarket, "B", "rules", "BTC", "source", polyFee)
+	c := seedInstrument("kalshi:C", canonical.VenueKalshi, "C", "rules", "BTC", "source", kalshiFee)
+	d := seedInstrument("polymarket:D", canonical.VenuePolymarket, "D", "rules", "BTC", "source", polyFee)
+	for _, in := range []canonical.Instrument{a, b, c, d} {
+		if err := st.UpsertInstrument(ctx, round.ID, in); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Insert one of each type: equivalent (routable), implies, related.
+	_, err = st.UpsertRelationship(ctx, canonical.Relationship{
+		RoundID: round.ID, AID: "kalshi:A", BID: "polymarket:B", Type: canonical.RelEquivalent, Confidence: dec("0.90"),
+		Method: canonical.MethodRules, Diff: match.Diff(a.Terms, b.Terms), Explanation: "Eq",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = st.UpsertRelationship(ctx, canonical.Relationship{
+		RoundID: round.ID, AID: "kalshi:C", BID: "polymarket:D", Type: canonical.RelImplies, Confidence: dec("0.85"),
+		Method: canonical.MethodRules, Diff: match.Diff(c.Terms, d.Terms), Explanation: "Implies",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = st.UpsertRelationship(ctx, canonical.Relationship{
+		RoundID: round.ID, AID: "kalshi:A", BID: "kalshi:C", Type: canonical.RelRelated, Confidence: dec("0.40"),
+		Method: canonical.MethodRules, Diff: match.Diff(a.Terms, c.Terms), Explanation: "Related",
+		Vetoes: []canonical.Veto{{Code: "subject_mismatch", Field: "subject", Detail: ""}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rec := get(s.Handler(), "/")
+	wantHTML(t, rec, 200)
+	body := rec.Body.String()
+
+	// Find section positions.
+	routablePos := strings.Index(body, `<h2 id="routable">`)
+	impliesPos := strings.Index(body, `<h2 id="type-implies">`)
+	relatedPos := strings.Index(body, `<summary>related`)
+
+	if routablePos < 0 || impliesPos < 0 || relatedPos < 0 {
+		t.Fatalf("missing sections: routable=%d, implies=%d, related=%d", routablePos, impliesPos, relatedPos)
+	}
+
+	// Assert order: routable < implies < related.
+	if routablePos >= impliesPos || impliesPos >= relatedPos {
+		t.Errorf("sections out of order: routable at %d, implies at %d, related at %d", routablePos, impliesPos, relatedPos)
+	}
 }
