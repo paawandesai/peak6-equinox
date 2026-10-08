@@ -20,8 +20,9 @@ const (
 var (
 	t0  = time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC)
 	cfg = Config{
-		RoundID:            7,
-		MinRouteConfidence: d("0.9"),
+		RoundID:                7,
+		MinRouteConfidence:     d("0.9"),
+		BasisPenaltyMultiplier: d("0.01"),
 		Eligibility: EligibilityConfig{
 			Snapshot:     t0, // quotes are fetched at t0, so they're fresh (0s old)
 			StaleAfter:   120 * time.Second,
@@ -137,7 +138,7 @@ func TestRouteChoosesLowestAllIn(t *testing.T) {
 	if len(dec.Exclusions) != 0 {
 		t.Errorf("exclusions = %+v", dec.Exclusions)
 	}
-	for _, want := range []string{polymarketID, kalshiID, "Best route: polymarket", "ranks #2", "approximate for kalshi", "verified for polymarket", "basis-risk"} {
+	for _, want := range []string{polymarketID, kalshiID, "Best route: polymarket", "ranks #2", "approximate for kalshi", "verified for polymarket", "Basis-risk penalty is applied"} {
 		if !strings.Contains(dec.Explanation, want) {
 			t.Errorf("explanation lacks %q: %s", want, dec.Explanation)
 		}

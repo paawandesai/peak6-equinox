@@ -49,7 +49,7 @@ func TestRouteHappyPathHTMX(t *testing.T) {
 		"Chosen route", `<span class="venue">polymarket</span></td><td><code>`+seedPolyB, "0.5150", "0.5325",
 		"Ranked alternatives", "chosen", "<td>2</td>", "0.5375",
 		"Excluded candidates", seedKalshiC, "not_routable",
-		"Warnings", "basis-risk penalty is not applied in v0",
+		"Warnings", "Basis-risk penalty is applied",
 		"Explanation", "Simulated buy of 100 YES contracts on "+seedKalshiA,
 	)
 

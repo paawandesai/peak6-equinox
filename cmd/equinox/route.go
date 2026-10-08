@@ -132,8 +132,9 @@ func runRoute(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 	rcfg := route.Config{
-		RoundID:            in.round.ID,
-		MinRouteConfidence: cfg.MinRouteConfidence,
+		RoundID:                in.round.ID,
+		MinRouteConfidence:     cfg.MinRouteConfidence,
+		BasisPenaltyMultiplier: cfg.BasisPenaltyMult,
 		Eligibility: route.EligibilityConfig{
 			Snapshot:     in.round.SnapshotAt(),
 			StaleAfter:   cfg.StaleAfter,
