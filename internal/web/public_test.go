@@ -96,6 +96,7 @@ func seedPublic(t *testing.T, st *store.Store) seeded {
 	eqID, err := st.UpsertRelationship(ctx, canonical.Relationship{
 		RoundID: round.ID, AID: seedKalshiA, BID: seedPolyB, Type: canonical.RelEquivalent, Confidence: dec("0.97"),
 		Method: canonical.MethodRules, Diff: match.Diff(a.Terms, b.Terms), Explanation: seedExplainEq,
+		BasisRisk: &canonical.BasisRisk{Score: dec("0.1"), Components: []canonical.BasisComponent{{Name: "source", Score: dec("0.1"), Detail: "Binance vs CF Benchmarks"}}},
 	})
 	if err != nil {
 		t.Fatal(err)

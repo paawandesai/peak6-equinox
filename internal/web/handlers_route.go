@@ -249,8 +249,9 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cfg := route.Config{
-		RoundID:            rel.RoundID,
-		MinRouteConfidence: s.cfg.MinRouteConfidence,
+		RoundID:                rel.RoundID,
+		MinRouteConfidence:     s.cfg.MinRouteConfidence,
+		BasisPenaltyMultiplier: s.cfg.BasisPenaltyMult,
 		Eligibility: route.EligibilityConfig{
 			Snapshot:     round.SnapshotAt(),
 			StaleAfter:   s.cfg.StaleAfter,

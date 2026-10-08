@@ -171,8 +171,11 @@ func seedRouteRound(t *testing.T, s *store.Store) store.Round {
 			t.Fatal(err)
 		}
 	}
-	if _, err := s.UpsertRelationship(ctx, canonical.Relationship{RoundID: round.ID, AID: routeKalshiID, BID: routePolymarketID,
-		Type: canonical.RelEquivalent, Confidence: dec("0.97"), Method: canonical.MethodRules, Explanation: "same proposition"}); err != nil {
+	if _, err := s.UpsertRelationship(ctx, canonical.Relationship{
+		RoundID: round.ID, AID: routeKalshiID, BID: routePolymarketID,
+		Type: canonical.RelEquivalent, Confidence: dec("0.97"), Method: canonical.MethodRules, Explanation: "same proposition",
+		BasisRisk: &canonical.BasisRisk{Score: dec("0.1"), Components: []canonical.BasisComponent{{Name: "test", Score: dec("0.1"), Detail: "test"}}},
+	}); err != nil {
 		t.Fatal(err)
 	}
 	return round

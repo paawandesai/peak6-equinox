@@ -45,12 +45,12 @@ func TestRouteHappyPathHTMX(t *testing.T) {
 	}
 	wantContains(t, body,
 		`id="route-result"`, "Decision #1", "buy 100 contracts YES, market IOC", "Partners considered: 2",
-		// Polymarket fills 50 at 0.50 and 50 at 0.53 (VWAP 0.515, all-in 0.5325); Kalshi fills all 100 at 0.52 (all-in 0.5375).
-		"Chosen route", `<span class="venue">polymarket</span></td><td><code>`+seedPolyB, "0.5150", "0.5325",
+		// Polymarket fills 50 at 0.50 and 50 at 0.53 (VWAP 0.515, fee 0.0175, basis 0.001, all-in 0.5335); Kalshi fills all 100 at 0.52 (all-in 0.5375).
+		"Chosen route", `<span class="venue">polymarket</span></td><td><code>`+seedPolyB, "0.5150", "0.5335",
 		"Ranked alternatives", "chosen", "<td>2</td>", "0.5375",
 		"Excluded candidates", seedKalshiC, "not_routable",
-		"Warnings", "basis-risk penalty is not applied in v0",
 		"Explanation", "Simulated buy of 100 YES contracts on "+seedKalshiA,
+		"Basis-risk penalty is applied",
 	)
 
 	decs, logs := countDecisions(t, st)

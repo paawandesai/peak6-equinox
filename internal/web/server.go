@@ -37,6 +37,8 @@ type Config struct {
 	SkewMax time.Duration
 	// MinBookDepth is the minimum book depth (MIN_BOOK_DEPTH).
 	MinBookDepth decimal.Decimal
+	// BasisPenaltyMult is the basis-risk penalty multiplier (BASIS_PENALTY_MULTIPLIER).
+	BasisPenaltyMult decimal.Decimal
 	// StaleRoundWarnMinutes is the stale-round warning threshold (STALE_ROUND_WARN_MINUTES).
 	StaleRoundWarnMinutes int
 }
@@ -88,6 +90,11 @@ func New(cfg Config, deps Deps) *Server {
 	}
 	if cfg.MinBookDepth.IsZero() {
 		cfg.MinBookDepth = decimal.RequireFromString("1")
+	}
+	// BASIS_PENALTY_MULTIPLIER: config.Load rejects zero/negative, so this default
+	// is only for direct test construction (not production).
+	if cfg.BasisPenaltyMult.IsZero() {
+		cfg.BasisPenaltyMult = decimal.RequireFromString("0.01")
 	}
 	return &Server{
 		cfg: cfg, deps: deps, log: logger,

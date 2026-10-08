@@ -29,6 +29,9 @@ type Config struct {
 	// MinRouteConfidence excludes partners whose relationship confidence is
 	// below it (domain.md rule 3; MIN_ROUTE_CONFIDENCE).
 	MinRouteConfidence decimal.Decimal
+	// BasisPenaltyMultiplier scales the basis-risk score into dollars per
+	// contract (M3-02; BASIS_PENALTY_MULTIPLIER, default 0.01 = one cent).
+	BasisPenaltyMultiplier decimal.Decimal
 	// Eligibility holds the staleness, skew, and depth thresholds.
 	Eligibility EligibilityConfig
 }
@@ -52,6 +55,7 @@ const (
 	ReasonInsufficientDepth     = "insufficient_depth"
 	ReasonLimitNotReachable     = "limit_not_reachable"
 	ReasonFeeUnknown            = "fee_unknown"
+	ReasonBasisRiskUnknown      = "basis_risk_unknown"
 	ReasonStale                 = "stale"
 	ReasonSkew                  = "skew"
 )
@@ -70,10 +74,11 @@ type candidate struct {
 
 // option is a candidate the order can fill on, ranked against the others.
 type option struct {
-	leg      canonical.Leg
-	fill     fill
-	full     bool // the whole order fills
-	verified bool // the fee schedule is verified against official docs
+	leg        canonical.Leg
+	fill       fill
+	full       bool            // the whole order fills
+	verified   bool            // the fee schedule is verified against official docs
+	basisScore decimal.Decimal // the basis-risk score used for tie-breaking
 }
 
 // sizing records how the order's quantity in contracts was determined.
@@ -190,7 +195,7 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 	sz := size(o, cands)
 	var opts []option
 	for _, c := range cands {
-		opt, ex, ok := evaluate(c, o, sz)
+		opt, ex, ok := evaluate(c, o, sz, cfg)
 		if !ok {
 			d.Exclusions = append(d.Exclusions, ex)
 			continue
@@ -268,7 +273,7 @@ func size(o canonical.Order, cands []candidate) sizing {
 
 // evaluate walks one candidate's book for the order and turns the result
 // into a ranked option or an exclusion.
-func evaluate(c candidate, o canonical.Order, sz sizing) (option, canonical.Exclusion, bool) {
+func evaluate(c candidate, o canonical.Order, sz sizing, cfg Config) (option, canonical.Exclusion, bool) {
 	ex := canonical.Exclusion{InstrumentID: c.Instrument.ID, Venue: c.Instrument.Venue}
 	fail := func(reason, detail string) (option, canonical.Exclusion, bool) {
 		ex.Reason, ex.Detail = reason, detail
@@ -303,6 +308,20 @@ func evaluate(c candidate, o canonical.Order, sz sizing) (option, canonical.Excl
 	if err != nil {
 		return fail(ReasonFeeUnknown, err.Error())
 	}
+
+	// Calculate basis penalty (M3-02): Score × BASIS_PENALTY_MULTIPLIER.
+	// Target has no relationship (nil), so no basis penalty.
+	// Partners must have BasisRisk; nil means unknown risk (never guess, domain.md).
+	basisScore := decimal.Zero
+	basisPenalty := decimal.Zero
+	if c.Relationship != nil {
+		if c.Relationship.BasisRisk == nil {
+			return fail(ReasonBasisRiskUnknown, "partner relationship has no basis-risk score")
+		}
+		basisScore = c.Relationship.BasisRisk.Score
+		basisPenalty = basisScore.Mul(cfg.BasisPenaltyMultiplier)
+	}
+
 	leg := canonical.Leg{
 		InstrumentID:            c.Instrument.ID,
 		Venue:                   c.Instrument.Venue,
@@ -311,11 +330,11 @@ func evaluate(c candidate, o canonical.Order, sz sizing) (option, canonical.Excl
 		Quantity:                f.Quantity,
 		VWAP:                    f.VWAP(),
 		FeePerContract:          fee.Div(f.Quantity),
-		BasisPenaltyPerContract: decimal.Zero, // priced in M3
+		BasisPenaltyPerContract: basisPenalty,
 		Route:                   c.route,
 	}
 	leg.AllInPerContract = allIn(leg)
-	return option{leg: leg, fill: f, full: f.Quantity.Equal(sz.qty), verified: c.Instrument.FeeSchedule.Verified}, canonical.Exclusion{}, true
+	return option{leg: leg, fill: f, full: f.Quantity.Equal(sz.qty), verified: c.Instrument.FeeSchedule.Verified, basisScore: basisScore}, canonical.Exclusion{}, true
 }
 
 // totalFee sums the taker fee over the consumed levels, each charged at its
@@ -342,25 +361,42 @@ func allIn(l canonical.Leg) decimal.Decimal {
 	return l.VWAP.Sub(l.FeePerContract).Sub(l.BasisPenaltyPerContract)
 }
 
+// quantizeCost rounds all-in cost to 4 decimal places for transitive comparison
+// (M3-02: 0.0001 tolerance = $0.0001 per contract).
+func quantizeCost(c decimal.Decimal) decimal.Decimal {
+	return c.Round(4)
+}
+
 // better orders options: full fills before partial ones, then the lowest
-// all-in cost (buy) or the highest net proceeds (sell), then the larger fill,
-// then the deeper book (domain.md rule 6), then the instrument ID so the
-// order is deterministic.
+// all-in cost (buy) or the highest net proceeds (sell) quantized to 4 dp
+// (M3-02), then the larger fill, then the deeper book, then the lower basis
+// score, then the lexicographically first venue name (domain.md rule 6).
 func better(side canonical.Side, a, b option) bool {
 	if a.full != b.full {
 		return a.full
 	}
-	if !a.leg.AllInPerContract.Equal(b.leg.AllInPerContract) {
+	// Quantize to 4 dp for transitive comparison (M3-02: 0.0001 = $0.0001/contract).
+	aQuant := quantizeCost(a.leg.AllInPerContract)
+	bQuant := quantizeCost(b.leg.AllInPerContract)
+	if !aQuant.Equal(bQuant) {
 		if side == canonical.SideBuy {
-			return a.leg.AllInPerContract.LessThan(b.leg.AllInPerContract)
+			return aQuant.LessThan(bQuant)
 		}
-		return a.leg.AllInPerContract.GreaterThan(b.leg.AllInPerContract)
+		return aQuant.GreaterThan(bQuant)
 	}
 	if !a.leg.Quantity.Equal(b.leg.Quantity) {
 		return a.leg.Quantity.GreaterThan(b.leg.Quantity)
 	}
 	if !a.fill.DepthWithinLimit.Equal(b.fill.DepthWithinLimit) {
 		return a.fill.DepthWithinLimit.GreaterThan(b.fill.DepthWithinLimit)
+	}
+	// Within quantized cost equality, prefer lower basis score (M3-02 tie-break).
+	if !a.basisScore.Equal(b.basisScore) {
+		return a.basisScore.LessThan(b.basisScore)
+	}
+	// Final tie-break: venue name lexicographically (deterministic).
+	if a.leg.Venue != b.leg.Venue {
+		return a.leg.Venue < b.leg.Venue
 	}
 	return a.leg.InstrumentID < b.leg.InstrumentID
 }
@@ -379,7 +415,6 @@ func warnings(o canonical.Order, opts []option, sz sizing) []string {
 	if sz.notional != nil && sz.ok {
 		w = append(w, fmt.Sprintf("quantity %s derived from notional %s at the %s touch", sz.qty, sz.notional, sz.touch))
 	}
-	w = append(w, "basis-risk penalty is not applied in v0")
 	return w
 }
 
