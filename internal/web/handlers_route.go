@@ -283,6 +283,7 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 
 	p := s.routePageHeader(in.PairID)
 	p.StaleWarning = s.staleRoundWarning(round)
+	p.DemoBanner = demoBanner(round)
 	data := routePage{
 		page:       p,
 		PairID:     in.PairID,

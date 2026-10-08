@@ -76,6 +76,7 @@ func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	data.Round = newRoundInfo(round)
+	data.DemoBanner = demoBanner(round)
 
 	rels, err := st.ListRelationships(ctx, store.RelationshipFilter{RoundID: round.ID, Limit: maxMatchRows + 1})
 	if err != nil {

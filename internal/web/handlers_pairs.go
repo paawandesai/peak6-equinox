@@ -113,10 +113,11 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 	}
 	data := pairPage{
 		page: page{
-			Title:    "Pair " + r.PathValue("id"),
-			Question: "Why does Equinox think these two contracts are, or are not, the same bet, and where would an order fill best?",
-			Assets:   pinnedAssets,
-			Round:    newRoundInfo(round),
+			Title:      "Pair " + r.PathValue("id"),
+			Question:   "Why does Equinox think these two contracts are, or are not, the same bet, and where would an order fill best?",
+			Assets:     pinnedAssets,
+			Round:      newRoundInfo(round),
+			DemoBanner: demoBanner(round),
 		},
 		ID: rel.ID, Type: string(rel.Type), TypeLabel: typeLabels[rel.Type], Confidence: rel.Confidence.StringFixed(2),
 		Method: string(rel.Method), Explanation: rel.Explanation, A: views[rel.AID], B: views[rel.BID],

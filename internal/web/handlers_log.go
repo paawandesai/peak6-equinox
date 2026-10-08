@@ -151,17 +151,20 @@ func (s *Server) handleDecision(w http.ResponseWriter, r *http.Request) {
 	}
 	snapshot := time.Time{}
 	var roundInfo *roundInfo
+	var banner string
 	if err == nil {
 		snapshot = round.SnapshotAt()
 		roundInfo = newRoundInfo(round)
+		banner = demoBanner(round)
 	}
 	data := decisionPage{
 		routePage: routePage{
 			page: page{
-				Title:    "Decision " + r.PathValue("id"),
-				Question: "What did this simulated order do, and why did the router choose that venue?",
-				Assets:   pinnedAssets,
-				Round:    roundInfo,
+				Title:      "Decision " + r.PathValue("id"),
+				Question:   "What did this simulated order do, and why did the router choose that venue?",
+				Assets:     pinnedAssets,
+				Round:      roundInfo,
+				DemoBanner: banner,
 			},
 			DecisionID: rd.ID,
 			Decision:   newDecisionView(rd.Decision, countPartners(rd.Decision), snapshot),

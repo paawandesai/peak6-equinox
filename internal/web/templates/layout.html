@@ -10,6 +10,7 @@
   <script src="{{.Assets.HtmxURL}}" integrity="{{.Assets.HtmxSRI}}" crossorigin="anonymous" defer></script>
 </head>
 <body>
+  {{if .DemoBanner}}<div class="demo-banner">{{.DemoBanner}}</div>{{end}}
   <header>
     <nav>
       <ul><li><strong><a href="/">Equinox</a></strong> cross-venue contract matcher and router</li></ul>

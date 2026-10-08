@@ -110,6 +110,7 @@ type page struct {
 	Assets       assets
 	Round        *roundInfo
 	StaleWarning string // "Data is N minutes old" when round is stale (NFR-09, D-077)
+	DemoBanner   string // "Demo mode: data as of ..." when a round is pinned (NFR-04, M3-07)
 }
 
 // roundInfo is the round a page reads from, as shown in headers.
@@ -126,6 +127,19 @@ func newRoundInfo(r store.Round) *roundInfo {
 		asOf = r.StartedAt
 	}
 	return &roundInfo{ID: r.ID, Status: string(r.Status), Pinned: r.Pinned, AsOf: formatUTC(asOf)}
+}
+
+// demoBanner returns the demo mode banner message when r is pinned, else "".
+// NFR-04: when a round is pinned, all pages show "Demo mode: data as of <timestamp>".
+func demoBanner(r store.Round) string {
+	if !r.Pinned {
+		return ""
+	}
+	asOf := r.FinishedAt
+	if asOf.IsZero() {
+		asOf = r.StartedAt
+	}
+	return fmt.Sprintf("Demo mode: data as of %s (round %d). Unpin at /admin", formatUTC(asOf), r.ID)
 }
 
 // nullPrice renders an optional price for display.

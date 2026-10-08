@@ -45,6 +45,7 @@ func (s *Server) adminRoutes(mux *http.ServeMux) {
 	mux.Handle("/admin/{$}", index)
 	mux.Handle("/admin/ingest", s.adminAuth(http.HandlerFunc(s.handleAdminIngest)))
 	mux.Handle("/admin/llm-verify", s.adminAuth(http.HandlerFunc(s.handleAdminLLMVerify)))
+	mux.Handle("/admin/unpin", s.adminAuth(http.HandlerFunc(s.handleAdminUnpin)))
 	mux.Handle("/admin/", s.adminAuth(http.NotFoundHandler()))
 }
 
@@ -436,4 +437,36 @@ func (s *Server) handleAdminLLMVerify(w http.ResponseWriter, r *http.Request) {
 		Downgraded:      downgraded,
 		BudgetExhausted: budgetExhausted,
 	})
+}
+
+// handleAdminUnpin unpins any pinned round (M3-07, NFR-04). After unpin, the
+// next page request uses the latest ok or partial round.
+func (s *Server) handleAdminUnpin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", "POST")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if s.deps.Store == nil {
+		http.Error(w, "database not configured", http.StatusServiceUnavailable)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	if err := s.deps.Store.UnpinRounds(ctx); err != nil {
+		s.log.Error("unpinning rounds", "error", err)
+		http.Error(w, "database unavailable", http.StatusServiceUnavailable)
+		return
+	}
+
+	s.log.Info("unpinned all rounds")
+
+	// Redirect back to the admin page
+	if wantsHTML(r) {
+		http.Redirect(w, r, "/admin", http.StatusSeeOther)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }
