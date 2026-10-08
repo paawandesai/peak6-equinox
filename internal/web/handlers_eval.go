@@ -81,14 +81,17 @@ type evalPage struct {
 
 // evalRow is one relationship type's metrics, formatted.
 type evalRow struct {
-	Type        string
-	Label       string
-	Support     int
-	TP, FP, FN  int
-	Precision   string
-	Recall      string
-	MeetsTarget bool // precision >= target (equivalent tier only)
-	HasPrec     bool
+	Type          string
+	TypeChipClass string
+	Label         string
+	Support       int
+	TP, FP, FN    int
+	Precision     string
+	Recall        string
+	MeetsTarget   bool   // precision >= target (equivalent tier only)
+	HasPrec       bool   // precision is not null
+	VerdictText   string // for the headline: "meets the 0.95 target", "below the 0.95 target", "undefined: no equivalent predictions"
+	VerdictChip   string // chip class for the verdict
 }
 
 // handleEval answers GET /eval: the latest `equinox eval` summary from the
@@ -113,7 +116,7 @@ func (s *Server) handleEval(w http.ResponseWriter, r *http.Request) {
 		data.Produced = sum.GeneratedAt
 		data.Notes = sum.Notes
 		for _, m := range sum.Types {
-			row := newEvalRow(m)
+			row := newEvalRow(m, data.Target)
 			data.Rows = append(data.Rows, row)
 			if m.Type == string(canonical.RelEquivalent) {
 				r := row
@@ -124,13 +127,28 @@ func (s *Server) handleEval(w http.ResponseWriter, r *http.Request) {
 	s.render(w, http.StatusOK, "eval", data)
 }
 
-func newEvalRow(m evalTypeMetrics) evalRow {
+func newEvalRow(m evalTypeMetrics, target string) evalRow {
+	relType := canonical.RelationshipType(m.Type)
 	row := evalRow{
-		Type: m.Type, Label: typeLabels[canonical.RelationshipType(m.Type)], Support: m.Support, TP: m.TP, FP: m.FP, FN: m.FN,
+		Type: m.Type, Label: typeLabels[relType], Support: m.Support, TP: m.TP, FP: m.FP, FN: m.FN,
 		Precision: formatPercent(m.Precision), Recall: formatPercent(m.Recall), HasPrec: m.Precision != nil,
+		TypeChipClass: TypeChipClass(relType),
 	}
 	if m.Precision != nil {
 		row.MeetsTarget = m.Precision.GreaterThanOrEqual(equivalentPrecisionTarget)
+	}
+	// For the equivalent tier, build the verdict text and chip for the headline.
+	if relType == canonical.RelEquivalent {
+		if !row.HasPrec {
+			row.VerdictText = "undefined: no equivalent predictions"
+			row.VerdictChip = "chip-muted"
+		} else if row.MeetsTarget {
+			row.VerdictText = fmt.Sprintf("meets the %s target", target)
+			row.VerdictChip = "chip-ok"
+		} else {
+			row.VerdictText = fmt.Sprintf("below the %s target", target)
+			row.VerdictChip = "chip-danger"
+		}
 	}
 	return row
 }
