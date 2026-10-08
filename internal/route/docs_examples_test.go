@@ -242,7 +242,6 @@ func TestDocsExample3ComplementRoute(t *testing.T) {
 		t.Fatalf("JSON unmarshal: %v", err)
 	}
 	decNoInputs.Inputs = nil
-	decNoInputs.TargetType = ""
 	jsonBytesNoInputs, err := json.MarshalIndent(decNoInputs, "", "  ")
 	if err != nil {
 		t.Fatalf("JSON marshal (no inputs): %v", err)

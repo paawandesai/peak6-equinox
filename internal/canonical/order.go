@@ -143,7 +143,7 @@ type Exclusion struct {
 type DecisionInput struct {
 	InstrumentID string `json:"instrument_id"`
 	Venue        Venue  `json:"venue"`
-	// RelationshipType is the target pair's type at decision time ("self" for the target).
+	// RelationshipType is the partner's relationship type to the target (empty for the target itself).
 	RelationshipType RelationshipType `json:"relationship_type"`
 	Confidence       decimal.Decimal  `json:"confidence"` // 1.0 for the target
 	// OutcomeSide is the outcome the router checked on this candidate.
@@ -172,9 +172,6 @@ type Decision struct {
 	// Inputs records the quotes the router read, one per candidate considered (eligible or not).
 	// Empty for decisions stored before UI-25. UI-25, D-098 call 3.
 	Inputs []DecisionInput `json:"inputs,omitempty"`
-	// TargetType is the target pair's relationship type at decision time.
-	// Empty for decisions stored before UI-25.
-	TargetType RelationshipType `json:"target_type,omitempty"`
 }
 
 // Validate checks the round, target, order, decision time and that the

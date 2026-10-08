@@ -122,9 +122,8 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 	}
 
 	// Capture the target's input snapshot (UI-25, D-098 call 3).
-	// For the target, relationship type is "self" (represented as empty string) and confidence is 1.0.
+	// For the target, relationship type is empty (no relationship to itself) and confidence is 1.0.
 	d.Inputs = append(d.Inputs, buildInput(target, o.Outcome, cfg.RoundID, nil))
-	d.TargetType = "" // The target has no relationship to itself
 
 	// Collect all candidates (target + partners) that pass pre-routing checks and eligibility.
 	type pendingCandidate struct {

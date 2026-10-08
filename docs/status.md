@@ -101,6 +101,7 @@ None.
 | D-081 | Human (Paawan, 2026-10-07 8:29 PM CT): UI clarity and usability pass designed by the orchestrator with /design; refines D-031; same stack (html/template + htmx + Pico.css, no JS build, no SPA). **Already approved by Paawan**; listed for the record. | 2026-10-08 |
 | D-084 | Q-7: labels.yaml added to guard-human-files.sh. The test that required an empty labels.yaml now checks the schema, provenance and that each label has a note. Tier 2. | 2026-10-07 |
 | D-097 | UI-08 follow-up (issue #40): llm_verify_last_run singleton table persists last LLM verify run summary (verified, downgraded, cache_hits, ran_at). Admin page shows "last run" state (chip-info); /admin/llm-verify redirects for browser posts. State precedence: disabled > cap_reached > last_run > ready. Migration 0002. Tier 2 schema change. | 2026-10-08 |
+| D-099 | Router stores input quotes with each decision (UI-25, D-098 call 3). `canonical.Decision` gains `Inputs []DecisionInput` (venue, instrument id, relationship type empty for target, confidence at decision time, outcome side, best ask, ask depth capped at 10 levels, quote times, round id). Stored as optional jsonb field; no SQL migration. Old decisions decode with empty Inputs. | 2026-10-08 |
 
 ## Kept decisions (veto closed)
 
@@ -175,4 +176,3 @@ Paawan kept these four in the operator chat on 2026-10-07 at 8:38 PM CT, after t
 | ID | Severity | Status | Ticket |
 |---|---|---|---|
 | none yet | | | AB harnesses landed in M1 (AB-01/02/05/06/07/08/11/12/13/14) |
-| D-099 | Router stores input quotes and label with each decision (UI-25, D-098 call 3). `canonical.Decision` gains `Inputs []DecisionInput` (venue, instrument id, relationship type/confidence at decision time, outcome side, best ask, ask depth capped at 10 levels, quote times, round id) and `TargetType`. Stored as optional jsonb fields; no SQL migration. Old decisions decode with empty fields. | 2026-10-08 |
