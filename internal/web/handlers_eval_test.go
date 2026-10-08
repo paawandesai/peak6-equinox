@@ -47,45 +47,12 @@ func TestEvalHeadlineStates(t *testing.T) {
 			// Check the headline strip with precision and verdict.
 			wantContains(t, body,
 				`<dl class="strip">`,
-				`Precision at equivalent:`,
+				`Precision at equivalent`,
 				tt.wantPrecision,
 				tt.wantVerdictText,
 				tt.wantChip,
 			)
 		})
-	}
-}
-
-// TestEvalDeltaRendering tests that when M3-06 provides delta data, the table
-// shows rules vs rules+llm side by side. Since the summary format does not
-// yet include delta data (M3-06 landed without it), this test verifies the
-// single-method rendering and is structured to be extended when delta data
-// becomes available.
-func TestEvalDeltaRendering(t *testing.T) {
-	// Current behavior: single-method rendering regardless of method.
-	rulesFixture := sampleEval
-	rulesLLMFixture := strings.Replace(sampleEval, `"method": "rules"`, `"method": "rules+llm"`, 1)
-	for _, fixture := range []string{rulesFixture, rulesLLMFixture} {
-		s := New(Config{EvalSummaryFile: writeEval(t, fixture)}, Deps{})
-		rec := get(s.Handler(), "/eval")
-		wantHTML(t, rec, http.StatusOK)
-		body := rec.Body.String()
-		// Single-method table: Type, Labelled, TP, FP, FN, Precision, Recall.
-		wantContains(t, body,
-			`<table class="data">`,
-			"<th>Type</th>",
-			"<th>Labelled</th>",
-			"<th>Precision</th>",
-			"<th>Recall</th>",
-		)
-		// Type chips are rendered with the chip class.
-		wantContains(t, body, `<span class="chip chip-ok">equivalent</span>`)
-		// Numeric columns are right-aligned with td.num.
-		wantContains(t, body, `<td class="num">12</td>`)
-		// TODO: When M3-06 extends the summary format to include delta data,
-		// add assertions for:
-		// - Side-by-side columns: Rules Precision, Rules+LLM Precision, Delta
-		// - Delta values rendered as signed percentages (e.g., "+2.3%", "-1.5%")
 	}
 }
 

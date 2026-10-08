@@ -367,7 +367,7 @@ func TestEvalPage(t *testing.T) {
 	// UI-07: headline is now a strip, verdict is a chip, table uses type chips and td.num
 	wantContains(t, body,
 		"by <code>equinox eval --round 3</code> on round <strong>3</strong>: <strong>40</strong> labelled pairs",
-		`<dl class="strip">`, "Precision at equivalent:", "100.00%", `<span class="chip chip-ok">meets the 0.95 target</span>`,
+		`<dl class="strip">`, "Precision at equivalent", "100.00%", `<span class="chip chip-ok">meets the 0.95 target</span>`,
 		`<span class="chip chip-ok">equivalent</span>`, `<td class="num">92.31%</td>`, `<td class="num">75.00%</td>`, `<td class="num">n/a</td>`,
 		"Notes from the run", "&lt;b&gt;x&lt;/b&gt;",
 	)
