@@ -112,7 +112,7 @@ func TestAB11_CachedVerifierNeverUpgrades(t *testing.T) {
 	innerVerifier := &llm.MockVerifier{Verdicts: []canonical.LLMVerdict{{
 		Relationship: canonical.RelRelated, Confidence: decimalOne(), DifferingFields: []string{}, Evidence: []string{},
 	}}}
-	cachedVerifier := llm.NewCachedVerifier(innerVerifier, &cache, modelID, llm.PromptVersion)
+	cachedVerifier := llm.NewCachedVerifier(innerVerifier, &cache, modelID, llm.PromptVersion, nil)
 
 	// Verify a pair the rules call "related"
 	rulesRel := llm.InjectionCase{Rules: canonical.RelRelated, Field: "rules", VenueText: "x"}.RulesRelationship()

@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"sync"
 	"time"
 )
 
@@ -21,9 +20,7 @@ type AnthropicClient struct {
 	maxTokens   int
 	temperature float64
 	httpClient  *http.Client
-	baseURL     string     // defaults to anthropicAPIURL, overrideable for tests
-	lastUsage   Usage      // token counts from the most recent successful call
-	usageMu     sync.Mutex // guards lastUsage (AO review: prevent data race)
+	baseURL     string // defaults to anthropicAPIURL, overrideable for tests
 }
 
 // NewAnthropicClient creates a client for the given model ID. apiKey must not
@@ -88,16 +85,10 @@ type anthropicError struct {
 	Message string `json:"message"`
 }
 
-// Usage holds the token counts from the last API call.
-type Usage struct {
-	InputTokens  int64
-	OutputTokens int64
-}
-
-// Complete sends the prompt to the Anthropic API and returns the raw text
-// response. It returns an error on transport failure, API error, or empty
-// content. The response text is untrusted until Decode accepts it.
-func (c *AnthropicClient) Complete(ctx context.Context, p Prompt) (string, error) {
+// Complete sends the prompt to the Anthropic API and returns the text response
+// and per-call token usage. It returns an error on transport failure, API error,
+// or empty content. The response text is untrusted until Decode accepts it.
+func (c *AnthropicClient) Complete(ctx context.Context, p Prompt) (ModelResult, error) {
 	reqBody := anthropicRequest{
 		Model:       c.model,
 		MaxTokens:   c.maxTokens,
@@ -108,12 +99,12 @@ func (c *AnthropicClient) Complete(ctx context.Context, p Prompt) (string, error
 
 	bodyJSON, err := json.Marshal(reqBody)
 	if err != nil {
-		return "", fmt.Errorf("marshaling anthropic request: %w", err)
+		return ModelResult{}, fmt.Errorf("marshaling anthropic request: %w", err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, "POST", c.baseURL, bytes.NewReader(bodyJSON))
 	if err != nil {
-		return "", fmt.Errorf("creating anthropic request: %w", err)
+		return ModelResult{}, fmt.Errorf("creating anthropic request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -122,35 +113,35 @@ func (c *AnthropicClient) Complete(ctx context.Context, p Prompt) (string, error
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("anthropic api call: %w", err)
+		return ModelResult{}, fmt.Errorf("anthropic api call: %w", err)
 	}
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20)) // 1 MB cap
 	if err != nil {
-		return "", fmt.Errorf("reading anthropic response: %w", err)
+		return ModelResult{}, fmt.Errorf("reading anthropic response: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		var apiErr anthropicResponse
 		if err := json.Unmarshal(respBody, &apiErr); err == nil && apiErr.Error != nil {
-			return "", fmt.Errorf("anthropic api error (%d): %s", resp.StatusCode, apiErr.Error.Message)
+			return ModelResult{}, fmt.Errorf("anthropic api error (%d): %s", resp.StatusCode, apiErr.Error.Message)
 		}
 		// Truncate response body to 200 bytes to avoid logging large bodies (AO review issue #3)
 		truncated := string(respBody)
 		if len(truncated) > 200 {
 			truncated = truncated[:200] + "... (truncated)"
 		}
-		return "", fmt.Errorf("anthropic api returned %d: %s", resp.StatusCode, truncated)
+		return ModelResult{}, fmt.Errorf("anthropic api returned %d: %s", resp.StatusCode, truncated)
 	}
 
 	var apiResp anthropicResponse
 	if err := json.Unmarshal(respBody, &apiResp); err != nil {
-		return "", fmt.Errorf("unmarshaling anthropic response: %w", err)
+		return ModelResult{}, fmt.Errorf("unmarshaling anthropic response: %w", err)
 	}
 
 	if len(apiResp.Content) == 0 {
-		return "", errors.New("anthropic returned empty content")
+		return ModelResult{}, errors.New("anthropic returned empty content")
 	}
 
 	// The verifier prompt asks for a single JSON object, so we concatenate all
@@ -163,27 +154,17 @@ func (c *AnthropicClient) Complete(ctx context.Context, p Prompt) (string, error
 	}
 
 	if text == "" {
-		return "", errors.New("anthropic returned no text content")
+		return ModelResult{}, errors.New("anthropic returned no text content")
 	}
 
-	// Record token usage from this call (AO review issue #5)
+	// Extract per-call token usage (Cursor: return usage per call, not shared mutable state)
+	var usage Usage
 	if apiResp.Usage != nil {
-		c.usageMu.Lock()
-		c.lastUsage = Usage{
+		usage = Usage{
 			InputTokens:  apiResp.Usage.InputTokens,
 			OutputTokens: apiResp.Usage.OutputTokens,
 		}
-		c.usageMu.Unlock()
 	}
 
-	return text, nil
-}
-
-// LastUsage returns the token counts from the most recent successful Complete call.
-// Returns zero values if no successful call has been made yet.
-// Thread-safe (AO review: guards against data race).
-func (c *AnthropicClient) LastUsage() Usage {
-	c.usageMu.Lock()
-	defer c.usageMu.Unlock()
-	return c.lastUsage
+	return ModelResult{Text: text, Usage: usage}, nil
 }

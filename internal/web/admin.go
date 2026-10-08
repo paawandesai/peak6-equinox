@@ -351,9 +351,9 @@ func (s *Server) handleAdminLLMVerify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	verifier := llm.NewVerifier(client)
-	budgetedVerifier := llm.NewBudgetedVerifier(verifier, s.deps.Store, dailyCap, client)
+	budgetedVerifier := llm.NewBudgetedVerifier(verifier, s.deps.Store, dailyCap, client, s.log)
 	cache := llm.NewPGCache(s.deps.Store, model, llm.PromptVersion)
-	cachedVerifier := llm.NewCachedVerifier(budgetedVerifier, cache, model, llm.PromptVersion)
+	cachedVerifier := llm.NewCachedVerifier(budgetedVerifier, cache, model, llm.PromptVersion, s.log)
 
 	var verified, downgraded int
 	var budgetExhausted bool

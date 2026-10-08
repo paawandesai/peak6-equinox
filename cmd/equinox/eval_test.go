@@ -173,3 +173,57 @@ labels:
 		t.Errorf("summary = %+v", sum)
 	}
 }
+
+func TestEvalRulesLLMFallsBackToRules(t *testing.T) {
+	st := store.New(tdb.Pool(t))
+	tdb.Reset(t)
+	seedMatchRound(t, st, store.RoundOK)
+	setEvalEnv(t)
+
+
+	labels := filepath.Join(t.TempDir(), "labels.yaml")
+	body := `version: 1
+round_id: 1
+labels:
+  # Pair from seeded round - no LLM verdict exists, so eval falls back to rules (related)
+  - a_id: kalshi:KXBTCD-26OCT0618-T76599.99
+    b_id: polymarket:1002
+    label: related
+    confirmed_by: test
+    confirmed_on: 2026-10-07
+  # Pair from seeded round - no LLM verdict exists, so eval falls back to rules (equivalent)
+  - a_id: kalshi:KXBTCD-26OCT0618-T76599.99
+    b_id: polymarket:1001
+    label: equivalent
+    confirmed_by: test
+    confirmed_on: 2026-10-07
+`
+	if err := os.WriteFile(labels, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	out := filepath.Join(t.TempDir(), "eval_summary.json")
+	if code := run(context.Background(), []string{"eval", "--method", "rules+llm", "--labels", labels, "--out", out}, &stdout, &stderr); code != 0 {
+		t.Fatalf("exit %d: %s", code, stderr.String())
+	}
+
+	// Verify output mentions rules+llm and shows 2 correct predictions
+	for _, want := range []string{"golden set (rules+llm): 2 labels evaluated, 2 correct"} {
+		if !strings.Contains(stdout.String(), want) {
+			t.Errorf("stdout lacks %q:\n%s", want, stdout.String())
+		}
+	}
+
+	// Verify summary JSON has method="rules+llm"
+	sum, err := eval.LoadSummary(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sum.Method != "rules+llm" {
+		t.Errorf("summary method = %q, want rules+llm", sum.Method)
+	}
+	if sum.Labels != 2 || sum.RoundID != 1 {
+		t.Errorf("summary = %+v", sum)
+	}
+}

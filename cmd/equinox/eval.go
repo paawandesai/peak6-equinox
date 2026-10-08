@@ -90,7 +90,7 @@ func runEval(ctx context.Context, args []string, stdout io.Writer) error {
 			"  run `equinox golden draft`, confirm pairs in the labels file (Tier 3), then re-run `equinox eval`\n", *labelsPath); err != nil {
 			return err
 		}
-		empty := eval.Evaluate(labels, nil)
+		empty := eval.Evaluate(labels, nil, evalMethod)
 		return writeSummary(stdout, *outPath, empty.Summary(time.Now(), command, labels.RoundID, *labelsPath, 0))
 	}
 	var predict eval.Predictor
@@ -119,7 +119,7 @@ func runEval(ctx context.Context, args []string, stdout io.Writer) error {
 			return err
 		}
 	}
-	report := eval.Evaluate(labels, predict)
+	report := eval.Evaluate(labels, predict, evalMethod)
 	if _, err := fmt.Fprint(stdout, report.String()); err != nil {
 		return err
 	}
@@ -159,8 +159,9 @@ func candidatesPredictor(c eval.Candidates) eval.Predictor {
 func storePredictor(ctx context.Context, st *store.Store, labels eval.Labels, fs facts.Set, method canonical.Method) (eval.Predictor, error) {
 	if method == canonical.MethodRulesLLM {
 		// For rules+llm, we read relationships from the database that have
-		// method='rules+llm'. We need to load them from the round that the
-		// labels reference, or the latest round.
+		// method='rules+llm', and fall back to rules-only for pairs without
+		// LLM processing (downgrade-only: the LLM can only downgrade, so pairs
+		// without LLM verdicts keep their rules verdict).
 		roundID := labels.RoundID
 		if roundID == 0 {
 			rd, err := st.CurrentRound(ctx)
@@ -174,17 +175,48 @@ func storePredictor(ctx context.Context, st *store.Store, labels eval.Labels, fs
 			return nil, fmt.Errorf("loading relationships for rules+llm eval: %w", err)
 		}
 		// Build a map of (aID, bID) -> type for rules+llm relationships
-		relMap := make(map[string]canonical.RelationshipType)
+		llmMap := make(map[string]canonical.RelationshipType)
 		for _, r := range rels {
 			if r.Method == canonical.MethodRulesLLM {
 				key := pairKey(r.AID, r.BID)
-				relMap[key] = r.Type
+				llmMap[key] = r.Type
 			}
+		}
+		// Load labelled instruments for rules fallback
+		idSet := map[string]struct{}{}
+		for _, l := range labels.Labels {
+			idSet[l.AID] = struct{}{}
+			idSet[l.BID] = struct{}{}
+		}
+		ids := make([]string, 0, len(idSet))
+		for id := range idSet {
+			ids = append(ids, id)
+		}
+		sort.Strings(ids)
+		records, err := st.GetInstruments(ctx, ids)
+		if err != nil && !errors.Is(err, store.ErrNotFound) {
+			return nil, fmt.Errorf("loading labelled instruments for rules fallback: %w", err)
+		}
+		instruments := make(map[string]canonical.Instrument, len(records))
+		for id, r := range records {
+			instruments[id] = normalize.Normalize(r.Instrument)
 		}
 		return func(aID, bID string) (canonical.RelationshipType, bool) {
 			key := pairKey(aID, bID)
-			t, ok := relMap[key]
-			return t, ok
+			// Check rules+llm first
+			if t, ok := llmMap[key]; ok {
+				return t, true
+			}
+			// Fall back to rules
+			a, okA := instruments[aID]
+			b, okB := instruments[bID]
+			if !okA || !okB {
+				return "", false
+			}
+			if venueRank(a.Venue) > venueRank(b.Venue) || (a.Venue == b.Venue && a.ID > b.ID) {
+				a, b = b, a
+			}
+			return match.Compare(a, b, fs).Type, true
 		}, nil
 	}
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
@@ -18,69 +19,65 @@ type UsageStore interface {
 	RecordLLMTokens(ctx context.Context, day time.Time, inputTokens, outputTokens int64) error
 }
 
-// TokenSource exposes token usage from the last API call.
-type TokenSource interface {
-	LastUsage() Usage
-}
-
 // BudgetedVerifier wraps a Verifier with a daily call cap. When the cap is
 // reached, Verify returns ErrBudgetExhausted and the caller leaves the rules
 // verdict unchanged.
 type BudgetedVerifier struct {
-	verifier    Verifier
-	store       UsageStore
-	tokenSource TokenSource // nil for mocks that don't expose usage
-	dailyCap    int
-	nowFunc     func() time.Time
+	verifier Verifier
+	store    UsageStore
+	log      *slog.Logger // nil is replaced with a discard handler
+	dailyCap int
+	nowFunc  func() time.Time
 }
 
 // NewBudgetedVerifier creates a verifier that enforces a daily call cap.
-// tokenSource may be nil for test mocks; if non-nil, token usage is recorded.
-func NewBudgetedVerifier(v Verifier, store UsageStore, dailyCap int, tokenSource TokenSource) *BudgetedVerifier {
+// log may be nil, in which case warnings are discarded.
+func NewBudgetedVerifier(v Verifier, store UsageStore, dailyCap int, log *slog.Logger) *BudgetedVerifier {
+	if log == nil {
+		log = slog.New(slog.DiscardHandler)
+	}
 	return &BudgetedVerifier{
-		verifier:    v,
-		store:       store,
-		tokenSource: tokenSource,
-		dailyCap:    dailyCap,
-		nowFunc:     time.Now,
+		verifier: v,
+		store:    store,
+		log:      log,
+		dailyCap: dailyCap,
+		nowFunc:  time.Now,
 	}
 }
 
 // Verify atomically reserves a call slot, calls the wrapped verifier if the
-// reservation succeeded, then records token usage. If the cap is reached,
-// returns ErrBudgetExhausted (AO review issue #1: atomic reserve prevents
-// concurrent overshoots).
-func (bv *BudgetedVerifier) Verify(ctx context.Context, a, b canonical.Instrument, r canonical.Relationship) (canonical.LLMVerdict, error) {
+// reservation succeeded, then records per-call token usage. If the cap is reached,
+// returns ErrBudgetExhausted. Cursor: record tokens even when the call fails after
+// successful HTTP (decode error case), so we track all billable API usage.
+func (bv *BudgetedVerifier) Verify(ctx context.Context, a, b canonical.Instrument, r canonical.Relationship) (VerifyResult, error) {
 	today := bv.nowFunc().UTC()
 
-	// Atomically reserve a call slot (AO review issue #1)
+	// Atomically reserve a call slot (AO review issue #1: atomic reserve prevents concurrent overshoots)
 	reserved, err := bv.store.ReserveLLMCall(ctx, today, bv.dailyCap)
 	if err != nil {
-		return canonical.LLMVerdict{}, fmt.Errorf("reserving llm call: %w", err)
+		return VerifyResult{}, fmt.Errorf("reserving llm call: %w", err)
 	}
 	if !reserved {
-		return canonical.LLMVerdict{}, ErrBudgetExhausted
+		return VerifyResult{}, ErrBudgetExhausted
 	}
 
-	verdict, err := bv.verifier.Verify(ctx, a, b, r)
-	if err != nil {
-		// Call was reserved but failed; the reserved slot is kept (failed calls
-		// still count toward the cap to prevent hammering a failing API).
-		return canonical.LLMVerdict{}, err
-	}
-
-	// Record token usage if available (AO review issue #5)
-	if bv.tokenSource != nil {
-		usage := bv.tokenSource.LastUsage()
-		if err := bv.store.RecordLLMTokens(ctx, today, usage.InputTokens, usage.OutputTokens); err != nil {
-			// AO review issue #2: log the error but return the verdict (don't discard paid work)
-			// Note: using fmt.Printf here because we don't have access to slog.Logger in this layer.
-			// The caller (admin handler) will log structured errors from the outer layer.
-			fmt.Printf("WARNING: failed to record token usage: %v\n", err)
+	result, err := bv.verifier.Verify(ctx, a, b, r)
+	// Cursor: record tokens even when the call fails (e.g., decode error after successful HTTP)
+	// The result.Usage is set even on decode errors (see verifier.Verify).
+	if result.Usage.InputTokens > 0 || result.Usage.OutputTokens > 0 {
+		if recordErr := bv.store.RecordLLMTokens(ctx, today, result.Usage.InputTokens, result.Usage.OutputTokens); recordErr != nil {
+			// Log the error but return the verdict (don't discard paid work)
+			bv.log.WarnContext(ctx, "failed to record token usage", "err", recordErr, "input_tokens", result.Usage.InputTokens, "output_tokens", result.Usage.OutputTokens)
 		}
 	}
 
-	return verdict, nil
+	if err != nil {
+		// Call was reserved but failed; the reserved slot is kept (failed calls
+		// still count toward the cap to prevent hammering a failing API).
+		return result, err
+	}
+
+	return result, nil
 }
 
 // CachedVerifier wraps a Verifier with a verdict cache. On a cache hit, it
@@ -89,39 +86,46 @@ func (bv *BudgetedVerifier) Verify(ctx context.Context, a, b canonical.Instrumen
 type CachedVerifier struct {
 	verifier      Verifier
 	cache         VerdictCache
+	log           *slog.Logger // nil is replaced with a discard handler
 	model         string
 	promptVersion string
 }
 
 // NewCachedVerifier creates a verifier that caches verdicts.
-func NewCachedVerifier(v Verifier, cache VerdictCache, model, promptVersion string) *CachedVerifier {
+// log may be nil, in which case warnings are discarded.
+func NewCachedVerifier(v Verifier, cache VerdictCache, model, promptVersion string, log *slog.Logger) *CachedVerifier {
+	if log == nil {
+		log = slog.New(slog.DiscardHandler)
+	}
 	return &CachedVerifier{
 		verifier:      v,
 		cache:         cache,
+		log:           log,
 		model:         model,
 		promptVersion: promptVersion,
 	}
 }
 
 // Verify checks the cache first, then calls the wrapped verifier on a miss and
-// stores the result.
-func (c *CachedVerifier) Verify(ctx context.Context, a, b canonical.Instrument, r canonical.Relationship) (canonical.LLMVerdict, error) {
+// stores the result. Cache hits return zero usage (no API call made).
+func (c *CachedVerifier) Verify(ctx context.Context, a, b canonical.Instrument, r canonical.Relationship) (VerifyResult, error) {
 	key := CacheKey(a, b, c.promptVersion, c.model)
 	if cached, ok, err := c.cache.Get(ctx, key); err != nil {
-		return canonical.LLMVerdict{}, fmt.Errorf("reading verdict cache: %w", err)
+		return VerifyResult{}, fmt.Errorf("reading verdict cache: %w", err)
 	} else if ok {
-		return cached, nil
+		// Cache hit: return the verdict with zero usage (no API call was made)
+		return VerifyResult{Verdict: cached, Usage: Usage{}}, nil
 	}
 
-	verdict, err := c.verifier.Verify(ctx, a, b, r)
+	result, err := c.verifier.Verify(ctx, a, b, r)
 	if err != nil {
-		return canonical.LLMVerdict{}, err
+		return result, err
 	}
 
 	// AO review: log cache Put failures but return the verdict (don't discard paid work)
-	if err := c.cache.Put(ctx, key, verdict); err != nil {
-		fmt.Printf("WARNING: failed to cache verdict: %v\n", err)
+	if err := c.cache.Put(ctx, key, result.Verdict); err != nil {
+		c.log.WarnContext(ctx, "failed to cache verdict", "err", err, "cache_key", key)
 	}
 
-	return verdict, nil
+	return result, nil
 }
