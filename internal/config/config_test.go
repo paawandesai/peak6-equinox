@@ -52,6 +52,7 @@ func TestLoadDefaults(t *testing.T) {
 		{"SkewWarn", c.SkewWarn, 5 * time.Second},
 		{"SkewMax", c.SkewMax, 30 * time.Second},
 		{"MinRouteConfidence", c.MinRouteConfidence.String(), "0.9"},
+		{"MinBookDepth", c.MinBookDepth.String(), "1"},
 		{"PublicRateLimitPerMin", c.PublicRateLimitPerMin, 60},
 		{"LLMEnabled", c.LLMEnabled, false},
 		{"AnthropicAPIKey", c.AnthropicAPIKey, ""},
@@ -84,6 +85,7 @@ func TestLoadOverrides(t *testing.T) {
 		"SKEW_WARN_SECONDS":         "2",
 		"SKEW_MAX_SECONDS":          "10",
 		"MIN_ROUTE_CONFIDENCE":      "0.95",
+		"MIN_BOOK_DEPTH":            "5",
 		"PUBLIC_RATE_LIMIT_PER_MIN": "30",
 		"LLM_ENABLED":               "true",
 		"ANTHROPIC_API_KEY":         "test-key",
@@ -111,8 +113,8 @@ func TestLoadOverrides(t *testing.T) {
 		c.SkewWarn != 2*time.Second || c.SkewMax != 10*time.Second {
 		t.Errorf("duration overrides not applied: %+v", c)
 	}
-	if !c.MinRouteConfidence.Equal(decimal.RequireFromString("0.95")) || c.PublicRateLimitPerMin != 30 {
-		t.Errorf("routing overrides not applied: %s %d", c.MinRouteConfidence, c.PublicRateLimitPerMin)
+	if !c.MinRouteConfidence.Equal(decimal.RequireFromString("0.95")) || !c.MinBookDepth.Equal(decimal.RequireFromString("5")) || c.PublicRateLimitPerMin != 30 {
+		t.Errorf("routing overrides not applied: %s %s %d", c.MinRouteConfidence, c.MinBookDepth, c.PublicRateLimitPerMin)
 	}
 	if !c.LLMEnabled || c.AnthropicAPIKey != "test-key" || c.LLMModel != "other-model" ||
 		c.LLMDailyCallCap != 0 || c.LLMMaxOutputTokens != 100 {
@@ -222,5 +224,27 @@ func TestFromEnv(t *testing.T) {
 	}
 	if c.Port != 8181 {
 		t.Errorf("Port = %d, want 8181", c.Port)
+	}
+}
+
+func TestLoadInvalidMinBookDepth(t *testing.T) {
+	tests := []struct {
+		name  string
+		value string
+		want  string
+	}{
+		{"negative", "-1", "must be positive"},
+		{"zero", "0", "must be positive"},
+		{"not a number", "abc", "must be a decimal"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			env := requiredEnv()
+			env["MIN_BOOK_DEPTH"] = tt.value
+			_, err := Load(lookupFrom(env))
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Errorf("Load with MIN_BOOK_DEPTH=%q: err=%v, want %q", tt.value, err, tt.want)
+			}
+		})
 	}
 }

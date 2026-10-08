@@ -19,7 +19,17 @@ const (
 
 var (
 	t0  = time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC)
-	cfg = Config{RoundID: 7, MinRouteConfidence: d("0.9")}
+	cfg = Config{
+		RoundID:            7,
+		MinRouteConfidence: d("0.9"),
+		Eligibility: EligibilityConfig{
+			Snapshot:     t0, // quotes are fetched at t0, so they're fresh (0s old)
+			StaleAfter:   120 * time.Second,
+			SkewWarn:     5 * time.Second,
+			SkewMax:      30 * time.Second,
+			MinBookDepth: d("1"),
+		},
+	}
 )
 
 // instrument builds a minimal open instrument whose fee schedule follows its
@@ -284,7 +294,7 @@ func TestRoutePartnerExclusions(t *testing.T) {
 		{"quote mismatch", badQuote, ReasonQuoteMismatch},
 		{"closed", closed, ReasonNotOpen},
 		{"no book flag", noBook, ReasonNoBook},
-		{"empty side", cand(polymarketID, []canonical.Level{lv("0.4", "1")}, nil, rel(kalshiID, polymarketID, canonical.RelEquivalent, "0.95")), ReasonNoBook},
+		{"empty side", cand(polymarketID, []canonical.Level{lv("0.4", "1")}, nil, rel(kalshiID, polymarketID, canonical.RelEquivalent, "0.95")), ReasonInsufficientDepth},
 		{"unknown fee schedule", unknownFee, ReasonFeeUnknown},
 	}
 	for _, tc := range cases {
@@ -322,14 +332,15 @@ func TestRouteNotional(t *testing.T) {
 		t.Errorf("warnings = %v\nexplanation = %s", dec.Warnings, dec.Explanation)
 	}
 
-	// The target has no asks: the partner's touch is used instead.
+	// The target has no asks: excluded for insufficient depth on consumed side.
 	bare := target
 	bare.Quote.YesAsks = nil
 	dec = mustRoute(t, o, bare, partners)
 	if len(dec.Chosen) != 1 || !dec.Chosen[0].Quantity.Equal(d("100")) { // floor(50 / 0.50)
 		t.Fatalf("partner-touch chosen = %+v", dec.Chosen)
 	}
-	if ex := exclusion(t, dec, kalshiID); ex.Reason != ReasonNoBook {
+	// Buy YES with no asks → insufficient_depth on consumed side.
+	if ex := exclusion(t, dec, kalshiID); ex.Reason != ReasonInsufficientDepth {
 		t.Errorf("bare target exclusion = %+v", ex)
 	}
 
@@ -519,4 +530,273 @@ func TestRouteProperties(t *testing.T) {
 			t.Fatal("every candidate must be chosen, ranked or excluded")
 		}
 	})
+}
+
+func TestRouteEligibilityAndSkew(t *testing.T) {
+	target, partners := scenario()
+	now := t0.Add(150 * time.Second) // 150s after t0
+
+	// Stale target: all quotes fetched at t0 are now 150s old (> 120s threshold).
+	// Use a config with snapshot=now so quotes at t0 are 150s old.
+	staleCfg := cfg
+	staleCfg.Eligibility.Snapshot = now
+	dec, err := Route(buy("10"), target, partners, staleCfg, now)
+	if err != nil {
+		t.Fatalf("Route: %v", err)
+	}
+	if ex := exclusion(t, dec, kalshiID); ex.Reason != ReasonStale {
+		t.Errorf("stale target exclusion = %+v, want stale", ex)
+	}
+	if ex := exclusion(t, dec, polymarketID); ex.Reason != ReasonStale {
+		t.Errorf("stale partner exclusion = %+v, want stale", ex)
+	}
+
+	// Skewed partner: target fresh, partner 40s old (> 30s SkewMax).
+	freshTarget := target
+	freshTarget.Quote.FetchedAt = now
+	skewedPartner := partners[0]
+	skewedPartner.Quote.FetchedAt = now.Add(-40 * time.Second)
+	dec, err = Route(buy("10"), freshTarget, []canonical.Candidate{skewedPartner}, cfg, now)
+	if err != nil {
+		t.Fatalf("Route: %v", err)
+	}
+	if ex := exclusion(t, dec, polymarketID); ex.Reason != ReasonSkew || !strings.Contains(ex.Detail, "40 s behind") {
+		t.Errorf("skewed partner exclusion = %+v, want skew with 40s detail", ex)
+	}
+
+	// Skew warning: partner 10s old (between 5s SkewWarn and 30s SkewMax).
+	warnPartner := partners[0]
+	warnPartner.Quote.FetchedAt = now.Add(-10 * time.Second)
+	dec, err = Route(buy("10"), freshTarget, []canonical.Candidate{warnPartner}, cfg, now)
+	if err != nil {
+		t.Fatalf("Route: %v", err)
+	}
+	if !strings.Contains(strings.Join(dec.Warnings, " "), "skew_warning") {
+		t.Errorf("warnings = %v, want skew_warning\nexclusions = %+v\nchosen = %+v", dec.Warnings, dec.Exclusions, dec.Chosen)
+	}
+
+	// Shallow book: total depth < MinBookDepth (1 contract).
+	shallow := cand(polymarketID, []canonical.Level{lv("0.49", "0.3")}, []canonical.Level{lv("0.50", "0.4")},
+		rel(kalshiID, polymarketID, canonical.RelEquivalent, "0.97"))
+	shallow.Quote.FetchedAt = now
+	dec, err = Route(buy("10"), freshTarget, []canonical.Candidate{shallow}, cfg, now)
+	if err != nil {
+		t.Fatalf("Route: %v", err)
+	}
+	if ex := exclusion(t, dec, polymarketID); ex.Reason != ReasonInsufficientDepth {
+		t.Errorf("shallow partner exclusion = %+v, want insufficient_depth", ex)
+	}
+}
+
+func TestRouteTargetExcludedBySkew(t *testing.T) {
+	target, partners := scenario()
+	now := t0.Add(150 * time.Second)
+
+	t.Run("target older by skew", func(t *testing.T) {
+		// Make partner fresh and target old.
+		freshPartner := partners[0]
+		freshPartner.Quote.FetchedAt = now
+		oldTarget := target
+		oldTarget.Quote.FetchedAt = now.Add(-50 * time.Second) // 50s skew > 30s max
+
+		dec, err := Route(buy("10"), oldTarget, []canonical.Candidate{freshPartner}, cfg, now)
+		if err != nil {
+			t.Fatalf("Route: %v", err)
+		}
+
+		// Target should be excluded due to skew, exactly once.
+		targetExclusionCount := 0
+		for _, ex := range dec.Exclusions {
+			if ex.InstrumentID == kalshiID {
+				targetExclusionCount++
+				if ex.Reason != ReasonSkew {
+					t.Errorf("target exclusion reason = %q, want %q", ex.Reason, ReasonSkew)
+				}
+				if !strings.Contains(ex.Detail, "50 s behind") {
+					t.Errorf("skew detail = %q, want '50 s behind'", ex.Detail)
+				}
+			}
+		}
+		if targetExclusionCount != 1 {
+			t.Errorf("target excluded %d times, want exactly 1; exclusions = %+v", targetExclusionCount, dec.Exclusions)
+		}
+
+		// Partner should still be chosen.
+		if len(dec.Chosen) != 1 || dec.Chosen[0].InstrumentID != polymarketID {
+			t.Errorf("partner not chosen; chosen = %+v, want polymarket", dec.Chosen)
+		}
+	})
+
+	t.Run("target stale, partner fresh", func(t *testing.T) {
+		// Target is stale (> 120s), partner is fresh.
+		// Use snapshot=now so target at now-150s is stale.
+		staleCfg := cfg
+		staleCfg.Eligibility.Snapshot = now
+		freshPartner := partners[0]
+		freshPartner.Quote.FetchedAt = now
+		staleTarget := target
+		staleTarget.Quote.FetchedAt = now.Add(-150 * time.Second) // stale, also skewed
+
+		dec, err := Route(buy("10"), staleTarget, []canonical.Candidate{freshPartner}, staleCfg, now)
+		if err != nil {
+			t.Fatalf("Route: %v", err)
+		}
+
+		// Target should be excluded for staleness, not skew (staleness check comes first).
+		targetExclusionCount := 0
+		foundStale := false
+		for _, ex := range dec.Exclusions {
+			if ex.InstrumentID == kalshiID {
+				targetExclusionCount++
+				if ex.Reason == ReasonStale {
+					foundStale = true
+				}
+			}
+		}
+		if !foundStale {
+			t.Errorf("target not excluded for staleness; exclusions = %+v", dec.Exclusions)
+		}
+		if targetExclusionCount != 1 {
+			t.Errorf("target excluded %d times, want exactly 1; exclusions = %+v", targetExclusionCount, dec.Exclusions)
+		}
+
+		// Partner should still be chosen despite target being ineligible.
+		if len(dec.Chosen) != 1 || dec.Chosen[0].InstrumentID != polymarketID {
+			t.Errorf("partner not chosen; chosen = %+v, want polymarket", dec.Chosen)
+		}
+	})
+}
+
+func TestRoutePartnerVsPartnerSkew(t *testing.T) {
+	// Regression test for reviewer finding: partner-vs-partner skew must be enforced.
+	// If partner A is fresh, partner B is 40s old, and target is 20s old, then B should
+	// be excluded for skew (40s > 30s SkewMax), even though target-vs-B is only 20s.
+	now := t0.Add(100 * time.Second)
+	freshPartner := cand(polymarketID, []canonical.Level{lv("0.49", "100")}, []canonical.Level{lv("0.50", "100")},
+		rel(kalshiID, polymarketID, canonical.RelEquivalent, "0.97"))
+	freshPartner.Quote.FetchedAt = now
+
+	oldPartner := cand(otherID, []canonical.Level{lv("0.48", "100")}, []canonical.Level{lv("0.49", "100")},
+		rel(kalshiID, otherID, canonical.RelEquivalent, "0.97"))
+	oldPartner.Quote.FetchedAt = now.Add(-40 * time.Second) // 40s old
+
+	target := cand(kalshiID, []canonical.Level{lv("0.495", "100")}, []canonical.Level{lv("0.505", "100")}, nil)
+	target.Quote.FetchedAt = now.Add(-20 * time.Second) // 20s old
+
+	staleCfg := cfg
+	staleCfg.Eligibility.Snapshot = now
+	dec, err := Route(buy("10"), target, []canonical.Candidate{freshPartner, oldPartner}, staleCfg, now)
+	if err != nil {
+		t.Fatalf("Route: %v", err)
+	}
+
+	// The old partner (40s behind freshest) should be excluded for skew.
+	foundOldPartnerSkew := false
+	for _, ex := range dec.Exclusions {
+		if ex.InstrumentID == otherID && ex.Reason == ReasonSkew {
+			foundOldPartnerSkew = true
+			if !strings.Contains(ex.Detail, "40 s behind") {
+				t.Errorf("old partner skew detail = %q, want '40 s behind'", ex.Detail)
+			}
+		}
+	}
+	if !foundOldPartnerSkew {
+		t.Errorf("old partner not excluded for skew; exclusions = %+v", dec.Exclusions)
+	}
+
+	// The fresh partner should be chosen.
+	if len(dec.Chosen) != 1 || dec.Chosen[0].InstrumentID != polymarketID {
+		t.Errorf("chosen = %+v, want fresh partner %s", dec.Chosen, polymarketID)
+	}
+}
+
+func TestRouteSkewOrderIndependence(t *testing.T) {
+	// Order-independence test: shuffling partners should not change the decision.
+	now := t0.Add(100 * time.Second)
+	fresh := cand(polymarketID, []canonical.Level{lv("0.49", "100")}, []canonical.Level{lv("0.50", "100")},
+		rel(kalshiID, polymarketID, canonical.RelEquivalent, "0.97"))
+	fresh.Quote.FetchedAt = now
+
+	old := cand(otherID, []canonical.Level{lv("0.48", "100")}, []canonical.Level{lv("0.49", "100")},
+		rel(kalshiID, otherID, canonical.RelEquivalent, "0.97"))
+	old.Quote.FetchedAt = now.Add(-40 * time.Second)
+
+	target := cand(kalshiID, []canonical.Level{lv("0.495", "100")}, []canonical.Level{lv("0.505", "100")}, nil)
+	target.Quote.FetchedAt = now.Add(-10 * time.Second)
+
+	staleCfg := cfg
+	staleCfg.Eligibility.Snapshot = now
+
+	// Run with partners in both orders.
+	dec1, err := Route(buy("10"), target, []canonical.Candidate{fresh, old}, staleCfg, now)
+	if err != nil {
+		t.Fatalf("Route order 1: %v", err)
+	}
+	dec2, err := Route(buy("10"), target, []canonical.Candidate{old, fresh}, staleCfg, now)
+	if err != nil {
+		t.Fatalf("Route order 2: %v", err)
+	}
+
+	// Both should exclude the old partner and choose the fresh one.
+	if len(dec1.Chosen) != 1 || dec1.Chosen[0].InstrumentID != polymarketID {
+		t.Errorf("order 1 chosen = %+v, want %s", dec1.Chosen, polymarketID)
+	}
+	if len(dec2.Chosen) != 1 || dec2.Chosen[0].InstrumentID != polymarketID {
+		t.Errorf("order 2 chosen = %+v, want %s", dec2.Chosen, polymarketID)
+	}
+
+	oldExcluded1 := false
+	oldExcluded2 := false
+	for _, ex := range dec1.Exclusions {
+		if ex.InstrumentID == otherID && ex.Reason == ReasonSkew {
+			oldExcluded1 = true
+		}
+	}
+	for _, ex := range dec2.Exclusions {
+		if ex.InstrumentID == otherID && ex.Reason == ReasonSkew {
+			oldExcluded2 = true
+		}
+	}
+	if !oldExcluded1 || !oldExcluded2 {
+		t.Errorf("old partner not excluded in both orders; dec1 exclusions = %+v, dec2 exclusions = %+v", dec1.Exclusions, dec2.Exclusions)
+	}
+}
+
+func TestEligibilityOneSidedBook(t *testing.T) {
+	// One-sided book test: buy YES order needs YesAsks, not YesBids.
+	now := time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)
+	cfg := EligibilityConfig{
+		Snapshot:     now,
+		StaleAfter:   120 * time.Second,
+		MinBookDepth: decimal.NewFromInt(1),
+	}
+
+	// Quote with only bids (no asks) should be ineligible for buy YES.
+	onlyBids := canonical.Quote{
+		InstrumentID: "test:1",
+		FetchedAt:    now.Add(-10 * time.Second),
+		YesBids:      []canonical.Level{{Price: dec("0.5"), Size: dec("10")}},
+		YesAsks:      []canonical.Level{},
+	}
+
+	ok, exs := IsEligible(onlyBids, canonical.SideBuy, canonical.OutcomeYes, cfg)
+	if ok {
+		t.Errorf("buy YES on bid-only quote should be ineligible; got eligible")
+	}
+	if len(exs) == 0 || exs[0].Reason != ReasonInsufficientDepth {
+		t.Errorf("expected insufficient_depth exclusion, got %+v", exs)
+	}
+
+	// Quote with only asks should be eligible for buy YES.
+	onlyAsks := canonical.Quote{
+		InstrumentID: "test:2",
+		FetchedAt:    now.Add(-10 * time.Second),
+		YesBids:      []canonical.Level{},
+		YesAsks:      []canonical.Level{{Price: dec("0.6"), Size: dec("10")}},
+	}
+
+	ok, exs = IsEligible(onlyAsks, canonical.SideBuy, canonical.OutcomeYes, cfg)
+	if !ok {
+		t.Errorf("buy YES on ask-only quote should be eligible; got %+v", exs)
+	}
 }
