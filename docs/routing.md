@@ -79,9 +79,9 @@ When one venue cannot fill the order, the router sweeps across venues (M3-03, FR
 
 2. **Rank by all-in cost** (quantized to 4 decimal places for transitive comparison, M3-02): lowest cost for buys, highest net proceeds for sells. Ties break on depth within the limit, then lower basis score, then lexicographically first venue name, then instrument ID (internal/route/route.go:538–565).
 
-3. **Full-fill shortcut** (internal/route/sweep.go:132–152): If the cheapest candidate can fill the entire order, return it immediately as the optimal single-venue solution. Otherwise, proceed to the greedy multi-venue sweep.
+3. **Full-fill shortcut** (internal/route/sweep.go:132–152): If the cheapest candidate (by quantized cost) can fill the entire order, return it immediately as the optimal single-venue solution. Otherwise, proceed to the greedy multi-venue sweep.
 
-4. **Greedy multi-venue fill**: Re-rank candidates by quantized cost alone (ignoring the full-fill preference), then walk each candidate's book in cost order, filling as much as possible per venue until the remaining quantity is zero or all venues are exhausted. Each leg consumes only the quantity it can fill from its own book; the next leg fills the remainder from the next-cheapest venue. When costs are equal (same quantized value), candidates are ranked by depth within the limit, then lower basis score, then lexicographically first venue name, then instrument ID (internal/route/sweep.go:155–175).
+4. **Greedy multi-venue fill**: Re-rank candidates by quantized cost alone (no full-fill preference), then walk each candidate's book in cost order, filling as much as possible per venue until the remaining quantity is zero or all venues are exhausted. Each leg consumes only the quantity it can fill from its own book; the next leg fills the remainder from the next-cheapest venue. When costs are equal (same quantized value), the sweep re-rank breaks ties by depth within the limit, then lower basis score, then lexicographically first venue name, then instrument ID (internal/route/sweep.go:155–175). Unlike `better()`, this re-rank has no "full fill" or "larger fill" step—it fills greedily from the cheapest venues.
 
 5. **Stop conditions**:
    - **IOC** (immediate-or-cancel): partial fills are permitted. The chosen legs are what the sweep filled, even if less than the full order.
@@ -107,14 +107,6 @@ When A and B are **complements**, buying YES on A is economically equivalent to 
 For each partner whose relationship type is `complement`, the router creates a candidate with the **opposite outcome**: if the order is buy YES, the complement candidate evaluates buy NO on the partner's instrument (consuming the partner's YES bids, re-priced as 1 − p per domain.md rule 4). The complement candidate is ranked by its all-in cost alongside direct equivalents, so a cheaper complement route can win.
 
 The chosen leg's `Outcome` reflects the actual trade (e.g., NO on the complement instrument), and `Route` is set to `"complement"` (vs `"direct"` for non-complement). The explanation says: "Chose NO on [B] (complement of [A]) at venue X because the all-in cost (VWAP + fee + basis) was $Y per contract, vs $Z for YES on [A] at venue W."
-
-### Example
-
-Order: buy 100 YES on instrument A.
-- Direct route: buy 100 YES on A at Kalshi, all-in 0.54/contract.
-- Complement route: buy 100 NO on complement B at Polymarket, all-in 0.52/contract.
-
-The router chooses the complement leg (NO on B) because 0.52 < 0.54. The trace shows both options ranked by cost, with the complement leg marked `Route: "complement"` and the explanation describing the opposite-side trade.
 
 ## Tie-breaking
 
@@ -154,12 +146,12 @@ Every `Decision` includes:
 |---|---|---|
 | `stale` | "fetched 150 s ago" | Quote is older than `STALE_AFTER_SECONDS`. |
 | `skew` | "30 s behind" | Quote is more than `SKEW_MAX_SECONDS` behind the freshest. |
-| `no_book` | "no buy on the YES side" | Adapter fetch failed, or both sides empty, or the consumed side is empty. |
+| `no_book` | "no asks on the yes side" or "no book available" | Adapter fetch failed, or both sides empty, or the consumed side is empty. |
 | `insufficient_depth` | "50 contracts available on consumed side" | Consumed side has less than `MIN_BOOK_DEPTH` contracts. |
 | `low_confidence` | "confidence 0.85 is below the 0.9 floor" | Relationship confidence is below `MIN_ROUTE_CONFIDENCE`. |
 | `not_routable` | "relationship type related is never routed" | Only `equivalent`, `equivalent_given_facts`, and `complement` are routable. |
 | `limit_not_reachable` | "best asks is 0.6, outside the 0.55 limit" | Limit order's limit excludes all levels. |
-| `fee_unknown` | "fee schedule kalshi_taker_v1: missing parameter 'rate'" | Fee cannot be computed (schedule unknown or parameter missing). |
+| `fee_unknown` | `fee schedule "polymarket_v1": missing fee parameter: polymarket_v1 needs "rate"` | Fee cannot be computed (schedule unknown or parameter missing). |
 | `basis_risk_unknown` | "partner relationship has no basis-risk score" | BasisRisk is nil on a partner. |
 | `not_open` | "instrument is closed" | Instrument status is `closed` or `settled`. |
 | `no_quantity` | "notional 10 buys less than one contract at the 0.02 touch" | Notional converts to zero or fractional contracts (no $ prefix). |
@@ -175,7 +167,7 @@ Every `Decision` includes:
 - Polymarket: YES asks = [[0.50, 50], [0.53, 100]], YES bids = [[0.49, 80]]
 
 **Fee schedules**:
-- Kalshi: `kalshi_taker_v1`, multiplier 0.07, verified
+- Kalshi: `kalshi_taker_v1`, multiplier 0.07, unverified (scenario() fixture)
 - Polymarket: `polymarket_v1`, rate 0.07, verified
 
 **Order**: Buy 100 YES, market, IOC
@@ -405,7 +397,7 @@ This is the structure returned by `equinox route --json` (note: `POST /route` re
 | `STALE_AFTER_SECONDS` | 120 | Quote staleness limit (cfg.Eligibility.StaleAfter) |
 | `SKEW_WARN_SECONDS` | 5 | Cross-venue skew warning threshold (cfg.Eligibility.SkewWarn) |
 | `SKEW_MAX_SECONDS` | 30 | Cross-venue skew exclusion threshold (cfg.Eligibility.SkewMax) |
-| `MIN_BOOK_DEPTH` | 1 | Minimum total book depth in contracts (cfg.Eligibility.MinBookDepth) |
+| `MIN_BOOK_DEPTH` | 1 | Minimum depth on consumed side in contracts (cfg.Eligibility.MinBookDepth) |
 | `MIN_ROUTE_CONFIDENCE` | 0.9 | Minimum relationship confidence for routing (cfg.MinRouteConfidence) |
 | `BASIS_PENALTY_MULTIPLIER` | 0.01 | Basis-risk penalty in cents per contract per risk point (cfg.BasisPenaltyMultiplier) |
 

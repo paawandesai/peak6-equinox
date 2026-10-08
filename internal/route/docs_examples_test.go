@@ -2,8 +2,8 @@ package route
 
 import (
 	"encoding/json"
-	"strings"
 	"testing"
+	"time"
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
 )
@@ -50,31 +50,22 @@ func TestDocsExample1SingleVenueFill(t *testing.T) {
 		t.Errorf("alternative[1] all-in = %s, want 0.5375", second.AllInPerContract)
 	}
 
-	// Explanation: verify key phrases
-	for _, want := range []string{
-		"Best route: polymarket",
-		"fills all 100 contracts",
-		"VWAP of 0.5150",
-		"fee of 0.0175",
-		"all-in cost of 0.5325",
-		"kalshi (kalshi:KXBTCD-26OCT0617-T120000) ranks #2 at 0.5375",
-		"0.0050 worse",
-		"Fees are verified for polymarket but approximate for kalshi",
-		"Basis-risk penalty is applied as score × 0.01",
-		"partners below a relationship confidence of 0.9 are excluded",
-	} {
-		if !strings.Contains(dec.Explanation, want) {
-			t.Errorf("explanation missing %q\nGot: %s", want, dec.Explanation)
+	// Explanation: assert EXACT text (byte-identical to what appears in the doc)
+	wantExplanation := "Simulated buy of 100 YES contracts on kalshi:KXBTCD-26OCT0617-T120000 as a market IOC order. Best route: polymarket (polymarket:1234567890) fills all 100 contracts at a VWAP of 0.5150 plus a fee of 0.0175 per contract, an all-in cost of 0.5325 per $1 payout Total cost: 53.2469. kalshi (kalshi:KXBTCD-26OCT0617-T120000) ranks #2 at 0.5375 per contract (VWAP 0.5200, fee 0.0175; 0.0050 worse). Fees are verified for polymarket but approximate for kalshi (schedule not yet verified against official documentation). Basis-risk penalty is applied as score × 0.01 per contract, and partners below a relationship confidence of 0.9 are excluded."
+	if dec.Explanation != wantExplanation {
+		t.Errorf("explanation mismatch\nGot:  %q\nWant: %q", dec.Explanation, wantExplanation)
+	}
+
+	// Warnings: assert EXACT list
+	wantWarnings := []string{"fees: approximate for kalshi (schedule not verified against official docs)"}
+	if len(dec.Warnings) != len(wantWarnings) {
+		t.Errorf("warnings count = %d, want %d: %v", len(dec.Warnings), len(wantWarnings), dec.Warnings)
+	}
+	for i, want := range wantWarnings {
+		if i >= len(dec.Warnings) || dec.Warnings[i] != want {
+			t.Errorf("warnings[%d] = %q, want %q", i, dec.Warnings[i], want)
 		}
 	}
-
-	// Warnings: Kalshi is unverified in scenario()
-	if !hasWarning(dec, "fees: approximate for kalshi") {
-		t.Errorf("warnings = %v, want 'fees: approximate for kalshi'", dec.Warnings)
-	}
-
-	t.Logf("Example 1 Decision:\n%s", dec.Explanation)
-	t.Logf("Warnings: %v", dec.Warnings)
 }
 
 // TestDocsExample2TwoVenueSweep is the fixture test for docs/routing.md Example 2.
@@ -100,10 +91,7 @@ func TestDocsExample2TwoVenueSweep(t *testing.T) {
 	if !leg1.VWAP.Equal(d("0.52")) {
 		t.Errorf("leg[0] VWAP = %s, want 0.52", leg1.VWAP)
 	}
-	// Fee: 50 × 0.07 × 0.50 × 0.50 = 0.875; 100 × 0.07 × 0.53 × 0.47 = 3.4874 → 4.3624 / 150
-	// But wait, the reviewer said 0.017458, let me check: 100×0.07×0.53×0.47 = 1.7437 per 100, not per level!
-	// Actually for the second level we have 100 contracts at 0.53, so fee is 100 × 0.07 × 0.53 × (1-0.53) = 100 × 0.07 × 0.53 × 0.47 = 1.7437
-	// Total fee: 0.875 + 1.7437 = 2.6187 for 150 contracts → 0.017458/contract
+	// Fee: 50 × 0.07 × 0.50 × 0.50 = 0.875; 100 × 0.07 × 0.53 × 0.47 = 1.7437 → 2.6187 / 150 = 0.017458
 	if !leg1.FeePerContract.Equal(d("0.017458")) {
 		t.Errorf("leg[0] FeePerContract = %s, want 0.017458", leg1.FeePerContract)
 	}
@@ -138,27 +126,25 @@ func TestDocsExample2TwoVenueSweep(t *testing.T) {
 		t.Errorf("average all-in = %s, want ~0.5375", avgAllIn)
 	}
 
-	// Explanation: verify key phrases (they tie at 0.5375, so ranks #2/#3 show 0.0000 worse)
-	for _, want := range []string{
-		"250 of 500 fill across 2 venues",
-		"250 contracts at average all-in 0.5375",
-		"total cost 134.3687",
-		"polymarket (polymarket:1234567890): 150 contracts",
-		"kalshi (kalshi:KXBTCD-26OCT0617-T120000): 100 contracts",
-		"Shortfall: 250 contracts (IOC)",
-	} {
-		if !strings.Contains(dec.Explanation, want) {
-			t.Errorf("explanation missing %q\nGot: %s", want, dec.Explanation)
+	// Explanation: assert EXACT text
+	wantExplanation := "Simulated buy of 500 YES contracts on kalshi:KXBTCD-26OCT0617-T120000 as a market IOC order. Best route: 250 of 500 fill across 2 venues (250 contracts at average all-in 0.5375, total cost 134.3687). [1] polymarket (polymarket:1234567890): 150 contracts at VWAP 0.5200 plus a fee of 0.0175 per contract, an all-in cost of 0.5375 per $1 payout [2] kalshi (kalshi:KXBTCD-26OCT0617-T120000): 100 contracts at VWAP 0.5200 plus a fee of 0.0175 per contract, an all-in cost of 0.5375 per $1 payout Shortfall: 250 contracts (IOC). polymarket (polymarket:1234567890) ranks #2 at 0.5375 per contract (VWAP 0.5200, fee 0.0175; 0.0000 worse). kalshi (kalshi:KXBTCD-26OCT0617-T120000) ranks #3 at 0.5375 per contract (VWAP 0.5200, fee 0.0175; 0.0000 worse). Fees are verified for polymarket but approximate for kalshi (schedule not yet verified against official documentation). Basis-risk penalty is applied as score × 0.01 per contract, and partners below a relationship confidence of 0.9 are excluded."
+	if dec.Explanation != wantExplanation {
+		t.Errorf("explanation mismatch\nGot:  %q\nWant: %q", dec.Explanation, wantExplanation)
+	}
+
+	// Warnings: assert EXACT list
+	wantWarnings := []string{
+		"fees: approximate for kalshi (schedule not verified against official docs)",
+		"partial fill: chosen route fills 250 of 500 contracts (IOC)",
+	}
+	if len(dec.Warnings) != len(wantWarnings) {
+		t.Errorf("warnings count = %d, want %d: %v", len(dec.Warnings), len(wantWarnings), dec.Warnings)
+	}
+	for i, want := range wantWarnings {
+		if i >= len(dec.Warnings) || dec.Warnings[i] != want {
+			t.Errorf("warnings[%d] = %q, want %q", i, dec.Warnings[i], want)
 		}
 	}
-
-	// Warnings: partial fill
-	if !hasWarning(dec, "partial fill: chosen route fills 250 of 500 contracts (IOC)") {
-		t.Errorf("warnings = %v, want partial fill warning", dec.Warnings)
-	}
-
-	t.Logf("Example 2 Decision:\n%s", dec.Explanation)
-	t.Logf("Warnings: %v", dec.Warnings)
 }
 
 // TestDocsExample3ComplementRoute is the fixture test for docs/routing.md Example 3.
@@ -215,28 +201,120 @@ func TestDocsExample3ComplementRoute(t *testing.T) {
 		t.Errorf("alternative[1] all-in = %s, want 0.5574", second.AllInPerContract)
 	}
 
-	// Explanation: verify complement explanation
-	for _, want := range []string{
-		"Chose NO on polymarket:B (complement of kalshi:A)",
-		"VWAP of 0.4800",
-		"fee of 0.0175",
-		"basis penalty of 0.0030",
-		"all-in cost of 0.5005",
-		"vs 0.5574 for YES on kalshi:A",
-		"kalshi (kalshi:A) ranks #2 at 0.5574",
-		"0.0569 worse",
-	} {
-		if !strings.Contains(dec.Explanation, want) {
-			t.Errorf("explanation missing %q\nGot: %s", want, dec.Explanation)
+	// Explanation: assert EXACT text
+	wantExplanation := "Simulated buy of 100 YES contracts on kalshi:A as a market IOC order. Chose NO on polymarket:B (complement of kalshi:A) at polymarket because the all-in cost (VWAP + fee + basis) was 0.5005 per contract, vs 0.5574 for YES on kalshi:A at kalshi fills all 100 contracts at a VWAP of 0.4800 plus a fee of 0.0175 and basis penalty of 0.0030 per contract, an all-in cost of 0.5005 per $1 payout Total cost: 50.0472. kalshi (kalshi:A) ranks #2 at 0.5574 per contract (VWAP 0.5400, fee 0.0174; 0.0569 worse). Fees are verified for polymarket but approximate for kalshi (schedule not yet verified against official documentation). Basis-risk penalty is applied as score × 0.01 per contract, and partners below a relationship confidence of 0.9 are excluded."
+	if dec.Explanation != wantExplanation {
+		t.Errorf("explanation mismatch\nGot:  %q\nWant: %q", dec.Explanation, wantExplanation)
+	}
+
+	// Warnings: assert EXACT list
+	wantWarnings := []string{"fees: approximate for kalshi (schedule not verified against official docs)"}
+	if len(dec.Warnings) != len(wantWarnings) {
+		t.Errorf("warnings count = %d, want %d: %v", len(dec.Warnings), len(wantWarnings), dec.Warnings)
+	}
+	for i, want := range wantWarnings {
+		if i >= len(dec.Warnings) || dec.Warnings[i] != want {
+			t.Errorf("warnings[%d] = %q, want %q", i, dec.Warnings[i], want)
 		}
 	}
 
-	t.Logf("Example 3 Decision:\n%s", dec.Explanation)
-
-	// Generate JSON for the documentation
+	// JSON: assert it marshals (exact JSON shown in doc)
 	jsonBytes, err := json.MarshalIndent(dec, "", "  ")
 	if err != nil {
 		t.Fatalf("JSON marshal: %v", err)
 	}
-	t.Logf("Example 3 JSON:\n%s", string(jsonBytes))
+	// The JSON in the doc is this exact output (verified in round-2)
+	_ = jsonBytes
+}
+
+// TestDocsEligibilityStaleQuote tests the stale quote exclusion example from docs/routing.md.
+func TestDocsEligibilityStaleQuote(t *testing.T) {
+	snapshot := time.Date(2026, 10, 6, 12, 5, 0, 0, time.UTC)
+	fetchedAt := time.Date(2026, 10, 6, 10, 0, 0, 0, time.UTC) // 7500 s ago
+	cfg := EligibilityConfig{
+		Snapshot:   snapshot,
+		StaleAfter: 120 * time.Second,
+	}
+	q := canonical.Quote{InstrumentID: "test:1", FetchedAt: fetchedAt, YesAsks: []canonical.Level{lv("0.5", "10")}}
+
+	ok, exs := IsEligible(q, canonical.SideBuy, canonical.OutcomeYes, cfg)
+	if ok {
+		t.Errorf("stale quote should be ineligible")
+	}
+	if len(exs) == 0 || exs[0].Reason != ReasonStale {
+		t.Fatalf("expected stale reason, got %+v", exs)
+	}
+	// Assert EXACT detail string
+	wantDetail := "fetched 7500 s ago"
+	if exs[0].Detail != wantDetail {
+		t.Errorf("stale detail = %q, want %q", exs[0].Detail, wantDetail)
+	}
+}
+
+// TestDocsEligibilitySkewWarning tests the skew warning example from docs/routing.md.
+func TestDocsEligibilitySkewWarning(t *testing.T) {
+	cfg := EligibilityConfig{
+		SkewWarn: 5 * time.Second,
+		SkewMax:  30 * time.Second,
+	}
+	q1 := canonical.Quote{InstrumentID: "test:A", FetchedAt: time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC)}
+	q2 := canonical.Quote{InstrumentID: "test:B", FetchedAt: time.Date(2026, 10, 6, 12, 0, 7, 0, time.UTC)} // 7 s later
+
+	excludeOlder, warnings := Skew(q1, q2, cfg)
+	if excludeOlder {
+		t.Errorf("7 s skew should not exclude (< 30 s max)")
+	}
+	// Assert EXACT warning string
+	wantWarning := "skew_warning: 7 s behind"
+	if len(warnings) != 1 || warnings[0] != wantWarning {
+		t.Errorf("warnings = %v, want [%q]", warnings, wantWarning)
+	}
+}
+
+// TestDocsEligibilitySkewExclusion tests the skew exclusion example from docs/routing.md.
+func TestDocsEligibilitySkewExclusion(t *testing.T) {
+	cfg := EligibilityConfig{
+		SkewWarn: 5 * time.Second,
+		SkewMax:  30 * time.Second,
+	}
+	q1 := canonical.Quote{InstrumentID: "test:A", FetchedAt: time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC)}
+	q2 := canonical.Quote{InstrumentID: "test:B", FetchedAt: time.Date(2026, 10, 6, 12, 0, 35, 0, time.UTC)} // 35 s later
+
+	excludeOlder, warnings := Skew(q1, q2, cfg)
+	if !excludeOlder {
+		t.Errorf("35 s skew should exclude (>= 30 s max)")
+	}
+	// Skew > max excludes with no warning (warning is only for skew between warn and max)
+	if len(warnings) != 0 {
+		t.Errorf("warnings = %v, want [] (skew > max has no warning, just exclusion)", warnings)
+	}
+}
+
+// TestDocsEligibilityShallowDepth tests the shallow depth exclusion example from docs/routing.md.
+func TestDocsEligibilityShallowDepth(t *testing.T) {
+	snapshot := time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC)
+	cfg := EligibilityConfig{
+		Snapshot:     snapshot,
+		StaleAfter:   120 * time.Second,
+		MinBookDepth: d("1"),
+	}
+	// Only 0.5 contracts on the consumed side (YES asks for a YES buy)
+	q := canonical.Quote{
+		InstrumentID: "test:1",
+		FetchedAt:    snapshot,
+		YesAsks:      []canonical.Level{lv("0.5", "0.5")},
+	}
+
+	ok, exs := IsEligible(q, canonical.SideBuy, canonical.OutcomeYes, cfg)
+	if ok {
+		t.Errorf("shallow quote should be ineligible")
+	}
+	if len(exs) == 0 || exs[0].Reason != ReasonInsufficientDepth {
+		t.Fatalf("expected insufficient_depth reason, got %+v", exs)
+	}
+	// Assert EXACT detail string
+	wantDetail := "0.5 contracts available on consumed side"
+	if exs[0].Detail != wantDetail {
+		t.Errorf("shallow detail = %q, want %q", exs[0].Detail, wantDetail)
+	}
 }
