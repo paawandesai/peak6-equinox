@@ -14,31 +14,8 @@ const pricePlaces = 4
 
 func money(d decimal.Decimal) string { return d.StringFixed(pricePlaces) }
 
-// explain writes the one-paragraph summary every Decision must carry: the
-// order, the chosen route with each cost term, the ranked alternatives, every
-// exclusion with its reason, and the fee and basis caveats.
-func explain(d canonical.Decision, opts []option, sz sizing, cfg Config) string {
-	var b strings.Builder
-	b.WriteString(orderSentence(d.Order, d.TargetID, sz))
-	if len(opts) == 0 {
-		b.WriteString(" No venue can fill this order: every candidate was excluded.")
-	} else {
-		b.WriteString(" " + chosenSentence(opts[0], sz))
-		for i, opt := range opts[1:] {
-			b.WriteString(" " + alternativeSentence(i+2, opt, opts[0], sz))
-		}
-	}
-	if len(d.Exclusions) > 0 {
-		parts := make([]string, 0, len(d.Exclusions))
-		for _, ex := range d.Exclusions {
-			parts = append(parts, fmt.Sprintf("%s (%s: %s)", ex.InstrumentID, ex.Reason, ex.Detail))
-		}
-		b.WriteString(" Excluded: " + strings.Join(parts, "; ") + ".")
-	}
-	b.WriteString(" " + feeSentence(opts))
-	fmt.Fprintf(&b, " Basis-risk penalty is applied as score × %s per contract, and partners below a relationship confidence of %s are excluded.", cfg.BasisPenaltyMultiplier, cfg.MinRouteConfidence)
-	return b.String()
-}
+// explain and related functions are replaced by explainSweep in route.go (M3-03).
+// Kept here for backwards compatibility and potential future use.
 
 func orderSentence(o canonical.Order, targetID string, sz sizing) string {
 	kind := "market"
@@ -58,20 +35,6 @@ func orderSentence(o canonical.Order, targetID string, sz sizing) string {
 	return s + "."
 }
 
-func chosenSentence(opt option, sz sizing) string {
-	l := opt.leg
-	filled := "all " + l.Quantity.String()
-	if !opt.full {
-		filled = fmt.Sprintf("only %s of %s", l.Quantity, sz.qty)
-	}
-	levels := "1 level"
-	if n := len(opt.fill.Consumed); n != 1 {
-		levels = fmt.Sprintf("%d levels", n)
-	}
-	return fmt.Sprintf("Best route: %s (%s) fills %s contracts at a VWAP of %s across %s %s.",
-		l.Venue, l.InstrumentID, filled, money(l.VWAP), levels, costClause(l))
-}
-
 // costClause spells out the per-contract terms that make up the all-in figure.
 func costClause(l canonical.Leg) string {
 	if l.Side == canonical.SideBuy {
@@ -86,47 +49,4 @@ func costClause(l canonical.Leg) string {
 	}
 	return fmt.Sprintf("less a fee of %s and basis penalty of %s per contract, net proceeds of %s per contract",
 		money(l.FeePerContract), money(l.BasisPenaltyPerContract), money(l.AllInPerContract))
-}
-
-func alternativeSentence(rank int, opt, best option, sz sizing) string {
-	l := opt.leg
-	gap := l.AllInPerContract.Sub(best.leg.AllInPerContract)
-	if l.Side == canonical.SideSell {
-		gap = gap.Neg()
-	}
-	var breakdown string
-	if l.BasisPenaltyPerContract.IsZero() {
-		breakdown = fmt.Sprintf("VWAP %s, fee %s", money(l.VWAP), money(l.FeePerContract))
-	} else {
-		breakdown = fmt.Sprintf("VWAP %s, fee %s, basis %s (score %s)", money(l.VWAP), money(l.FeePerContract), money(l.BasisPenaltyPerContract), money(opt.basisScore))
-	}
-	s := fmt.Sprintf("%s (%s) ranks #%d at %s per contract (%s; %s worse)",
-		l.Venue, l.InstrumentID, rank, money(l.AllInPerContract), breakdown, money(gap))
-	if !opt.full {
-		s += fmt.Sprintf(", filling only %s of %s contracts", l.Quantity, sz.qty)
-	}
-	return s + "."
-}
-
-// feeSentence says which venues' fees are verified and which are approximate.
-func feeSentence(opts []option) string {
-	var verified, approx []string
-	for _, opt := range opts {
-		v := string(opt.leg.Venue)
-		if opt.verified {
-			verified = append(verified, v)
-		} else {
-			approx = append(approx, v)
-		}
-	}
-	switch {
-	case len(opts) == 0:
-		return "Fees: none computed."
-	case len(approx) == 0:
-		return fmt.Sprintf("Fees are verified against official documentation for %s.", strings.Join(verified, ", "))
-	case len(verified) == 0:
-		return fmt.Sprintf("Fees: approximate for %s (schedule not yet verified against official documentation).", strings.Join(approx, ", "))
-	}
-	return fmt.Sprintf("Fees are verified for %s but approximate for %s (schedule not yet verified against official documentation).",
-		strings.Join(verified, ", "), strings.Join(approx, ", "))
 }

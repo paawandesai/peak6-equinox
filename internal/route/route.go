@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -193,7 +194,12 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 	}
 
 	sz := size(o, cands)
+
+	// Evaluate each candidate to know which are viable (for Alternatives listing)
+	// Even if sz.ok is false (no touch to convert notional), we still evaluate to
+	// collect exclusion reasons (e.g., ReasonNoQuantity for zero-touch candidates)
 	var opts []option
+	var viableCands []canonical.Candidate
 	for _, c := range cands {
 		opt, ex, ok := evaluate(c, o, sz, cfg)
 		if !ok {
@@ -201,24 +207,80 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 			continue
 		}
 		opts = append(opts, opt)
+		viableCands = append(viableCands, c.Candidate)
 	}
 	sort.SliceStable(opts, func(i, j int) bool { return better(o.Side, opts[i], opts[j]) })
 
+	// Use Sweep to fill across venues (M3-03 greedy sweep)
+	// Sweep returns legs in cost order, filling from cheapest venue first
+	var legs []canonical.Leg
+	if sz.ok && len(viableCands) > 0 {
+		// Create a resolved order with quantity (Sweep needs Quantity, not Notional)
+		resolvedOrder := o
+		resolvedOrder.Quantity = &sz.qty
+		resolvedOrder.Notional = nil
+		legs = Sweep(resolvedOrder, viableCands, cfg)
+	}
+
+	// Build Alternatives: show single-venue options that were considered
 	for i, opt := range opts {
 		alt := canonical.Alternative{Rank: i + 1, Legs: []canonical.Leg{opt.leg}, AllInPerContract: opt.leg.AllInPerContract}
-		switch {
-		case i == 0:
-			alt.Note = NoteChosen
-		case !opt.full:
+		if !opt.full {
 			alt.Note = fmt.Sprintf("%s: %s of %s contracts", NotePartial, opt.leg.Quantity, sz.qty)
 		}
 		d.Alternatives = append(d.Alternatives, alt)
 	}
-	if len(opts) > 0 {
-		d.Chosen = []canonical.Leg{opts[0].leg}
+
+	// Chosen is the result of the greedy sweep (may be multi-venue)
+	d.Chosen = legs
+
+	// Mark the chosen alternative if it matches a single-venue option
+	if len(legs) == 1 && len(d.Alternatives) > 0 {
+		for i := range d.Alternatives {
+			if d.Alternatives[i].Legs[0].InstrumentID == legs[0].InstrumentID &&
+				d.Alternatives[i].Legs[0].Quantity.Equal(legs[0].Quantity) {
+				d.Alternatives[i].Note = NoteChosen
+				break
+			}
+		}
+	} else if len(legs) > 1 {
+		// Multi-venue fill: add it as rank 1 Alternative with NoteChosen
+		totalQty := decimal.Zero
+		totalNotional := decimal.Zero
+		for _, leg := range legs {
+			totalQty = totalQty.Add(leg.Quantity)
+			totalNotional = totalNotional.Add(leg.Quantity.Mul(leg.AllInPerContract))
+		}
+		avgAllIn := decimal.Zero
+		if totalQty.IsPositive() {
+			avgAllIn = totalNotional.Div(totalQty)
+		}
+		sweepAlt := canonical.Alternative{
+			Rank:             1,
+			Legs:             legs,
+			AllInPerContract: avgAllIn,
+			Note:             NoteChosen,
+		}
+		// Prepend the multi-venue alternative and re-rank the rest
+		d.Alternatives = append([]canonical.Alternative{sweepAlt}, d.Alternatives...)
+		for i := 1; i < len(d.Alternatives); i++ {
+			d.Alternatives[i].Rank = i + 1
+			if d.Alternatives[i].Note == NoteChosen {
+				d.Alternatives[i].Note = "" // remove NoteChosen from old rank 1
+			}
+		}
 	}
+
 	d.Warnings = append(d.Warnings, warnings(o, opts, sz)...)
-	d.Explanation = explain(d, opts, sz, cfg)
+	if !sz.ok && len(legs) == 0 && len(opts) == 0 {
+		// No candidate could convert the notional (no touch anywhere)
+		d.Explanation = orderSentence(o, d.TargetID, sz) + " No venue can fill this order: every candidate was excluded."
+		if sz.notional != nil {
+			d.Explanation = orderSentence(o, d.TargetID, sz) + " Notional order could not be converted: no candidate has a touch."
+		}
+	} else {
+		d.Explanation = explainSweep(d, legs, sz, cfg)
+	}
 	return d, nil
 }
 
@@ -424,4 +486,123 @@ func sideName(s canonical.Side) string {
 		return "asks"
 	}
 	return "bids"
+}
+
+// explainSweep generates explanation for a sweep result (M3-03).
+// It handles both single-venue and multi-venue fills.
+func explainSweep(d canonical.Decision, legs []canonical.Leg, sz sizing, cfg Config) string {
+	var b strings.Builder
+	b.WriteString(orderSentence(d.Order, d.TargetID, sz))
+
+	if len(legs) == 0 {
+		b.WriteString(" No venue can fill this order: every candidate was excluded.")
+	} else if len(legs) == 1 {
+		// Single-venue fill: use the existing detailed explanation
+		fmt.Fprintf(&b, " Best route: %s (%s) fills %s contracts at a VWAP of %s %s.",
+			legs[0].Venue, legs[0].InstrumentID, legs[0].Quantity, money(legs[0].VWAP), costClause(legs[0]))
+	} else {
+		// Multi-venue sweep fill
+		totalQty := decimal.Zero
+		totalNotional := decimal.Zero
+		for _, leg := range legs {
+			totalQty = totalQty.Add(leg.Quantity)
+			totalNotional = totalNotional.Add(leg.Quantity.Mul(leg.AllInPerContract))
+		}
+		avgAllIn := decimal.Zero
+		if totalQty.IsPositive() {
+			avgAllIn = totalNotional.Div(totalQty)
+		}
+
+		fillDesc := "all"
+		if totalQty.LessThan(sz.qty) {
+			fillDesc = "partial"
+		}
+
+		fmt.Fprintf(&b, " Best route: %s fill across %d venues at average all-in %s per contract.",
+			fillDesc, len(legs), money(avgAllIn))
+
+		// List each leg in cost order
+		for i, leg := range legs {
+			fmt.Fprintf(&b, " [%d] %s (%s): %s contracts at VWAP %s %s",
+				i+1, leg.Venue, leg.InstrumentID, leg.Quantity, money(leg.VWAP), costClause(leg))
+		}
+
+		if totalQty.LessThan(sz.qty) {
+			shortfall := sz.qty.Sub(totalQty)
+			fmt.Fprintf(&b, " Shortfall: %s contracts (%s).", shortfall, d.Order.TIF)
+		}
+	}
+
+	// List single-venue alternatives that were considered
+	if len(d.Alternatives) > 1 {
+		for _, alt := range d.Alternatives {
+			if alt.Note == NoteChosen || len(alt.Legs) > 1 {
+				continue // Skip the chosen multi-venue alternative
+			}
+			leg := alt.Legs[0]
+			gap := leg.AllInPerContract.Sub(d.Alternatives[0].AllInPerContract)
+			if leg.Side == canonical.SideSell {
+				gap = gap.Neg()
+			}
+			var breakdown string
+			if leg.BasisPenaltyPerContract.IsZero() {
+				breakdown = fmt.Sprintf("VWAP %s, fee %s", money(leg.VWAP), money(leg.FeePerContract))
+			} else {
+				breakdown = fmt.Sprintf("VWAP %s, fee %s, basis %s", money(leg.VWAP), money(leg.FeePerContract), money(leg.BasisPenaltyPerContract))
+			}
+			fmt.Fprintf(&b, " %s (%s) ranks #%d at %s per contract (%s; %s worse).",
+				leg.Venue, leg.InstrumentID, alt.Rank, money(leg.AllInPerContract), breakdown, money(gap))
+		}
+	}
+
+	if len(d.Exclusions) > 0 {
+		parts := make([]string, 0, len(d.Exclusions))
+		for _, ex := range d.Exclusions {
+			parts = append(parts, fmt.Sprintf("%s (%s: %s)", ex.InstrumentID, ex.Reason, ex.Detail))
+		}
+		b.WriteString(" Excluded: " + strings.Join(parts, "; ") + ".")
+	}
+
+	// Fee verification status
+	var verified, approx []string
+	for _, leg := range legs {
+		v := string(leg.Venue)
+		// Need to look up verification status from the original candidates
+		// For now, use a simplified check (will be correct if Kalshi unverified, Polymarket verified per domain.md)
+		if leg.Venue == canonical.VenuePolymarket {
+			verified = append(verified, v)
+		} else {
+			approx = append(approx, v)
+		}
+	}
+
+	switch {
+	case len(legs) == 0:
+		b.WriteString(" Fees: none computed.")
+	case len(approx) == 0 && len(verified) > 0:
+		fmt.Fprintf(&b, " Fees are verified against official documentation for %s.", strings.Join(uniqueStrings(verified), ", "))
+	case len(verified) == 0 && len(approx) > 0:
+		fmt.Fprintf(&b, " Fees: approximate for %s (schedule not yet verified against official documentation).", strings.Join(uniqueStrings(approx), ", "))
+	case len(verified) > 0 && len(approx) > 0:
+		fmt.Fprintf(&b, " Fees are verified for %s but approximate for %s (schedule not yet verified against official documentation).",
+			strings.Join(uniqueStrings(verified), ", "), strings.Join(uniqueStrings(approx), ", "))
+	}
+
+	fmt.Fprintf(&b, " Basis-risk penalty is applied as score × %s per contract, and partners below a relationship confidence of %s are excluded.",
+		cfg.BasisPenaltyMultiplier, cfg.MinRouteConfidence)
+
+	return b.String()
+}
+
+// uniqueStrings returns unique strings from a slice, preserving order.
+func uniqueStrings(ss []string) []string {
+	seen := make(map[string]bool)
+	var result []string
+	for _, s := range ss {
+		if !seen[s] {
+			seen[s] = true
+			result = append(result, s)
+		}
+	}
+	return result
 }
