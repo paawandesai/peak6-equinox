@@ -86,3 +86,57 @@ func TestAB11_CachedVerdictNeverUpgrades(t *testing.T) {
 		t.Errorf("confirming cache entry gave %s", got.Type)
 	}
 }
+
+// TestAB11_CachedVerifierNeverUpgrades: when a CachedVerifier wraps a verifier,
+// a cache hit on an "equivalent" verdict for a pair the rules call "related"
+// still goes through Guard, which rejects the upgrade. This extends M1-11's
+// test to M3-06's CachedVerifier wrapper.
+func TestAB11_CachedVerifierNeverUpgrades(t *testing.T) {
+	ctx := context.Background()
+	a, b := llm.InjectionCase{Field: "rules", VenueText: "x"}.Instruments()
+
+	// Pre-populate the cache with an "equivalent" verdict
+	var cache llm.MemoryCache
+	upgradeVerdict := canonical.LLMVerdict{
+		Relationship:    canonical.RelEquivalent,
+		Confidence:      decimalOne(),
+		DifferingFields: []string{},
+		Evidence:        []string{"cached upgrade attempt"},
+	}
+	key := llm.CacheKey(a, b, llm.PromptVersion, modelID)
+	if err := cache.Put(ctx, key, upgradeVerdict); err != nil {
+		t.Fatal(err)
+	}
+
+	// Wrap a verifier (which won't be called because of the cache hit)
+	innerVerifier := &llm.MockVerifier{Verdicts: []canonical.LLMVerdict{{
+		Relationship: canonical.RelRelated, Confidence: decimalOne(), DifferingFields: []string{}, Evidence: []string{},
+	}}}
+	cachedVerifier := llm.NewCachedVerifier(innerVerifier, &cache, modelID, llm.PromptVersion, nil)
+
+	// Verify a pair the rules call "related"
+	rulesRel := llm.InjectionCase{Rules: canonical.RelRelated, Field: "rules", VenueText: "x"}.RulesRelationship()
+	result, err := cachedVerifier.Verify(ctx, a, b, rulesRel)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// The verdict should be the cached "equivalent" (cache hit)
+	if result.Verdict.Relationship != canonical.RelEquivalent {
+		t.Errorf("cache returned %s, want equivalent", result.Verdict.Relationship)
+	}
+
+	// But when passed through Guard, it must be rejected (no upgrade)
+	guardResult := llm.Guard(ctx, slog.New(slog.DiscardHandler), rulesRel, result.Verdict)
+	if guardResult.Outcome != llm.OutcomeRejectedUpgrade {
+		t.Errorf("guard outcome: got %s, want rejected_upgrade", guardResult.Outcome)
+	}
+	if guardResult.Relationship.Type != canonical.RelRelated {
+		t.Errorf("guard kept type %s, want related", guardResult.Relationship.Type)
+	}
+
+	// Inner verifier was never called (cache hit)
+	if innerVerifier.Calls() > 0 {
+		t.Errorf("inner verifier was called %d times, expected 0 (cache hit)", innerVerifier.Calls())
+	}
+}

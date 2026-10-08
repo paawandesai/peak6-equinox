@@ -26,7 +26,7 @@ These files change only via an MR labelled `human-approved`, and CI enforces thi
 1. Read [plan.md](plan.md) and [status.md](status.md). Write the current milestone's tickets in `docs/tickets/Mn.md` if they don't exist yet.
 2. Spawn one worker per ready ticket, meaning its dependencies are merged and it touches no file another in-flight ticket owns. There is no fixed worker cap.
 3. Route CI failures and reviewer findings back to the owning worker. If a worker fails the same check twice, or makes no progress across two check-ins, stop it, log it, and re-scope the ticket.
-4. Merge per the decision tiers below.
+4. Merge per the decision tiers below. MR pipelines are manual: the worker pushes once per review round, only after local tests (`go test ./...`, `make cover`, `make e2e`) pass; Cursor reviews that head; then the operator plays the `ci-gate` job to run one pipeline, and merges when it is green.
 5. After each merge, update [status.md](status.md) and append to [log.md](log.md). log.md must change at least daily; CI enforces this.
 6. Check every milestone's exit criteria before starting the next milestone.
 

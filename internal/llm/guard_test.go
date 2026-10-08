@@ -285,9 +285,9 @@ func TestVerifierPipeline(t *testing.T) {
 	ctx := context.Background()
 
 	m := &ScriptedModel{Responses: []string{`{"relationship":"related","confidence":0.6}`}}
-	v, err := NewVerifier(m).Verify(ctx, a, b, r)
-	if err != nil || v.Relationship != canonical.RelRelated {
-		t.Fatalf("Verify = %v, %v", v, err)
+	result, err := NewVerifier(m).Verify(ctx, a, b, r)
+	if err != nil || result.Verdict.Relationship != canonical.RelRelated {
+		t.Fatalf("Verify = %v, %v", result, err)
 	}
 	if ps := m.Prompts(); len(ps) != 1 || ps[0].Version != PromptVersion || !strings.Contains(ps[0].User, a.Title) {
 		t.Error("verifier must send the built prompt")

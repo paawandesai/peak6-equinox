@@ -11,6 +11,7 @@ human_files=(
   docs/threat-model.md
   docs/plan.md
   docs/operating-rules.md
+  testdata/golden/labels.yaml
 )
 label="human-approved"
 
