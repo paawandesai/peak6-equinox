@@ -76,7 +76,7 @@ func runInjectionCase(t *testing.T, c llm.InjectionCase) {
 	}
 
 	var result llm.Result
-	verdict, err := llm.Decode(raw)
+	verdict, err := llm.Decode(raw.Text)
 	if err != nil {
 		result = llm.GuardError(ctx, logger, rules, err)
 	} else {

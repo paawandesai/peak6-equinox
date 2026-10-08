@@ -180,7 +180,6 @@ func TestEvalRulesLLMFallsBackToRules(t *testing.T) {
 	seedMatchRound(t, st, store.RoundOK)
 	setEvalEnv(t)
 
-
 	labels := filepath.Join(t.TempDir(), "labels.yaml")
 	body := `version: 1
 round_id: 1

@@ -127,12 +127,12 @@ func TestAB11_CachedVerifierNeverUpgrades(t *testing.T) {
 	}
 
 	// But when passed through Guard, it must be rejected (no upgrade)
-	result := llm.Guard(ctx, slog.New(slog.DiscardHandler), rulesRel, verdict)
-	if result.Outcome != llm.OutcomeRejectedUpgrade {
-		t.Errorf("guard outcome: got %s, want rejected_upgrade", result.Outcome)
+	guardResult := llm.Guard(ctx, slog.New(slog.DiscardHandler), rulesRel, result.Verdict)
+	if guardResult.Outcome != llm.OutcomeRejectedUpgrade {
+		t.Errorf("guard outcome: got %s, want rejected_upgrade", guardResult.Outcome)
 	}
-	if result.Relationship.Type != canonical.RelRelated {
-		t.Errorf("guard kept type %s, want related", result.Relationship.Type)
+	if guardResult.Relationship.Type != canonical.RelRelated {
+		t.Errorf("guard kept type %s, want related", guardResult.Relationship.Type)
 	}
 
 	// Inner verifier was never called (cache hit)

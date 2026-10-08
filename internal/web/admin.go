@@ -412,15 +412,16 @@ func (s *Server) handleAdminLLMVerify(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Update the relationship in the database
-		updatedRel, err := s.deps.Store.UpsertRelationship(ctx, result.Relationship)
+		relID, err := s.deps.Store.UpsertRelationship(ctx, result.Relationship)
 		if err != nil {
 			s.log.Error("updating relationship after llm verification", "error", err, "a_id", rel.AID, "b_id", rel.BID)
 			continue
 		}
 
 		// FR-17: log the verdict to decision_log (Cursor: actually write each verdict)
-		if _, err := dlog.Relationship(ctx, updatedRel); err != nil {
-			s.log.Warn("logging relationship verdict", "error", err, "relationship_id", updatedRel.ID)
+		result.Relationship.ID = relID // Need ID for logging
+		if _, err := dlog.Relationship(ctx, result.Relationship); err != nil {
+			s.log.Warn("logging relationship verdict", "error", err, "relationship_id", relID)
 			// Don't fail the verification on log error - verdict is already saved
 		}
 	}

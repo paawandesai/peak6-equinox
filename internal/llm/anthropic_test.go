@@ -80,7 +80,6 @@ func TestAnthropicClientEmptyModel(t *testing.T) {
 	}
 }
 
-
 // TestConcurrentVerifyUsageAttribution proves that parallel Verify calls with
 // a shared verifier correctly attribute per-call token usage (Cursor: run with -race).
 func TestConcurrentVerifyUsageAttribution(t *testing.T) {
