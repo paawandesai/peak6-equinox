@@ -154,6 +154,9 @@ func (s *Server) handleDecision(w http.ResponseWriter, r *http.Request) {
 		snapshot = round.SnapshotAt()
 	}
 
+	// Load instrument titles for display
+	titles := s.loadDecisionInstrumentTitles(ctx, st, rd.Decision)
+
 	// Use current round from context for the page banner (not the decision's own round)
 	currentRound := roundFromContext(r.Context())
 	tz := timezoneFromRequest(r)
@@ -161,7 +164,7 @@ func (s *Server) handleDecision(w http.ResponseWriter, r *http.Request) {
 		routePage: routePage{
 			page:       s.pageBase(currentRound, "Decision "+r.PathValue("id"), "What did this simulated order do, and why did the router choose that venue?", tz),
 			DecisionID: rd.ID,
-			Decision:   newDecisionView(rd.Decision, countPartners(rd.Decision), snapshot),
+			Decision:   newDecisionView(rd.Decision, countPartners(rd.Decision), snapshot, titles),
 		},
 		CreatedAt: rd.CreatedAt,
 	}
@@ -183,4 +186,38 @@ func countPartners(d canonical.Decision) int {
 	}
 	delete(seen, d.TargetID)
 	return len(seen)
+}
+
+// loadDecisionInstrumentTitles loads the titles for all instruments mentioned in a decision.
+// If an instrument is not found or an error occurs, it is skipped (title will be empty).
+func (s *Server) loadDecisionInstrumentTitles(ctx context.Context, st *store.Store, d canonical.Decision) map[string]string {
+	titles := make(map[string]string)
+	ids := collectInstrumentIDs(d)
+	for id := range ids {
+		rec, err := st.GetInstrument(ctx, id)
+		if err != nil {
+			s.log.Warn("loading instrument title for decision", "instrument", id, "err", err.Error())
+			continue
+		}
+		titles[id] = rec.Title
+	}
+	return titles
+}
+
+// collectInstrumentIDs returns all instrument IDs mentioned in a decision.
+func collectInstrumentIDs(d canonical.Decision) map[string]bool {
+	ids := make(map[string]bool)
+	ids[d.TargetID] = true
+	for _, leg := range d.Chosen {
+		ids[leg.InstrumentID] = true
+	}
+	for _, alt := range d.Alternatives {
+		for _, leg := range alt.Legs {
+			ids[leg.InstrumentID] = true
+		}
+	}
+	for _, ex := range d.Exclusions {
+		ids[ex.InstrumentID] = true
+	}
+	return ids
 }

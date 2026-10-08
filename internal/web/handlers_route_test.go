@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/store"
@@ -46,11 +47,11 @@ func TestRouteHappyPathHTMX(t *testing.T) {
 	wantContains(t, body,
 		`id="route-result"`, "Decision #1", "buy 100 contracts YES, market IOC", "Partners considered: 2",
 		// Polymarket fills 50 at 0.50 and 50 at 0.53 (VWAP 0.515, fee 0.0175, basis 0.001, all-in 0.5335); Kalshi fills all 100 at 0.52 (all-in 0.5375).
-		"Chosen route", `<span class="venue">polymarket</span></td><td><code>`+seedPolyB, "0.5150", "0.5335",
-		"Ranked alternatives", "chosen", "<td>2</td>", "0.5375",
-		"Excluded candidates", seedKalshiC, "not_routable",
+		"Chosen legs", `<span class="venue">polymarket</span>`, "0.5150", "0.5335",
+		"Ranked alternatives", "0.5375",
+		"Excluded candidates", seedKalshiC, "not routable",
 		"Explanation", "Simulated buy of 100 YES contracts on "+seedKalshiA,
-		"Basis-risk penalty is applied",
+		"basis penalty = score",
 	)
 
 	decs, logs := countDecisions(t, st)
@@ -215,5 +216,104 @@ func TestRouteLogSummary(t *testing.T) {
 	d.Order.Quantity, d.Order.Notional = nil, &n
 	if got := orderLine(d.Order); got != "buy $25 notional YES, market IOC" && !strings.HasPrefix(got, "buy $25 notional YES") {
 		t.Errorf("orderLine = %q", got)
+	}
+}
+
+// TestRouteOutcomeKinds tests the outcome strip for each outcome kind (AC from UI-05).
+func TestRouteOutcomeKinds(t *testing.T) {
+	qty := dec("100")
+	cases := []struct {
+		name     string
+		decision canonical.Decision
+		wantChip string
+		want     []string
+	}{
+		{
+			name: "routed_single_venue",
+			decision: canonical.Decision{
+				TargetID: seedKalshiA,
+				Order:    canonical.Order{Side: canonical.SideBuy, Outcome: canonical.OutcomeYes, Quantity: &qty},
+				Chosen:   []canonical.Leg{{Venue: canonical.VenuePolymarket, InstrumentID: seedPolyB, Quantity: qty, AllInPerContract: dec("0.5335"), Route: "direct"}},
+			},
+			wantChip: "chip-ok",
+			want:     []string{"Routed", "filled 100 contracts"},
+		},
+		{
+			name: "routed_across_venues",
+			decision: canonical.Decision{
+				TargetID: seedKalshiA,
+				Order:    canonical.Order{Side: canonical.SideBuy, Outcome: canonical.OutcomeYes, Quantity: &qty},
+				Chosen: []canonical.Leg{
+					{Venue: canonical.VenuePolymarket, InstrumentID: seedPolyB, Quantity: dec("60"), AllInPerContract: dec("0.5335"), Route: "direct"},
+					{Venue: canonical.VenueKalshi, InstrumentID: seedKalshiA, Quantity: dec("40"), AllInPerContract: dec("0.5375"), Route: "direct"},
+				},
+			},
+			wantChip: "chip-ok",
+			want:     []string{"Routed across 2 venues", "filled 100 contracts"},
+		},
+		{
+			name: "partially_routed",
+			decision: canonical.Decision{
+				TargetID: seedKalshiA,
+				Order:    canonical.Order{Side: canonical.SideBuy, Outcome: canonical.OutcomeYes, Quantity: &qty, TIF: canonical.TIFIOC},
+				Chosen:   []canonical.Leg{{Venue: canonical.VenuePolymarket, InstrumentID: seedPolyB, Quantity: dec("80"), AllInPerContract: dec("0.5335"), Route: "direct"}},
+			},
+			wantChip: "chip-warn",
+			want:     []string{"Partially routed", "filled 80 of 100"},
+		},
+		{
+			name: "complement_route",
+			decision: canonical.Decision{
+				TargetID: seedKalshiA,
+				Order:    canonical.Order{Side: canonical.SideBuy, Outcome: canonical.OutcomeYes, Quantity: &qty},
+				Chosen:   []canonical.Leg{{Venue: canonical.VenuePolymarket, InstrumentID: seedPolyB, Quantity: qty, AllInPerContract: dec("0.5335"), Route: "complement", Outcome: canonical.OutcomeNo}},
+			},
+			wantChip: "chip-ok",
+			want:     []string{"Routed as complement", "filled 100 contracts"},
+		},
+		{
+			name: "not_routed",
+			decision: canonical.Decision{
+				TargetID:   seedKalshiA,
+				Order:      canonical.Order{Side: canonical.SideBuy, Outcome: canonical.OutcomeYes, Quantity: &qty},
+				Exclusions: []canonical.Exclusion{{Reason: "stale"}, {Reason: "insufficient_depth"}, {Reason: "insufficient_depth"}},
+			},
+			wantChip: "chip-danger",
+			want:     []string{"Not routed", "1 stale", "2 too shallow"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			view := newDecisionView(tc.decision, 2, time.Now(), map[string]string{})
+			if view.OutcomeChipClass != tc.wantChip {
+				t.Errorf("chip class = %q, want %q", view.OutcomeChipClass, tc.wantChip)
+			}
+			for _, want := range tc.want {
+				if !strings.Contains(view.OutcomePhrase, want) && !strings.Contains(view.OutcomeSummary, want) {
+					t.Errorf("outcome phrase %q or summary %q lacks %q", view.OutcomePhrase, view.OutcomeSummary, want)
+				}
+			}
+		})
+	}
+}
+
+// TestRouteExclusionReasonPhrases tests that exclusion reason codes are mapped to human-readable phrases (AC from UI-05).
+func TestRouteExclusionReasonPhrases(t *testing.T) {
+	cases := map[string]string{
+		"stale":               "stale",
+		"skew":                "skew",
+		"no_book":             "no book",
+		"insufficient_depth":  "too shallow",
+		"not_routable":        "not routable",
+		"low_confidence":      "low confidence",
+		"limit_not_reachable": "limit not reachable",
+		"unknown_code":        "unknown_code",
+	}
+	for code, wantPhrase := range cases {
+		got := exclusionReasonPhrase(code)
+		if got != wantPhrase {
+			t.Errorf("exclusionReasonPhrase(%q) = %q, want %q", code, got, wantPhrase)
+		}
 	}
 }
