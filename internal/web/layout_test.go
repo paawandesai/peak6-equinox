@@ -38,8 +38,8 @@ func TestLayoutStamp(t *testing.T) {
 	}
 
 	// Check for a timezone abbreviation (ET, CT, UTC, EDT/EST/CDT/CST) in the <time> element
-	timePattern := regexp.MustCompile(`<time[^>]*>[^<]*(ET|CT|UTC|EDT|EST|CDT|CST|MST|MDT|PST|PDT)[^<]*</time>`)
-	if !timePattern.MatchString(body) {
+	tzPattern := regexp.MustCompile(`<time[^>]*>[^<]*(ET|CT|UTC|EDT|EST|CDT|CST|MST|MDT|PST|PDT)[^<]*</time>`)
+	if !tzPattern.MatchString(body) {
 		t.Error("stamp missing timezone abbreviation in <time> element")
 	}
 }
