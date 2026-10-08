@@ -92,6 +92,9 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), dbTimeout)
 	defer cancel()
 
+	// Get current round from context (pinned or latest)
+	currentRound := roundFromContext(r.Context())
+
 	rel, err := st.GetRelationship(ctx, id)
 	switch {
 	case isNotFound(err):
@@ -101,10 +104,23 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 		s.dbError(w, "loading relationship", err)
 		return
 	}
-	round, err := st.GetRound(ctx, rel.RoundID)
-	if err != nil {
-		s.dbError(w, "loading the pair's round", err)
-		return
+
+	// Determine which round to use: current (pinned or latest), or the pair's own round as fallback
+	var round store.Round
+	if currentRound.ID != 0 {
+		// NFR-04: when a round is available (pinned or latest), reject pairs from other rounds
+		if rel.RoundID != currentRound.ID {
+			s.renderErrorWithContext(w, r, http.StatusNotFound, "This pair belongs to a different round.")
+			return
+		}
+		round = currentRound
+	} else {
+		// No current round available (no pinned, no finished): use the pair's own round
+		round, err = st.GetRound(ctx, rel.RoundID)
+		if err != nil {
+			s.dbError(w, "loading the pair's round", err)
+			return
+		}
 	}
 	views, err := loadInstrumentViews(ctx, st, []string{rel.AID, rel.BID})
 	if err != nil {

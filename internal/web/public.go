@@ -114,8 +114,17 @@ type page struct {
 	Question     string
 	Assets       assets
 	Round        *roundInfo
-	StaleWarning string        // "Data is N minutes old" when round is stale (NFR-09, D-077)
-	DemoBanner   template.HTML // Demo mode banner with unpin link when round is pinned (NFR-04, M3-07)
+	StaleWarning string // "Data is N minutes old" when round is stale (NFR-09, D-077)
+	Banner       banner // Demo mode or no-round banner (NFR-04, M3-07)
+}
+
+// banner is the structured data for the demo/no-round banner (M3-07).
+// The HTML markup is in layout.html; these fields are auto-escaped.
+type banner struct {
+	Show    bool   // true = show demo banner or no-round fallback
+	Pinned  bool   // true = demo mode (pinned round), false = no-round fallback
+	AsOf    string // formatted timestamp in ET (demo mode only)
+	RoundID int64  // round ID (demo mode only)
 }
 
 // roundInfo is the round a page reads from, as shown in headers.

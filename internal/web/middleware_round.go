@@ -23,15 +23,19 @@ func (s *Server) roundMiddleware(next http.Handler) http.Handler {
 		defer cancel()
 
 		round, err := s.deps.Store.CurrentRound(ctx)
-		if err != nil && !isNotFound(err) {
-			s.log.Error("loading current round for request", "error", err, "path", r.URL.Path)
-			// Continue without round; pages handle missing round themselves
-			next.ServeHTTP(w, r)
-			return
+		switch {
+		case isNotFound(err):
+			// No round available: attach zero-value round to context, pages show fallback
+			ctx = context.WithValue(r.Context(), roundKey{}, store.Round{})
+			next.ServeHTTP(w, r.WithContext(ctx))
+		case err != nil:
+			// DB error: render 503, do not continue
+			s.dbError(w, "loading current round", err)
+		default:
+			// Round loaded: attach to context
+			ctx = context.WithValue(r.Context(), roundKey{}, round)
+			next.ServeHTTP(w, r.WithContext(ctx))
 		}
-		// Attach round to context (even if not found - pages check for zero ID)
-		ctx = context.WithValue(r.Context(), roundKey{}, round)
-		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 

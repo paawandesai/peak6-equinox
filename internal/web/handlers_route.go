@@ -218,6 +218,9 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), dbTimeout)
 	defer cancel()
 
+	// Get current round from context (pinned or latest) - NFR-04
+	currentRound := roundFromContext(r.Context())
+
 	rel, err := st.GetRelationship(ctx, in.PairID)
 	switch {
 	case isNotFound(err):
@@ -228,11 +231,31 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 		s.routeFailure(w, r, http.StatusServiceUnavailable, in.PairID, "the database is unavailable; try again shortly")
 		return
 	}
+
+	// Determine which round to use: current (pinned or latest), or the pair's own round as fallback
+	var round store.Round
+	if currentRound.ID != 0 {
+		// NFR-04: when a round is available (pinned or latest), reject pairs from other rounds
+		if rel.RoundID != currentRound.ID {
+			s.routeFailure(w, r, http.StatusNotFound, in.PairID, "this pair belongs to a different round")
+			return
+		}
+		round = currentRound
+	} else {
+		// No current round available (no pinned, no finished): use the pair's own round
+		round, err = st.GetRound(ctx, rel.RoundID)
+		if err != nil {
+			s.log.Error("loading round for route", "err", err)
+			s.routeFailure(w, r, http.StatusServiceUnavailable, in.PairID, "the database is unavailable; try again shortly")
+			return
+		}
+	}
+
 	if in.Target != rel.AID && in.Target != rel.BID {
 		s.routeFailure(w, r, http.StatusBadRequest, in.PairID, "target must be one of the pair's instrument IDs")
 		return
 	}
-	target, partners, err := s.loadRouteInputs(ctx, st, rel.RoundID, in.Target)
+	target, partners, err := s.loadRouteInputs(ctx, st, round.ID, in.Target)
 	switch {
 	case isNotFound(err):
 		s.routeFailure(w, r, http.StatusNotFound, in.PairID, "the target instrument is no longer in the store")
@@ -242,14 +265,8 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 		s.routeFailure(w, r, http.StatusServiceUnavailable, in.PairID, "the database is unavailable; try again shortly")
 		return
 	}
-	round, err := st.GetRound(ctx, rel.RoundID)
-	if err != nil {
-		s.log.Error("loading round for route", "err", err)
-		s.routeFailure(w, r, http.StatusServiceUnavailable, in.PairID, "the database is unavailable; try again shortly")
-		return
-	}
 	cfg := route.Config{
-		RoundID:                rel.RoundID,
+		RoundID:                round.ID,
 		MinRouteConfidence:     s.cfg.MinRouteConfidence,
 		BasisPenaltyMultiplier: s.cfg.BasisPenaltyMult,
 		Eligibility: route.EligibilityConfig{
