@@ -38,7 +38,8 @@ func TestAB15_AlertAboveThreshold(t *testing.T) {
 		t.Fatalf("GET /admin: status %d", rec.Code)
 	}
 	body := rec.Body.String()
-	for _, want := range []string{"Database size: <strong>5.0 GB</strong>", "ALERT: database size is above the 5.0 GB growth threshold (AB-15)"} {
+	// UI-08: DB size is in health strip, alert is in a banner
+	for _, want := range []string{"5.0 GB", "banner banner-danger", "ALERT:", "database size is above the 5.0 GB growth threshold (AB-15)"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("admin page lacks %q", want)
 		}
@@ -63,10 +64,12 @@ func TestAB15_NoAlertAtOrBelowThreshold(t *testing.T) {
 		if rec.Code != http.StatusOK {
 			t.Fatalf("size %d: status %d", size, rec.Code)
 		}
-		if strings.Contains(rec.Body.String(), "ALERT:") {
+		body := rec.Body.String()
+		if strings.Contains(body, "banner-danger") || strings.Contains(body, "ALERT:") {
 			t.Errorf("size %d: page shows an alert", size)
 		}
-		if !strings.Contains(rec.Body.String(), "alert threshold 5.0 GB") {
+		// UI-08: health strip shows DB size and threshold without explicit "alert threshold" text
+		if !strings.Contains(body, "5.0 GB") || !strings.Contains(body, "Database size") {
 			t.Errorf("size %d: page does not state the threshold", size)
 		}
 		if strings.Contains(logs.String(), "db_growth") {
