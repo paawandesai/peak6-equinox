@@ -67,7 +67,7 @@ Computed from the instrument's `FeeSchedule` (a named formula plus parameters) p
 
 ### Basis penalty per contract
 
-`relationship.BasisRisk.Score × cfg.BasisPenaltyMultiplier` (internal/route/route.go:470–481). The basis-risk score (from M2-04) is validated to [0,1] where 0 = no detectable risk and 1 = maximum risk (D-080). The score is multiplied by the penalty (default `BASIS_PENALTY_MULTIPLIER=0.01` = 1 cent per 1.0 risk point), so a score of 0.5 adds $0.005 to the all-in cost, and the maximum penalty is $0.01 at score 1.0. The target has no relationship to itself, so its basis penalty is zero. Partners must have a `BasisRisk`; if nil, the candidate is excluded as `basis_risk_unknown`.
+`relationship.BasisRisk.Score × cfg.BasisPenaltyMultiplier` (internal/route/route.go:470–481). The basis-risk score (from M2-04) is validated to [0,1] where 0 = no detectable risk and 1 = maximum risk (D-080). The score is multiplied by the penalty (default `BASIS_PENALTY_MULTIPLIER=0.01`), so a score of 0.5 adds $0.005 to the all-in cost, and the maximum penalty is $0.01 at score 1.0. The target has no relationship to itself, so its basis penalty is zero. Partners must have a `BasisRisk`; if nil, the candidate is excluded as `basis_risk_unknown`.
 
 ## Greedy sweep algorithm
 
@@ -77,7 +77,7 @@ When one venue cannot fill the order, the router sweeps across venues (M3-03, FR
 
 1. **Build ranked candidates**: Evaluate each eligible candidate by walking its book for the full order quantity (not just the first level), computing VWAP, fee, basis penalty, and all-in cost. A candidate that cannot fill any of the order (limit excluded all levels, or zero depth) is skipped.
 
-2. **Rank by all-in cost** (quantized to 4 decimal places for transitive comparison, M3-02): lowest cost for buys, highest net proceeds for sells. Ties break on depth within the limit, then lower basis score, then lexicographically first venue name, then instrument ID (internal/route/route.go:538–565).
+2. **Rank by `better()`** (internal/route/route.go:538–565): full fills before partials, then quantized all-in cost (4 decimal places, M3-02), then larger fill, then depth within the limit, then lower basis score, then lexicographically first venue name, then instrument ID. This ranking prefers complete single-venue solutions.
 
 3. **Full-fill shortcut** (internal/route/sweep.go:132–152): If the cheapest candidate (by quantized cost) can fill the entire order, return it immediately as the optimal single-venue solution. Otherwise, proceed to the greedy multi-venue sweep.
 
@@ -225,8 +225,8 @@ fees: approximate for kalshi (schedule not verified against official docs)
   - Fee: ceil(0.07 × 100 × 0.52 × 0.48) = 1.75 → 0.0175/contract
   - All-in: 0.52 + 0.0175 + 0 = 0.5375
 
-**Greedy sweep**: Both quantize to 0.5375 (tie), so fill size decides the order.
-1. Polymarket: 150 contracts at all-in 0.537458 (larger fill breaks the tie) → leg [1]
+**Greedy sweep**: Both quantize to 0.5375 (tie), so the sweep re-rank breaks ties by depth within the limit.
+1. Polymarket: 150 contracts at all-in 0.537458 (150 depth > 100 depth) → leg [1]
 2. Kalshi: 100 contracts at all-in 0.5375 → leg [2]
 3. Total filled: 250 of 500 (partial, IOC allows it)
 4. Average all-in: (150×0.537458 + 100×0.5375) / 250 = 0.5375, total cost 134.3687
@@ -305,7 +305,7 @@ Quote has YES asks = [[0.50, 0.5]] (half a contract). Order wants to buy 10 YES 
 
 ## Sample routing trace JSON
 
-This is the structure returned by `equinox route --json` (note: `POST /route` renders HTML, not JSON). The JSON below is from Example 3's fixture test (`TestDocsExample3ComplementRoute`):
+This is the `Decision` structure. The JSON below is from Example 3's fixture test (`TestDocsExample3ComplementRoute`):
 
 ```json
 {
@@ -399,7 +399,7 @@ This is the structure returned by `equinox route --json` (note: `POST /route` re
 | `SKEW_MAX_SECONDS` | 30 | Cross-venue skew exclusion threshold (cfg.Eligibility.SkewMax) |
 | `MIN_BOOK_DEPTH` | 1 | Minimum depth on consumed side in contracts (cfg.Eligibility.MinBookDepth) |
 | `MIN_ROUTE_CONFIDENCE` | 0.9 | Minimum relationship confidence for routing (cfg.MinRouteConfidence) |
-| `BASIS_PENALTY_MULTIPLIER` | 0.01 | Basis-risk penalty in cents per contract per risk point (cfg.BasisPenaltyMultiplier) |
+| `BASIS_PENALTY_MULTIPLIER` | 0.01 | Basis-risk penalty in dollars per contract per risk point (cfg.BasisPenaltyMultiplier) |
 
 See [docs/environment.md](environment.md) for the full list and deployment notes.
 

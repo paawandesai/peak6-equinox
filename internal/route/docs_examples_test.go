@@ -218,13 +218,84 @@ func TestDocsExample3ComplementRoute(t *testing.T) {
 		}
 	}
 
-	// JSON: assert it marshals (exact JSON shown in doc)
+	// JSON: assert EXACT output matches the doc
 	jsonBytes, err := json.MarshalIndent(dec, "", "  ")
 	if err != nil {
 		t.Fatalf("JSON marshal: %v", err)
 	}
-	// The JSON in the doc is this exact output (verified in round-2)
-	_ = jsonBytes
+	wantJSON := `{
+  "round_id": 7,
+  "target_id": "kalshi:A",
+  "order": {
+    "side": "buy",
+    "outcome": "yes",
+    "quantity": "100",
+    "type": "market",
+    "tif": "IOC"
+  },
+  "chosen": [
+    {
+      "instrument_id": "polymarket:B",
+      "venue": "polymarket",
+      "side": "buy",
+      "outcome": "no",
+      "quantity": "100",
+      "vwap": "0.48",
+      "fee_per_contract": "0.017472",
+      "basis_penalty_per_contract": "0.003",
+      "all_in_per_contract": "0.500472",
+      "route": "complement"
+    }
+  ],
+  "alternatives": [
+    {
+      "rank": 1,
+      "legs": [
+        {
+          "instrument_id": "polymarket:B",
+          "venue": "polymarket",
+          "side": "buy",
+          "outcome": "no",
+          "quantity": "100",
+          "vwap": "0.48",
+          "fee_per_contract": "0.017472",
+          "basis_penalty_per_contract": "0.003",
+          "all_in_per_contract": "0.500472",
+          "route": "complement"
+        }
+      ],
+      "all_in_per_contract": "0.500472",
+      "note": "chosen"
+    },
+    {
+      "rank": 2,
+      "legs": [
+        {
+          "instrument_id": "kalshi:A",
+          "venue": "kalshi",
+          "side": "buy",
+          "outcome": "yes",
+          "quantity": "100",
+          "vwap": "0.54",
+          "fee_per_contract": "0.0174",
+          "basis_penalty_per_contract": "0",
+          "all_in_per_contract": "0.5574",
+          "route": "direct"
+        }
+      ],
+      "all_in_per_contract": "0.5574"
+    }
+  ],
+  "exclusions": [],
+  "warnings": [
+    "fees: approximate for kalshi (schedule not verified against official docs)"
+  ],
+  "explanation": "Simulated buy of 100 YES contracts on kalshi:A as a market IOC order. Chose NO on polymarket:B (complement of kalshi:A) at polymarket because the all-in cost (VWAP + fee + basis) was 0.5005 per contract, vs 0.5574 for YES on kalshi:A at kalshi fills all 100 contracts at a VWAP of 0.4800 plus a fee of 0.0175 and basis penalty of 0.0030 per contract, an all-in cost of 0.5005 per $1 payout Total cost: 50.0472. kalshi (kalshi:A) ranks #2 at 0.5574 per contract (VWAP 0.5400, fee 0.0174; 0.0569 worse). Fees are verified for polymarket but approximate for kalshi (schedule not yet verified against official documentation). Basis-risk penalty is applied as score × 0.01 per contract, and partners below a relationship confidence of 0.9 are excluded.",
+  "decided_at": "2026-10-06T12:00:00Z"
+}`
+	if string(jsonBytes) != wantJSON {
+		t.Errorf("JSON mismatch\nGot:\n%s\n\nWant:\n%s", string(jsonBytes), wantJSON)
+	}
 }
 
 // TestDocsEligibilityStaleQuote tests the stale quote exclusion example from docs/routing.md.
@@ -287,6 +358,12 @@ func TestDocsEligibilitySkewExclusion(t *testing.T) {
 	// Skew > max excludes with no warning (warning is only for skew between warn and max)
 	if len(warnings) != 0 {
 		t.Errorf("warnings = %v, want [] (skew > max has no warning, just exclusion)", warnings)
+	}
+	// Assert EXACT detail string
+	wantDetail := "35 s behind"
+	gotDetail := SkewDetail(35)
+	if gotDetail != wantDetail {
+		t.Errorf("SkewDetail(35) = %q, want %q", gotDetail, wantDetail)
 	}
 }
 
