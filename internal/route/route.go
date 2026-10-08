@@ -29,6 +29,8 @@ type Config struct {
 	// MinRouteConfidence excludes partners whose relationship confidence is
 	// below it (domain.md rule 3; MIN_ROUTE_CONFIDENCE).
 	MinRouteConfidence decimal.Decimal
+	// Eligibility holds the staleness, skew, and depth thresholds.
+	Eligibility EligibilityConfig
 }
 
 // Leg routes.
@@ -50,6 +52,8 @@ const (
 	ReasonInsufficientDepth     = "insufficient_depth"
 	ReasonLimitNotReachable     = "limit_not_reachable"
 	ReasonFeeUnknown            = "fee_unknown"
+	ReasonStale                 = "stale"
+	ReasonSkew                  = "skew"
 )
 
 // Note values on an Alternative.
@@ -109,13 +113,78 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 		DecidedAt:    now.UTC(),
 	}
 
-	cands := []candidate{{Candidate: target, route: RouteDirect}}
+	// Collect all candidates (target + partners) that pass pre-routing checks and eligibility.
+	type pendingCandidate struct {
+		cand  canonical.Candidate
+		route string
+	}
+	var pending []pendingCandidate
+
+	// Check target eligibility (staleness, missing book, depth).
+	if targetOK, targetExs := IsEligible(target.Quote, o.Side, o.Outcome, cfg.Eligibility); !targetOK {
+		for _, ex := range targetExs {
+			d.Exclusions = append(d.Exclusions, canonical.Exclusion{
+				InstrumentID: target.Instrument.ID,
+				Venue:        target.Instrument.Venue,
+				Reason:       ex.Reason,
+				Detail:       ex.Detail,
+			})
+		}
+	} else {
+		pending = append(pending, pendingCandidate{cand: target, route: RouteDirect})
+	}
+
+	// Check each partner's relationship and eligibility.
 	for _, p := range partners {
 		if ex, ok := partnerExclusion(target, p, cfg); !ok {
 			d.Exclusions = append(d.Exclusions, ex)
 			continue
 		}
-		cands = append(cands, candidate{Candidate: p, route: RouteDirect})
+
+		if partnerOK, partnerExs := IsEligible(p.Quote, o.Side, o.Outcome, cfg.Eligibility); !partnerOK {
+			for _, ex := range partnerExs {
+				d.Exclusions = append(d.Exclusions, canonical.Exclusion{
+					InstrumentID: p.Instrument.ID,
+					Venue:        p.Instrument.Venue,
+					Reason:       ex.Reason,
+					Detail:       ex.Detail,
+				})
+			}
+			continue
+		}
+
+		pending = append(pending, pendingCandidate{cand: p, route: RouteDirect})
+	}
+
+	// Skew check: use Skew() to check each candidate against the freshest quote.
+	// This ensures partner-vs-partner skew is enforced per M3-01 AC.
+	var cands []candidate
+	if len(pending) > 1 {
+		// Find the freshest quote as reference.
+		var freshest canonical.Quote
+		for _, pc := range pending {
+			if pc.cand.Quote.FetchedAt.After(freshest.FetchedAt) {
+				freshest = pc.cand.Quote
+			}
+		}
+		// Check each candidate against the reference.
+		for _, pc := range pending {
+			excludeOlder, warnings := Skew(freshest, pc.cand.Quote, cfg.Eligibility)
+			if excludeOlder {
+				gapSec := int(freshest.FetchedAt.Sub(pc.cand.Quote.FetchedAt).Seconds())
+				d.Exclusions = append(d.Exclusions, canonical.Exclusion{
+					InstrumentID: pc.cand.Instrument.ID,
+					Venue:        pc.cand.Instrument.Venue,
+					Reason:       ReasonSkew,
+					Detail:       SkewDetail(gapSec),
+				})
+			} else {
+				d.Warnings = append(d.Warnings, warnings...)
+				cands = append(cands, candidate{Candidate: pc.cand, route: pc.route})
+			}
+		}
+	} else if len(pending) == 1 {
+		cands = append(cands, candidate{Candidate: pending[0].cand, route: pending[0].route})
 	}
 
 	sz := size(o, cands)
@@ -143,7 +212,7 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 	if len(opts) > 0 {
 		d.Chosen = []canonical.Leg{opts[0].leg}
 	}
-	d.Warnings = warnings(o, opts, sz)
+	d.Warnings = append(d.Warnings, warnings(o, opts, sz)...)
 	d.Explanation = explain(d, opts, sz, cfg)
 	return d, nil
 }
