@@ -151,3 +151,12 @@ deploy-staging: ## Deploy a no-traffic revision tagged staging (needs gcloud cre
 	gcloud run deploy $(SERVICE) $(DEPLOY_FLAGS) --tag=staging --no-traffic \
 	  --set-env-vars=APP_ENV=staging,LLM_ENABLED=false,ADMIN_USER=admin \
 	  --set-secrets=DATABASE_URL=equinox-staging-database-url:latest,$(APP_SECRETS)$(ANTHROPIC_SECRET)
+
+review-window-on: ## Set min-instances=1 for the review window (M4-04, D-101)
+	bash scripts/review-window.sh on
+
+review-window-off: ## Revert to min-instances=0 after the review window (M4-04, D-101)
+	bash scripts/review-window.sh off
+
+review-window-status: ## Show current min-instances setting (M4-04, D-101)
+	bash scripts/review-window.sh status
