@@ -256,8 +256,8 @@ func TestPublicPairPage(t *testing.T) {
 	rec = get(s.Handler(), "/pairs/"+strconv.FormatInt(sd.relID, 10))
 	wantHTML(t, rec, http.StatusOK)
 	body = rec.Body.String()
-	wantContains(t, body, "Vetoes (1)", "subject_mismatch", "BTC is not ETH", "Different subject: BTC vs ETH.",
-		"No quote for this instrument in the round.", `class="type-related"`)
+	wantContains(t, body, "Vetoes (1): each blocks equivalent", "subject_mismatch", "BTC is not ETH", "Different subject: BTC vs ETH.",
+		"No quote for this instrument in the round.", `class="chip chip-warn">related`)
 }
 
 func TestPublicPairNotFound(t *testing.T) {
