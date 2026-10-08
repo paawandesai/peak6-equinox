@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
@@ -15,30 +16,30 @@ import (
 // the touch on each venue and the route form (US-02).
 type pairPage struct {
 	page
-	ID              int64
-	Type            string
-	TypeLabel       string
-	TypeChipClass   string // UI-04: chip class for the type
-	Confidence      string
-	ConfidenceWord  string // UI-04: bucket word
-	Method          string
-	BasisRiskScore  string // UI-04: score as string or "not scored"
-	BasisRiskWord   string // UI-04: bucket word
-	Routable        bool   // UI-04: yes/no in the strip
-	VetoHeading     string // UI-04: heading variant
-	Explanation     string
-	A, B            instrumentView
-	QuoteA          touchView
-	QuoteB          touchView
-	DiffRows        []diffRowView // UI-04: diff with annotations
-	Vetoes          []canonical.Veto
-	Facts           []canonical.FactUse
-	BasisRisk       *canonical.BasisRisk
-	NearMiss        bool // a stored related pair: shown with the veto that fired
-	Types           []typeView
-	History         historyChart
-	LogEntries      []logEntryView
-	Form            routeFormView
+	ID             int64
+	Type           string
+	TypeLabel      string
+	TypeChipClass  string // UI-04: chip class for the type
+	Confidence     string
+	ConfidenceWord string // UI-04: bucket word
+	Method         string
+	BasisRiskScore string // UI-04: score as string or "not scored"
+	BasisRiskWord  string // UI-04: bucket word
+	Routable       bool   // UI-04: yes/no in the strip
+	VetoHeading    string // UI-04: heading variant
+	Explanation    string
+	A, B           instrumentView
+	QuoteA         touchView
+	QuoteB         touchView
+	DiffRows       []diffRowView // UI-04: diff with annotations
+	Vetoes         []canonical.Veto
+	Facts          []canonical.FactUse
+	BasisRisk      *canonical.BasisRisk
+	NearMiss       bool // a stored related pair: shown with the veto that fired
+	Types          []typeView
+	History        historyChart
+	LogEntries     []logEntryView
+	Form           routeFormView
 }
 
 // diffRowView is one diff row with annotations for vetoes and facts (UI-04).
@@ -170,28 +171,28 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := pairPage{
-		page:            s.pageBase(round, "Pair "+r.PathValue("id"), "Why does Equinox think these two contracts are, or are not, the same bet, and where would an order fill best?", tz),
-		ID:              rel.ID,
-		Type:            string(rel.Type),
-		TypeLabel:       typeLabels[rel.Type],
-		TypeChipClass:   TypeChipClass(rel.Type), // UI-04
-		Confidence:      rel.Confidence.StringFixed(2),
-		ConfidenceWord:  ConfidenceWord(rel.Confidence), // UI-04
-		Method:          string(rel.Method),
-		BasisRiskScore:  basisRiskScore, // UI-04
-		BasisRiskWord:   basisRiskWord,  // UI-04
-		Routable:        rel.Type.Routable(), // UI-04
-		VetoHeading:     vetoHeading,                    // UI-04
-		Explanation:     rel.Explanation,
-		A:               viewA,
-		B:               viewB,
-		DiffRows:        diffRows,        // UI-04
-		Vetoes:          rel.Vetoes,
-		Facts:           rel.FactsUsed,
-		BasisRisk:       rel.BasisRisk,
-		NearMiss:        rel.Type == canonical.RelRelated,
-		Types:           allTypeViews(),
-		Form:            defaultRouteForm(rel),
+		page:           s.pageBase(round, "Pair "+r.PathValue("id"), "Why does Equinox think these two contracts are, or are not, the same bet, and where would an order fill best?", tz),
+		ID:             rel.ID,
+		Type:           string(rel.Type),
+		TypeLabel:      typeLabels[rel.Type],
+		TypeChipClass:  TypeChipClass(rel.Type), // UI-04
+		Confidence:     rel.Confidence.StringFixed(2),
+		ConfidenceWord: ConfidenceWord(rel.Confidence), // UI-04
+		Method:         string(rel.Method),
+		BasisRiskScore: basisRiskScore,      // UI-04
+		BasisRiskWord:  basisRiskWord,       // UI-04
+		Routable:       rel.Type.Routable(), // UI-04
+		VetoHeading:    vetoHeading,         // UI-04
+		Explanation:    rel.Explanation,
+		A:              viewA,
+		B:              viewB,
+		DiffRows:       diffRows, // UI-04
+		Vetoes:         rel.Vetoes,
+		Facts:          rel.FactsUsed,
+		BasisRisk:      rel.BasisRisk,
+		NearMiss:       rel.Type == canonical.RelRelated,
+		Types:          allTypeViews(),
+		Form:           defaultRouteForm(rel),
 	}
 	points, err := st.QuoteHistory(ctx, []string{rel.AID, rel.BID}, maxHistoryPt)
 	if err != nil {
@@ -237,20 +238,14 @@ func buildDiffRows(rel canonical.Relationship) []diffRowView {
 		vetoByField[v.Field] = v
 	}
 
-	// Build fact closure map by field (for equivalent_given_facts)
-	factClosures := make(map[string][]string) // field -> fact keys
-	if rel.Type == canonical.RelEquivalentGivenFacts {
-		for _, fact := range rel.FactsUsed {
-			// Infer which fields this fact closes by matching veto codes
-			for _, v := range rel.Vetoes {
-				// Map veto codes to the fact that might close them
-				switch v.Code {
-				case "metric_mismatch", "comparator_mismatch", "threshold_mismatch":
-					// These can be closed by facts
-					factClosures[v.Field] = append(factClosures[v.Field], fact.Key)
-				}
-			}
+	// Build fact list for equivalent_given_facts annotation
+	var factsList string
+	if rel.Type == canonical.RelEquivalentGivenFacts && len(rel.FactsUsed) > 0 {
+		factPairs := make([]string, 0, len(rel.FactsUsed))
+		for _, f := range rel.FactsUsed {
+			factPairs = append(factPairs, fmt.Sprintf("%s=%s", f.Key, f.Value))
 		}
+		factsList = strings.Join(factPairs, ", ")
 	}
 
 	for _, d := range rel.Diff {
@@ -264,12 +259,11 @@ func buildDiffRows(rel canonical.Relationship) []diffRowView {
 
 		// Add veto annotation if present
 		if veto, ok := vetoByField[d.Field]; ok {
-			if rel.Type == canonical.RelEquivalentGivenFacts && len(factClosures[d.Field]) > 0 {
-				// For equivalent_given_facts, show which fact closed it
-				row.Annotation = fmt.Sprintf("veto %s, closed by fact %s=%s",
-					veto.Code, factClosures[d.Field][0], rel.FactsUsed[0].Value)
-			} else if rel.Type != canonical.RelEquivalentGivenFacts {
-				// For other types, just show the veto
+			if factsList != "" {
+				// For pairs with facts, show all facts
+				row.Annotation = fmt.Sprintf("veto %s, closed by facts: %s", veto.Code, factsList)
+			} else {
+				// For other types or pairs without facts, just show the veto
 				row.Annotation = fmt.Sprintf("veto %s", veto.Code)
 			}
 		}
