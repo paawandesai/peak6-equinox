@@ -29,8 +29,8 @@ type Config struct {
 	// MinRouteConfidence excludes partners whose relationship confidence is
 	// below it (domain.md rule 3; MIN_ROUTE_CONFIDENCE).
 	MinRouteConfidence decimal.Decimal
-	// BasisPenaltyMultiplier scales the basis-risk score into cents per
-	// contract (M3-02; BASIS_PENALTY_MULTIPLIER).
+	// BasisPenaltyMultiplier scales the basis-risk score into dollars per
+	// contract (M3-02; BASIS_PENALTY_MULTIPLIER, default 0.01 = one cent).
 	BasisPenaltyMultiplier decimal.Decimal
 	// Eligibility holds the staleness, skew, and depth thresholds.
 	Eligibility EligibilityConfig
@@ -55,6 +55,7 @@ const (
 	ReasonInsufficientDepth     = "insufficient_depth"
 	ReasonLimitNotReachable     = "limit_not_reachable"
 	ReasonFeeUnknown            = "fee_unknown"
+	ReasonBasisRiskUnknown      = "basis_risk_unknown"
 	ReasonStale                 = "stale"
 	ReasonSkew                  = "skew"
 )
@@ -309,10 +310,14 @@ func evaluate(c candidate, o canonical.Order, sz sizing, cfg Config) (option, ca
 	}
 
 	// Calculate basis penalty (M3-02): Score × BASIS_PENALTY_MULTIPLIER.
-	// Target has no relationship, so no basis risk. Partners have BasisRisk.
+	// Target has no relationship (nil), so no basis penalty.
+	// Partners must have BasisRisk; nil means unknown risk (never guess, domain.md).
 	basisScore := decimal.Zero
 	basisPenalty := decimal.Zero
-	if c.Relationship != nil && c.Relationship.BasisRisk != nil {
+	if c.Relationship != nil {
+		if c.Relationship.BasisRisk == nil {
+			return fail(ReasonBasisRiskUnknown, "partner relationship has no basis-risk score")
+		}
 		basisScore = c.Relationship.BasisRisk.Score
 		basisPenalty = basisScore.Mul(cfg.BasisPenaltyMultiplier)
 	}

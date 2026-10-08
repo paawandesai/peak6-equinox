@@ -65,6 +65,32 @@ func TestBasisPenaltyFlipsDecision(t *testing.T) {
 	}
 }
 
+// TestBasisPenaltyNilRisk: partner with nil BasisRisk is excluded (unknown never guessed).
+func TestBasisPenaltyNilRisk(t *testing.T) {
+	target := cand(kalshiID, []canonical.Level{lv("0.48", "200")}, []canonical.Level{lv("0.60", "100")}, nil)
+	partner := cand(polymarketID, []canonical.Level{lv("0.49", "80")}, []canonical.Level{lv("0.51", "100")},
+		rel(kalshiID, polymarketID, canonical.RelEquivalent, "0.95"))
+	// Nil BasisRisk: unknown risk, must not guess zero.
+	partner.Relationship.BasisRisk = nil
+
+	dec := mustRoute(t, buy("50"), target, []canonical.Candidate{partner})
+	// Partner excluded, target chosen.
+	if len(dec.Chosen) != 1 || dec.Chosen[0].InstrumentID != kalshiID {
+		t.Fatalf("nil BasisRisk should exclude partner, chose %+v", dec.Chosen)
+	}
+	// Check exclusion reason.
+	found := false
+	for _, ex := range dec.Exclusions {
+		if ex.InstrumentID == polymarketID && ex.Reason == "basis_risk_unknown" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected basis_risk_unknown exclusion for partner, got %+v", dec.Exclusions)
+	}
+}
+
 // TestBasisPenaltyZeroScore: when basis-risk score is 0, penalty is 0 (M3-02 AC).
 func TestBasisPenaltyZeroScore(t *testing.T) {
 	target := cand(kalshiID, []canonical.Level{lv("0.48", "200")}, []canonical.Level{lv("0.60", "100")}, nil)

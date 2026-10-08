@@ -51,7 +51,10 @@ func quote(id string, bids, asks []canonical.Level) canonical.Quote {
 }
 
 func rel(a, b string, typ canonical.RelationshipType, conf string) *canonical.Relationship {
-	return &canonical.Relationship{RoundID: 7, AID: a, BID: b, Type: typ, Confidence: d(conf), Method: canonical.MethodRules, Explanation: "test"}
+	return &canonical.Relationship{
+		RoundID: 7, AID: a, BID: b, Type: typ, Confidence: d(conf), Method: canonical.MethodRules, Explanation: "test",
+		BasisRisk: &canonical.BasisRisk{Score: d("0"), Components: []canonical.BasisComponent{}},
+	}
 }
 
 func cand(id string, bids, asks []canonical.Level, r *canonical.Relationship) canonical.Candidate {
@@ -374,6 +377,8 @@ func TestRouteNotional(t *testing.T) {
 func TestRouteTieBreaks(t *testing.T) {
 	a := cand(kalshiID, nil, []canonical.Level{lv("0.50", "100")}, nil)
 	b := cand(otherID, nil, []canonical.Level{lv("0.50", "300")}, rel(kalshiID, otherID, canonical.RelEquivalent, "0.95"))
+	// Add BasisRisk (partners must have it, or they're excluded per M3-02).
+	b.Relationship.BasisRisk = &canonical.BasisRisk{Score: d("0"), Components: []canonical.BasisComponent{}}
 	dec := mustRoute(t, buy("100"), a, []canonical.Candidate{b})
 	if dec.Chosen[0].InstrumentID != otherID {
 		t.Errorf("deeper book should win the tie: %+v", dec.Chosen)
