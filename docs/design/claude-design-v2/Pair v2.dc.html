@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><style>body{margin:0;background:#e6e9ed;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue","Noto Sans",sans-serif;color:#1b2230;-webkit-font-smoothing:antialiased}a{color:#0172ad}a:hover{color:#01527d}del{background:#fbe9e7;color:#b3261e;text-decoration:line-through}ins{background:#e6f4ea;color:#1b6e3a;text-decoration:underline}</style></helmet>
+<section style="display:flex;gap:48px;padding:48px;align-items:flex-start">
+
+<div style="display:flex;flex-direction:column;gap:10px">
+  <div style="font:600 12px ui-monospace,Menlo,monospace;color:#3a4350">Pair detail · desktop 1280 · templates/pair.html + history.html</div>
+  <div style="width:1280px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.06);border-radius:4px;overflow:hidden">
+    <dc-import name="Eq Header v2" active="" banner="none" hint-size="100%,100px"></dc-import>
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) 200px;gap:40px;padding:28px 40px 48px">
+    <main style="display:flex;flex-direction:column;gap:32px;min-width:0">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <nav aria-label="Breadcrumb" style="font-size:13px;color:#4f5866"><a href="/">Matches</a> / Pair #924</nav>
+        <h1 style="margin:0;font-size:30px;line-height:1.2;font-weight:700">Pair #924</h1>
+        <p style="margin:0;font-size:17px;color:#5d6675">Are these two contracts the same bet, term by term, and what carried the verdict?</p>
+      </div>
+
+      <section aria-label="Verdict" style="display:flex;flex-direction:column;gap:14px;padding:20px 22px;border-radius:8px;background:#f3f9f5;box-shadow:inset 0 0 0 1px #b9dcc4">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px"><dc-import name="Eq Badge" k="egf" size="l" hint-size="260px,30px"></dc-import><p style="margin:0;font-size:16px;color:#1b2230">Same bet once a documented external fact is applied.</p></div>
+        <dl style="margin:0;display:flex;flex-wrap:wrap;gap:12px 32px;font-size:14px">
+          <div style="display:flex;flex-direction:column;gap:3px"><dt style="font-size:12px;color:#4f5866">Confidence</dt><dd style="margin:0"><dc-import name="Eq Conf" v="0.93" hint-size="100px,40px"></dc-import></dd></div>
+          <div style="display:flex;flex-direction:column;gap:3px"><dt style="font-size:12px;color:#4f5866">Method</dt><dd style="margin:0;font-weight:600">rules</dd></div>
+          <div style="display:flex;flex-direction:column;gap:3px"><dt style="font-size:12px;color:#4f5866">Basis risk (separate from confidence)</dt><dd style="margin:0"><strong>0.38</strong> <span style="color:#8a5a00;font-weight:600">■ moderate</span> · <a href="#basis">2 diff rows</a></dd></div>
+          <div style="display:flex;flex-direction:column;gap:3px"><dt style="font-size:12px;color:#4f5866">Routable</dt><dd style="margin:0;font-weight:600;color:#1b6e3a">✓ yes</dd></div>
+          <div style="display:flex;flex-direction:column;gap:3px"><dt style="font-size:12px;color:#4f5866">Round</dt><dd style="margin:0">49, as of 2026-10-08 11:03:20 EDT</dd></div>
+        </dl>
+        <p style="margin:0;font-size:13px;color:#3a4350">When <code>.NearMiss</code> is set, this sentence appears here: “This pair is a <a href="/near-misses">near miss</a>: a hard veto fired.”</p>
+      </section>
+
+      <details>
+        <summary style="cursor:pointer;font-size:14px;font-weight:600;color:#0172ad">The full set of relationship types</summary>
+        <ul style="margin:10px 0 0;padding:0;list-style:none;display:grid;grid-template-columns:auto 1fr;gap:8px 14px;align-items:center;font-size:14px">
+          <li style="display:contents"><dc-import name="Eq Badge" k="equivalent" hint-size="110px,22px"></dc-import><span>(routable) Same bet: identical terms.</span></li>
+          <li style="display:contents"><dc-import name="Eq Badge" k="egf" hint-size="190px,22px"></dc-import><span>(routable) Same bet once a documented external fact is applied.</span></li>
+          <li style="display:contents"><dc-import name="Eq Badge" k="complement" hint-size="110px,22px"></dc-import><span>(routable) Exactly one resolves YES.</span></li>
+          <li style="display:contents"><dc-import name="Eq Badge" k="implies" hint-size="90px,22px"></dc-import><span>One resolving YES forces the other YES.</span></li>
+          <li style="display:contents"><dc-import name="Eq Badge" k="related" hint-size="80px,22px"></dc-import><span>Same event, different payout.</span></li>
+          <li style="display:contents"><dc-import name="Eq Badge" k="unrelated" hint-size="100px,22px"></dc-import><span>No meaningful link.</span></li>
+        </ul>
+      </details>
+
+      <section id="contracts" style="display:flex;flex-direction:column;gap:12px">
+        <h2 style="margin:0;font-size:21px">The two contracts</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px">
+          <sc-for list="{{ contracts }}" as="c" hint-placeholder-count="2">
+          <article style="display:flex;flex-direction:column;gap:10px;padding:16px;border:1px solid #e1e5ea;border-radius:8px">
+            <header style="display:flex;flex-direction:column;gap:4px"><span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#4f5866">{{ c.side }} · {{ c.venue }}</span><strong style="font-size:16px;line-height:1.35">{{ c.title }}</strong></header>
+            <dl style="margin:0;display:grid;grid-template-columns:64px minmax(0,1fr);gap:3px 8px;font-size:13px"><dt style="color:#4f5866">ID</dt><dd style="margin:0"><code style="overflow-wrap:anywhere">{{ c.id }}</code></dd><dt style="color:#4f5866">Market</dt><dd style="margin:0"><code style="overflow-wrap:anywhere">{{ c.market }}</code></dd><dt style="color:#4f5866">Event</dt><dd style="margin:0"><code style="overflow-wrap:anywhere">{{ c.event }}</code></dd></dl>
+            <p style="margin:0;font-size:13px;color:#3a4350">{{ c.meta }}</p>
+            <div role="group" aria-label="Rule layers" style="display:flex;flex-direction:column;border:1px solid #e1e5ea;border-radius:6px">
+              <div style="display:flex;flex-wrap:wrap;gap:2px;padding:4px;background:#f5f7f9;border-bottom:1px solid #e1e5ea;font-size:13px">
+                <span style="padding:4px 10px;border-radius:4px;color:#0172ad">Title</span>
+                <span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:4px;color:#6b2fa0;box-shadow:inset 0 0 0 1px #6b2fa0;border-style:dashed">◆ Summary</span>
+                <span aria-current="true" style="padding:4px 10px;border-radius:4px;background:#fff;font-weight:600;box-shadow:0 0 0 1px #c9cfd6">Full rules</span>
+                <span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:4px;color:#6b2fa0;box-shadow:inset 0 0 0 1px #6b2fa0">◆ Clarifications{{ c.clar }}</span>
+              </div>
+              <p style="margin:0;padding:10px 12px;font-size:13px;line-height:1.5;color:#3a4350;max-height:96px;overflow:auto">{{ c.rules }}</p>
+            </div>
+            <p style="margin:0;font-size:13px;color:#3a4350">Quality flags: <code style="padding:1px 6px;border-radius:4px;background:#fff3d6;color:#8a5a00">{{ c.flag }}</code></p>
+          </article>
+          </sc-for>
+        </div>
+      </section>
+
+      <section id="diff" style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px"><h2 style="margin:0;font-size:21px">Contract diff</h2><span style="font-size:14px;color:#3a4350">7 terms · 2 match · 3 differ, closed by facts · 1 unknown</span></div>
+        <p style="margin:0;font-size:14px;color:#3a4350;max-width:760px">Every term the normaliser extracted, side by side. <em>unknown</em> means a term could not be parsed on at least one side; it is never guessed. Rows are grouped by rule part and read top to bottom like an evidence ledger.</p>
+        <table style="width:100%;border-collapse:collapse;font-size:14px;line-height:1.45">
+          <thead><tr>
+            <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#4f5866;border-bottom:1px solid #d5dae0;width:96px">Term</th>
+            <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#4f5866;border-bottom:1px solid #d5dae0">A: KALSHI</th>
+            <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#4f5866;border-bottom:1px solid #d5dae0">B: POLYMARKET</th>
+            <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#4f5866;border-bottom:1px solid #d5dae0;width:250px">Verdict</th>
+            <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#6b2fa0;border-bottom:1px solid #d5dae0;width:150px">◆ Contribution<span style="display:block;font-size:11px;font-weight:600">needs new data</span></th>
+          </tr></thead>
+          <tbody>
+            <tr><td style="padding:8px 10px;border-bottom:1px solid #eceff2;color:#4f5866" colspan="4"><em>Prior: base rate for pairs with the same subject</em></td><td style="padding:8px 10px;border-bottom:1px solid #eceff2;background:#faf6fd"><span style="display:flex;align-items:center;gap:6px;font-size:12px;font-variant-numeric:tabular-nums"><span style="position:relative;display:block;width:80px;height:8px;background:#eceff2"><span style="position:absolute;left:26px;width:14px;top:0;bottom:0;background:#b3261e"></span><span style="position:absolute;left:40px;top:-2px;bottom:-2px;width:1px;background:#1b2230"></span></span>−1.4</span></td></tr>
+            <sc-for list="{{ diff }}" as="d" hint-placeholder-count="7">
+            <sc-if value="{{ d.head }}"><tr><th colspan="5" scope="rowgroup" style="text-align:left;padding:14px 10px 6px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#4f5866;border-bottom:1px solid #d5dae0">{{ d.part }}</th></tr></sc-if>
+            <tr style="box-shadow:inset 3px 0 0 {{ d.edge }}">
+              <td style="padding:10px;border-bottom:1px solid #eceff2;vertical-align:top;font-weight:600">{{ d.field }}</td>
+              <td style="padding:10px;border-bottom:1px solid #eceff2;vertical-align:top;font-family:ui-monospace,Menlo,monospace;font-size:13px;font-style:{{ d.fs }}">{{ d.a }}</td>
+              <td style="padding:10px;border-bottom:1px solid #eceff2;vertical-align:top;font-family:ui-monospace,Menlo,monospace;font-size:13px;font-style:{{ d.fs }}">{{ d.b }}</td>
+              <td style="padding:10px;border-bottom:1px solid #eceff2;vertical-align:top"><div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px"><dc-import name="Eq Badge" k="{{ d.k }}" hint-size="110px,22px"></dc-import><span style="font-size:13px;color:#3a4350">{{ d.note }}</span><sc-if value="{{ d.basis }}"><a href="#basis" style="font-size:12px;color:#8a5a00">→ basis risk: {{ d.basis }}</a></sc-if></div></td>
+              <td style="padding:10px;border-bottom:1px solid #eceff2;vertical-align:top;background:#faf6fd"><span style="display:flex;align-items:center;gap:6px;font-size:12px;font-variant-numeric:tabular-nums"><span style="position:relative;display:block;width:80px;height:8px;background:#eceff2"><span style="position:absolute;left:{{ d.cl }};width:{{ d.cw }};top:0;bottom:0;background:{{ d.cc }}"></span><span style="position:absolute;left:40px;top:-2px;bottom:-2px;width:1px;background:#1b2230"></span></span>{{ d.c }}</span></td>
+            </tr>
+            </sc-for>
+            <tr><td colspan="4" style="padding:10px;border-top:2px solid #d5dae0;font-weight:600">Total match weight, converted to confidence 0.93</td><td style="padding:10px;border-top:2px solid #d5dae0;background:#faf6fd;font-weight:700;font-variant-numeric:tabular-nums">+3.9</td></tr>
+          </tbody>
+        </table>
+
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;padding:16px 18px;border-radius:8px;background:#e8f0fb;box-shadow:inset 0 0 0 1px #9fbde6">
+          <h3 style="margin:0;font-size:16px;color:#1a56a8">◇ 3 term differences, closed by facts</h3>
+          <p style="margin:0;font-size:14px">These term differences exist, but documented external facts close them.</p>
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead><tr><th style="text-align:left;padding:6px 8px;color:#3a4350;border-bottom:1px solid #9fbde6">Code</th><th style="text-align:left;padding:6px 8px;color:#3a4350;border-bottom:1px solid #9fbde6">Term</th><th style="text-align:left;padding:6px 8px;color:#3a4350;border-bottom:1px solid #9fbde6">Detail</th></tr></thead>
+            <tbody>
+              <tr><td style="padding:6px 8px"><code>metric_mismatch</code></td><td style="padding:6px 8px">metric</td><td style="padding:6px 8px">rate_upper_bound vs rate_change</td></tr>
+              <tr><td style="padding:6px 8px"><code>comparator_mismatch</code></td><td style="padding:6px 8px">comparator</td><td style="padding:6px 8px">gt vs gte</td></tr>
+              <tr><td style="padding:6px 8px"><code>threshold_mismatch</code></td><td style="padding:6px 8px">threshold</td><td style="padding:6px 8px">4.25 vs 0.5</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="facts" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <h3 style="margin:0;font-size:17px">External facts consulted (2)</h3>
+          <p style="margin:0;font-size:13px;color:#3a4350">Each fact is reviewed data from <code>config/facts.yaml</code> (FR-10). For <em>equivalent_given_facts</em> the verdict rests on them; for a <em>related</em> verdict they are the facts that were tried and did not close the gap.</p>
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead><tr><th style="text-align:left;padding:6px 8px;color:#4f5866;border-bottom:1px solid #d5dae0">Fact</th><th style="text-align:left;padding:6px 8px;color:#4f5866;border-bottom:1px solid #d5dae0">Value</th><th style="text-align:left;padding:6px 8px;color:#4f5866;border-bottom:1px solid #d5dae0">Source</th><th style="text-align:left;padding:6px 8px;color:#4f5866;border-bottom:1px solid #d5dae0">As of</th></tr></thead>
+            <tbody>
+              <tr><td style="padding:6px 8px;border-bottom:1px solid #eceff2"><code>fed_upper_bound</code></td><td style="padding:6px 8px;border-bottom:1px solid #eceff2">4.00</td><td style="padding:6px 8px;border-bottom:1px solid #eceff2;overflow-wrap:anywhere"><a href="https://www.federalreserve.gov/">https://www.federalreserve.gov/</a></td><td style="padding:6px 8px;border-bottom:1px solid #eceff2">2026-09-16</td></tr>
+              <tr><td style="padding:6px 8px;border-bottom:1px solid #eceff2"><code>fed_rate_step</code></td><td style="padding:6px 8px;border-bottom:1px solid #eceff2">0.25</td><td style="padding:6px 8px;border-bottom:1px solid #eceff2">FOMC convention</td><td style="padding:6px 8px;border-bottom:1px solid #eceff2">2026-09-16</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="basis" style="display:flex;flex-direction:column;gap:8px">
+          <h3 style="margin:0;font-size:17px">Basis risk: 0.38 <span style="color:#8a5a00">■ moderate</span></h3>
+          <p style="margin:0;font-size:13px;color:#3a4350">The residual chance that the two contracts settle differently even though they are matched, as a score in [0,1] built from documented components (FR-11). The router charges it as a per-contract penalty.</p>
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead><tr><th style="text-align:left;padding:6px 8px;color:#4f5866;border-bottom:1px solid #d5dae0">Component</th><th style="text-align:right;padding:6px 8px;color:#4f5866;border-bottom:1px solid #d5dae0">Score</th><th style="text-align:left;padding:6px 8px;color:#4f5866;border-bottom:1px solid #d5dae0">Detail</th><th style="text-align:left;padding:6px 8px;color:#4f5866;border-bottom:1px solid #d5dae0">Diff row</th></tr></thead>
+            <tbody>
+              <tr><td style="padding:6px 8px;border-bottom:1px solid #eceff2"><code>deadline_gap</code></td><td style="padding:6px 8px;border-bottom:1px solid #eceff2;text-align:right">0.21</td><td style="padding:6px 8px;border-bottom:1px solid #eceff2">9h54m between close times</td><td style="padding:6px 8px;border-bottom:1px solid #eceff2"><a href="#diff">deadline</a></td></tr>
+              <tr><td style="padding:6px 8px;border-bottom:1px solid #eceff2"><code>fact_dependency</code></td><td style="padding:6px 8px;border-bottom:1px solid #eceff2;text-align:right">0.17</td><td style="padding:6px 8px;border-bottom:1px solid #eceff2">verdict rests on 2 facts</td><td style="padding:6px 8px;border-bottom:1px solid #eceff2"><a href="#diff">threshold</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="why" style="display:flex;flex-direction:column;gap:10px">
+        <h2 style="margin:0;font-size:21px">Why: the explanation</h2>
+        <p style="margin:0;padding:4px 0 4px 16px;border-left:3px solid #c9cfd6;font-size:15px;line-height:1.6;color:#3a4350;max-width:820px">Both contracts settle on the Fed's October 28 decision. Kalshi asks whether the upper bound ends above 4.25%; Polymarket asks whether rates rise by 50 bps or more. With the upper bound at 4.00% (fed_upper_bound) and 25 bp steps (fed_rate_step), “above 4.25%” and “+50 bps or more” describe the same outcome.</p>
+        <details style="border:1px dashed #6b2fa0;border-radius:6px;padding:10px 14px;background:#faf6fd">
+          <summary style="cursor:pointer;font-size:14px;font-weight:600;color:#6b2fa0">◆ LLM verifier rationale · run <code>llm-0142</code> · 2026-10-08 11:04 EDT <span style="font-weight:500">(needs new data)</span></summary>
+          <p style="margin:8px 0 0;font-size:14px;color:#3a4350">Shown only when method is <code>rules+llm</code>: the verifier's kept or downgraded verdict, its rationale, and the run ID.</p>
+        </details>
+      </section>
+
+      <section id="touch" style="display:flex;flex-direction:column;gap:10px">
+        <h2 style="margin:0;font-size:21px">Current touch in round 49</h2>
+        <p style="margin:0;font-size:14px;color:#3a4350">Best YES bid and ask on each venue as fetched in this round. Mid is for display only; routing walks the book.</p>
+        <table style="width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums">
+          <thead><tr><th style="text-align:left;padding:8px 10px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Venue</th><th style="text-align:right;padding:8px 10px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Best bid</th><th style="text-align:right;padding:8px 10px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Best ask</th><th style="text-align:right;padding:8px 10px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Mid</th><th style="text-align:right;padding:8px 10px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Levels (bid/ask)</th><th style="text-align:left;padding:8px 10px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Fetched</th><th style="text-align:left;padding:8px 10px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Venue time</th><th style="text-align:left;padding:8px 10px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Quality</th></tr></thead>
+          <tbody>
+            <tr><td style="padding:10px;border-bottom:1px solid #eceff2;font-size:11px;font-weight:700;letter-spacing:.07em;color:#4f5866">KALSHI</td><td style="padding:10px;border-bottom:1px solid #eceff2;text-align:right">0.51</td><td style="padding:10px;border-bottom:1px solid #eceff2;text-align:right">0.52</td><td style="padding:10px;border-bottom:1px solid #eceff2;text-align:right">0.515</td><td style="padding:10px;border-bottom:1px solid #eceff2;text-align:right">14/11</td><td style="padding:10px;border-bottom:1px solid #eceff2"><div style="display:flex;flex-direction:column;align-items:flex-start;gap:3px">11:03:18 EDT<dc-import name="Eq Badge" k="fresh" text="Fresh · 38 s" hint-size="96px,22px"></dc-import></div></td><td style="padding:10px;border-bottom:1px solid #eceff2">11:03:17 EDT</td><td style="padding:10px;border-bottom:1px solid #eceff2;color:#1b6e3a;font-weight:600">ok</td></tr>
+            <tr><td style="padding:10px;border-bottom:1px solid #eceff2;font-size:11px;font-weight:700;letter-spacing:.07em;color:#4f5866">POLYMARKET</td><td style="padding:10px;border-bottom:1px solid #eceff2;text-align:right">0.535</td><td style="padding:10px;border-bottom:1px solid #eceff2;text-align:right">0.545</td><td style="padding:10px;border-bottom:1px solid #eceff2;text-align:right">0.540</td><td style="padding:10px;border-bottom:1px solid #eceff2;text-align:right">9/12</td><td style="padding:10px;border-bottom:1px solid #eceff2"><div style="display:flex;flex-direction:column;align-items:flex-start;gap:3px">11:03:19 EDT<dc-import name="Eq Badge" k="fresh" text="Fresh · 37 s" hint-size="96px,22px"></dc-import></div></td><td style="padding:10px;border-bottom:1px solid #eceff2">n/a</td><td style="padding:10px;border-bottom:1px solid #eceff2"><code style="padding:1px 6px;border-radius:4px;background:#fff3d6;color:#8a5a00">thin_book</code></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="history" style="display:flex;flex-direction:column;gap:10px">
+        <h2 style="margin:0;font-size:21px">Price history</h2>
+        <p style="margin:0;font-size:14px;color:#3a4350">24 touches across 12 rounds, from 2026-10-08 10:08 EDT to 11:03 EDT. Solid line: mid of the best YES bid and ask; thin lines: best bid and best ask. Prices are per $1 payout on a fixed 0 to 1 axis so both venues share one scale.</p>
+        <figure style="margin:0;padding:12px;border:1px solid #e1e5ea;border-radius:8px">
+          <div style="height:150px;border-radius:4px;background:repeating-linear-gradient(to bottom,#fff 0 36px,#eceff2 36px 37px);display:flex;align-items:center;justify-content:center;font-size:13px;color:#4f5866">Existing server-rendered SVG chart from history.html (unchanged)</div>
+          <figcaption><ul style="margin:10px 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:6px 20px;font-size:13px"><li><span aria-hidden="true" style="display:inline-block;width:14px;height:3px;background:#0172ad;vertical-align:middle"></span> KALSHI <code>KXFED-26OCT-T4.25</code>: 12 points, last mid 0.515</li><li><span aria-hidden="true" style="display:inline-block;width:14px;height:3px;background:#8a5a00;vertical-align:middle;border-top:1px dashed #fff"></span> POLYMARKET <code>0x8f3c…a21d</code>: 12 points, last mid 0.540</li></ul></figcaption>
+        </figure>
+        <details><summary style="cursor:pointer;font-size:14px;font-weight:600;color:#0172ad">Data points (24)</summary></details>
+      </section>
+
+      <section id="log" style="display:flex;flex-direction:column;gap:8px">
+        <h3 style="margin:0;font-size:17px">Decision-log entries for this pair</h3>
+        <table style="width:100%;border-collapse:collapse;font-size:14px">
+          <thead><tr><th style="text-align:left;padding:6px 8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0;width:170px">When</th><th style="text-align:left;padding:6px 8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0;width:110px">Kind</th><th style="text-align:left;padding:6px 8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Summary</th></tr></thead>
+          <tbody>
+            <tr><td style="padding:8px;border-bottom:1px solid #eceff2;font-size:13px">2026-10-08 11:05:12 EDT</td><td style="padding:8px;border-bottom:1px solid #eceff2"><dc-import name="Eq Badge" tone="ok" glyph="→" text="routing" hint-size="80px,22px"></dc-import></td><td style="padding:8px;border-bottom:1px solid #eceff2">Decision #57: buy 100 YES routed across 2 venues, 60 + 40 contracts, average 0.5362 all-in.</td></tr>
+            <tr><td style="padding:8px;border-bottom:1px solid #eceff2;font-size:13px">2026-10-08 11:03:40 EDT</td><td style="padding:8px;border-bottom:1px solid #eceff2"><dc-import name="Eq Badge" tone="info" glyph="≡" text="verdict" hint-size="80px,22px"></dc-import></td><td style="padding:8px;border-bottom:1px solid #eceff2">Pair #924 matched as equivalent_given_facts (0.93, rules).</td></tr>
+          </tbody>
+        </table>
+        <p style="margin:0;font-size:14px"><a href="/log">Full decision log</a></p>
+      </section>
+
+      <section id="route" style="display:flex;flex-direction:column;gap:12px;padding:22px;border-radius:8px;background:#f5f7f9;box-shadow:inset 0 0 0 1px #e1e5ea">
+        <h2 style="margin:0;font-size:21px">Route a hypothetical order</h2>
+        <p style="margin:0;font-size:14px;color:#3a4350">Simulates the order against the target's book and every routable partner in this round, then explains the choice. Nothing is sent to a venue.</p>
+        <p style="margin:0;font-size:13px;color:#3a4350">The form and result are shown in full in <a href="Route v2.dc.html">Route v2</a>.</p>
+      </section>
+    </main>
+
+    <aside style="position:sticky;top:24px;align-self:start;display:flex;flex-direction:column;gap:12px;font-size:14px">
+      <a href="#route" style="display:flex;align-items:center;justify-content:center;height:40px;border-radius:5px;background:#0172ad;color:#fff;font-weight:600;text-decoration:none">Route an order ↓</a>
+      <p style="margin:6px 0 0;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#4f5866">On this page</p>
+      <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px"><li><a href="#contracts">The two contracts</a></li><li><a href="#diff">Contract diff</a></li><li><a href="#facts">Facts and basis risk</a></li><li><a href="#why">Why</a></li><li><a href="#touch">Current touch</a></li><li><a href="#history">Price history</a></li><li><a href="#log">Decision log</a></li></ul>
+    </aside>
+    </div>
+  </div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+  <div style="font:600 12px ui-monospace,Menlo,monospace;color:#3a4350">Pair detail · mobile 390</div>
+  <div style="width:390px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.06);border-radius:4px;overflow:hidden">
+    <dc-import name="Eq Header v2" active="" banner="none" mobile="{{ true }}" hint-size="100%,170px"></dc-import>
+    <main style="padding:18px 16px 32px;display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;flex-direction:column;gap:4px"><nav aria-label="Breadcrumb" style="font-size:13px;color:#4f5866"><a href="/">Matches</a> / Pair #924</nav><h1 style="margin:0;font-size:26px">Pair #924</h1><p style="margin:0;font-size:15px;color:#5d6675">Are these two contracts the same bet, term by term, and what carried the verdict?</p></div>
+      <section style="display:flex;flex-direction:column;gap:12px;padding:14px;border-radius:8px;background:#f3f9f5;box-shadow:inset 0 0 0 1px #b9dcc4">
+        <dc-import name="Eq Badge" k="egf" size="l" hint-size="260px,30px"></dc-import>
+        <p style="margin:0;font-size:15px">Same bet once a documented external fact is applied.</p>
+        <dl style="margin:0;display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:14px"><div><dt style="font-size:12px;color:#4f5866">Confidence</dt><dd style="margin:0"><dc-import name="Eq Conf" v="0.93" hint-size="100px,40px"></dc-import></dd></div><div><dt style="font-size:12px;color:#4f5866">Basis risk</dt><dd style="margin:0"><strong>0.38</strong> <span style="color:#8a5a00;font-weight:600">■ moderate</span></dd></div><div><dt style="font-size:12px;color:#4f5866">Method</dt><dd style="margin:0;font-weight:600">rules</dd></div><div><dt style="font-size:12px;color:#4f5866">Routable</dt><dd style="margin:0;font-weight:600;color:#1b6e3a">✓ yes</dd></div><div style="grid-column:1 / -1"><dt style="font-size:12px;color:#4f5866">Round</dt><dd style="margin:0">49, as of 2026-10-08 11:03:20 EDT</dd></div></dl>
+      </section>
+      <a href="#route" style="display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:5px;background:#0172ad;color:#fff;font-weight:600;text-decoration:none">Route an order ↓</a>
+      <h2 style="margin:6px 0 0;font-size:19px">Contract diff</h2>
+      <p style="margin:0;font-size:13px;color:#3a4350">7 terms · 2 match · 3 differ, closed by facts · 1 unknown</p>
+      <sc-for list="{{ diffM }}" as="d" hint-placeholder-count="4">
+      <article style="display:flex;flex-direction:column;gap:6px;padding:12px;border:1px solid #e1e5ea;border-radius:6px;box-shadow:inset 3px 0 0 {{ d.edge }}">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><strong>{{ d.field }}</strong><dc-import name="Eq Badge" k="{{ d.k }}" hint-size="110px,22px"></dc-import></div>
+        <dl style="margin:0;display:grid;grid-template-columns:28px minmax(0,1fr);gap:2px 8px;font-size:13px"><dt style="color:#4f5866">A</dt><dd style="margin:0;font-family:ui-monospace,Menlo,monospace;overflow-wrap:anywhere">{{ d.a }}</dd><dt style="color:#4f5866">B</dt><dd style="margin:0;font-family:ui-monospace,Menlo,monospace;overflow-wrap:anywhere">{{ d.b }}</dd></dl>
+        <span style="font-size:13px;color:#3a4350">{{ d.note }}</span>
+      </article>
+      </sc-for>
+      <p style="margin:0;font-size:13px;color:#4f5866">The rest of the page keeps the desktop order (vetoes, facts, basis, why, touch, history, log, route), one column, with tables stacked into cards. The rail is hidden.</p>
+    </main>
+  </div>
+</div>
+
+<aside style="width:340px;display:flex;flex-direction:column;gap:16px;font-size:14px;line-height:1.5;color:#3a4350">
+  <h2 style="margin:0;font-size:18px;color:#1b2230">Pair detail: build notes</h2>
+  <p style="margin:0">Templates: <code>pair.html</code> and <code>history.html</code>. The page is built around the terms diff, which is now the third block.</p>
+  <div><strong style="color:#1b2230">Components</strong><ul style="margin:4px 0 0;padding-left:18px"><li>verdict panel (<code>.verdict</code>) with the large badge</li><li>rule-layer tabs (<code>details[name]</code> group, no JS)</li><li>terms diff (<code>table.terms</code>): <code>tbody</code> per rule part, rows edged red for differs, blue for closed, gray for unknown</li><li>word-level <code>&lt;del&gt;</code>/<code>&lt;ins&gt;</code></li><li>basis-risk back-links</li><li>freshness badge on each quote</li></ul></div>
+  <div><strong style="color:#1b2230">VM fields (data already stored)</strong><ul style="margin:4px 0 0;padding-left:18px"><li><code>DiffRow.Part</code>: maps each field to a rule part (subject and metric → criteria, threshold → strike, comparator → direction, deadline → timeframe, source → sources, edge rules → edge cases)</li><li><code>DiffRow.AHTML</code> and <code>BHTML</code>: word diff rendered server-side</li><li><code>BasisComponent.Row</code>: the diff field each component comes from</li><li>diff counts line</li><li>quote age</li></ul></div>
+  <div style="padding:12px;border-radius:6px;background:#f5eefb;box-shadow:inset 0 0 0 1px #6b2fa0"><strong style="color:#6b2fa0">◆ Needs new data</strong><ul style="margin:4px 0 0;padding-left:18px"><li>Contribution column (prior, signed weight per row, total). The matcher stores no per-term weights.</li><li>Summary and Clarifications layers. Only the title and the full rules are stored.</li><li>LLM verifier rationale and run ID</li></ul><p style="margin:6px 0 0">Until these exist, hide the Contribution column and those two tabs.</p></div>
+</aside>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const E = { match:'#1b6e3a', differs:'#b3261e', closed:'#1a56a8', missing:'#8e96a3' };
+    const row = (part, head, field, a, b, k, note, c, basis) => {
+      const v = parseFloat(c), w = Math.min(40, Math.abs(v) * 10);
+      return { part, head, field, a, b, k, note, basis, c: (v > 0 ? '+' : '') + c, edge: E[k], fs: k === 'missing' ? 'italic' : 'normal', cl: (v >= 0 ? 40 : 40 - w) + 'px', cw: w + 'px', cc: v >= 0 ? '#1b6e3a' : '#b3261e' };
+    };
+    const diff = [
+      row('Resolution criteria', true, 'subject', 'fed_funds_rate', 'fed_funds_rate', 'match', 'match', '2.6'),
+      row('Resolution criteria', false, 'metric', 'rate_upper_bound', 'rate_change', 'closed', 'differs; veto metric_mismatch, closed by fact fed_upper_bound = 4.00', '0.4'),
+      row('Strike / threshold', true, 'threshold', '4.25', '0.5', 'closed', 'differs; veto threshold_mismatch, closed by facts', '0.6', 'fact_dependency 0.17'),
+      row('Direction', true, 'comparator', 'gt', 'gte', 'closed', 'differs; veto comparator_mismatch, closed by fact fed_rate_step = 0.25', '0.3'),
+      row('Timeframe / cutoff', true, 'deadline', '2026-10-28 18:05 UTC', '2026-10-29 03:59 UTC', 'match', 'match: 9h54m apart, within 24 h', '0.9', 'deadline_gap 0.21'),
+      row('Sources', true, 'source', 'federalreserve_gov', 'federalreserve_gov', 'match', 'match', '1.1'),
+      row('Qualifying / edge cases', true, 'edge rules', 'unknown', 'unknown', 'missing', 'not compared', '-0.6')
+    ];
+    return {
+      diff,
+      diffM: [diff[1], diff[2], diff[4], diff[6]],
+      contracts: [
+        { side:'A', venue:'KALSHI', title:"Will the upper bound of the federal funds rate be above 4.25% following the Fed's Oct 28, 2026 meeting? — Above 4.25%", id:'KXFED-26OCT-T4.25', market:'KXFED-26OCT', event:'KXFED-26OCT', meta:'Economics · open · closes 2026-10-28 14:05 EDT', rules:'If the upper bound of the federal funds target range is above 4.25% following the FOMC meeting concluding October 28, 2026, then the market resolves to Yes. Source: federalreserve.gov.', clar:'', flag:'title_suffix' },
+        { side:'B', venue:'POLYMARKET', title:'Will the Fed increase interest rates by 50+ bps after the October 2026 meeting?', id:'0x8f3c51e0b7d24f6a9c13e2a8d47b6f0e5c9a1b2d3e4f5a6b7c8d9e0f1a2ba21d', market:'fed-oct-2026-50bps', event:'fed-decision-october-2026', meta:'Economics · open · closes 2026-10-28 23:59 EDT', rules:'This market resolves to Yes if the Federal Reserve raises the target federal funds rate by 50 basis points or more at its October 2026 meeting, per the FOMC statement.', clar:' (1)', flag:'no_event_close' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

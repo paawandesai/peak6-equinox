@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><style>body{margin:0;background:#e6e9ed;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue","Noto Sans",sans-serif;color:#1b2230;-webkit-font-smoothing:antialiased}a{color:#0172ad}a:hover{color:#01527d}</style></helmet>
+<section style="padding:48px;display:flex;flex-direction:column;gap:32px;max-width:1360px">
+
+<div style="background:#fff;border-radius:8px;padding:32px 36px;display:flex;flex-direction:column;gap:20px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+  <div style="display:flex;flex-direction:column;gap:6px">
+    <div style="font:600 12px ui-monospace,Menlo,monospace;color:#5d6675">UI-09 · Equinox redesign</div>
+    <h1 style="margin:0;font-size:32px;font-weight:700;letter-spacing:-0.01em">Equinox design system and page index</h1>
+    <p style="margin:0;max-width:90ch;font-size:16px;line-height:1.55;color:#3a4350">This layer goes over Pico.css. It uses Pico's system font stack and adds no new fonts, CDN assets or JS. Every value below becomes a custom property or class in <code style="font-family:ui-monospace,Menlo,monospace;font-size:14px;background:#f2f4f6;padding:1px 5px;border-radius:3px">internal/web/static/app.css</code>, because the CSP forbids inline styles. Each state is carried by a word first; colour is the second channel.</p>
+  </div>
+  <nav aria-label="Pages" style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px">
+    <a href="Matches.dc.html" style="display:flex;flex-direction:column;gap:2px;padding:12px 14px;border:1px solid #e1e5ea;border-radius:6px;text-decoration:none"><strong>Matches</strong><code style="font:12px ui-monospace,Menlo,monospace;color:#5d6675">matches.html</code></a>
+    <a href="Pair.dc.html" style="display:flex;flex-direction:column;gap:2px;padding:12px 14px;border:1px solid #e1e5ea;border-radius:6px;text-decoration:none"><strong>Pair detail + history</strong><code style="font:12px ui-monospace,Menlo,monospace;color:#5d6675">pair.html, history.html</code></a>
+    <a href="Near Misses.dc.html" style="display:flex;flex-direction:column;gap:2px;padding:12px 14px;border:1px solid #e1e5ea;border-radius:6px;text-decoration:none"><strong>Near misses</strong><code style="font:12px ui-monospace,Menlo,monospace;color:#5d6675">near_misses.html</code></a>
+    <a href="Eval.dc.html" style="display:flex;flex-direction:column;gap:2px;padding:12px 14px;border:1px solid #e1e5ea;border-radius:6px;text-decoration:none"><strong>Eval</strong><code style="font:12px ui-monospace,Menlo,monospace;color:#5d6675">eval.html</code></a>
+    <a href="Route.dc.html" style="display:flex;flex-direction:column;gap:2px;padding:12px 14px;border:1px solid #e1e5ea;border-radius:6px;text-decoration:none"><strong>Route + result states</strong><code style="font:12px ui-monospace,Menlo,monospace;color:#5d6675">route.html, route_result.html</code></a>
+    <a href="Decision.dc.html" style="display:flex;flex-direction:column;gap:2px;padding:12px 14px;border:1px solid #e1e5ea;border-radius:6px;text-decoration:none"><strong>Decision trace</strong><code style="font:12px ui-monospace,Menlo,monospace;color:#5d6675">decision.html</code></a>
+    <a href="Log.dc.html" style="display:flex;flex-direction:column;gap:2px;padding:12px 14px;border:1px solid #e1e5ea;border-radius:6px;text-decoration:none"><strong>Decision log</strong><code style="font:12px ui-monospace,Menlo,monospace;color:#5d6675">log.html</code></a>
+    <a href="Admin.dc.html" style="display:flex;flex-direction:column;gap:2px;padding:12px 14px;border:1px solid #e1e5ea;border-radius:6px;text-decoration:none"><strong>Admin</strong><code style="font:12px ui-monospace,Menlo,monospace;color:#5d6675">admin.html</code></a>
+    <a href="Error.dc.html" style="display:flex;flex-direction:column;gap:2px;padding:12px 14px;border:1px solid #e1e5ea;border-radius:6px;text-decoration:none"><strong>Error</strong><code style="font:12px ui-monospace,Menlo,monospace;color:#5d6675">error.html</code></a>
+    <a href="Eq Header.dc.html" style="display:flex;flex-direction:column;gap:2px;padding:12px 14px;border:1px solid #e1e5ea;border-radius:6px;text-decoration:none"><strong>Header + banners</strong><code style="font:12px ui-monospace,Menlo,monospace;color:#5d6675">layout.html</code></a>
+  </nav>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:32px">
+  <div style="background:#fff;border-radius:8px;padding:28px 32px;display:flex;flex-direction:column;gap:16px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+    <h2 style="margin:0;font-size:20px">Colour: semantic (light)</h2>
+    <p style="margin:0;font-size:14px;color:#5d6675">Unchanged from design.md §5. Ratios are text on white / text on its own tint / white on solid.</p>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+      <div style="display:flex;flex-direction:column;gap:6px"><div style="height:56px;border-radius:6px;background:#1b6e3a"></div><div style="height:24px;border-radius:4px;background:#e6f4ea;color:#1b6e3a;font-size:13px;font-weight:600;padding:2px 8px">--eq-ok</div><code style="font:12px ui-monospace,Menlo,monospace">#1b6e3a / #e6f4ea</code><span style="font-size:12px;color:#5d6675">6.4 · 5.7 · 6.4 : 1</span></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><div style="height:56px;border-radius:6px;background:#1a56a8"></div><div style="height:24px;border-radius:4px;background:#e8f0fb;color:#1a56a8;font-size:13px;font-weight:600;padding:2px 8px">--eq-info</div><code style="font:12px ui-monospace,Menlo,monospace">#1a56a8 / #e8f0fb</code><span style="font-size:12px;color:#5d6675">7.0 · 6.2 · 7.0 : 1</span></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><div style="height:56px;border-radius:6px;background:#8a5a00"></div><div style="height:24px;border-radius:4px;background:#fff3d6;color:#8a5a00;font-size:13px;font-weight:600;padding:2px 8px">--eq-warn</div><code style="font:12px ui-monospace,Menlo,monospace">#8a5a00 / #fff3d6</code><span style="font-size:12px;color:#5d6675">5.9 · 5.4 · 5.9 : 1</span></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><div style="height:56px;border-radius:6px;background:#b3261e"></div><div style="height:24px;border-radius:4px;background:#fbe9e7;color:#b3261e;font-size:13px;font-weight:600;padding:2px 8px">--eq-danger</div><code style="font:12px ui-monospace,Menlo,monospace">#b3261e / #fbe9e7</code><span style="font-size:12px;color:#5d6675">6.5 · 5.7 · 6.5 : 1</span></div>
+    </div>
+    <h3 style="margin:8px 0 0;font-size:16px">Neutrals (new; mapped onto Pico vars where one exists)</h3>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;font-size:12px">
+      <div style="display:flex;gap:8px;align-items:center"><span style="width:28px;height:28px;border-radius:4px;background:#1b2230"></span><span><code style="font-family:ui-monospace,Menlo,monospace">--eq-ink</code><br>#1b2230</span></div>
+      <div style="display:flex;gap:8px;align-items:center"><span style="width:28px;height:28px;border-radius:4px;background:#3a4350"></span><span><code style="font-family:ui-monospace,Menlo,monospace">--eq-ink-2</code><br>#3a4350</span></div>
+      <div style="display:flex;gap:8px;align-items:center"><span style="width:28px;height:28px;border-radius:4px;background:#5d6675"></span><span><code style="font-family:ui-monospace,Menlo,monospace">--eq-muted</code><br>#5d6675 · 5.9:1</span></div>
+      <div style="display:flex;gap:8px;align-items:center"><span style="width:28px;height:28px;border-radius:4px;background:#0172ad"></span><span><code style="font-family:ui-monospace,Menlo,monospace">--pico-primary</code><br>#0172ad · 5.4:1</span></div>
+      <div style="display:flex;gap:8px;align-items:center"><span style="width:28px;height:28px;border-radius:4px;background:#c9cfd6"></span><span><code style="font-family:ui-monospace,Menlo,monospace">--eq-control</code><br>#c9cfd6</span></div>
+      <div style="display:flex;gap:8px;align-items:center"><span style="width:28px;height:28px;border-radius:4px;background:#d5dae0"></span><span><code style="font-family:ui-monospace,Menlo,monospace">--eq-rule-strong</code><br>#d5dae0</span></div>
+      <div style="display:flex;gap:8px;align-items:center"><span style="width:28px;height:28px;border-radius:4px;background:#e1e5ea"></span><span><code style="font-family:ui-monospace,Menlo,monospace">--eq-border</code><br>#e1e5ea</span></div>
+      <div style="display:flex;gap:8px;align-items:center"><span style="width:28px;height:28px;border-radius:4px;background:#f5f7f9;box-shadow:inset 0 0 0 1px #e1e5ea"></span><span><code style="font-family:ui-monospace,Menlo,monospace">--eq-surface</code><br>#f5f7f9</span></div>
+    </div>
+  </div>
+  <div style="background:#13171f;color:#e6e9ee;border-radius:8px;padding:28px 32px;display:flex;flex-direction:column;gap:16px">
+    <h2 style="margin:0;font-size:20px">Colour: semantic (dark)</h2>
+    <p style="margin:0;font-size:14px;color:#9aa3b0">Pico's dark background #13171f. Solid chips flip to dark text on the bright colour.</p>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+      <div style="display:flex;flex-direction:column;gap:6px"><div style="height:56px;border-radius:6px;background:#6fd08c"></div><div style="height:24px;border-radius:4px;background:#12301c;color:#6fd08c;font-size:13px;font-weight:600;padding:2px 8px">--eq-ok</div><code style="font:12px ui-monospace,Menlo,monospace">#6fd08c / #12301c</code><span style="font-size:12px;color:#9aa3b0">≈ 9.9 : 1</span></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><div style="height:56px;border-radius:6px;background:#8ab4f8"></div><div style="height:24px;border-radius:4px;background:#142338;color:#8ab4f8;font-size:13px;font-weight:600;padding:2px 8px">--eq-info</div><code style="font:12px ui-monospace,Menlo,monospace">#8ab4f8 / #142338</code><span style="font-size:12px;color:#9aa3b0">≈ 8.6 : 1</span></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><div style="height:56px;border-radius:6px;background:#f2c14e"></div><div style="height:24px;border-radius:4px;background:#3a2c05;color:#f2c14e;font-size:13px;font-weight:600;padding:2px 8px">--eq-warn</div><code style="font:12px ui-monospace,Menlo,monospace">#f2c14e / #3a2c05</code><span style="font-size:12px;color:#9aa3b0">≈ 10.6 : 1</span></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><div style="height:56px;border-radius:6px;background:#ff8a80"></div><div style="height:24px;border-radius:4px;background:#3b1512;color:#ff8a80;font-size:13px;font-weight:600;padding:2px 8px">--eq-danger</div><code style="font:12px ui-monospace,Menlo,monospace">#ff8a80 / #3b1512</code><span style="font-size:12px;color:#9aa3b0">≈ 7.7 : 1</span></div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">
+      <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#6fd08c;color:#13171f">equivalent</span>
+      <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#12301c;color:#6fd08c;box-shadow:inset 0 0 0 1px #6fd08c">equivalent_given_facts</span>
+      <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#12301c;color:#6fd08c">complement</span>
+      <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#142338;color:#8ab4f8">implies</span>
+      <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#3a2c05;color:#f2c14e">related</span>
+      <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;color:#9aa3b0;box-shadow:inset 0 0 0 1px #3a424f">unrelated</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;font-size:12px;color:#c3c9d2;margin-top:8px">
+      <span>ink #e6e9ee</span><span>ink-2 #c3c9d2</span><span>muted #9aa3b0</span><span>surface #1a1f29</span><span>border #2a313c</span><span>rule-strong #353d4a</span><span>control #3a424f</span><span>primary #01aaff</span>
+    </div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:32px">
+  <div style="background:#fff;border-radius:8px;padding:28px 32px;display:flex;flex-direction:column;gap:14px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+    <h2 style="margin:0;font-size:20px">Type</h2>
+    <p style="margin:0;font-size:14px;color:#5d6675">Pico's system stack. Monospace is only for IDs, codes and commands. Every number uses <code style="font-family:ui-monospace,Menlo,monospace">tabular-nums</code>.</p>
+    <div style="display:grid;grid-template-columns:150px 1fr;gap:12px 16px;align-items:baseline">
+      <code style="font:12px ui-monospace,Menlo,monospace;color:#5d6675">--eq-text-xl 1.875rem</code><span style="font-size:30px;font-weight:700;letter-spacing:-0.01em">Pair #924</span>
+      <code style="font:12px ui-monospace,Menlo,monospace;color:#5d6675">lede 1.0625rem</code><span style="font-size:17px;color:#5d6675">Which contracts are the same bet?</span>
+      <code style="font:12px ui-monospace,Menlo,monospace;color:#5d6675">--eq-text-l 1.3125rem</code><span style="font-size:21px;font-weight:700">Contract diff</span>
+      <code style="font:12px ui-monospace,Menlo,monospace;color:#5d6675">h3 1.0625rem</code><span style="font-size:17px;font-weight:700">External facts consulted (3)</span>
+      <code style="font:12px ui-monospace,Menlo,monospace;color:#5d6675">--eq-text-m 0.9375rem</code><span style="font-size:15px">Body and table cells, 1.45 line height</span>
+      <code style="font:12px ui-monospace,Menlo,monospace;color:#5d6675">--eq-text-s 0.8125rem</code><span style="font-size:13px;color:#5d6675">Labels, th, chips, meta</span>
+      <code style="font:12px ui-monospace,Menlo,monospace;color:#5d6675">.venue 0.6875rem</code><span style="font-size:11px;font-weight:700;letter-spacing:.07em">KALSHI · POLYMARKET</span>
+      <code style="font:12px ui-monospace,Menlo,monospace;color:#5d6675">code 0.78rem</code><code style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:#f2f4f6;padding:1px 5px;border-radius:3px">kalshi:KXFED-26OCT-T4.25</code>
+    </div>
+  </div>
+  <div style="background:#fff;border-radius:8px;padding:28px 32px;display:flex;flex-direction:column;gap:14px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+    <h2 style="margin:0;font-size:20px">Spacing, radius, layout</h2>
+    <div style="display:flex;align-items:flex-end;gap:18px">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:4px;height:4px;background:#0172ad"></span><code style="font:11px ui-monospace,Menlo,monospace">space-1 4</code></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:8px;height:8px;background:#0172ad"></span><code style="font:11px ui-monospace,Menlo,monospace">space-2 8</code></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:16px;height:16px;background:#0172ad"></span><code style="font:11px ui-monospace,Menlo,monospace">space-3 16</code></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:24px;height:24px;background:#0172ad"></span><code style="font:11px ui-monospace,Menlo,monospace">space-35 24 (new)</code></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:32px;height:32px;background:#0172ad"></span><code style="font:11px ui-monospace,Menlo,monospace">space-4 32</code></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:48px;height:48px;background:#0172ad"></span><code style="font:11px ui-monospace,Menlo,monospace">space-5 48 (new)</code></div>
+    </div>
+    <ul style="margin:0;padding-left:18px;font-size:14px;line-height:1.6;color:#3a4350">
+      <li>Radius: 4 for chips and code, 6 for panels and cards, 8 for page-level blocks.</li>
+      <li>Container: Pico's <code style="font-family:ui-monospace,Menlo,monospace">.container</code> (1200 at 1280). Page gutter 40 desktop, 16 mobile.</li>
+      <li>Section rhythm: 36–40 between sections, 12–14 from heading to content.</li>
+      <li>Table cell padding <code style="font-family:ui-monospace,Menlo,monospace">--eq-table-pad</code> 0.75rem × 0.625rem. Row rule #eceff2, header rule #d5dae0.</li>
+      <li>Breakpoints: 1024 (pair rail and facts/basis grid collapse), 640 (tables stack into cards).</li>
+      <li>Hit targets at 640 and below: 44px minimum for links in nav, summaries and buttons.</li>
+    </ul>
+  </div>
+</div>
+
+<div style="background:#fff;border-radius:8px;padding:28px 32px;display:flex;flex-direction:column;gap:22px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+  <h2 style="margin:0;font-size:20px">Status badges</h2>
+  <div style="display:grid;grid-template-columns:220px 1fr;gap:18px 24px;align-items:start;font-size:14px">
+    <div><strong>Relationship type</strong><div style="color:#5d6675;font-size:13px;margin-top:2px"><code style="font-family:ui-monospace,Menlo,monospace">.chip.type-{type}</code></div></div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+        <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#1b6e3a;color:#fff">equivalent</span>
+        <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e6f4ea;color:#1b6e3a;box-shadow:inset 0 0 0 1px #1b6e3a">equivalent_given_facts</span>
+        <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e6f4ea;color:#1b6e3a">complement</span>
+        <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e8f0fb;color:#1a56a8">implies</span>
+        <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#fff3d6;color:#8a5a00">related</span>
+        <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;color:#5d6675;box-shadow:inset 0 0 0 1px #c9cfd6">unrelated</span>
+      </div>
+      <p style="margin:0;color:#3a4350;line-height:1.5">Fill strength follows certainty. <strong>equivalent</strong> is solid. <strong>equivalent given facts</strong> is a tint with a full-strength outline: it is routable, and the outline says something extra carries it. complement is a plain tint. implies is info, related is warn, unrelated is outline only. The chip text is always the type name verbatim.</p>
+    </div>
+
+    <div><strong>Confidence</strong><div style="color:#5d6675;font-size:13px;margin-top:2px">number + bucket word + <code style="font-family:ui-monospace,Menlo,monospace">&lt;meter&gt;</code></div></div>
+    <div style="display:flex;flex-wrap:wrap;gap:36px;align-items:flex-start">
+      <span><span style="font-weight:600">0.93</span> <span style="color:#1b6e3a;font-weight:600">high</span><span aria-hidden="true" style="position:relative;display:block;width:76px;height:4px;margin-top:6px;background:#e1e5ea;border-radius:2px"><span style="position:absolute;left:0;top:0;bottom:0;width:93%;background:#1b6e3a;border-radius:2px"></span><span style="position:absolute;left:90%;top:-2px;width:2px;height:8px;background:#1b2230"></span></span><span style="display:block;font-size:12px;color:#5d6675;margin-top:4px">≥ 0.90 (route floor)</span></span>
+      <span><span style="font-weight:600">0.78</span> <span style="color:#8a5a00;font-weight:600">medium</span><span aria-hidden="true" style="position:relative;display:block;width:76px;height:4px;margin-top:6px;background:#e1e5ea;border-radius:2px"><span style="position:absolute;left:0;top:0;bottom:0;width:78%;background:#8a5a00;border-radius:2px"></span><span style="position:absolute;left:90%;top:-2px;width:2px;height:8px;background:#1b2230"></span></span><span style="display:block;font-size:12px;color:#5d6675;margin-top:4px">0.70 – 0.89</span></span>
+      <span><span style="font-weight:600">0.52</span> <span style="color:#5d6675;font-weight:600">low</span><span aria-hidden="true" style="position:relative;display:block;width:76px;height:4px;margin-top:6px;background:#e1e5ea;border-radius:2px"><span style="position:absolute;left:0;top:0;bottom:0;width:52%;background:#5d6675;border-radius:2px"></span><span style="position:absolute;left:90%;top:-2px;width:2px;height:8px;background:#1b2230"></span></span><span style="display:block;font-size:12px;color:#5d6675;margin-top:4px">&lt; 0.70</span></span>
+    </div>
+
+    <div><strong>Basis risk</strong><div style="color:#5d6675;font-size:13px;margin-top:2px">score + word</div></div>
+    <div style="display:flex;flex-wrap:wrap;gap:28px"><span><strong>0.12</strong> <span style="color:#1b6e3a;font-weight:600">low</span></span><span><strong>0.38</strong> <span style="color:#8a5a00;font-weight:600">moderate</span></span><span><strong>0.61</strong> <span style="color:#b3261e;font-weight:600">high</span></span><span style="color:#5d6675;font-style:italic">not scored</span></div>
+
+    <div><strong>Diff status</strong></div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+      <span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e6f4ea;color:#1b6e3a">match</span>
+      <span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#fbe9e7;color:#b3261e">differ</span>
+      <span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;font-style:italic;line-height:20px;color:#5d6675;box-shadow:inset 0 0 0 1px #c9cfd6">unknown</span>
+      <span style="font-size:13px;color:#1a56a8">veto <code style="font-family:ui-monospace,Menlo,monospace">metric_mismatch</code>, closed by fact <code style="font-family:ui-monospace,Menlo,monospace">fed_upper_bound</code> = 4.00</span>
+      <span style="font-size:13px;color:#b3261e">veto <code style="font-family:ui-monospace,Menlo,monospace">threshold_mismatch</code> stands</span>
+      <span style="display:inline-block;padding:1px 8px;border-radius:4px;font:600 12.5px/20px ui-monospace,Menlo,monospace;background:#fbe9e7;color:#b3261e">deadline_mismatch</span>
+    </div>
+
+    <div><strong>Staleness / as-of</strong><div style="color:#5d6675;font-size:13px;margin-top:2px"><code style="font-family:ui-monospace,Menlo,monospace">.asof</code> dot + text, banner for stale and demo</div></div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <p style="margin:0;display:flex;align-items:center;gap:8px;font-size:13px"><span style="width:8px;height:8px;border-radius:50%;background:#1b6e3a"></span>Data as of <strong>2026-10-08 10:58:02 EDT</strong> (round 44)<span style="color:#5d6675">: latest round, fresh</span></p>
+      <p style="margin:0;display:flex;align-items:center;gap:8px;font-size:13px"><span style="width:8px;height:8px;border-radius:50%;background:#1a56a8"></span>Data as of <strong>2026-10-06 21:15:56 EDT</strong> (round 3, pinned)<span style="color:#5d6675">: demo mode</span></p>
+      <p style="margin:0;display:flex;align-items:center;gap:8px;font-size:13px"><span style="width:8px;height:8px;border-radius:50%;background:#8a5a00"></span>Data as of <strong>2026-10-08 10:21:04 EDT</strong> (round 41)<span style="color:#5d6675">: stale, banner below</span></p>
+      <div role="alert" style="background:#fff3d6;color:#8a5a00;border:1px solid #8a5a00;border-radius:4px;font-size:14px;font-weight:600;padding:10px 14px">Data is 42 minutes old.</div>
+      <div role="status" style="background:#e8f0fb;color:#1a56a8;border:1px solid #1a56a8;border-radius:4px;font-size:14px;font-weight:600;padding:10px 14px">Demo mode: data as of 2026-10-06 21:15:56 EDT (round 3). <a href="/admin" style="color:#1a56a8">Unpin</a></div>
+      <div role="alert" style="background:#fff3d6;color:#8a5a00;border:1px solid #8a5a00;border-radius:4px;font-size:14px;font-weight:600;padding:10px 14px">No data available yet. Run ingest from <a href="/admin" style="color:#8a5a00">/admin</a>.</div>
+      <div role="alert" style="background:#fbe9e7;color:#b3261e;border:1px solid #b3261e;border-radius:4px;font-size:14px;font-weight:600;padding:10px 14px">ALERT: database size is above the 8.0 GB growth threshold (AB-15).</div>
+    </div>
+
+    <div><strong>Routing outcome</strong></div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px"><span style="display:inline-block;padding:3px 10px;border-radius:4px;font-size:14px;font-weight:700;line-height:20px;background:#1b6e3a;color:#fff">Routed</span><span style="display:inline-block;padding:3px 10px;border-radius:4px;font-size:14px;font-weight:700;line-height:20px;background:#1b6e3a;color:#fff">Routed across 2 venues</span><span style="display:inline-block;padding:3px 10px;border-radius:4px;font-size:14px;font-weight:700;line-height:20px;background:#8a5a00;color:#fff">Partially routed</span><span style="display:inline-block;padding:3px 10px;border-radius:4px;font-size:14px;font-weight:700;line-height:20px;background:#b3261e;color:#fff">Not routed</span><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e8f0fb;color:#1a56a8">complement</span></div>
+
+    <div><strong>Exclusion reasons, warnings</strong></div>
+    <div style="display:flex;flex-direction:column;gap:6px"><span><strong style="color:#b3261e">stale</strong>: fetched 140 s before the snapshot</span><span><strong style="color:#b3261e">skew</strong>: 31 s behind kalshi</span><span><strong style="color:#b3261e">no book</strong></span><span><strong style="color:#b3261e">too shallow</strong>: 12 contracts available</span><span><strong style="color:#b3261e">not routable</strong>: related pairs are never routed</span><span><strong style="color:#b3261e">low confidence</strong>: 0.87 is below the 0.9 floor</span><span style="padding:6px 10px;border-radius:4px;background:#fff3d6;align-self:flex-start">skew: 7 s behind kalshi · approximate fees</span></div>
+
+    <div><strong>Eval verdict</strong></div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:700;line-height:20px;background:#1b6e3a;color:#fff">meets the 0.95 target</span><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:700;line-height:20px;background:#b3261e;color:#fff">below the 0.95 target</span><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;color:#5d6675;box-shadow:inset 0 0 0 1px #c9cfd6">undefined: no equivalent predictions</span></div>
+
+    <div><strong>LLM verifier, collector, rounds</strong></div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;color:#5d6675;box-shadow:inset 0 0 0 1px #c9cfd6">disabled: ANTHROPIC_API_KEY not set</span><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e6f4ea;color:#1b6e3a">ready: 12 of 200 calls used today</span><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#fbe9e7;color:#b3261e">cap reached: 200 of 200</span><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e8f0fb;color:#1a56a8">last run: 14 verified, 2 downgraded, 9 cache hits</span><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e6f4ea;color:#1b6e3a">meets target</span><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#fbe9e7;color:#b3261e">below target</span><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e8f0fb;color:#1a56a8">round 6 running</span><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#fff3d6;color:#8a5a00">partial</span></div>
+  </div>
+</div>
+
+<div style="background:#fff;border-radius:8px;padding:28px 32px;display:flex;flex-direction:column;gap:22px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+  <h2 style="margin:0;font-size:20px">Components</h2>
+  <div style="display:grid;grid-template-columns:220px 1fr;gap:22px 24px;align-items:start;font-size:14px">
+    <div><strong>.strip</strong><div style="color:#5d6675;font-size:13px">dl of stat cells; one cell may carry a tint (<code style="font-family:ui-monospace,Menlo,monospace">.strip-key</code>)</div></div>
+    <dl style="margin:0;display:grid;grid-template-columns:repeat(4,auto);justify-content:start;border:1px solid #e1e5ea;border-radius:6px;background:#f5f7f9">
+      <div style="padding:12px 20px"><dt style="font-size:13px;color:#5d6675">Round</dt><dd style="margin:0;font-size:18px;font-weight:600">3</dd></div>
+      <div style="padding:12px 20px;border-left:1px solid #e1e5ea"><dt style="font-size:13px;color:#5d6675">Pairs kept</dt><dd style="margin:0;font-size:18px;font-weight:600">878</dd></div>
+      <div style="padding:12px 20px;border-left:1px solid #e1e5ea;background:#e6f4ea"><dt style="font-size:13px;color:#1b6e3a;font-weight:600">Routable</dt><dd style="margin:0;font-size:18px;font-weight:600"><a href="#" style="color:#1b6e3a">2 pairs ↓</a></dd></div>
+      <div style="padding:12px 20px;border-left:1px solid #e1e5ea"><dt style="font-size:13px;color:#5d6675">Showing</dt><dd style="margin:0;font-size:18px;font-weight:600;color:#8a5a00">first 1000</dd></div>
+    </dl>
+
+    <div><strong>.verdict</strong><div style="color:#5d6675;font-size:13px">tinted block: chip + sentence + strip; used for pair verdict, route outcome, eval headline</div></div>
+    <div style="border:1px solid #1b6e3a;border-radius:6px;overflow:hidden;max-width:640px"><div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:#e6f4ea"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#fff;color:#1b6e3a;box-shadow:inset 0 0 0 1px #1b6e3a">equivalent_given_facts</span><span style="font-weight:600">Same bet once a documented external fact is applied.</span></div><div style="padding:10px 16px;font-size:13px;color:#3a4350">Confidence 0.93 high · Method rules · Basis risk 0.38 moderate · Routable yes</div></div>
+
+    <div><strong>Buttons</strong><div style="color:#5d6675;font-size:13px">Pico buttons; <code style="font-family:ui-monospace,Menlo,monospace">.secondary.outline</code> for secondary</div></div>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center"><button style="height:40px;padding:0 16px;border:0;border-radius:5px;background:#0172ad;color:#fff;font-size:14px;font-weight:600">Route it</button><a href="#" style="display:inline-flex;align-items:center;height:32px;padding:0 14px;border-radius:5px;background:#0172ad;color:#fff;font-size:14px;font-weight:600;text-decoration:none">Route →</a><button style="height:40px;padding:0 16px;border:1px solid #0172ad;border-radius:5px;background:#fff;color:#0172ad;font-size:14px;font-weight:600">Unpin round</button><button disabled="" style="height:40px;padding:0 16px;border:0;border-radius:5px;background:#c9cfd6;color:#3a4350;font-size:14px;font-weight:600">Run one fetch round now</button><button style="height:40px;padding:0 16px;border:0;border-radius:5px;background:#0172ad;color:#fff;font-size:14px;font-weight:600;outline:2px solid #0172ad;outline-offset:2px">Focus-visible</button></div>
+
+    <div><strong>table.data / .stack</strong><div style="color:#5d6675;font-size:13px">desktop rows; ≤ 640 px each row becomes a card, cells show <code style="font-family:ui-monospace,Menlo,monospace">data-label</code></div></div>
+    <div style="display:grid;grid-template-columns:1fr 300px;gap:24px;align-items:start">
+      <table style="width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums"><thead><tr><th style="text-align:left;padding:8px 10px;font-size:13px;color:#5d6675;border-bottom:1px solid #d5dae0">Venue</th><th style="text-align:right;padding:8px 10px;font-size:13px;color:#5d6675;border-bottom:1px solid #d5dae0">VWAP</th><th style="text-align:right;padding:8px 10px;font-size:13px;color:#5d6675;border-bottom:1px solid #d5dae0">+ Fee</th><th style="text-align:right;padding:8px 10px;font-size:13px;font-weight:700;border-bottom:1px solid #d5dae0;background:#f5f7f9">= All-in</th></tr></thead><tbody><tr><td style="padding:10px;border-bottom:1px solid #eceff2"><span style="font-size:11px;font-weight:700;letter-spacing:.07em">KALSHI</span></td><td style="padding:10px;border-bottom:1px solid #eceff2;text-align:right">0.6050</td><td style="padding:10px;border-bottom:1px solid #eceff2;text-align:right">0.0070</td><td style="padding:10px;border-bottom:1px solid #eceff2;text-align:right;font-weight:700;background:#f5f7f9">0.6120</td></tr></tbody></table>
+      <div style="border:1px solid #e1e5ea;border-radius:6px;padding:12px;display:grid;grid-template-columns:1fr auto;gap:2px 12px;font-size:14px"><span style="color:#5d6675;font-weight:600">Venue</span><span style="font-size:11px;font-weight:700;letter-spacing:.07em">KALSHI</span><span style="color:#5d6675;font-weight:600">VWAP</span><span>0.6050</span><span style="color:#5d6675;font-weight:600">+ Fee</span><span>0.0070</span><span style="font-weight:700">= All-in</span><strong>0.6120</strong></div>
+    </div>
+
+    <div><strong>details.fold</strong><div style="color:#5d6675;font-size:13px">collapsed group (related) or long text</div></div>
+    <details style="border:1px solid #e1e5ea;border-radius:6px;max-width:640px"><summary style="display:flex;align-items:center;gap:10px;padding:12px 14px;list-style:none"><span aria-hidden="true" style="color:#5d6675">▸</span><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#fff3d6;color:#8a5a00">related</span><strong>851 pairs</strong><span style="color:#5d6675">same event, different payout; never routed</span><span style="margin-left:auto;color:#0172ad;font-weight:600">Show</span></summary></details>
+
+    <div><strong>.note-warn</strong><div style="color:#5d6675;font-size:13px">replaces <code style="font-family:ui-monospace,Menlo,monospace">&lt;mark&gt;</code> for truncation and empty states</div></div>
+    <p style="margin:0;padding:10px 14px;border-radius:6px;background:#fff3d6;color:#1b2230;max-width:640px"><strong style="color:#8a5a00">Showing the first 200 near misses only</strong> (651 more not shown).</p>
+
+    <div><strong>.quote</strong><div style="color:#5d6675;font-size:13px">explanation prose, pre-wrap, max 78ch</div></div>
+    <p style="margin:0;max-width:72ch;font-size:15px;line-height:1.6;padding-left:16px;border-left:3px solid #d5dae0">Bought 40 as NO on polymarket (the complement of the target) at 0.6013 all-in, then 60 YES on kalshi at 0.6120 once that book ran out.</p>
+  </div>
+</div>
+</section>
+</x-dc>
+</body>
+</html>

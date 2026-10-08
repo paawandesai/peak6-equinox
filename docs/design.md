@@ -7,6 +7,18 @@ Grounding: [brief.md](brief.md), [plan.md](plan.md) (each milestone's demoable o
 
 **The demo path, in order.** Matches grouped by relationship type → pair contract diff (terms, vetoes, facts used, basis risk) → route form → decision trace (eligibility, VWAP, fees, basis penalty, chosen venue and why) → decision log → eval. Every choice below is judged by whether it shortens that path or makes a step on it more legible.
 
+## 0. Claude Design v2 (UI-09) supersedes the layouts
+
+Paawan approved the Claude Design v2 UI on 2026-10-08 at 1:41 PM CT ([D-098](decisions.md)). The export lives in [design/claude-design-v2/](design/claude-design-v2/README.md). Its build spec is [design/claude-design-v2/HANDOFF.md](design/claude-design-v2/HANDOFF.md), and the drop-in stylesheet is [design/claude-design-v2/handoff/app.css](design/claude-design-v2/handoff/app.css). The build tickets are UI-10 onward in [tickets/UI-v2.md](tickets/UI-v2.md).
+
+- **What v2 replaces.** The page layouts, the component set and the visual vocabulary in sections 3, 5 and 6 below. That covers the badge set with glyphs, the confidence meter, the freshness stamp, the cost report and split bar, the step-by-step decision trace, the terms diff by rule part, the health rollup and the error page. Where this document and `HANDOFF.md` disagree on layout, `HANDOFF.md` wins, and the three calls below win over both.
+- **What v2 keeps.** Every UI-01..UI-08 acceptance criterion carries over unchanged or stricter. That includes the wave 9 shared rules in [tickets/M3.md](tickets/M3.md): CSP and `html/template` escaping with no `style` attributes or inline scripts, SRI on CDN assets, 1280 px and 390 px screenshots, keyboard focus, a text label on every coloured state (section 4), WCAG AA in light and dark, NFR-01 p95 and `make check`. Every test those ACs name must keep passing. Nothing the current UI shows is dropped (`HANDOFF.md`, "Nothing dropped: audit"). The stack, sections 2, 4 (the words), 7 and 8 also still hold: `html/template` + htmx + Pico.css, no JS build, no SPA, no new font or CDN asset (D-031, D-081). The mocks' inline styles and the design tool's unpkg runtime are not built.
+- **◆ NEW DATA is not faked.** Anything `HANDOFF.md` marks ◆ (17 items) stays hidden until its backend ticket lands. Any schema change there is Tier 2.
+- **The three approved calls (D-098):**
+  1. **Complement badges are blue, not green.** `¬ complement` uses `--eq-info`, the same family as `⇒ implies`. This changes the section 4 token for `complement`: it stays routable and keeps its text label. `equivalent` and `equivalent_given_facts` stay green.
+  2. **Sign rule for money differences, everywhere.** A favourable difference (a saving, price improvement, or a cheaper all-in than the comparison) reads positive. An unfavourable one is shown in parentheses, e.g. `(0.71¢) · (130) bps`, never with a bare minus. Every table that uses the rule prints it under the table (`p.sign-rule`). It applies to slippage, gap to chosen, Δ in the trace, the log and outlier panels. The routing-log column is named **"Saving vs best ask"**, not "Saving vs best alt" as in the mock.
+  3. **The router stores its input quotes with each decision.** Each candidate's venue, instrument, relationship type, best ask, ask depth, quote time and age are stored on the decision at decision time. The Decision trace's step 1 ("Order and input snapshot") reads them from the decision, not from a later re-query, so the trace shows exactly what the router saw. This is a Tier 2 change to the stored decision.
+
 ## 1. What the walk found
 
 | Page | What gets in the way today |

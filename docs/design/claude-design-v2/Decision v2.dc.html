@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><style>body{margin:0;background:#e6e9ed;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue","Noto Sans",sans-serif;color:#1b2230;-webkit-font-smoothing:antialiased}a{color:#0172ad}a:hover{color:#01527d}</style></helmet>
+<section style="display:flex;gap:48px;padding:48px;align-items:flex-start">
+
+<div style="display:flex;flex-direction:column;gap:10px">
+  <div style="font:600 12px ui-monospace,Menlo,monospace;color:#3a4350">Decision trace · desktop 1280 · decision.html + route_result.html</div>
+  <div style="width:1280px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.06);border-radius:4px;overflow:hidden">
+    <dc-import name="Eq Header v2" active="log" banner="none" hint-size="100%,100px"></dc-import>
+    <main style="padding:28px 40px 48px;display:flex;flex-direction:column;gap:26px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <nav aria-label="Breadcrumb" style="font-size:13px;color:#4f5866"><a href="/log?kind=routing">All routing decisions</a> · <a href="/">Matches</a></nav>
+        <h1 style="margin:0;font-size:30px;line-height:1.2;font-weight:700">Routing decision #57</h1>
+        <p style="margin:0;font-size:17px;color:#5d6675">Why did the router choose this venue, step by step?</p>
+        <p style="margin:6px 0 0;font-size:14px;color:#3a4350;max-width:860px">A stored simulation: the order below was routed against the books of round 49 and the decision was written to the decision log at 2026-10-08 11:05:12 EDT. Nothing was sent to a venue.</p>
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding:14px 18px;border-radius:8px;background:#f3f9f5;box-shadow:inset 0 0 0 1px #b9dcc4">
+        <dc-import name="Eq Badge" k="routed" size="l" hint-size="110px,30px"></dc-import>
+        <span style="font-size:16px;font-weight:600">Routed across 2 venues: 60 + 40 contracts, 0.5451 average all-in</span>
+        <span style="font-size:14px;color:#3a4350">$54.51 total · fees $1.11 · basis $0.15 · slippage <span style="color:#b3261e">(47) bps</span></span>
+        <a href="Route v2.dc.html" style="margin-left:auto;font-size:14px">Cost report ↓</a>
+      </div>
+
+      <ol style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:0">
+
+        <li style="display:grid;grid-template-columns:44px minmax(0,1fr);gap:0 16px">
+          <div style="display:flex;flex-direction:column;align-items:center"><span style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:16px;background:#1b2230;color:#fff;font-weight:700">1</span><span style="flex:1;width:2px;background:#d5dae0"></span></div>
+          <section style="display:flex;flex-direction:column;gap:10px;padding-bottom:28px">
+            <h2 style="margin:4px 0 0;font-size:19px">Order and input snapshot</h2>
+            <p style="margin:0;font-size:14px"><strong>Order:</strong> buy 100 YES on <code>KXFED-26OCT-T4.25</code>, market IOC. Partners considered: 5. Snapshot: round 49, as of 11:03:20 EDT.</p>
+            <table style="width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums">
+              <thead><tr><th style="text-align:left;padding:7px 8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Venue</th><th style="text-align:left;padding:7px 8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Instrument</th><th style="text-align:left;padding:7px 8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Relationship to target</th><th style="text-align:right;padding:7px 8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Best ask</th><th style="text-align:right;padding:7px 8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Ask depth</th><th style="text-align:left;padding:7px 8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Quote age at snapshot</th></tr></thead>
+              <tbody>
+                <sc-for list="{{ snap }}" as="s" hint-placeholder-count="6">
+                <tr><td style="padding:8px;border-bottom:1px solid #eceff2;font-size:11px;font-weight:700;letter-spacing:.07em;color:#4f5866">{{ s.venue }}</td><td style="padding:8px;border-bottom:1px solid #eceff2"><code style="font-size:12px;overflow-wrap:anywhere">{{ s.id }}</code></td><td style="padding:8px;border-bottom:1px solid #eceff2"><dc-import name="Eq Badge" k="{{ s.k }}" text="{{ s.kt }}" hint-size="120px,22px"></dc-import></td><td style="padding:8px;border-bottom:1px solid #eceff2;text-align:right">{{ s.ask }}</td><td style="padding:8px;border-bottom:1px solid #eceff2;text-align:right">{{ s.depth }}</td><td style="padding:8px;border-bottom:1px solid #eceff2"><dc-import name="Eq Badge" k="{{ s.fk }}" text="{{ s.age }}" hint-size="120px,22px"></dc-import></td></tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </section>
+        </li>
+
+        <li style="display:grid;grid-template-columns:44px minmax(0,1fr);gap:0 16px">
+          <div style="display:flex;flex-direction:column;align-items:center"><span style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:16px;background:#1b2230;color:#fff;font-weight:700">2</span><span style="flex:1;width:2px;background:#d5dae0"></span></div>
+          <section style="display:flex;flex-direction:column;gap:10px;padding-bottom:28px">
+            <h2 style="margin:4px 0 0;font-size:19px">Eligibility: 2 of 6 candidates kept</h2>
+            <h3 style="margin:0;font-size:15px">Excluded candidates</h3>
+            <table style="width:100%;border-collapse:collapse;font-size:14px">
+              <thead><tr><th style="text-align:left;padding:7px 8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0;width:120px">Venue</th><th style="text-align:left;padding:7px 8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Instrument</th><th style="text-align:left;padding:7px 8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Reason</th></tr></thead>
+              <tbody>
+                <tr><td style="padding:9px 8px;border-bottom:1px solid #eceff2;font-size:11px;font-weight:700;letter-spacing:.07em;color:#4f5866">KALSHI</td><td style="padding:9px 8px;border-bottom:1px solid #eceff2"><s style="color:#4f5866">Fed upper bound above 4.50% after Oct 28</s> <code style="font-size:12px">KXFED-26OCT-T4.50</code></td><td style="padding:9px 8px;border-bottom:1px solid #eceff2"><strong style="color:#b3261e">✕ stale</strong>: fetched 140 s before the snapshot</td></tr>
+                <tr><td style="padding:9px 8px;border-bottom:1px solid #eceff2;font-size:11px;font-weight:700;letter-spacing:.07em;color:#4f5866">POLYMARKET</td><td style="padding:9px 8px;border-bottom:1px solid #eceff2"><s style="color:#4f5866">Fed rate hike in 2026?</s> <code style="font-size:12px">0x41ab…9e07</code></td><td style="padding:9px 8px;border-bottom:1px solid #eceff2"><strong style="color:#b3261e">✕ not routable</strong>: related pairs are never routed</td></tr>
+                <tr><td style="padding:9px 8px;border-bottom:1px solid #eceff2;font-size:11px;font-weight:700;letter-spacing:.07em;color:#4f5866">POLYMARKET</td><td style="padding:9px 8px;border-bottom:1px solid #eceff2"><s style="color:#4f5866">Fed decision in October: +50 bps</s> <code style="font-size:12px">0x77d0…31c4</code></td><td style="padding:9px 8px;border-bottom:1px solid #eceff2"><strong style="color:#b3261e">✕ low confidence</strong>: 0.87 is below the 0.9 floor</td></tr>
+                <tr><td style="padding:9px 8px;border-bottom:1px solid #eceff2;font-size:11px;font-weight:700;letter-spacing:.07em;color:#4f5866">POLYMARKET</td><td style="padding:9px 8px;border-bottom:1px solid #eceff2"><s style="color:#4f5866">Fed holds or hikes in October 2026?</s> <code style="font-size:12px">0x2c19…d5aa</code></td><td style="padding:9px 8px;border-bottom:1px solid #eceff2"><strong style="color:#b3261e">✕ no book</strong>: no quote stored for this instrument in round 49</td></tr>
+              </tbody>
+            </table>
+          </section>
+        </li>
+
+        <li style="display:grid;grid-template-columns:44px minmax(0,1fr);gap:0 16px">
+          <div style="display:flex;flex-direction:column;align-items:center"><span style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:16px;background:#1b2230;color:#fff;font-weight:700">3</span><span style="flex:1;width:2px;background:#d5dae0"></span></div>
+          <section style="display:flex;flex-direction:column;gap:10px;padding-bottom:28px">
+            <h2 style="margin:4px 0 0;font-size:19px">Fill simulation and fee math</h2>
+            <p style="margin:0;font-size:14px;color:#3a4350">Each leg walks the book to a VWAP, then adds the venue fee and the basis penalty (basis penalty = score × 0.0100 per contract).</p>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:14px">
+              <sc-for list="{{ math }}" as="m" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:6px;padding:14px 16px;border:1px solid #e1e5ea;border-radius:8px">
+                <span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#4f5866">{{ m.venue }} · {{ m.qty }} contracts · direct</span>
+                <dl style="margin:0;display:grid;grid-template-columns:1fr auto;gap:3px 12px;font-size:14px;font-variant-numeric:tabular-nums">
+                  <dt>VWAP over {{ m.levels }}</dt><dd style="margin:0;text-align:right">{{ m.vwap }}</dd>
+                  <dt>+ fee per contract</dt><dd style="margin:0;text-align:right">{{ m.fee }}</dd>
+                  <dt>+ basis: {{ m.bscore }} × 0.0100</dt><dd style="margin:0;text-align:right">{{ m.basis }}</dd>
+                  <dt style="padding-top:5px;border-top:1px solid #d5dae0;font-weight:700">= all-in per contract</dt><dd style="margin:0;padding-top:5px;border-top:1px solid #d5dae0;text-align:right;font-weight:700">{{ m.allin }}</dd>
+                </dl>
+              </div>
+              </sc-for>
+            </div>
+          </section>
+        </li>
+
+        <li style="display:grid;grid-template-columns:44px minmax(0,1fr);gap:0 16px">
+          <div style="display:flex;flex-direction:column;align-items:center"><span style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:16px;background:#1b2230;color:#fff;font-weight:700">4</span><span style="flex:1;width:2px;background:#d5dae0"></span></div>
+          <section style="display:flex;flex-direction:column;gap:10px;padding-bottom:28px">
+            <h2 style="margin:4px 0 0;font-size:19px">Ranked alternatives</h2>
+            <div role="img" aria-label="All-in per contract: chosen 0.5451, alternative 2 0.5522, alternative 3 0.5646" style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-variant-numeric:tabular-nums">
+              <div style="display:grid;grid-template-columns:150px minmax(0,1fr) 190px;align-items:center;gap:10px"><span style="font-weight:600;color:#1b6e3a">✓ chosen · split</span><span style="height:14px;width:60%;background:#1b6e3a;border-radius:2px"></span><span><strong>0.5451</strong></span></div>
+              <div style="display:grid;grid-template-columns:150px minmax(0,1fr) 190px;align-items:center;gap:10px"><span>2 · KALSHI only</span><span style="height:14px;width:68%;background:#8e96a3;border-radius:2px"></span><span>0.5522 <span style="color:#b3261e">(0.71¢) (130) bps</span></span></div>
+              <div style="display:grid;grid-template-columns:150px minmax(0,1fr) 190px;align-items:center;gap:10px"><span>3 · POLYMARKET only</span><span style="height:14px;width:82%;background:#8e96a3;border-radius:2px"></span><span>0.5646 <span style="color:#b3261e">(1.95¢) (358) bps</span></span></div>
+            </div>
+            <p style="margin:0;font-size:13px;color:#3a4350">Bars start from 0.50 so that differences are visible. The full table, with VWAP, fee, basis and note per leg, is the same as in the cost report.</p>
+          </section>
+        </li>
+
+        <li style="display:grid;grid-template-columns:44px minmax(0,1fr);gap:0 16px">
+          <div style="display:flex;flex-direction:column;align-items:center"><span style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:16px;background:#1b6e3a;color:#fff;font-weight:700">5</span></div>
+          <section style="display:flex;flex-direction:column;gap:10px">
+            <h2 style="margin:4px 0 0;font-size:19px">Decision</h2>
+            <section style="display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:6px;background:#fff3d6;box-shadow:inset 0 0 0 1px #d9b45a">
+              <h3 style="margin:0;font-size:15px;color:#8a5a00">! Warnings</h3>
+              <ul style="margin:0;padding-left:18px;font-size:14px"><li>skew: polymarket quote 31 s behind kalshi</li></ul>
+            </section>
+            <h3 style="margin:4px 0 0;font-size:15px">Explanation</h3>
+            <p style="margin:0;padding:4px 0 4px 16px;border-left:3px solid #c9cfd6;font-size:15px;line-height:1.6;color:#3a4350;max-width:860px">Kalshi's book fills 60 contracts below 0.53; beyond that its next level is more expensive than Polymarket's best ask plus the 0.0038 basis penalty, so the remaining 40 go to Polymarket. Splitting saves 0.71¢ per contract against Kalshi alone.</p>
+          </section>
+        </li>
+      </ol>
+    </main>
+  </div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+  <div style="font:600 12px ui-monospace,Menlo,monospace;color:#3a4350">Decision trace · mobile 390</div>
+  <div style="width:390px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.06);border-radius:4px;overflow:hidden">
+    <dc-import name="Eq Header v2" active="log" banner="none" mobile="{{ true }}" hint-size="100%,170px"></dc-import>
+    <main style="padding:18px 16px 32px;display:flex;flex-direction:column;gap:14px">
+      <nav style="font-size:13px"><a href="/log?kind=routing">All routing decisions</a> · <a href="/">Matches</a></nav>
+      <h1 style="margin:0;font-size:26px">Routing decision #57</h1>
+      <div style="display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:8px;background:#f3f9f5;box-shadow:inset 0 0 0 1px #b9dcc4"><dc-import name="Eq Badge" k="routed" size="l" hint-size="110px,30px"></dc-import><span style="font-weight:600">60 + 40 contracts, 0.5451 avg all-in</span></div>
+      <details open style="border:1px solid #e1e5ea;border-radius:6px"><summary style="min-height:44px;display:flex;align-items:center;padding:0 12px;font-weight:600">1 · Order and snapshot</summary><div style="padding:0 12px 12px;display:flex;flex-direction:column;gap:8px;font-size:14px"><span>buy 100 YES, market IOC</span><div style="display:flex;justify-content:space-between;align-items:center"><span>KALSHI T4.25 · 0.5200</span><dc-import name="Eq Badge" k="fresh" text="38 s" hint-size="60px,22px"></dc-import></div><div style="display:flex;justify-content:space-between;align-items:center"><span><s>KALSHI T4.50</s> · 0.4100</span><dc-import name="Eq Badge" k="stale" text="140 s" hint-size="66px,22px"></dc-import></div></div></details>
+      <details style="border:1px solid #e1e5ea;border-radius:6px"><summary style="min-height:44px;display:flex;align-items:center;padding:0 12px;font-weight:600">2 · Eligibility: 2 of 6 kept</summary></details>
+      <details style="border:1px solid #e1e5ea;border-radius:6px"><summary style="min-height:44px;display:flex;align-items:center;padding:0 12px;font-weight:600">3 · Fee math</summary></details>
+      <details style="border:1px solid #e1e5ea;border-radius:6px"><summary style="min-height:44px;display:flex;align-items:center;padding:0 12px;font-weight:600">4 · Ranked alternatives</summary></details>
+      <details style="border:1px solid #e1e5ea;border-radius:6px"><summary style="min-height:44px;display:flex;align-items:center;padding:0 12px;font-weight:600">5 · Decision and warnings (1)</summary></details>
+    </main>
+  </div>
+</div>
+
+<aside style="width:340px;display:flex;flex-direction:column;gap:16px;font-size:14px;line-height:1.5;color:#3a4350">
+  <h2 style="margin:0;font-size:18px;color:#1b2230">Decision trace: build notes</h2>
+  <p style="margin:0">Templates: <code>decision.html</code> (intro), with the steps rendered by <code>route_result.html</code> inside <code>&lt;details&gt;</code>. They are open on <code>/decisions/{id}</code> and collapsed under the route form. One partial means the two views cannot disagree.</p>
+  <div><strong style="color:#1b2230">Components</strong><ul style="margin:4px 0 0;padding-left:18px"><li><code>ol.trace-steps</code></li><li>freshness badge on each quote</li><li>struck-through exclusions with a ✕ reason word</li><li>equation card (<code>dl.math</code>)</li><li>alternatives bars</li><li>warnings panel</li></ul></div>
+  <div><strong style="color:#1b2230">VM fields (data already stored)</strong><ul style="margin:4px 0 0;padding-left:18px"><li><code>Snapshot[]</code>: each candidate's best ask, depth, FetchedAt − snapshot and relationship. The router already reads these to decide eligibility.</li><li>basis score per leg</li><li>levels walked per leg</li><li>kept/total counts</li></ul></div>
+  <div style="padding:12px;border-radius:6px;background:#f5eefb;box-shadow:inset 0 0 0 1px #6b2fa0"><strong style="color:#6b2fa0">◆ Needs new data</strong><p style="margin:4px 0 0">None, provided the router persists the snapshot inputs with each decision. If it does not, the step 1 table needs that stored. Flag this during UI-05.</p></div>
+</aside>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      snap: [
+        { venue:'KALSHI', id:'KXFED-26OCT-T4.25', k:'chosen', kt:'target', ask:'0.5200', depth:'60 ≤ 0.53', fk:'fresh', age:'Fresh · 38 s' },
+        { venue:'POLYMARKET', id:'0x8f3c51e0b7d24f6a…a2ba21d', k:'egf', kt:null, ask:'0.5450', depth:'210', fk:'fresh', age:'Fresh · 7 s' },
+        { venue:'KALSHI', id:'KXFED-26OCT-T4.50', k:'equivalent', kt:null, ask:'0.4100', depth:'35', fk:'stale', age:'Stale · 140 s' },
+        { venue:'POLYMARKET', id:'0x41ab…9e07', k:'related', kt:null, ask:'0.6100', depth:'500', fk:'fresh', age:'Fresh · 9 s' },
+        { venue:'POLYMARKET', id:'0x77d0…31c4', k:'egf', kt:null, ask:'0.5380', depth:'90', fk:'fresh', age:'Fresh · 11 s' },
+        { venue:'POLYMARKET', id:'0x2c19…d5aa', k:'complement', kt:null, ask:'0.4700', depth:'—', fk:'unknown', age:'Unknown · no book' }
+      ],
+      math: [
+        { venue:'KALSHI', qty:60, levels:'2 levels', vwap:'0.5233', fee:'0.0112', bscore:'0.00 (target)', basis:'0.0000', allin:'0.5345' },
+        { venue:'POLYMARKET', qty:40, levels:'1 level', vwap:'0.5462', fee:'0.0109', bscore:'0.38', basis:'0.0038', allin:'0.5609' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

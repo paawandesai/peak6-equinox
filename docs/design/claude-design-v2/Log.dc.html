@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><style>body{margin:0;background:#e6e9ed;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue","Noto Sans",sans-serif;color:#1b2230;-webkit-font-smoothing:antialiased}a{color:#0172ad}a:hover{color:#01527d}</style></helmet>
+<section style="display:flex;gap:48px;padding:48px;align-items:flex-start">
+
+<div style="display:flex;flex-direction:column;gap:10px">
+  <div style="font:600 12px ui-monospace,Menlo,monospace;color:#3a4350">Decision log · desktop 1280 · templates/log.html</div>
+  <div style="width:1280px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.06);border-radius:4px;overflow:hidden">
+    <dc-import name="Eq Header" active="log" banner="demo" hint-size="100%,140px"></dc-import>
+    <main style="padding:32px 40px 48px;display:flex;flex-direction:column;gap:24px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <h1 style="margin:0;font-size:30px;line-height:1.2;font-weight:700">Decision log</h1>
+        <p style="margin:0;font-size:17px;line-height:1.45;color:#5d6675">What did Equinox decide, when, and why?</p>
+        <p style="margin:8px 0 0;max-width:96ch;font-size:15px;line-height:1.55;color:#3a4350">Every verdict and simulated order Equinox stored, newest first: relationship verdicts from <code style="font-family:ui-monospace,Menlo,monospace;font-size:13px;background:#f2f4f6;padding:1px 5px;border-radius:3px">equinox match</code>, routing decisions from the pair pages and <code style="font-family:ui-monospace,Menlo,monospace;font-size:13px;background:#f2f4f6;padding:1px 5px;border-radius:3px">equinox route</code>, LLM verifier results (when enabled; never from a public request) and fetch rounds. Each line links to the pair or decision it is about.</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;padding:12px 16px;border:1px solid #e1e5ea;border-radius:6px;background:#f5f7f9">
+        <form method="get" action="/log" style="margin:0;display:flex;align-items:center;gap:8px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600">Show
+            <select name="kind" style="height:34px;padding:0 10px;border:1px solid #c9cfd6;border-radius:5px;background:#fff;font-size:14px"><option>everything</option><option>relationship verdicts</option><option>routing decisions</option><option>LLM verdicts</option><option>fetch rounds</option></select>
+          </label>
+          <button type="submit" style="height:34px;padding:0 14px;border:1px solid #c9cfd6;border-radius:5px;background:#fff;font-size:14px;font-weight:600">Filter</button>
+        </form>
+        <p style="margin:0 0 0 auto;font-size:14px;color:#3a4350">Latest 6 entries (at most 200). Newest: <strong style="font-variant-numeric:tabular-nums">2026-10-08 11:20:07 EDT</strong></p>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:15px;line-height:1.45">
+        <thead><tr>
+          <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0;width:190px">When</th>
+          <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0;width:130px">Kind</th>
+          <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0;width:330px">About</th>
+          <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0">Summary</th>
+        </tr></thead>
+        <tbody>
+          <tr><td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top;font-size:14px;color:#3a4350;font-variant-numeric:tabular-nums">2026-10-08 11:20:07 EDT</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e6f4ea;color:#1b6e3a">routing</span></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><a href="/decisions/3" style="font-weight:600">Decision #3</a><div style="font-size:13px;color:#5d6675">pair #908 · Above 4.00% / Fed decrease 25 bps</div></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><details><summary style="list-style:none;cursor:pointer"><span style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">buy 100 YES: 40 as NO on polymarket (complement of the target) + 60 on kalshi, average 0.6077 all-in per contract, filled 100 of 100</span></summary></details></td></tr>
+          <tr><td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top;font-size:14px;color:#3a4350;font-variant-numeric:tabular-nums">2026-10-08 11:03:20 EDT</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e6f4ea;color:#1b6e3a">routing</span></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><a href="/decisions/2" style="font-weight:600">Decision #2</a><div style="font-size:13px;color:#5d6675">pair #924 · Above 4.25% / Fed increase 50+ bps</div></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><details open=""><summary style="list-style:none;cursor:pointer;color:#0172ad;font-size:13px;font-weight:600">Collapse</summary><p style="margin:6px 0 0">buy 100 YES on polymarket at 0.0080 all-in per contract, filled 100 contracts. Alternatives: kalshi target at 0.0117 (+0.0037). Excluded: 1 not routable, 1 stale, 1 too shallow.</p></details></td></tr>
+          <tr><td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top;font-size:14px;color:#3a4350;font-variant-numeric:tabular-nums">2026-10-06 21:16:02 EDT</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e8f0fb;color:#1a56a8">relationship</span></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><a href="/pairs/924" style="font-weight:600">Pair #924</a><div style="font-size:13px;color:#5d6675">Above 4.25% / Fed increase 50+ bps</div></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><span style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">equivalent_given_facts 0.93 via rules: 3 term differences closed by facts fed_upper_bound, fed_rate_step; deadlines 9h54m apart, within 24 h; edge-case rules unknown on both sides.</span></td></tr>
+          <tr><td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top;font-size:14px;color:#3a4350;font-variant-numeric:tabular-nums">2026-10-06 21:16:02 EDT</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e8f0fb;color:#1a56a8">relationship</span></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><a href="/pairs/908" style="font-weight:600">Pair #908</a><div style="font-size:13px;color:#5d6675">Above 4.00% / Fed decrease 25 bps</div></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><span style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">complement 0.91 via rules: YES on one settles exactly when the other settles NO, given fed_upper_bound = 4.00.</span></td></tr>
+          <tr><td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top;font-size:14px;color:#3a4350;font-variant-numeric:tabular-nums">2026-10-06 21:16:01 EDT</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#fff3d6;color:#8a5a00">llm_verdict</span></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><a href="/pairs/915" style="font-weight:600">Pair #915</a><div style="font-size:13px;color:#5d6675">BTC above $80k / BTC reach $80k</div></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><span style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">downgraded equivalent → related: "reach" settles on any intraday touch, "above" on the close.</span></td></tr>
+          <tr><td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top;font-size:14px;color:#3a4350;font-variant-numeric:tabular-nums">2026-10-06 21:15:56 EDT</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;color:#5d6675;box-shadow:inset 0 0 0 1px #c9cfd6">fetch_round</span></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><span style="font-size:13px;color:#5d6675">round:3</span></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top">round 3 ok: kalshi 1204 instruments, polymarket 1249 instruments, 41.2 s</td></tr>
+        </tbody>
+      </table>
+    </main>
+    <footer style="padding:20px 40px;border-top:1px solid #e1e5ea;font-size:13px;color:#5d6675">Everything here is a simulation over recorded venue data. Equinox never places orders. Prices are per $1 payout, in [0,1].</footer>
+  </div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+  <div style="font:600 12px ui-monospace,Menlo,monospace;color:#3a4350">Decision log · mobile 390</div>
+  <div style="width:390px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.06);border-radius:4px;overflow:hidden">
+    <dc-import name="Eq Header" mobile="{{ true }}" active="log" banner="demo" hint-size="100%,220px"></dc-import>
+    <main style="padding:20px 16px 32px;display:flex;flex-direction:column;gap:16px">
+      <h1 style="margin:0;font-size:26px;font-weight:700">Decision log</h1>
+      <p style="margin:0;font-size:16px;line-height:1.45;color:#5d6675">What did Equinox decide, when, and why?</p>
+      <details style="font-size:14px"><summary style="min-height:44px;display:flex;align-items:center;color:#0172ad">What is logged</summary></details>
+      <form style="margin:0;display:flex;gap:8px;align-items:flex-end"><label style="flex:1;display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600">Show<select style="height:44px;padding:0 10px;border:1px solid #c9cfd6;border-radius:5px;background:#fff;font-size:15px"><option>everything</option></select></label><button style="height:44px;padding:0 16px;border:1px solid #c9cfd6;border-radius:5px;background:#fff;font-size:15px;font-weight:600">Filter</button></form>
+      <p style="margin:0;font-size:13px;color:#3a4350">Latest 6 entries (at most 200)</p>
+      <article style="border:1px solid #e1e5ea;border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;color:#3a4350">2026-10-08 11:20:07 EDT</span><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e6f4ea;color:#1b6e3a">routing</span></div><a href="/decisions/3" style="font-weight:600;min-height:28px">Decision #3 · pair #908</a><span style="font-size:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">buy 100 YES: 40 as NO on polymarket (complement of the target) + 60 on kalshi, average 0.6077 all-in per contract</span></article>
+      <article style="border:1px solid #e1e5ea;border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;color:#3a4350">2026-10-06 21:16:02 EDT</span><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e8f0fb;color:#1a56a8">relationship</span></div><a href="/pairs/924" style="font-weight:600">Pair #924</a><span style="font-size:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">equivalent_given_facts 0.93 via rules: 3 term differences closed by facts fed_upper_bound, fed_rate_step…</span></article>
+      <article style="border:1px solid #e1e5ea;border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;color:#3a4350">2026-10-06 21:15:56 EDT</span><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;color:#5d6675;box-shadow:inset 0 0 0 1px #c9cfd6">fetch_round</span></div><span style="font-size:13px;color:#5d6675">round:3</span><span style="font-size:14px">round 3 ok: kalshi 1204 instruments, polymarket 1249 instruments, 41.2 s</span></article>
+    </main>
+  </div>
+</div>
+
+<aside style="width:280px;display:flex;flex-direction:column;gap:10px;font-size:14px;line-height:1.5;color:#3a4350">
+  <div style="font:600 12px ui-monospace,Menlo,monospace">Notes</div>
+  <ol style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px">
+    <li>The filter form and the entry count share one toolbar. The count line adds the newest entry's time (design.md §3: "the latest entry's time").</li>
+    <li>About shows the linked pair or decision on top, with its short title muted below. That needs a <code>.AboutTitle</code> view-model field. When it is empty, the line is omitted.</li>
+    <li>Summaries clamp to two lines and expand in place through <code>details</code>, as today.</li>
+    <li>Kind chips: routing ok, relationship info, llm_verdict warn, fetch_round muted.</li>
+    <li>On mobile the intro paragraph folds into a "What is logged" <code>details</code>. The text is unchanged.</li>
+  </ol>
+</aside>
+</section>
+</x-dc>
+</body>
+</html>

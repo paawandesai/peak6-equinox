@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><style>body{margin:0;background:#e6e9ed;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue","Noto Sans",sans-serif;color:#1b2230;-webkit-font-smoothing:antialiased}a{color:#0172ad}a:hover{color:#01527d}</style></helmet>
+<section style="display:flex;gap:48px;padding:48px;align-items:flex-start">
+
+<div style="display:flex;flex-direction:column;gap:10px">
+  <div style="font:600 12px ui-monospace,Menlo,monospace;color:#3a4350">Eval · desktop 1280 · templates/eval.html</div>
+  <div style="width:1280px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.06);border-radius:4px;overflow:hidden">
+    <dc-import name="Eq Header v2" active="eval" banner="none" hint-size="100%,100px"></dc-import>
+    <main style="padding:28px 40px 48px;display:flex;flex-direction:column;gap:28px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <h1 style="margin:0;font-size:30px;line-height:1.2;font-weight:700">Eval: matcher accuracy on labelled pairs</h1>
+        <p style="margin:0;font-size:17px;color:#5d6675">How often is the matcher right, per relationship type, on human-confirmed labels?</p>
+      </div>
+
+      <div style="display:grid;grid-template-columns:380px minmax(0,1fr);gap:28px;align-items:start">
+        <section aria-label="Headline" style="display:flex;flex-direction:column;gap:8px;padding:18px 20px;border-radius:8px;background:#f3f9f5;box-shadow:inset 0 0 0 1px #b9dcc4">
+          <span style="font-size:13px;font-weight:600;color:#3a4350">Precision at equivalent</span>
+          <div style="display:flex;align-items:baseline;gap:12px"><span style="font-size:44px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums">0.974</span><dc-import name="Eq Badge" k="match" fill="solid" tone="ok" glyph="✓" text="meets the 0.95 target" hint-size="170px,22px"></dc-import></div>
+          <span style="font-size:13px;color:#3a4350">Exit bar: precision ≥ 0.95 at equivalent. Support 40 labelled pairs.</span>
+          <span style="display:inline-flex;align-self:flex-start;align-items:center;gap:6px;padding:0 6px;border-radius:3px;outline:1px dashed #6b2fa0;background:#faf6fd;color:#6b2fa0;font-size:12px">◆ Δ vs previous run +0.012 · needs new data</span>
+        </section>
+        <div style="display:flex;flex-direction:column;gap:10px;font-size:14px;line-height:1.55;color:#3a4350">
+          <p style="margin:0">Precision and recall per relationship type, computed by <code>equinox eval</code> over the human-confirmed labels in <code>testdata/golden/labels.yaml</code>. The exit bar is precision ≥ 0.95 at <em>equivalent</em>: a false "same bet" is the worst failure, so precision counts more than recall. This page only reads the stored summary.</p>
+          <p style="margin:0">Produced <strong>2026-10-08 09:40:11 EDT</strong> by <code>equinox eval --out config/eval_summary.json</code> on round <strong>47</strong>: <strong>160</strong> labelled pairs from <code>testdata/golden/labels.yaml</code>, method <code>rules</code>.</p>
+          <p style="margin:0;display:flex;flex-wrap:wrap;gap:8px;align-items:center"><span>Golden-set version</span><span style="display:inline-flex;align-items:center;gap:6px;padding:0 6px;border-radius:3px;outline:1px dashed #6b2fa0;background:#faf6fd;color:#6b2fa0;font-size:12px">◆ labels.yaml @ 3f9a1c2 · needs new data</span><span>Previous run</span><span style="display:inline-flex;align-items:center;gap:6px;padding:0 6px;border-radius:3px;outline:1px dashed #6b2fa0;background:#faf6fd;color:#6b2fa0;font-size:12px">◆ 2026-10-07 18:02 EDT · needs new data</span></p>
+        </div>
+      </div>
+
+      <section style="display:flex;flex-direction:column;gap:8px">
+        <h2 style="margin:0;font-size:21px">Quality by type</h2>
+        <table style="width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums">
+          <thead><tr>
+            <th style="text-align:left;padding:8px 10px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Type</th>
+            <th style="text-align:right;padding:8px 10px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Labelled (support)</th>
+            <th style="text-align:right;padding:8px 10px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">True positives</th>
+            <th style="text-align:right;padding:8px 10px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">False positives</th>
+            <th style="text-align:right;padding:8px 10px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">False negatives</th>
+            <th style="text-align:left;padding:8px 10px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0;width:150px">Precision</th>
+            <th style="text-align:left;padding:8px 10px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0;width:150px">Recall</th>
+            <th style="text-align:right;padding:8px 10px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">F1</th>
+            <th style="text-align:right;padding:8px 10px;font-size:13px;color:#6b2fa0;border-bottom:1px solid #d5dae0">◆ Δ P</th>
+          </tr></thead>
+          <tbody>
+            <sc-for list="{{ rows }}" as="r" hint-placeholder-count="6">
+            <tr style="background:{{ r.bg }}">
+              <td style="padding:9px 10px;border-bottom:1px solid #eceff2"><dc-import name="Eq Badge" k="{{ r.k }}" hint-size="180px,22px"></dc-import></td>
+              <td style="padding:9px 10px;border-bottom:1px solid #eceff2;text-align:right">{{ r.s }}</td>
+              <td style="padding:9px 10px;border-bottom:1px solid #eceff2;text-align:right">{{ r.tp }}</td>
+              <td style="padding:9px 10px;border-bottom:1px solid #eceff2;text-align:right">{{ r.fp }}</td>
+              <td style="padding:9px 10px;border-bottom:1px solid #eceff2;text-align:right">{{ r.fn }}</td>
+              <td style="padding:9px 10px;border-bottom:1px solid #eceff2"><span style="display:flex;align-items:center;gap:8px"><span style="width:44px">{{ r.p }}</span><span aria-hidden="true" style="position:relative;flex:1;height:6px;background:#e1e5ea;border-radius:3px"><span style="position:absolute;left:0;top:0;bottom:0;width:{{ r.pw }};background:#1b6e3a;border-radius:3px"></span></span></span></td>
+              <td style="padding:9px 10px;border-bottom:1px solid #eceff2"><span style="display:flex;align-items:center;gap:8px"><span style="width:44px">{{ r.r }}</span><span aria-hidden="true" style="position:relative;flex:1;height:6px;background:#e1e5ea;border-radius:3px"><span style="position:absolute;left:0;top:0;bottom:0;width:{{ r.rw }};background:#1a56a8;border-radius:3px"></span></span></span></td>
+              <td style="padding:9px 10px;border-bottom:1px solid #eceff2;text-align:right;font-weight:600">{{ r.f1 }}</td>
+              <td style="padding:9px 10px;border-bottom:1px solid #eceff2;text-align:right;color:#6b2fa0;background:#faf6fd">{{ r.d }}</td>
+            </tr>
+            </sc-for>
+            <tr><td style="padding:9px 10px;border-top:2px solid #d5dae0;font-weight:600">Macro average</td><td style="padding:9px 10px;border-top:2px solid #d5dae0;text-align:right">160</td><td colspan="3" style="border-top:2px solid #d5dae0"></td><td style="padding:9px 10px;border-top:2px solid #d5dae0">0.898</td><td style="padding:9px 10px;border-top:2px solid #d5dae0">0.865</td><td style="padding:9px 10px;border-top:2px solid #d5dae0;text-align:right;font-weight:600">0.880</td><td style="border-top:2px solid #d5dae0;background:#faf6fd"></td></tr>
+            <tr><td style="padding:9px 10px;font-weight:600">Weighted by support</td><td style="padding:9px 10px;text-align:right">160</td><td colspan="3"></td><td style="padding:9px 10px">0.895</td><td style="padding:9px 10px">0.894</td><td style="padding:9px 10px;text-align:right;font-weight:600">0.894</td><td style="background:#faf6fd"></td></tr>
+          </tbody>
+        </table>
+        <p style="margin:0;font-size:13px;color:#4f5866">Example values for illustration only. Rare types (complement, 8 pairs) are read with their support, never from one headline number.</p>
+      </section>
+
+      <div style="display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:32px;align-items:start">
+        <section style="display:flex;flex-direction:column;gap:8px;padding:16px;border-radius:8px;outline:1px dashed #6b2fa0;background:#fdfbfe">
+          <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px"><h2 style="margin:0;font-size:19px">Confusion matrix</h2><span style="font-size:12px;font-weight:600;color:#6b2fa0">◆ needs new data: per-label prediction pairs</span></div>
+          <p style="margin:0;font-size:13px;color:#3a4350">Rows: the human label. Columns: what the matcher predicted. Each cell links to the pairs in it.</p>
+          <table style="border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums">
+            <thead><tr><th style="padding:6px;font-size:12px;color:#4f5866;text-align:left">label ↓ / predicted →</th><sc-for list="{{ cols }}" as="c" hint-placeholder-count="6"><th scope="col" style="padding:6px 4px;font-size:12px;color:#4f5866;font-family:ui-monospace,Menlo,monospace;text-align:center" title="{{ c.name }}">{{ c.g }}</th></sc-for><th style="padding:6px;font-size:12px;color:#4f5866;text-align:right">n</th></tr></thead>
+            <tbody>
+              <sc-for list="{{ cm }}" as="row" hint-placeholder-count="6">
+              <tr><th scope="row" style="padding:4px 8px 4px 0;text-align:left;font-size:12px;font-weight:600;white-space:nowrap"><span aria-hidden="true" style="font-family:ui-monospace,Menlo,monospace">{{ row.g }}</span> {{ row.name }}</th>
+                <sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="6"><td style="padding:2px"><a href="/eval/cell?l={{ row.name }}&p={{ c.p }}" aria-label="{{ c.aria }}" style="display:flex;align-items:center;justify-content:center;width:46px;height:34px;border-radius:3px;text-decoration:none;font-weight:{{ c.fw }};background:{{ c.bg }};color:{{ c.fg }};box-shadow:{{ c.ring }}">{{ c.n }}</a></td></sc-for>
+                <td style="padding:2px 4px;text-align:right;color:#4f5866">{{ row.n }}</td></tr>
+              </sc-for>
+            </tbody>
+          </table>
+          <p style="margin:0;font-size:12px;color:#3a4350">Green diagonal: correct. Red shading: errors, darker for more pairs. The worst off-diagonal cell is <strong>implies → related (3)</strong>, which is outlined.</p>
+        </section>
+
+        <section style="display:flex;flex-direction:column;gap:8px;padding:16px;border-radius:8px;outline:1px dashed #6b2fa0;background:#fdfbfe">
+          <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px"><h2 style="margin:0;font-size:19px">Precision and recall at confidence thresholds</h2><span style="font-size:12px;font-weight:600;color:#6b2fa0">◆ needs new data: threshold sweep</span></div>
+          <p style="margin:0;font-size:13px;color:#3a4350">For equivalent. The router floor is 0.90.</p>
+          <table style="width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums">
+            <thead><tr><th style="text-align:right;padding:6px;color:#4f5866;border-bottom:1px solid #d5dae0">Confidence ≥</th><th style="text-align:right;padding:6px;color:#4f5866;border-bottom:1px solid #d5dae0">Kept</th><th style="text-align:right;padding:6px;color:#4f5866;border-bottom:1px solid #d5dae0">TP</th><th style="text-align:right;padding:6px;color:#4f5866;border-bottom:1px solid #d5dae0">FP</th><th style="text-align:right;padding:6px;color:#4f5866;border-bottom:1px solid #d5dae0">P</th><th style="text-align:right;padding:6px;color:#4f5866;border-bottom:1px solid #d5dae0">R</th></tr></thead>
+            <tbody>
+              <tr><td style="padding:6px;text-align:right;border-bottom:1px solid #eceff2">0.95</td><td style="padding:6px;text-align:right;border-bottom:1px solid #eceff2">30</td><td style="padding:6px;text-align:right;border-bottom:1px solid #eceff2">30</td><td style="padding:6px;text-align:right;border-bottom:1px solid #eceff2">0</td><td style="padding:6px;text-align:right;border-bottom:1px solid #eceff2">1.000</td><td style="padding:6px;text-align:right;border-bottom:1px solid #eceff2">0.750</td></tr>
+              <tr style="background:#f3f9f5;font-weight:600"><td style="padding:6px;text-align:right;border-bottom:1px solid #eceff2">0.90 · floor</td><td style="padding:6px;text-align:right;border-bottom:1px solid #eceff2">39</td><td style="padding:6px;text-align:right;border-bottom:1px solid #eceff2">38</td><td style="padding:6px;text-align:right;border-bottom:1px solid #eceff2">1</td><td style="padding:6px;text-align:right;border-bottom:1px solid #eceff2">0.974</td><td style="padding:6px;text-align:right;border-bottom:1px solid #eceff2">0.950</td></tr>
+              <tr><td style="padding:6px;text-align:right;border-bottom:1px solid #eceff2">0.80</td><td style="padding:6px;text-align:right;border-bottom:1px solid #eceff2">44</td><td style="padding:6px;text-align:right;border-bottom:1px solid #eceff2">39</td><td style="padding:6px;text-align:right;border-bottom:1px solid #eceff2">5</td><td style="padding:6px;text-align:right;border-bottom:1px solid #eceff2">0.886</td><td style="padding:6px;text-align:right;border-bottom:1px solid #eceff2">0.975</td></tr>
+              <tr><td style="padding:6px;text-align:right">0.70</td><td style="padding:6px;text-align:right">51</td><td style="padding:6px;text-align:right">40</td><td style="padding:6px;text-align:right">11</td><td style="padding:6px;text-align:right">0.784</td><td style="padding:6px;text-align:right">1.000</td></tr>
+            </tbody>
+          </table>
+          <p style="margin:0;font-size:12px;color:#3a4350">No calibration plot: confidence is a rules score, not a probability.</p>
+        </section>
+      </div>
+
+      <section style="display:flex;flex-direction:column;gap:6px">
+        <h2 style="margin:0;font-size:19px">Notes from the run</h2>
+        <ul style="margin:0;padding-left:20px;font-size:14px;line-height:1.6"><li>3 implies pairs predicted related: open-ended deadlines parsed as unknown.</li><li>1 equivalent false positive (#712): Polymarket clarification changed the source after labelling.</li></ul>
+      </section>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="display:flex;flex-direction:column;gap:8px;padding:16px;border-radius:8px;background:#fff3d6;box-shadow:inset 0 0 0 1px #d9b45a" role="status">
+          <span style="font:600 11px ui-monospace,Menlo,monospace;color:#8a5a00">STATE · .Missing</span>
+          <div style="display:flex;align-items:center;gap:10px"><dc-import name="Eq Badge" fill="solid" tone="warn" glyph="!" text="blocked" hint-size="80px,22px"></dc-import><strong>No labels confirmed yet (Q-7).</strong></div>
+          <ol style="margin:0;padding-left:20px;font-size:14px;line-height:1.6"><li>Confirm <code>testdata/golden/labels.yaml</code></li><li>Run <code>equinox eval --out config/eval_summary.json</code></li><li>This page reads the result.</li></ol>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;padding:16px;border-radius:8px;background:#fbe9e7;box-shadow:inset 0 0 0 1px #b3261e" role="alert">
+          <span style="font:600 11px ui-monospace,Menlo,monospace;color:#b3261e">STATE · .Broken · and “The summary has no per-type metrics.”</span>
+          <p style="margin:0;font-size:14px"><strong style="color:#b3261e">✕</strong> config/eval_summary.json: unexpected end of JSON input</p>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+  <div style="font:600 12px ui-monospace,Menlo,monospace;color:#3a4350">Eval · mobile 390</div>
+  <div style="width:390px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.06);border-radius:4px;overflow:hidden">
+    <dc-import name="Eq Header v2" active="eval" banner="none" mobile="{{ true }}" hint-size="100%,170px"></dc-import>
+    <main style="padding:18px 16px 32px;display:flex;flex-direction:column;gap:14px">
+      <h1 style="margin:0;font-size:24px">Eval: matcher accuracy on labelled pairs</h1>
+      <section style="display:flex;flex-direction:column;gap:6px;padding:14px;border-radius:8px;background:#f3f9f5;box-shadow:inset 0 0 0 1px #b9dcc4"><span style="font-size:13px;font-weight:600">Precision at equivalent</span><span style="font-size:36px;font-weight:700">0.974</span><dc-import name="Eq Badge" fill="solid" tone="ok" glyph="✓" text="meets the 0.95 target" hint-size="170px,22px"></dc-import></section>
+      <sc-for list="{{ rowsM }}" as="r" hint-placeholder-count="3">
+      <article style="display:flex;flex-direction:column;gap:6px;padding:12px;border:1px solid #e1e5ea;border-radius:6px">
+        <dc-import name="Eq Badge" k="{{ r.k }}" hint-size="180px,22px"></dc-import>
+        <dl style="margin:0;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-size:13px;font-variant-numeric:tabular-nums"><div><dt style="color:#4f5866">n</dt><dd style="margin:0;font-weight:600">{{ r.s }}</dd></div><div><dt style="color:#4f5866">P</dt><dd style="margin:0;font-weight:600">{{ r.p }}</dd></div><div><dt style="color:#4f5866">R</dt><dd style="margin:0;font-weight:600">{{ r.r }}</dd></div><div><dt style="color:#4f5866">F1</dt><dd style="margin:0;font-weight:600">{{ r.f1 }}</dd></div></dl>
+        <span style="font-size:12px;color:#4f5866">TP {{ r.tp }} · FP {{ r.fp }} · FN {{ r.fn }}</span>
+      </article>
+      </sc-for>
+      <p style="margin:0;font-size:13px;color:#4f5866">The confusion matrix scrolls horizontally inside its own box (<code>overflow-x:auto</code>). The threshold table stays a table.</p>
+    </main>
+  </div>
+</div>
+
+<aside style="width:340px;display:flex;flex-direction:column;gap:16px;font-size:14px;line-height:1.5;color:#3a4350">
+  <h2 style="margin:0;font-size:18px;color:#1b2230">Eval: build notes</h2>
+  <p style="margin:0">Template: <code>eval.html</code>. The order follows the Evidently report: headline, quality by type with support, confusion matrix, then thresholds.</p>
+  <div><strong style="color:#1b2230">Components</strong><ul style="margin:4px 0 0;padding-left:18px"><li>headline panel</li><li><code>table.data</code> with in-cell bars</li><li>average rows</li><li><code>table.confusion</code> (shading as a <code>--a</code> custom property bucket class)</li><li>blocked and broken states</li></ul></div>
+  <div><strong style="color:#1b2230">VM fields (data already stored)</strong><ul style="margin:4px 0 0;padding-left:18px"><li><code>F1</code> per row, from P and R</li><li>macro and weighted average rows</li><li>float P and R for the bars</li></ul></div>
+  <div style="padding:12px;border-radius:6px;background:#f5eefb;box-shadow:inset 0 0 0 1px #6b2fa0"><strong style="color:#6b2fa0">◆ Needs new data</strong><ul style="margin:4px 0 0;padding-left:18px"><li>Confusion matrix: <code>eval_summary.json</code> needs per-(label, predicted) counts and pair ids</li><li>Cell drill-down route <code>/eval/cell</code></li><li>Threshold sweep (P/R at confidence cut-offs)</li><li>Golden-set version (file hash), previous run, Δ P</li><li>M3-06: rules vs rules+LLM columns</li></ul><p style="margin:6px 0 0">Until these exist, ship the headline, the type table and the notes only.</p></div>
+</aside>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const T = [['equivalent','≡','equivalent'],['egf','≡*','equivalent_given_facts'],['complement','¬','complement'],['implies','⇒','implies'],['related','~','related'],['unrelated','∅','unrelated']];
+    const R = [[40,38,1,2,.974,.950,.962,'+0.012'],[12,10,1,2,.909,.833,.870,'−0.020'],[8,7,0,1,1,.875,.933,'0.000'],[15,11,3,4,.786,.733,.759,'+0.041'],[60,55,8,5,.873,.917,.894,'+0.004'],[25,22,4,3,.846,.880,.863,'−0.008']];
+    const f = v => v.toFixed(3);
+    const rows = T.map(([k],i) => { const [s,tp,fp,fn,p,r,f1,d] = R[i]; return { k, s, tp, fp, fn, p:f(p), r:f(r), f1:f(f1), pw:p*100+'%', rw:r*100+'%', d, bg: i===0 ? '#f7fbf8' : 'transparent' }; });
+    const M = [[38,1,0,0,1,0],[1,10,0,0,1,0],[0,0,7,0,0,1],[0,0,0,11,3,1],[0,0,0,3,55,2],[0,0,0,0,3,22]];
+    const cm = M.map((row,i) => { const n = row.reduce((a,b)=>a+b,0); return { g:T[i][1], name:T[i][2], n, cells: row.map((v,j) => {
+      const diag = i===j, a = v/n;
+      const bg = v===0 ? '#f5f7f9' : diag ? `rgba(27,110,58,${0.15+a*0.85})` : `rgba(179,38,30,${Math.min(0.85,0.18+a*3)})`;
+      const dark = v>0 && (diag ? a>0.7 : Math.min(0.85,0.18+a*3)>0.6);
+      return { n:v, p:T[j][2], aria:`${v} labelled ${T[i][2]}, predicted ${T[j][2]}`, bg, fg: v===0 ? '#8e96a3' : dark ? '#fff' : '#1b2230', fw: diag ? 700 : 600, ring: (i===3&&j===4) ? '0 0 0 2px #1b2230' : 'none' };
+    }) }; });
+    return { rows, rowsM: rows.slice(0,3), cm, cols: T.map(t => ({ g:t[1], name:t[2] })) };
+  }
+}
+</script>
+</body>
+</html>

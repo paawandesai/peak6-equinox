@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><style>body{margin:0;background:#e6e9ed;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue","Noto Sans",sans-serif;color:#1b2230;-webkit-font-smoothing:antialiased}a{color:#0172ad}a:hover{color:#01527d}</style></helmet>
+<section style="display:flex;gap:48px;padding:48px;align-items:flex-start">
+
+<div style="display:flex;flex-direction:column;gap:10px">
+  <div style="font:600 12px ui-monospace,Menlo,monospace;color:#3a4350">Eval · desktop 1280 · templates/eval.html · summary present (illustrative numbers)</div>
+  <div style="width:1280px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.06);border-radius:4px;overflow:hidden">
+    <dc-import name="Eq Header" active="eval" banner="demo" hint-size="100%,140px"></dc-import>
+    <main style="padding:32px 40px 48px;display:flex;flex-direction:column;gap:28px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <h1 style="margin:0;font-size:30px;line-height:1.2;font-weight:700">Eval: matcher accuracy on labelled pairs</h1>
+        <p style="margin:0;font-size:17px;line-height:1.45;color:#5d6675">How accurate is the matcher on human-labelled pairs, per relationship type?</p>
+      </div>
+      <div style="display:grid;grid-template-columns:400px minmax(0,1fr);gap:32px;align-items:stretch">
+        <div style="border:1px solid #1b6e3a;border-radius:8px;padding:20px 24px;background:#e6f4ea;display:flex;flex-direction:column;gap:6px">
+          <div style="font-size:14px;font-weight:600;color:#1b6e3a">Precision at equivalent</div>
+          <div style="display:flex;align-items:baseline;gap:14px"><span style="font-size:48px;line-height:1;font-weight:700;font-variant-numeric:tabular-nums">1.00</span><span style="display:inline-block;padding:2px 10px;border-radius:4px;font-size:14px;font-weight:700;line-height:22px;background:#1b6e3a;color:#fff">meets the 0.95 target</span></div>
+          <div style="font-size:13px;color:#1b2230">Exit bar: precision ≥ 0.95 at <em>equivalent</em>.</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px;justify-content:center">
+          <p style="margin:0;font-size:15px;line-height:1.6;color:#3a4350">Precision and recall per relationship type, computed by <code style="font-family:ui-monospace,Menlo,monospace;font-size:13px;background:#f2f4f6;padding:1px 5px;border-radius:3px">equinox eval</code> over the human-confirmed labels in <code style="font-family:ui-monospace,Menlo,monospace;font-size:13px;background:#f2f4f6;padding:1px 5px;border-radius:3px">testdata/golden/labels.yaml</code>. The exit bar is precision ≥ 0.95 at <em>equivalent</em>: a false "same bet" is the worst failure, so precision counts more than recall. This page only reads the stored summary.</p>
+          <p style="margin:0;font-size:15px;line-height:1.6">Produced <strong>2026-10-08 09:12:44 EDT</strong> by <code style="font-family:ui-monospace,Menlo,monospace;font-size:13px;background:#f2f4f6;padding:1px 5px;border-radius:3px">equinox eval --out config/eval_summary.json</code> on round <strong>3</strong>: <strong>41</strong> labelled pairs from <code style="font-family:ui-monospace,Menlo,monospace;font-size:13px;background:#f2f4f6;padding:1px 5px;border-radius:3px">testdata/golden/labels.yaml</code>, method <code style="font-family:ui-monospace,Menlo,monospace;font-size:13px;background:#f2f4f6;padding:1px 5px;border-radius:3px">rules</code>.</p>
+        </div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:15px;font-variant-numeric:tabular-nums">
+        <thead><tr>
+          <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0">Type</th>
+          <th style="text-align:right;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0">Labelled</th>
+          <th style="text-align:right;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0">True positives</th>
+          <th style="text-align:right;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0">False positives</th>
+          <th style="text-align:right;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0">False negatives</th>
+          <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0;width:200px">Precision</th>
+          <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0;width:200px">Recall</th>
+        </tr></thead>
+        <tbody>
+          <tr style="background:#f7fbf8"><td style="padding:12px 10px;border-bottom:1px solid #eceff2"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#1b6e3a;color:#fff">equivalent</span></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right">6</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right">5</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right;font-weight:700">0</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right">1</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2"><span style="display:flex;align-items:center;gap:10px"><strong style="width:36px">1.00</strong><span aria-hidden="true" style="position:relative;flex:1;height:6px;background:#e1e5ea;border-radius:3px"><span style="position:absolute;inset:0 0 0 0;background:#1b6e3a;border-radius:3px"></span><span style="position:absolute;left:95%;top:-3px;width:2px;height:12px;background:#1b2230"></span></span></span></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2"><span style="display:flex;align-items:center;gap:10px"><span style="width:36px">0.83</span><span aria-hidden="true" style="position:relative;flex:1;height:6px;background:#e1e5ea;border-radius:3px"><span style="position:absolute;left:0;top:0;bottom:0;width:83%;background:#5d6675;border-radius:3px"></span></span></span></td></tr>
+          <tr><td style="padding:12px 10px;border-bottom:1px solid #eceff2"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e6f4ea;color:#1b6e3a;box-shadow:inset 0 0 0 1px #1b6e3a">equivalent_given_facts</span></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right">3</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right">2</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right">0</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right">1</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2"><span style="display:flex;align-items:center;gap:10px"><strong style="width:36px">1.00</strong><span aria-hidden="true" style="position:relative;flex:1;height:6px;background:#e1e5ea;border-radius:3px"><span style="position:absolute;inset:0;background:#3a4350;border-radius:3px"></span></span></span></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2"><span style="display:flex;align-items:center;gap:10px"><span style="width:36px">0.67</span><span aria-hidden="true" style="position:relative;flex:1;height:6px;background:#e1e5ea;border-radius:3px"><span style="position:absolute;left:0;top:0;bottom:0;width:67%;background:#5d6675;border-radius:3px"></span></span></span></td></tr>
+          <tr><td style="padding:12px 10px;border-bottom:1px solid #eceff2"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e6f4ea;color:#1b6e3a">complement</span></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right">2</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right">1</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right">0</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right">1</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2"><span style="display:flex;align-items:center;gap:10px"><strong style="width:36px">1.00</strong><span aria-hidden="true" style="position:relative;flex:1;height:6px;background:#e1e5ea;border-radius:3px"><span style="position:absolute;inset:0;background:#3a4350;border-radius:3px"></span></span></span></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2"><span style="display:flex;align-items:center;gap:10px"><span style="width:36px">0.50</span><span aria-hidden="true" style="position:relative;flex:1;height:6px;background:#e1e5ea;border-radius:3px"><span style="position:absolute;left:0;top:0;bottom:0;width:50%;background:#5d6675;border-radius:3px"></span></span></span></td></tr>
+          <tr><td style="padding:12px 10px;border-bottom:1px solid #eceff2"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e8f0fb;color:#1a56a8">implies</span></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right">8</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right">6</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right">1</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right">2</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2"><span style="display:flex;align-items:center;gap:10px"><strong style="width:36px">0.86</strong><span aria-hidden="true" style="position:relative;flex:1;height:6px;background:#e1e5ea;border-radius:3px"><span style="position:absolute;left:0;top:0;bottom:0;width:86%;background:#3a4350;border-radius:3px"></span></span></span></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2"><span style="display:flex;align-items:center;gap:10px"><span style="width:36px">0.75</span><span aria-hidden="true" style="position:relative;flex:1;height:6px;background:#e1e5ea;border-radius:3px"><span style="position:absolute;left:0;top:0;bottom:0;width:75%;background:#5d6675;border-radius:3px"></span></span></span></td></tr>
+          <tr><td style="padding:12px 10px;border-bottom:1px solid #eceff2"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#fff3d6;color:#8a5a00">related</span></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right">14</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right">12</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right">2</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right">2</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2"><span style="display:flex;align-items:center;gap:10px"><strong style="width:36px">0.86</strong><span aria-hidden="true" style="position:relative;flex:1;height:6px;background:#e1e5ea;border-radius:3px"><span style="position:absolute;left:0;top:0;bottom:0;width:86%;background:#3a4350;border-radius:3px"></span></span></span></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2"><span style="display:flex;align-items:center;gap:10px"><span style="width:36px">0.86</span><span aria-hidden="true" style="position:relative;flex:1;height:6px;background:#e1e5ea;border-radius:3px"><span style="position:absolute;left:0;top:0;bottom:0;width:86%;background:#5d6675;border-radius:3px"></span></span></span></td></tr>
+          <tr><td style="padding:12px 10px;border-bottom:1px solid #eceff2"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;color:#5d6675;box-shadow:inset 0 0 0 1px #c9cfd6">unrelated</span></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right">8</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right">8</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right">1</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right">0</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2"><span style="display:flex;align-items:center;gap:10px"><strong style="width:36px">0.89</strong><span aria-hidden="true" style="position:relative;flex:1;height:6px;background:#e1e5ea;border-radius:3px"><span style="position:absolute;left:0;top:0;bottom:0;width:89%;background:#3a4350;border-radius:3px"></span></span></span></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2"><span style="display:flex;align-items:center;gap:10px"><span style="width:36px">1.00</span><span aria-hidden="true" style="position:relative;flex:1;height:6px;background:#e1e5ea;border-radius:3px"><span style="position:absolute;inset:0;background:#5d6675;border-radius:3px"></span></span></span></td></tr>
+        </tbody>
+      </table>
+      <section style="display:flex;flex-direction:column;gap:8px">
+        <h2 style="margin:0;font-size:21px;font-weight:700">Notes from the run</h2>
+        <ul style="margin:0;padding-left:20px;font-size:15px;line-height:1.6;color:#3a4350"><li>One equivalent label was classified related: the Polymarket rules text names a different resolution source.</li><li>Back-test: 0 equivalent pairs settled differently across 14 settled contracts.</li></ul>
+      </section>
+    </main>
+    <footer style="padding:20px 40px;border-top:1px solid #e1e5ea;font-size:13px;color:#5d6675">Everything here is a simulation over recorded venue data. Equinox never places orders. Prices are per $1 payout, in [0,1].</footer>
+  </div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:48px">
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div style="font:600 12px ui-monospace,Menlo,monospace;color:#3a4350">Eval · mobile 390 · empty state (Q-7, current live state)</div>
+    <div style="width:390px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.06);border-radius:4px;overflow:hidden">
+      <dc-import name="Eq Header" mobile="{{ true }}" active="eval" banner="demo" hint-size="100%,220px"></dc-import>
+      <main style="padding:20px 16px 32px;display:flex;flex-direction:column;gap:20px">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <h1 style="margin:0;font-size:24px;line-height:1.25;font-weight:700">Eval: matcher accuracy on labelled pairs</h1>
+          <p style="margin:0;font-size:16px;line-height:1.45;color:#5d6675">How accurate is the matcher on human-labelled pairs, per relationship type?</p>
+        </div>
+        <div role="status" style="border:1px solid #8a5a00;border-radius:8px;background:#fff3d6;padding:16px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:8px"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:700;line-height:20px;background:#8a5a00;color:#fff">blocked</span><strong style="color:#8a5a00">No labels confirmed yet (Q-7).</strong></div>
+          <ol style="margin:0;padding-left:20px;font-size:14px;line-height:1.6;color:#1b2230"><li>Confirm <code style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:#fff;padding:1px 4px;border-radius:3px;overflow-wrap:anywhere">testdata/golden/labels.yaml</code></li><li>Run <code style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:#fff;padding:1px 4px;border-radius:3px;overflow-wrap:anywhere">equinox eval --out config/eval_summary.json</code></li><li>This page reads the result.</li></ol>
+        </div>
+        <p style="margin:0;font-size:14px;line-height:1.6;color:#3a4350">Precision and recall per relationship type, computed by <code style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:#f2f4f6;padding:1px 4px;border-radius:3px">equinox eval</code> over the human-confirmed labels in <code style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:#f2f4f6;padding:1px 4px;border-radius:3px;overflow-wrap:anywhere">testdata/golden/labels.yaml</code>. The exit bar is precision ≥ 0.95 at <em>equivalent</em>: a false "same bet" is the worst failure, so precision counts more than recall. This page only reads the stored summary.</p>
+      </main>
+      <footer style="padding:16px;border-top:1px solid #e1e5ea;font-size:13px;line-height:1.45;color:#5d6675">Everything here is a simulation over recorded venue data. Equinox never places orders. Prices are per $1 payout, in [0,1].</footer>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div style="font:600 12px ui-monospace,Menlo,monospace;color:#3a4350">Eval · mobile 390 · per-type rows stack</div>
+    <div style="width:390px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.06);border-radius:4px;padding:16px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box">
+      <div style="border:1px solid #1b6e3a;border-radius:8px;padding:14px;background:#e6f4ea"><div style="font-size:13px;font-weight:600;color:#1b6e3a">Precision at equivalent</div><div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin-top:4px"><span style="font-size:36px;font-weight:700">1.00</span><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:700;line-height:20px;background:#1b6e3a;color:#fff">meets the 0.95 target</span></div></div>
+      <div style="border:1px solid #e1e5ea;border-radius:6px;padding:12px;display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-size:14px;font-variant-numeric:tabular-nums"><span style="grid-column:1 / -1"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#1b6e3a;color:#fff">equivalent</span></span><span style="color:#5d6675">Labelled</span><span>6</span><span style="color:#5d6675">TP / FP / FN</span><span>5 / <strong>0</strong> / 1</span><span style="color:#5d6675">Precision</span><strong>1.00</strong><span style="color:#5d6675">Recall</span><span>0.83</span></div>
+      <div style="border:1px solid #e1e5ea;border-radius:6px;padding:12px;display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-size:14px;font-variant-numeric:tabular-nums"><span style="grid-column:1 / -1"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e8f0fb;color:#1a56a8">implies</span></span><span style="color:#5d6675">Labelled</span><span>8</span><span style="color:#5d6675">TP / FP / FN</span><span>6 / 1 / 2</span><span style="color:#5d6675">Precision</span><strong>0.86</strong><span style="color:#5d6675">Recall</span><span>0.75</span></div>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div style="font:600 12px ui-monospace,Menlo,monospace;color:#3a4350">Eval · broken summary and failing verdict (states)</div>
+    <div style="width:390px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.06);border-radius:4px;padding:16px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box">
+      <div role="alert" style="border:1px solid #b3261e;border-radius:8px;background:#fbe9e7;padding:14px;font-size:14px;line-height:1.5;color:#b3261e"><strong>config/eval_summary.json could not be read:</strong> unexpected end of JSON input</div>
+      <div style="border:1px solid #b3261e;border-radius:8px;padding:14px;background:#fbe9e7"><div style="font-size:13px;font-weight:600;color:#b3261e">Precision at equivalent</div><div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin-top:4px"><span style="font-size:36px;font-weight:700">0.83</span><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:700;line-height:20px;background:#b3261e;color:#fff">below the 0.95 target</span></div></div>
+      <div style="border:1px solid #c9cfd6;border-radius:8px;padding:14px"><div style="font-size:13px;font-weight:600;color:#5d6675">Precision at equivalent</div><div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin-top:4px"><span style="font-size:36px;font-weight:700;color:#5d6675">—</span><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;color:#5d6675;box-shadow:inset 0 0 0 1px #c9cfd6">undefined: no equivalent predictions</span></div></div>
+    </div>
+  </div>
+</div>
+
+<aside style="width:280px;display:flex;flex-direction:column;gap:10px;font-size:14px;line-height:1.5;color:#3a4350">
+  <div style="font:600 12px ui-monospace,Menlo,monospace">Notes</div>
+  <ol style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px">
+    <li>The headline is the precision-at-equivalent card. It takes the verdict's tint: ok, danger or muted.</li>
+    <li>The empty state turns into a numbered three-step unblock list. The Q-7 text stays word for word.</li>
+    <li>Precision and recall cells get a <code>&lt;meter&gt;</code>. The equivalent row shows the 0.95 target tick.</li>
+    <li>The equivalent row is tinted because it is the only row with an exit bar. Its FP count is bold.</li>
+    <li>When M3-06 adds rules+LLM, add a second Precision/Recall pair and a Δ column. Layout room is reserved.</li>
+  </ol>
+</aside>
+</section>
+</x-dc>
+</body>
+</html>

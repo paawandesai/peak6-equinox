@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><style>body{margin:0;background:#e6e9ed;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue","Noto Sans",sans-serif;color:#1b2230;-webkit-font-smoothing:antialiased}a{color:#0172ad}a:hover{color:#01527d}</style></helmet>
+<section style="display:flex;gap:48px;padding:48px;align-items:flex-start">
+
+<div style="display:flex;flex-direction:column;gap:10px">
+  <div style="font:600 12px ui-monospace,Menlo,monospace;color:#3a4350">Admin · desktop 1280 · templates/admin.html (rendered through layout.html)</div>
+  <div style="width:1280px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.06);border-radius:4px;overflow:hidden">
+    <dc-import name="Eq Header v2" active="" banner="demo" hint-size="100%,140px"></dc-import>
+    <main style="padding:28px 40px 48px;display:flex;flex-direction:column;gap:26px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <h1 style="margin:0;font-size:30px;line-height:1.2;font-weight:700">Admin</h1>
+        <p style="margin:0;font-size:17px;color:#5d6675">Is data flowing, which round is pinned, and what can the LLM verifier spend?</p>
+      </div>
+
+      <div role="alert" style="display:flex;gap:10px;padding:12px 16px;border-radius:6px;background:#fbe9e7;color:#b3261e;font-size:14px;font-weight:600;box-shadow:inset 0 0 0 1px #b3261e"><span aria-hidden="true">✕</span>ALERT: database size is above the 8.0 GiB growth threshold (AB-15).</div>
+      <p role="status" style="margin:-10px 0 0;padding:10px 14px;border-radius:6px;background:#e8f0fb;color:#1a56a8;font-size:14px">Round 3 pinned. Pages now use its stored data.</p>
+
+      <section style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px"><h2 style="margin:0;font-size:21px">Health</h2><span style="font-size:14px;color:#3a4350">Each component shows its worst signal. Gray means unknown, never healthy.</span></div>
+        <table style="width:100%;border-collapse:collapse;font-size:14px">
+          <thead><tr>
+            <th style="text-align:left;padding:8px 10px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0;width:150px">Component</th>
+            <th style="text-align:left;padding:8px 10px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0;width:130px">Status</th>
+            <th style="text-align:left;padding:8px 10px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Signals</th>
+            <th style="text-align:left;padding:8px 10px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0;width:300px">Recent rounds</th>
+          </tr></thead>
+          <tbody>
+            <sc-for list="{{ health }}" as="h" hint-placeholder-count="4">
+            <tr>
+              <th scope="row" style="text-align:left;padding:14px 10px;border-bottom:1px solid #eceff2;vertical-align:top;font-size:15px">{{ h.name }}</th>
+              <td style="padding:14px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><dc-import name="Eq Badge" k="{{ h.k }}" hint-size="100px,22px"></dc-import></td>
+              <td style="padding:14px 10px;border-bottom:1px solid #eceff2;vertical-align:top">
+                <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px">
+                  <sc-for list="{{ h.signals }}" as="s" hint-placeholder-count="2"><li style="display:flex;gap:8px;align-items:baseline"><span aria-hidden="true" style="width:14px;font-weight:700;color:{{ s.fg }}">{{ s.g }}</span><span>{{ s.t }}</span><sc-if value="{{ s.nd }}"><span style="padding:0 6px;border-radius:3px;outline:1px dashed #6b2fa0;background:#faf6fd;color:#6b2fa0;font-size:12px;white-space:nowrap">◆ needs new data</span></sc-if></li></sc-for>
+                </ul>
+              </td>
+              <td style="padding:14px 10px;border-bottom:1px solid #eceff2;vertical-align:top">
+                <sc-if value="{{ h.bars }}"><div role="img" aria-label="Last 24 rounds: 21 ok, 2 partial, 1 failed, 1 missing tick" style="display:flex;align-items:flex-end;gap:2px;height:28px"><sc-for list="{{ bars }}" as="b" hint-placeholder-count="24"><span title="{{ b.t }}" style="flex:1;height:{{ b.h }};background:{{ b.bg }};box-shadow:{{ b.ring }};border-radius:1px"></span></sc-for></div><div style="display:flex;justify-content:space-between;margin-top:4px;font-size:11px;color:#4f5866"><span>round 26</span><span>full height ok · ¾ partial · ½ failed · outline missing</span><span>49</span></div></sc-if>
+                <sc-if value="{{ h.nobars }}" hint-placeholder-val="{{ true }}"><span style="font-size:13px;color:#4f5866">{{ h.nobarsText }}</span></sc-if>
+              </td>
+            </tr>
+            </sc-for>
+          </tbody>
+        </table>
+        <p style="margin:0;font-size:13px;color:#3a4350">Collector freshness windows: warn after 7 min, fail after 15 min, against the 5-minute schedule. <span style="padding:0 6px;border-radius:3px;outline:1px dashed #6b2fa0;background:#faf6fd;color:#6b2fa0;font-size:12px">◆ the warn window needs new data; only the D-077 stale threshold exists</span></p>
+      </section>
+
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px">
+        <section style="display:flex;flex-direction:column;gap:8px">
+          <h2 style="margin:0;font-size:18px">Collector success, trailing 24h (NFR-05)</h2>
+          <p style="margin:0;font-size:14px;line-height:1.55">Since 2026-10-07 11:05 EDT: <strong>98.6%</strong> of 288 expected 5-minute ticks succeeded (target 95%): <strong>MEETS TARGET</strong>.</p>
+          <dl style="margin:0;display:flex;flex-wrap:wrap;gap:6px;font-size:13px">
+            <div style="display:flex;gap:6px;padding:4px 10px;border-radius:4px;background:#e6f4ea;color:#1b6e3a"><dt>✓ ok</dt><dd style="margin:0;font-weight:700">278</dd></div>
+            <div style="display:flex;gap:6px;padding:4px 10px;border-radius:4px;background:#fff3d6;color:#8a5a00"><dt>◐ partial</dt><dd style="margin:0;font-weight:700">6</dd></div>
+            <div style="display:flex;gap:6px;padding:4px 10px;border-radius:4px;background:#fbe9e7;color:#b3261e"><dt>✕ failed</dt><dd style="margin:0;font-weight:700">2</dd></div>
+            <div style="display:flex;gap:6px;padding:4px 10px;border-radius:4px;background:#e8f0fb;color:#1a56a8"><dt>↻ running</dt><dd style="margin:0;font-weight:700">0</dd></div>
+            <div style="display:flex;gap:6px;padding:4px 10px;border-radius:4px;background:#f2f4f6;color:#4f5866;box-shadow:inset 0 0 0 1px #8e96a3"><dt>? missing ticks</dt><dd style="margin:0;font-weight:700">2</dd></div>
+          </dl>
+          <p style="margin:0;font-size:13px;color:#3a4350">286 rounds observed of 288 scheduled. A partial round (one venue failed) counts as a success; a missing tick counts as a failure.</p>
+        </section>
+        <section style="display:flex;flex-direction:column;gap:8px">
+          <h2 style="margin:0;font-size:18px">Database</h2>
+          <p style="margin:0;font-size:14px;line-height:1.55">Database size: <strong>8.4 GiB</strong> (alert threshold 8.0 GiB) <strong style="color:#b3261e">ALERT: database size is above the 8.0 GiB growth threshold (AB-15); an error-level log entry was written. Trim raw responses or raise the disk before the collector fills it.</strong></p>
+          <div role="img" aria-label="8.4 of 8.0 GiB, 105 percent" style="position:relative;height:10px;border-radius:5px;background:#e1e5ea"><span style="position:absolute;left:0;top:0;bottom:0;width:100%;border-radius:5px;background:#b3261e"></span><span style="position:absolute;left:95%;top:-4px;bottom:-4px;width:2px;background:#1b2230"></span></div>
+          <span style="font-size:12px;color:#4f5866">8.4 of 8.0 GiB · 105%</span>
+        </section>
+      </div>
+
+      <section style="display:flex;flex-direction:column;gap:12px">
+        <h2 style="margin:0;font-size:21px">Actions</h2>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px">
+          <section style="display:flex;flex-direction:column;gap:10px;padding:16px;border:1px solid #e1e5ea;border-radius:8px">
+            <header style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3 style="margin:0;font-size:16px">Ingest</h3><dc-import name="Eq Badge" tone="info" glyph="↻" text="round 50 running" hint-size="130px,22px"></dc-import></header>
+            <button disabled style="height:40px;border:0;border-radius:5px;background:#c9cfd6;color:#3a4350;font-size:14px;font-weight:600">Run one fetch round now</button>
+            <small style="font-size:13px;color:#3a4350">Fetches both venues and stores a new round. Cloud Scheduler does the same every 5 minutes.</small>
+            <small style="font-size:12px;color:#4f5866">Not configured state: <span style="color:#4f5866;font-weight:600">? not configured</span>, “Ingest is not configured on this server.”</small>
+          </section>
+          <section style="display:flex;flex-direction:column;gap:10px;padding:16px;border:1px solid #e1e5ea;border-radius:8px">
+            <header style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3 style="margin:0;font-size:16px">Unpin round (demo mode)</h3><dc-import name="Eq Badge" tone="info" glyph="◆" text="round 3 pinned" hint-size="120px,22px"></dc-import></header>
+            <p style="margin:0;font-size:14px">Demo mode active: all pages use this round's stored data. No live venue calls.</p>
+            <button style="height:40px;border:0;border-radius:5px;background:#0172ad;color:#fff;font-size:14px;font-weight:600">Unpin round</button>
+            <small style="font-size:13px;color:#3a4350">Unpins the current round. Next page request will use the latest round.</small>
+          </section>
+          <section style="display:flex;flex-direction:column;gap:10px;padding:16px;border:1px solid #e1e5ea;border-radius:8px">
+            <header style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3 style="margin:0;font-size:16px">LLM Verification</h3><dc-import name="Eq Badge" k="healthy" text="ready: 12 of 200 calls used today" hint-size="220px,22px"></dc-import></header>
+            <button style="height:40px;border:0;border-radius:5px;background:#0172ad;color:#fff;font-size:14px;font-weight:600">Verify 2 equivalent pairs</button>
+            <small style="font-size:13px;color:#3a4350">Runs LLM verifier on all rules-equivalent pairs from the current round. Downgrade-only, cached, budget-capped.</small>
+          </section>
+        </div>
+      </section>
+
+      <section style="display:flex;flex-direction:column;gap:8px;padding:16px;border-radius:8px;outline:1px dashed #6b2fa0;background:#fdfbfe">
+        <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px"><h2 style="margin:0;font-size:18px">LLM verifier runs</h2><span style="font-size:12px;font-weight:600;color:#6b2fa0">◆ needs new data: per-run history (only the last-run text exists today)</span></div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums">
+          <thead><tr><th style="text-align:left;padding:6px 8px;color:#4f5866;border-bottom:1px solid #d5dae0">Run</th><th style="text-align:left;padding:6px 8px;color:#4f5866;border-bottom:1px solid #d5dae0">Started</th><th style="text-align:right;padding:6px 8px;color:#4f5866;border-bottom:1px solid #d5dae0">Verified</th><th style="text-align:right;padding:6px 8px;color:#4f5866;border-bottom:1px solid #d5dae0">Downgraded</th><th style="text-align:right;padding:6px 8px;color:#4f5866;border-bottom:1px solid #d5dae0">Cache hits</th><th style="text-align:right;padding:6px 8px;color:#4f5866;border-bottom:1px solid #d5dae0">Calls</th></tr></thead>
+          <tbody><tr><td style="padding:6px 8px"><code>llm-0142</code></td><td style="padding:6px 8px">2026-10-08 11:04 EDT</td><td style="padding:6px 8px;text-align:right">14</td><td style="padding:6px 8px;text-align:right">2</td><td style="padding:6px 8px;text-align:right">9</td><td style="padding:6px 8px;text-align:right">5</td></tr></tbody>
+        </table>
+      </section>
+
+      <section style="display:flex;flex-direction:column;gap:6px;padding:14px 16px;border-radius:8px;background:#f5f7f9">
+        <h2 style="margin:0;font-size:16px">Data notes</h2>
+        <ul style="margin:0;padding-left:18px;font-size:14px;line-height:1.6;color:#3a4350"><li>Polymarket venue time is not reported; the touch table shows n/a.</li><li>While a round is pinned, freshness reads “Pinned” and is not judged against the clock.</li><li>Fee estimates are approximate until each venue publishes a schedule (see route warnings).</li></ul>
+      </section>
+
+      <section style="display:flex;flex-direction:column;gap:8px">
+        <h2 style="margin:0;font-size:21px">Last 3 rounds</h2>
+        <table style="width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums">
+          <thead><tr><th style="text-align:left;padding:7px 8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Round</th><th style="text-align:left;padding:7px 8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Started (UTC)</th><th style="text-align:left;padding:7px 8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Duration</th><th style="text-align:left;padding:7px 8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Status</th><th style="text-align:left;padding:7px 8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0;border-left:1px solid #e1e5ea">Venue</th><th style="text-align:left;padding:7px 8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">OK</th><th style="text-align:right;padding:7px 8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Instruments</th><th style="text-align:right;padding:7px 8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Quotes</th><th style="text-align:left;padding:7px 8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Venue time</th><th style="text-align:left;padding:7px 8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Error</th></tr></thead>
+          <tbody>
+            <tr><td rowspan="2" style="padding:8px;border-bottom:2px solid #d5dae0;vertical-align:top;font-weight:600">50</td><td rowspan="2" style="padding:8px;border-bottom:2px solid #d5dae0;vertical-align:top">2026-10-08 15:08:20</td><td rowspan="2" style="padding:8px;border-bottom:2px solid #d5dae0;vertical-align:top">—</td><td rowspan="2" style="padding:8px;border-bottom:2px solid #d5dae0;vertical-align:top"><dc-import name="Eq Badge" tone="info" glyph="↻" text="running" hint-size="80px,22px"></dc-import></td><td style="padding:8px;border-bottom:1px solid #eceff2;border-left:1px solid #e1e5ea">kalshi</td><td style="padding:8px;border-bottom:1px solid #eceff2">yes</td><td style="padding:8px;border-bottom:1px solid #eceff2;text-align:right">1,204</td><td style="padding:8px;border-bottom:1px solid #eceff2;text-align:right">1,190</td><td style="padding:8px;border-bottom:1px solid #eceff2">6.1 s</td><td style="padding:8px;border-bottom:1px solid #eceff2"></td></tr>
+            <tr><td style="padding:8px;border-bottom:2px solid #d5dae0;border-left:1px solid #e1e5ea">polymarket</td><td style="padding:8px;border-bottom:2px solid #d5dae0">—</td><td style="padding:8px;border-bottom:2px solid #d5dae0;text-align:right">—</td><td style="padding:8px;border-bottom:2px solid #d5dae0;text-align:right">—</td><td style="padding:8px;border-bottom:2px solid #d5dae0">—</td><td style="padding:8px;border-bottom:2px solid #d5dae0"></td></tr>
+            <tr><td rowspan="2" style="padding:8px;border-bottom:2px solid #d5dae0;vertical-align:top;font-weight:600">49</td><td rowspan="2" style="padding:8px;border-bottom:2px solid #d5dae0;vertical-align:top">2026-10-08 15:03:20</td><td rowspan="2" style="padding:8px;border-bottom:2px solid #d5dae0;vertical-align:top">18.2 s</td><td rowspan="2" style="padding:8px;border-bottom:2px solid #d5dae0;vertical-align:top"><dc-import name="Eq Badge" k="match" text="ok" hint-size="50px,22px"></dc-import></td><td style="padding:8px;border-bottom:1px solid #eceff2;border-left:1px solid #e1e5ea">kalshi</td><td style="padding:8px;border-bottom:1px solid #eceff2">yes</td><td style="padding:8px;border-bottom:1px solid #eceff2;text-align:right">1,206</td><td style="padding:8px;border-bottom:1px solid #eceff2;text-align:right">1,192</td><td style="padding:8px;border-bottom:1px solid #eceff2">6.4 s</td><td style="padding:8px;border-bottom:1px solid #eceff2"></td></tr>
+            <tr><td style="padding:8px;border-bottom:2px solid #d5dae0;border-left:1px solid #e1e5ea">polymarket</td><td style="padding:8px;border-bottom:2px solid #d5dae0">yes</td><td style="padding:8px;border-bottom:2px solid #d5dae0;text-align:right">1,247</td><td style="padding:8px;border-bottom:2px solid #d5dae0;text-align:right">1,218</td><td style="padding:8px;border-bottom:2px solid #d5dae0">11.8 s</td><td style="padding:8px;border-bottom:2px solid #d5dae0"></td></tr>
+            <tr><td rowspan="2" style="padding:8px;border-bottom:2px solid #d5dae0;vertical-align:top;font-weight:600">3 (pinned)</td><td rowspan="2" style="padding:8px;border-bottom:2px solid #d5dae0;vertical-align:top">2026-10-07 01:15:56</td><td rowspan="2" style="padding:8px;border-bottom:2px solid #d5dae0;vertical-align:top">21.0 s</td><td rowspan="2" style="padding:8px;border-bottom:2px solid #d5dae0;vertical-align:top"><dc-import name="Eq Badge" tone="warn" glyph="◐" text="partial" hint-size="80px,22px"></dc-import></td><td style="padding:8px;border-bottom:1px solid #eceff2;border-left:1px solid #e1e5ea">kalshi</td><td style="padding:8px;border-bottom:1px solid #eceff2">yes</td><td style="padding:8px;border-bottom:1px solid #eceff2;text-align:right">1,201</td><td style="padding:8px;border-bottom:1px solid #eceff2;text-align:right">1,188</td><td style="padding:8px;border-bottom:1px solid #eceff2">6.0 s</td><td style="padding:8px;border-bottom:1px solid #eceff2"></td></tr>
+            <tr><td style="padding:8px;border-bottom:2px solid #d5dae0;border-left:1px solid #e1e5ea">polymarket</td><td style="padding:8px;border-bottom:2px solid #d5dae0;color:#b3261e;font-weight:600">✕ no</td><td style="padding:8px;border-bottom:2px solid #d5dae0;text-align:right">0</td><td style="padding:8px;border-bottom:2px solid #d5dae0;text-align:right">0</td><td style="padding:8px;border-bottom:2px solid #d5dae0">15.0 s</td><td style="padding:8px;border-bottom:2px solid #d5dae0;color:#b3261e">context deadline exceeded</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+  <div style="font:600 12px ui-monospace,Menlo,monospace;color:#3a4350">Admin · mobile 390</div>
+  <div style="width:390px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.06);border-radius:4px;overflow:hidden">
+    <dc-import name="Eq Header v2" active="" banner="demo" mobile="{{ true }}" hint-size="100%,210px"></dc-import>
+    <main style="padding:18px 16px 32px;display:flex;flex-direction:column;gap:12px">
+      <h1 style="margin:0;font-size:26px">Admin</h1>
+      <div role="alert" style="padding:10px 12px;border-radius:6px;background:#fbe9e7;color:#b3261e;font-size:14px;font-weight:600">✕ ALERT: database size is above the 8.0 GiB growth threshold (AB-15).</div>
+      <sc-for list="{{ health }}" as="h" hint-placeholder-count="4">
+      <article style="display:flex;flex-direction:column;gap:6px;padding:12px;border:1px solid #e1e5ea;border-radius:6px;font-size:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><strong>{{ h.name }}</strong><dc-import name="Eq Badge" k="{{ h.k }}" hint-size="100px,22px"></dc-import></div>
+        <span style="color:#3a4350">{{ h.first }}</span>
+      </article>
+      </sc-for>
+      <p style="margin:0;font-size:13px;color:#4f5866">Actions stack as one column with 44px buttons. The rounds table becomes one card per round, with venues listed inside it.</p>
+    </main>
+  </div>
+</div>
+
+<aside style="width:340px;display:flex;flex-direction:column;gap:16px;font-size:14px;line-height:1.5;color:#3a4350">
+  <h2 style="margin:0;font-size:18px;color:#1b2230">Admin: build notes</h2>
+  <p style="margin:0">Template: <code>admin.html</code>, now rendered through <code>layout.html</code>. The old health strip becomes a worst-signal table, one row per component (Dagster-style). All existing sentences are kept verbatim; tests assert MEETS/BELOW TARGET.</p>
+  <div><strong style="color:#1b2230">Rollup rule</strong><p style="margin:2px 0 0">Status = the worst of the row's signals. The order is degraded &gt; warning &gt; healthy. A component with any unknown signal and no worse one reads Unknown (gray), never Healthy.</p></div>
+  <div><strong style="color:#1b2230">VM fields (data already stored)</strong><ul style="margin:4px 0 0;padding-left:18px"><li><code>Health[]</code>: name, status, signals, computed in <code>admin.go</code> from Collector, DB, the latest round and the LLM state</li><li><code>Bars[]</code>: the last 24 rounds from the rounds query</li></ul></div>
+  <div style="padding:12px;border-radius:6px;background:#f5eefb;box-shadow:inset 0 0 0 1px #6b2fa0"><strong style="color:#6b2fa0">◆ Needs new data</strong><ul style="margin:4px 0 0;padding-left:18px"><li>Matcher health: last match run time and duration per round. Today the matcher row is Unknown.</li><li>Freshness warn window (config)</li><li>Daily 90-day history; days with no data show gray</li><li>LLM verifier per-run history table</li></ul></div>
+</aside>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const S = { ok:['✓','#1b6e3a'], w:['!','#8a5a00'], x:['✕','#b3261e'], u:['?','#4f5866'] };
+    const sig = (k, t, nd) => ({ g:S[k][0], fg:S[k][1], t, nd: !!nd });
+    const health = [
+      { name:'Collectors', k:'warning', first:'98.6% of 288 (target 95%) · latest round 49 ok · 2 missing ticks', signals:[ sig('ok','Success 98.6% of 288 (target 95%): meets target'), sig('ok','Latest complete round 49: both venues ok'), sig('w','2 missing ticks in the trailing 24h') ], bars:true, nobars:false },
+      { name:'Database', k:'degraded', first:'8.4 GiB of 8.0 GiB threshold', signals:[ sig('x','8.4 GiB of 8.0 GiB threshold (AB-15)') ], bars:false, nobars:true, nobarsText:'No history stored.' },
+      { name:'Matcher', k:'unknown', first:'Last run not recorded', signals:[ sig('u','Last match run and duration not recorded', true), sig('ok','Round 49 has 878 stored relationships') ], bars:false, nobars:true, nobarsText:'Unknown: no per-round matcher record.' },
+      { name:'Pinned round', k:'pinned', first:'round 3, as of 2026-10-07 01:15:56 UTC', signals:[ sig('ok','round 3, as of 2026-10-07 01:15:56 UTC (demo mode)') ], bars:false, nobars:true, nobarsText:'Freshness is not judged while pinned.' },
+      { name:'LLM verifier', k:'healthy', first:'ready: 12 of 200 calls used today', signals:[ sig('ok','ready: 12 of 200 calls used today'), sig('ok','last run: 14 verified, 2 downgraded, 9 cache hits') ], bars:false, nobars:true, nobarsText:'—' }
+    ];
+    const pat = 'oooooooopoooxoooooomooooo'.slice(0,24).split('');
+    const bars = pat.map((c,i) => ({
+      t: `round ${26+i}: ${ {o:'ok',p:'partial',x:'failed',m:'missing tick'}[c] }`,
+      h: { o:'100%', p:'75%', x:'50%', m:'100%' }[c],
+      bg: { o:'#1b6e3a', p:'#c08a1e', x:'#b3261e', m:'#fff' }[c],
+      ring: c === 'm' ? 'inset 0 0 0 1px #8e96a3' : 'none'
+    }));
+    return { health, bars };
+  }
+}
+</script>
+</body>
+</html>
