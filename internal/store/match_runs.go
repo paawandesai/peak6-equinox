@@ -86,11 +86,11 @@ func (s *Store) GetLatestMatchRun(ctx context.Context) (MatchRun, error) {
 }
 
 // ListMatchRuns returns the most recent match runs, ordered by finished_at descending.
-// Limit is clamped to [1, 100].
+// Limit is clamped to [1, 500] (matches the retention cap).
 func (s *Store) ListMatchRuns(ctx context.Context, limit int) ([]MatchRun, error) {
 	rows, err := s.pool.Query(ctx,
 		`SELECT `+matchRunCols+` FROM match_runs ORDER BY finished_at DESC LIMIT $1`,
-		clampLimit(limit, 1, 100))
+		clampLimit(limit, 1, 500))
 	if err != nil {
 		return nil, fmt.Errorf("listing match runs: %w", err)
 	}
