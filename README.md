@@ -7,6 +7,7 @@ Cross-venue prediction-market aggregation and routing **simulation**, built for 
 - Requirements: [docs/requirements.md](docs/requirements.md)
 - Architecture: [docs/architecture.md](docs/architecture.md)
 - Equivalence logic (how two contracts are judged the same bet): [docs/equivalence.md](docs/equivalence.md)
+- Routing logic (how orders are routed across venues): [docs/routing.md](docs/routing.md)
 - Decisions log: [docs/decisions.md](docs/decisions.md)
 
 ## Live demo
@@ -45,5 +46,5 @@ _Filled in as milestones ship:_
 ## Docs to come
 
 - [docs/equivalence.md](docs/equivalence.md) (shipped: definition, vetoes, facts, basis risk, eval and back-test reading, failure modes, Fed walkthrough)
-- `docs/routing.md` (M3)
+- [docs/routing.md](docs/routing.md) (shipped M3: objective, eligibility, cost formula, greedy sweep, complement routes, worked examples)
 - [docs/ai-usage.md](docs/ai-usage.md) (shipped: runtime LLM use and development AI use)
