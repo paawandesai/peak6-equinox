@@ -82,7 +82,7 @@ func newTouchView(q store.QuoteRecord) touchView {
 func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 	id, ok := parseID(r.PathValue("id"))
 	if !ok {
-		s.renderError(w, http.StatusNotFound, "No such pair.")
+		s.renderErrorWithContext(w, r, http.StatusNotFound, "No such pair.")
 		return
 	}
 	st, ok := s.storeOrFail(w)
@@ -95,7 +95,7 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 	rel, err := st.GetRelationship(ctx, id)
 	switch {
 	case isNotFound(err):
-		s.renderError(w, http.StatusNotFound, "No such pair.")
+		s.renderErrorWithContext(w, r, http.StatusNotFound, "No such pair.")
 		return
 	case err != nil:
 		s.dbError(w, "loading relationship", err)
@@ -112,14 +112,8 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	data := pairPage{
-		page: page{
-			Title:      "Pair " + r.PathValue("id"),
-			Question:   "Why does Equinox think these two contracts are, or are not, the same bet, and where would an order fill best?",
-			Assets:     pinnedAssets,
-			Round:      newRoundInfo(round),
-			DemoBanner: demoBanner(round),
-		},
-		ID: rel.ID, Type: string(rel.Type), TypeLabel: typeLabels[rel.Type], Confidence: rel.Confidence.StringFixed(2),
+		page: s.pageBase(round, "Pair "+r.PathValue("id"), "Why does Equinox think these two contracts are, or are not, the same bet, and where would an order fill best?"),
+		ID:   rel.ID, Type: string(rel.Type), TypeLabel: typeLabels[rel.Type], Confidence: rel.Confidence.StringFixed(2),
 		Method: string(rel.Method), Explanation: rel.Explanation, A: views[rel.AID], B: views[rel.BID],
 		Diff: rel.Diff, Vetoes: rel.Vetoes, Facts: rel.FactsUsed, BasisRisk: rel.BasisRisk,
 		NearMiss: rel.Type == canonical.RelRelated, Types: allTypeViews(),

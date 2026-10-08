@@ -13,18 +13,21 @@ import (
 	"github.com/shopspring/decimal"
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
+	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/collector"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/store"
+	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/venues"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/web"
 )
 
 // TestNFR04_DemoZeroOutbound: when a round is pinned, all public pages and the
 // router use only stored data and make 0 outbound venue calls (NFR-04). This test
-// seeds a round, pins it, and makes requests to all public pages and POST /route.
-// If any handler tries to call a venue adapter, the test fails. The test passes
-// by verifying that all pages render using only the pinned round's stored data.
+// seeds a round, pins it, wraps venue adapters with PanicOnCallAdapter, and makes
+// requests to all public pages and POST /route. If any handler tries to trigger a
+// venue call, the adapter will panic and fail the test.
 func TestNFR04_DemoZeroOutbound(t *testing.T) {
 	ctx := context.Background()
 	st := store.New(tdb.Pool(t))
+	tdb.Reset(t)
 
 	// Seed a round with minimal data for the test
 	round, relID := seedRoundForDemo(ctx, t, st)
@@ -34,11 +37,26 @@ func TestNFR04_DemoZeroOutbound(t *testing.T) {
 		t.Fatalf("pinning round: %v", err)
 	}
 
-	// Build a server with panic-wrapped adapters
-	// If any page or route handler calls the venue, the adapter will panic
+	// Build server with PanicOnCallAdapter-wrapped venues in the collector
+	// NFR-04: if any handler tries to trigger an ingest, the panic proves venue calls happened
+	kalshiMock := &mockAdapter{venue: canonical.VenueKalshi}
+	polymarketMock := &mockAdapter{venue: canonical.VenuePolymarket}
+	reg, err := venues.NewRegistry(
+		venues.NewPanicOnCallAdapter(kalshiMock),
+		venues.NewPanicOnCallAdapter(polymarketMock),
+	)
+	if err != nil {
+		t.Fatalf("creating registry: %v", err)
+	}
+
+	coll, err := collector.New(st, reg, venues.Universes{}, collector.Options{})
+	if err != nil {
+		t.Fatalf("creating collector: %v", err)
+	}
+
 	cfg := web.Config{
 		AppEnv:                "ci",
-		PublicRateLimitPerMin: 10000, // high limit so rate limit doesn't interfere
+		PublicRateLimitPerMin: 10000,
 		MinRouteConfidence:    decimal.RequireFromString("0.9"),
 		BasisPenaltyMult:      decimal.RequireFromString("0.01"),
 		StaleAfter:            120 * time.Second,
@@ -47,45 +65,44 @@ func TestNFR04_DemoZeroOutbound(t *testing.T) {
 		MinBookDepth:          decimal.RequireFromString("1"),
 	}
 	deps := web.Deps{
-		Store: st,
-		Now:   func() time.Time { return time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC) },
+		Store:    st,
+		Ingester: coll,
+		Now:      func() time.Time { return time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC) },
 	}
 	s := web.New(cfg, deps)
 	handler := s.Handler()
 
-	// Test each public page GET
-	pages := []string{
-		"/",
-		"/near-misses",
-		"/log",
-		"/eval",
+	// Test each public page
+	tests := []struct {
+		method string
+		path   string
+	}{
+		{"GET", "/"},
+		{"GET", "/near-misses"},
+		{"GET", "/log"},
+		{"GET", "/eval"},
+		{"GET", "/pairs/" + strconv.FormatInt(relID, 10)},
 	}
-	for _, path := range pages {
-		t.Run("GET "+path, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, path, nil)
+
+	for _, tt := range tests {
+		t.Run(tt.method+" "+tt.path, func(t *testing.T) {
+			req := httptest.NewRequest(tt.method, tt.path, nil)
 			rec := httptest.NewRecorder()
-			// If a venue call is made, PanicOnCallAdapter will panic
 			handler.ServeHTTP(rec, req)
-			// Check we got a response (not panicked)
-			if rec.Code == 0 {
-				t.Error("handler did not write response (possible panic)")
+
+			if rec.Code != http.StatusOK {
+				t.Errorf("status %d, want 200", rec.Code)
 			}
-			// 200, 404, or 503 are all acceptable (page may be missing data, but no venue call)
-			if rec.Code != http.StatusOK && rec.Code != http.StatusNotFound && rec.Code != http.StatusServiceUnavailable {
-				t.Logf("status %d (acceptable as long as no venue call)", rec.Code)
+
+			body := rec.Body.String()
+			if !strings.Contains(body, "Demo mode") {
+				t.Error("expected demo banner in response")
+			}
+			if !strings.Contains(body, "Unpin") {
+				t.Error("expected Unpin link in demo banner")
 			}
 		})
 	}
-
-	// Test GET /pairs/{id}
-	t.Run("GET /pairs/:id", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/pairs/"+strconv.FormatInt(relID, 10), nil)
-		rec := httptest.NewRecorder()
-		handler.ServeHTTP(rec, req)
-		if rec.Code == 0 {
-			t.Error("handler did not write response (possible panic)")
-		}
-	})
 
 	// Test POST /route
 	t.Run("POST /route", func(t *testing.T) {
@@ -102,31 +119,24 @@ func TestNFR04_DemoZeroOutbound(t *testing.T) {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
-		if rec.Code == 0 {
-			t.Error("handler did not write response (possible panic)")
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("status %d, want 200; body: %s", rec.Code, rec.Body.String())
 		}
-		// Route may fail for other reasons (bad data, etc.), but no venue call
-		if rec.Code != http.StatusOK && rec.Code != http.StatusBadRequest && rec.Code != http.StatusNotFound {
-			t.Logf("POST /route status %d (acceptable as long as no venue call)", rec.Code)
+
+		body := rec.Body.String()
+		if !strings.Contains(body, "Chosen") || !strings.Contains(body, "Decision") {
+			t.Error("expected routing decision in response")
 		}
 	})
 }
 
-// TestNFR04_BannerShown: when a round is pinned, every page shows the demo banner.
-func TestNFR04_BannerShown(t *testing.T) {
-	ctx := context.Background()
+// TestNFR04_NoRoundFallback: when no round exists, pages show the fallback banner.
+func TestNFR04_NoRoundFallback(t *testing.T) {
 	st := store.New(tdb.Pool(t))
+	tdb.Reset(t)
 
-	round, _ := seedRoundForDemo(ctx, t, st)
-
-	if err := st.PinRound(ctx, round.ID); err != nil {
-		t.Fatalf("pinning round: %v", err)
-	}
-
-	cfg := web.Config{
-		AppEnv:                "ci",
-		PublicRateLimitPerMin: 10000,
-	}
+	cfg := web.Config{AppEnv: "ci", PublicRateLimitPerMin: 10000}
 	deps := web.Deps{
 		Store: st,
 		Now:   func() time.Time { return time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC) },
@@ -134,18 +144,40 @@ func TestNFR04_BannerShown(t *testing.T) {
 	s := web.New(cfg, deps)
 	handler := s.Handler()
 
-	// Test that the demo banner is shown on the main page
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
+	if rec.Code != http.StatusOK {
+		t.Errorf("status %d, want 200", rec.Code)
+	}
+
 	body := rec.Body.String()
-	if !strings.Contains(body, "Demo mode") {
-		t.Error("expected demo banner on main page when round is pinned")
+	if !strings.Contains(body, "No data available yet") {
+		t.Error("expected no-round fallback banner")
 	}
-	if !strings.Contains(body, "Unpin") {
-		t.Error("expected Unpin link in demo banner")
+	if !strings.Contains(body, "/admin") {
+		t.Error("expected /admin link in fallback banner")
 	}
+}
+
+// mockAdapter is a minimal adapter for testing (used before wrapping with PanicOnCallAdapter).
+type mockAdapter struct {
+	venue canonical.Venue
+}
+
+func (m *mockAdapter) Venue() canonical.Venue { return m.venue }
+
+func (m *mockAdapter) FetchInstruments(_ context.Context, _ venues.Universe) ([]canonical.Instrument, []venues.RawResponse, error) {
+	return nil, nil, nil
+}
+
+func (m *mockAdapter) FetchQuotes(_ context.Context, _ []canonical.Instrument) ([]canonical.Quote, []venues.RawResponse, error) {
+	return nil, nil, nil
+}
+
+func (m *mockAdapter) FetchSettled(_ context.Context, _ venues.Universe, _ time.Time) ([]canonical.Settled, []venues.RawResponse, error) {
+	return nil, nil, nil
 }
 
 // seedRoundForDemo creates a minimal round with one relationship for testing demo mode.

@@ -37,9 +37,9 @@
   </form>
 
   <h2>Demo Mode</h2>
-  {{$hasPinned := false}}{{range .Rounds}}{{if .Pinned}}{{$hasPinned = .ID}}{{end}}{{end}}
-  {{if $hasPinned}}
-  <p>Round <strong>{{$hasPinned}}</strong> is currently pinned (demo mode: all pages use this round's data, no live venue calls).</p>
+  {{if .HasPinned}}
+  <p>Round <strong>{{.PinnedRound.ID}}</strong> (started {{.PinnedRound.Started}}, duration {{.PinnedRound.Duration}}, status {{.PinnedRound.Status}}) is currently pinned.</p>
+  <p><em>Demo mode active: all pages use this round's stored data. No live venue calls.</em></p>
   <form method="post" action="/admin/unpin">
     <button type="submit">Unpin round</button>
     <span>Unpins the current round. Next page request will use the latest round.</span>

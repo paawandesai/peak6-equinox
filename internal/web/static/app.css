@@ -1,6 +1,6 @@
 /* Equinox: small additions over Pico.css (classless). No inline styles anywhere
    (the CSP has no 'unsafe-inline'); every rule lives here. */
-.demo-banner { background: #fff3cd; color: #856404; padding: 1rem; text-align: center; font-weight: 600; border-bottom: 2px solid #ffc107; }
+.banner { background: #fff3cd; color: #856404; padding: 1rem; text-align: center; font-weight: 600; border-bottom: 2px solid #ffc107; }
 .question { font-size: 1.1rem; margin: 0 0 1rem; color: var(--pico-muted-color); }
 .venue { font-variant: small-caps; font-weight: 600; letter-spacing: 0.02em; }
 table.pairs td, table.diff td { vertical-align: top; }

@@ -80,6 +80,8 @@ type adminPage struct {
 	Rounds      []roundView
 	Message     string
 	IngestReady bool
+	PinnedRound *roundView // M3-07: pinned round info for demo mode section
+	HasPinned   bool       // M3-07: whether a round is currently pinned
 }
 
 func (s *Server) handleAdminIndex(w http.ResponseWriter, r *http.Request) {
@@ -110,6 +112,17 @@ func (s *Server) handleAdminIndex(w http.ResponseWriter, r *http.Request) {
 	}
 	page.Collector = collectorSuccess(nil, s.now())
 	if s.deps.Store != nil {
+		// M3-07: query pinned round directly
+		if pinned, err := s.deps.Store.PinnedRound(ctx); err == nil {
+			views := roundViews([]store.Round{pinned})
+			if len(views) > 0 {
+				page.PinnedRound = &views[0]
+				page.HasPinned = true
+			}
+		} else if !isNotFound(err) {
+			s.log.Error("querying pinned round", "error", err)
+		}
+
 		rounds, err := s.deps.Store.ListRounds(ctx, adminRounds)
 		if err != nil {
 			s.log.Error("listing rounds", "error", err)

@@ -82,15 +82,20 @@ func parsePage(files ...string) *template.Template {
 
 // publicRoutes registers the open, read-only pages (D-035). The only public
 // POST is /route, a simulation whose only write is its own decision (AB-14).
-// All routes except /static are rate-limited per client IP (AB-03).
+// All routes except /static are rate-limited per client IP (AB-03) and wrapped
+// with round middleware (M3-07: load pinned or latest round once per request).
 func (s *Server) publicRoutes(mux *http.ServeMux) {
-	mux.Handle("GET /{$}", s.rateLimitMiddleware(http.HandlerFunc(s.handleMatches)))
-	mux.Handle("GET /near-misses", s.rateLimitMiddleware(http.HandlerFunc(s.handleNearMisses)))
-	mux.Handle("GET /pairs/{id}", s.rateLimitMiddleware(http.HandlerFunc(s.handlePair)))
-	mux.Handle("POST /route", s.rateLimitMiddleware(http.HandlerFunc(s.handleRoute)))
-	mux.Handle("GET /decisions/{id}", s.rateLimitMiddleware(http.HandlerFunc(s.handleDecision)))
-	mux.Handle("GET /log", s.rateLimitMiddleware(http.HandlerFunc(s.handleLog)))
-	mux.Handle("GET /eval", s.rateLimitMiddleware(http.HandlerFunc(s.handleEval)))
+	// Apply both round middleware and rate limiting to public pages
+	wrap := func(h http.HandlerFunc) http.Handler {
+		return s.roundMiddleware(s.rateLimitMiddleware(http.HandlerFunc(h)))
+	}
+	mux.Handle("GET /{$}", wrap(s.handleMatches))
+	mux.Handle("GET /near-misses", wrap(s.handleNearMisses))
+	mux.Handle("GET /pairs/{id}", wrap(s.handlePair))
+	mux.Handle("POST /route", wrap(s.handleRoute))
+	mux.Handle("GET /decisions/{id}", wrap(s.handleDecision))
+	mux.Handle("GET /log", wrap(s.handleLog))
+	mux.Handle("GET /eval", wrap(s.handleEval))
 	mux.HandleFunc("GET /static/app.css", s.handleAppCSS)
 }
 
@@ -109,8 +114,8 @@ type page struct {
 	Question     string
 	Assets       assets
 	Round        *roundInfo
-	StaleWarning string // "Data is N minutes old" when round is stale (NFR-09, D-077)
-	DemoBanner   string // "Demo mode: data as of ..." when a round is pinned (NFR-04, M3-07)
+	StaleWarning string        // "Data is N minutes old" when round is stale (NFR-09, D-077)
+	DemoBanner   template.HTML // Demo mode banner with unpin link when round is pinned (NFR-04, M3-07)
 }
 
 // roundInfo is the round a page reads from, as shown in headers.
@@ -127,19 +132,6 @@ func newRoundInfo(r store.Round) *roundInfo {
 		asOf = r.StartedAt
 	}
 	return &roundInfo{ID: r.ID, Status: string(r.Status), Pinned: r.Pinned, AsOf: formatUTC(asOf)}
-}
-
-// demoBanner returns the demo mode banner message when r is pinned, else "".
-// NFR-04: when a round is pinned, all pages show "Demo mode: data as of <timestamp>".
-func demoBanner(r store.Round) string {
-	if !r.Pinned {
-		return ""
-	}
-	asOf := r.FinishedAt
-	if asOf.IsZero() {
-		asOf = r.StartedAt
-	}
-	return fmt.Sprintf("Demo mode: data as of %s (round %d). Unpin at /admin", formatUTC(asOf), r.ID)
 }
 
 // nullPrice renders an optional price for display.
@@ -208,8 +200,19 @@ type errorPage struct {
 // renderError writes a full error page with a plain message. The message is
 // written by this package, never copied from the request or the database.
 func (s *Server) renderError(w http.ResponseWriter, status int, message string) {
+	// renderError is called without request context; use an empty round (no banner)
 	s.render(w, status, "error", errorPage{
-		page:    page{Title: http.StatusText(status), Question: "Something went wrong.", Assets: pinnedAssets},
+		page:    s.pageBase(store.Round{}, http.StatusText(status), "Something went wrong."),
+		Status:  status,
+		Message: message,
+	})
+}
+
+// renderErrorWithContext writes a full error page with banner from request context.
+func (s *Server) renderErrorWithContext(w http.ResponseWriter, r *http.Request, status int, message string) {
+	round := roundFromContext(r.Context())
+	s.render(w, status, "error", errorPage{
+		page:    s.pageBase(round, http.StatusText(status), "Something went wrong."),
 		Status:  status,
 		Message: message,
 	})

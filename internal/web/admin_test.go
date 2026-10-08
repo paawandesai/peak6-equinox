@@ -441,3 +441,100 @@ func TestHelpers(t *testing.T) {
 		t.Errorf("running round view = %+v", views[0])
 	}
 }
+
+// TestAdminUnpin: POST /admin/unpin clears the pinned round (M3-07, NFR-04).
+func TestAdminUnpin(t *testing.T) {
+	st := store.New(tdb.Pool(t))
+	tdb.Reset(t)
+	ctx := context.Background()
+
+	// Seed two rounds
+	round1, err := st.CreateRound(ctx, t0)
+	if err != nil {
+		t.Fatalf("creating round 1: %v", err)
+	}
+	if err := st.FinishRound(ctx, round1.ID, store.RoundOK, nil, t0.Add(time.Second)); err != nil {
+		t.Fatalf("finishing round 1: %v", err)
+	}
+
+	round2, err := st.CreateRound(ctx, t0.Add(time.Minute))
+	if err != nil {
+		t.Fatalf("creating round 2: %v", err)
+	}
+	if err := st.FinishRound(ctx, round2.ID, store.RoundOK, nil, t0.Add(time.Minute+time.Second)); err != nil {
+		t.Fatalf("finishing round 2: %v", err)
+	}
+
+	// Pin round 1
+	if err := st.PinRound(ctx, round1.ID); err != nil {
+		t.Fatalf("pinning round 1: %v", err)
+	}
+
+	s, _ := newAdminServer(t, Deps{Store: st}, "ci")
+	h := s.Handler()
+
+	tests := []struct {
+		name       string
+		method     string
+		auth       bool
+		wantStatus int
+		wantUnpin  bool
+	}{
+		{"POST with auth unpins", http.MethodPost, true, http.StatusSeeOther, true},
+		{"GET rejected", http.MethodGet, true, http.StatusMethodNotAllowed, false},
+		{"no auth rejected", http.MethodPost, false, http.StatusUnauthorized, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Re-pin for each test
+			if err := st.PinRound(ctx, round1.ID); err != nil {
+				t.Fatalf("re-pinning round 1: %v", err)
+			}
+
+			var req *http.Request
+			if tt.auth {
+				req = request(tt.method, "/admin/unpin", withAuth(testUser, testPass), withHeader("Accept", "text/html"))
+			} else {
+				req = request(tt.method, "/admin/unpin", withHeader("Accept", "text/html"))
+			}
+			rec := do(h, req)
+
+			if rec.Code != tt.wantStatus {
+				t.Errorf("status = %d, want %d", rec.Code, tt.wantStatus)
+			}
+
+			// Check if round is still pinned
+			pinned, err := st.PinnedRound(ctx)
+			isPinned := err == nil && pinned.ID != 0
+
+			if tt.wantUnpin && isPinned {
+				t.Error("expected round to be unpinned, but still pinned")
+			}
+			if !tt.wantUnpin && !isPinned && tt.method == http.MethodPost && tt.auth {
+				t.Error("expected round to remain pinned after failed/rejected request")
+			}
+		})
+	}
+}
+
+// TestAdminUnpinRouteOrder: /admin/unpin is registered before /admin/ catch-all (M3-07 AC).
+func TestAdminUnpinRouteOrder(t *testing.T) {
+	st := store.New(tdb.Pool(t))
+	tdb.Reset(t)
+
+	s, _ := newAdminServer(t, Deps{Store: st}, "ci")
+	h := s.Handler()
+
+	// /admin/unpin should not 404 (proves it's registered before catch-all)
+	rec := do(h, request(http.MethodPost, "/admin/unpin", withAuth(testUser, testPass)))
+	if rec.Code == http.StatusNotFound {
+		t.Error("/admin/unpin returned 404; route not registered before catch-all")
+	}
+
+	// /admin/unknown should 404 (catch-all works)
+	rec = do(h, request(http.MethodGet, "/admin/unknown", withAuth(testUser, testPass)))
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("/admin/unknown status = %d, want 404", rec.Code)
+	}
+}

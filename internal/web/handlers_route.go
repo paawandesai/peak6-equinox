@@ -281,9 +281,8 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 	s.log.Info("routing decision stored", "decision_id", id, "round_id", dec.RoundID, "target", dec.TargetID,
 		"chosen", len(dec.Chosen), "alternatives", len(dec.Alternatives), "exclusions", len(dec.Exclusions))
 
-	p := s.routePageHeader(in.PairID)
+	p := s.routePageHeader(in.PairID, round)
 	p.StaleWarning = s.staleRoundWarning(round)
-	p.DemoBanner = demoBanner(round)
 	data := routePage{
 		page:       p,
 		PairID:     in.PairID,
@@ -293,19 +292,16 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 	s.renderRoute(w, r, http.StatusOK, data)
 }
 
-func (s *Server) routePageHeader(pairID int64) page {
-	return page{
-		Title:    "Routing trace",
-		Question: fmt.Sprintf("Where would this order fill best, and why? (pair %d)", pairID),
-		Assets:   pinnedAssets,
-	}
+func (s *Server) routePageHeader(pairID int64, round store.Round) page {
+	return s.pageBase(round, "Routing trace", fmt.Sprintf("Where would this order fill best, and why? (pair %d)", pairID))
 }
 
 // routeFailure renders the problems at the given status: as a fragment for
 // htmx (which swaps 400 responses in, see the htmx-config meta) or as a
 // full page otherwise.
 func (s *Server) routeFailure(w http.ResponseWriter, r *http.Request, status int, pairID int64, problems ...string) {
-	s.renderRoute(w, r, status, routePage{page: s.routePageHeader(pairID), PairID: pairID, Errors: problems})
+	round := roundFromContext(r.Context())
+	s.renderRoute(w, r, status, routePage{page: s.routePageHeader(pairID, round), PairID: pairID, Errors: problems})
 }
 
 func (s *Server) renderRoute(w http.ResponseWriter, r *http.Request, status int, data routePage) {
