@@ -258,7 +258,7 @@ func readPage(t *testing.T, what string, resp *http.Response) string {
 var (
 	pairLinkRe    = regexp.MustCompile(`href="/pairs/([0-9]+)"`)
 	explanationRe = regexp.MustCompile(`(?s)<p class="explanation">\s*(.*?)\s*</p>`)
-	chosenRe      = regexp.MustCompile(`(?s)<h3>Chosen route</h3>\s*<table>.*?<span class="venue">([a-z]+)</span>`)
+	chosenRe      = regexp.MustCompile(`(?s)<h3>Chosen legs</h3>\s*<table[^>]*>.*?<span class="venue">([a-z]+)</span>`)
 )
 
 // firstEquivalentPair finds the equivalent section of the matches page and
