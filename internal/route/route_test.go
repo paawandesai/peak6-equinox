@@ -173,14 +173,20 @@ func TestRouteFOKNeverPartiallyFills(t *testing.T) {
 		t.Fatalf("chosen = %+v", dec.Chosen)
 	}
 	ex := exclusion(t, dec, kalshiID)
-	if ex.Reason != ReasonInsufficientDepth || !strings.Contains(ex.Detail, "100 of 150") {
+	if ex.Reason != ReasonInsufficientDepth || !strings.Contains(ex.Detail, "FOK requires 150") {
 		t.Errorf("exclusion = %+v", ex)
+	}
+
+	// Finding #5: FOK Alternatives should not include partials (only polymarket full fill)
+	if len(dec.Alternatives) != 1 || dec.Alternatives[0].Legs[0].InstrumentID != polymarketID {
+		t.Errorf("FOK alternatives should only include full fills, got %d: %+v", len(dec.Alternatives), dec.Alternatives)
 	}
 
 	dec = mustRoute(t, buy("150"), target, partners)
 	if len(dec.Alternatives) != 2 || dec.Alternatives[1].Legs[0].InstrumentID != kalshiID {
 		t.Fatalf("IOC alternatives = %+v", dec.Alternatives)
 	}
+	// Finding #5: IOC partial alternative should have NotePartial prefix
 	if alt := dec.Alternatives[1]; !strings.HasPrefix(alt.Note, NotePartial) || !alt.Legs[0].Quantity.Equal(d("100")) {
 		t.Errorf("IOC partial = %+v", alt)
 	}
@@ -505,6 +511,24 @@ func TestRouteProperties(t *testing.T) {
 			orderQty = *o.Quantity
 		}
 		for _, alt := range dec.Alternatives {
+			// M3-03: alternatives can have multiple legs (multi-venue fills)
+			// For multi-leg alternatives, check total quantity vs order
+			if len(alt.Legs) > 1 {
+				if o.TIF == canonical.TIFFOK && o.Quantity != nil {
+					altTotal := decimal.Zero
+					for _, leg := range alt.Legs {
+						altTotal = altTotal.Add(leg.Quantity)
+					}
+					if !altTotal.Equal(orderQty) {
+						t.Fatalf("FOK multi-leg alternative partial: %s of %s", altTotal, orderQty)
+					}
+				}
+				if o.TIF == canonical.TIFFOK && strings.HasPrefix(alt.Note, NotePartial) {
+					t.Fatalf("FOK alternative marked partial: %+v", alt)
+				}
+				continue // Skip per-leg checks for multi-leg alternatives
+			}
+
 			leg := alt.Legs[0]
 			if leg.FeePerContract.IsNegative() {
 				t.Fatalf("negative fee on %s: %s", leg.InstrumentID, leg.FeePerContract)

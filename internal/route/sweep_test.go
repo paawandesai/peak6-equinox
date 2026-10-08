@@ -269,6 +269,17 @@ func TestRouteIOCPartialSweep(t *testing.T) {
 	if !foundPartial {
 		t.Errorf("warnings missing partial fill: %v", dec.Warnings)
 	}
+
+	// Finding #5: Check explainSweep includes total cost, "filled N of M", and shortfall
+	if !strings.Contains(dec.Explanation, "140 of 200") {
+		t.Errorf("explanation missing 'filled N of M': %s", dec.Explanation)
+	}
+	if !strings.Contains(dec.Explanation, "total cost") {
+		t.Errorf("explanation missing 'total cost': %s", dec.Explanation)
+	}
+	if !strings.Contains(dec.Explanation, "Shortfall: 60") {
+		t.Errorf("explanation missing shortfall: %s", dec.Explanation)
+	}
 }
 
 // TestRouteFOKInsufficientDepth: FOK rejects partial with empty Chosen.
@@ -289,6 +300,19 @@ func TestRouteFOKInsufficientDepth(t *testing.T) {
 	// FOK should reject partial (no chosen)
 	if len(dec.Chosen) != 0 {
 		t.Errorf("FOK partial should be rejected, got chosen = %+v", dec.Chosen)
+	}
+
+	// Finding #5: FOK should have exclusions with ReasonInsufficientDepth
+	if len(dec.Exclusions) != 2 {
+		t.Errorf("FOK should exclude both candidates, got %d exclusions: %+v", len(dec.Exclusions), dec.Exclusions)
+	}
+	for _, ex := range dec.Exclusions {
+		if ex.Reason != ReasonInsufficientDepth {
+			t.Errorf("exclusion reason = %s, want %s: %+v", ex.Reason, ReasonInsufficientDepth, ex)
+		}
+		if !strings.Contains(ex.Detail, "FOK requires 200") {
+			t.Errorf("exclusion detail missing 'FOK requires 200': %s", ex.Detail)
+		}
 	}
 }
 
@@ -321,6 +345,14 @@ func TestRouteSellSideGreedySweep(t *testing.T) {
 	// Second leg should be kalshi (remaining 20)
 	if dec.Chosen[1].InstrumentID != kalshiID || !dec.Chosen[1].Quantity.Equal(d("20")) {
 		t.Errorf("second leg = %+v, want kalshi 20", dec.Chosen[1])
+	}
+
+	// Finding #5: Verify cross-venue cheapest-first ordering (sell: highest proceeds first)
+	firstProceeds := dec.Chosen[0].AllInPerContract
+	secondProceeds := dec.Chosen[1].AllInPerContract
+	if firstProceeds.LessThan(secondProceeds) {
+		t.Errorf("sell-side ordering: first leg proceeds %s < second leg proceeds %s (should sell to highest bidder first)",
+			firstProceeds, secondProceeds)
 	}
 }
 
@@ -363,5 +395,7 @@ func TestSweepGreedyProperty(t *testing.T) {
 					totalFilled, availableAtP1, vwap, p1)
 			}
 		}
+
+		// Finding #5: Cross-venue cheapest-first ordering is tested in TestRouteSellSideGreedySweep
 	})
 }

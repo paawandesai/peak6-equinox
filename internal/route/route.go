@@ -220,6 +220,56 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 		resolvedOrder.Quantity = &sz.qty
 		resolvedOrder.Notional = nil
 		legs = Sweep(resolvedOrder, viableCands, cfg)
+
+		// FOK: add exclusions for any candidate that couldn't fill the full order
+		// (Finding #1: FOK needs exclusions even when another venue fills completely)
+		if o.TIF == canonical.TIFFOK {
+			totalFilled := sumQuantity(legs)
+			if totalFilled.LessThan(sz.qty) {
+				// Sweep returned nil or partial under FOK, so no fill occurred
+				// Add exclusions for each viable candidate showing why it couldn't fill
+				for _, opt := range opts {
+					reason := ReasonInsufficientDepth
+					detail := fmt.Sprintf("FOK requires %s contracts; %s can fill %s", sz.qty, opt.leg.InstrumentID, opt.leg.Quantity)
+
+					// For limit orders, use more specific messaging
+					if o.Type == canonical.OrderLimit && opt.leg.Quantity.IsZero() {
+						reason = ReasonLimitNotReachable
+						detail = fmt.Sprintf("best %s is outside the %s limit", sideName(o.Side), money(*o.LimitPrice))
+					} else if o.Type == canonical.OrderLimit && opt.leg.Quantity.LessThan(sz.qty) {
+						reason = ReasonLimitNotReachable
+						detail = fmt.Sprintf("%s of %s contracts at or better than limit %s", opt.leg.Quantity, sz.qty, money(*o.LimitPrice))
+					}
+
+					d.Exclusions = append(d.Exclusions, canonical.Exclusion{
+						InstrumentID: opt.leg.InstrumentID,
+						Venue:        opt.leg.Venue,
+						Reason:       reason,
+						Detail:       detail,
+					})
+				}
+				legs = nil // Clear legs since FOK rejected the partial
+			} else {
+				// FOK filled completely from one or more venues
+				// Add exclusions for candidates that couldn't fill the full order alone
+				for _, opt := range opts {
+					if opt.leg.Quantity.LessThan(sz.qty) {
+						reason := ReasonInsufficientDepth
+						detail := fmt.Sprintf("FOK requires %s contracts; %s can fill %s", sz.qty, opt.leg.InstrumentID, opt.leg.Quantity)
+						if o.Type == canonical.OrderLimit {
+							reason = ReasonLimitNotReachable
+							detail = fmt.Sprintf("%s of %s contracts at or better than limit %s", opt.leg.Quantity, sz.qty, money(*o.LimitPrice))
+						}
+						d.Exclusions = append(d.Exclusions, canonical.Exclusion{
+							InstrumentID: opt.leg.InstrumentID,
+							Venue:        opt.leg.Venue,
+							Reason:       reason,
+							Detail:       detail,
+						})
+					}
+				}
+			}
+		}
 	}
 
 	// Build Alternatives: show single-venue options that were considered
@@ -243,7 +293,12 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 		for i := range d.Alternatives {
 			if d.Alternatives[i].Legs[0].InstrumentID == legs[0].InstrumentID &&
 				d.Alternatives[i].Legs[0].Quantity.Equal(legs[0].Quantity) {
-				d.Alternatives[i].Note = NoteChosen
+				// Finding #3: keep NotePartial prefix for IOC partials (e.g., "partial fill: N of M (chosen)")
+				if strings.HasPrefix(d.Alternatives[i].Note, NotePartial) {
+					d.Alternatives[i].Note = fmt.Sprintf("%s (%s)", d.Alternatives[i].Note, NoteChosen)
+				} else {
+					d.Alternatives[i].Note = NoteChosen
+				}
 				break
 			}
 		}
@@ -508,14 +563,15 @@ func explainSweep(d canonical.Decision, legs []canonical.Leg, opts []option, sz 
 	if len(legs) == 0 {
 		b.WriteString(" No venue can fill this order: every candidate was excluded.")
 	} else if len(legs) == 1 {
-		// Single-venue fill: include explicit "filled N of M" and shortfall (M3-03 #6)
+		// Single-venue fill: include total filled, total cost, average all-in, shortfall (Finding #4)
 		filled := legs[0].Quantity
+		totalCost := filled.Mul(legs[0].AllInPerContract)
 		fillDesc := fmt.Sprintf("%s of %s", filled, sz.qty)
 		if filled.Equal(sz.qty) {
 			fillDesc = fmt.Sprintf("all %s", filled)
 		}
-		fmt.Fprintf(&b, " Best route: %s (%s) fills %s contracts at a VWAP of %s %s.",
-			legs[0].Venue, legs[0].InstrumentID, fillDesc, money(legs[0].VWAP), costClause(legs[0]))
+		fmt.Fprintf(&b, " Best route: %s (%s) fills %s contracts at a VWAP of %s %s Total cost: %s.",
+			legs[0].Venue, legs[0].InstrumentID, fillDesc, money(legs[0].VWAP), costClause(legs[0]), money(totalCost))
 		if filled.LessThan(sz.qty) {
 			shortfall := sz.qty.Sub(filled)
 			fmt.Fprintf(&b, " Shortfall: %s contracts (%s).", shortfall, d.Order.TIF)
@@ -555,6 +611,11 @@ func explainSweep(d canonical.Decision, legs []canonical.Leg, opts []option, sz 
 	}
 
 	// List single-venue alternatives that were considered
+	// Build a map from instrument ID to option so we can get the basis score (Finding #2)
+	optMap := make(map[string]option)
+	for _, opt := range opts {
+		optMap[opt.leg.InstrumentID] = opt
+	}
 	if len(d.Alternatives) > 1 {
 		for _, alt := range d.Alternatives {
 			if alt.Note == NoteChosen || len(alt.Legs) > 1 {
@@ -569,7 +630,12 @@ func explainSweep(d canonical.Decision, legs []canonical.Leg, opts []option, sz 
 			if leg.BasisPenaltyPerContract.IsZero() {
 				breakdown = fmt.Sprintf("VWAP %s, fee %s", money(leg.VWAP), money(leg.FeePerContract))
 			} else {
-				breakdown = fmt.Sprintf("VWAP %s, fee %s, basis %s", money(leg.VWAP), money(leg.FeePerContract), money(leg.BasisPenaltyPerContract))
+				// Finding #2: restore basis score (e.g., "basis 0.0300; score 1.0000")
+				score := decimal.Zero
+				if opt, ok := optMap[leg.InstrumentID]; ok {
+					score = opt.basisScore
+				}
+				breakdown = fmt.Sprintf("VWAP %s, fee %s, basis %s; score %s", money(leg.VWAP), money(leg.FeePerContract), money(leg.BasisPenaltyPerContract), money(score))
 			}
 			fmt.Fprintf(&b, " %s (%s) ranks #%d at %s per contract (%s; %s worse).",
 				leg.Venue, leg.InstrumentID, alt.Rank, money(leg.AllInPerContract), breakdown, money(gap))
@@ -630,4 +696,13 @@ func uniqueStrings(ss []string) []string {
 		}
 	}
 	return result
+}
+
+// sumQuantity returns the total quantity across all legs.
+func sumQuantity(legs []canonical.Leg) decimal.Decimal {
+	total := decimal.Zero
+	for _, leg := range legs {
+		total = total.Add(leg.Quantity)
+	}
+	return total
 }
