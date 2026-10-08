@@ -47,11 +47,16 @@ func TestRouteHappyPathHTMX(t *testing.T) {
 	wantContains(t, body,
 		`id="route-result"`, "Decision #1", "buy 100 contracts YES, market IOC", "Partners considered: 2",
 		// Polymarket fills 50 at 0.50 and 50 at 0.53 (VWAP 0.515, fee 0.0175, basis 0.001, all-in 0.5335); Kalshi fills all 100 at 0.52 (all-in 0.5375).
-		"Chosen legs", `<span class="venue">polymarket</span>`, "0.5150", "0.5335",
-		"Ranked alternatives", "0.5375",
-		"Excluded candidates", seedKalshiC, "not routable",
+		`class="chip chip-ok"`, "Routed", // Outcome strip with chip
+		"Chosen legs", `<span class="venue">polymarket</span>`,
+		"0.5150",                            // VWAP
+		"0.5335",                            // All-in
+		`<tr class="totals">`, "100 of 100", // Totals row
+		"Ranked alternatives", "0.5375", "+0.0040", // Gap to chosen
+		"Excluded candidates", seedKalshiC,
+		"<strong>not routable</strong>", // Reason phrase in bold
 		"Explanation", "Simulated buy of 100 YES contracts on "+seedKalshiA,
-		"basis penalty = score",
+		"basis penalty = score × 0.01", // Configured multiplier
 	)
 
 	decs, logs := countDecisions(t, st)
@@ -223,20 +228,22 @@ func TestRouteLogSummary(t *testing.T) {
 func TestRouteOutcomeKinds(t *testing.T) {
 	qty := dec("100")
 	cases := []struct {
-		name     string
-		decision canonical.Decision
-		wantChip string
-		want     []string
+		name        string
+		decision    canonical.Decision
+		wantChip    string
+		wantPhrase  string
+		wantSummary []string
 	}{
 		{
 			name: "routed_single_venue",
 			decision: canonical.Decision{
 				TargetID: seedKalshiA,
 				Order:    canonical.Order{Side: canonical.SideBuy, Outcome: canonical.OutcomeYes, Quantity: &qty},
-				Chosen:   []canonical.Leg{{Venue: canonical.VenuePolymarket, InstrumentID: seedPolyB, Quantity: qty, AllInPerContract: dec("0.5335"), Route: "direct"}},
+				Chosen:   []canonical.Leg{{Venue: canonical.VenuePolymarket, InstrumentID: seedPolyB, Quantity: qty, AllInPerContract: dec("0.5335"), Route: "direct", Outcome: canonical.OutcomeYes}},
 			},
-			wantChip: "chip-ok",
-			want:     []string{"Routed", "filled 100 contracts"},
+			wantChip:    "chip-ok",
+			wantPhrase:  "Routed",
+			wantSummary: []string{"buy 100 YES on polymarket", "filled 100 contracts"},
 		},
 		{
 			name: "routed_across_venues",
@@ -244,54 +251,75 @@ func TestRouteOutcomeKinds(t *testing.T) {
 				TargetID: seedKalshiA,
 				Order:    canonical.Order{Side: canonical.SideBuy, Outcome: canonical.OutcomeYes, Quantity: &qty},
 				Chosen: []canonical.Leg{
-					{Venue: canonical.VenuePolymarket, InstrumentID: seedPolyB, Quantity: dec("60"), AllInPerContract: dec("0.5335"), Route: "direct"},
-					{Venue: canonical.VenueKalshi, InstrumentID: seedKalshiA, Quantity: dec("40"), AllInPerContract: dec("0.5375"), Route: "direct"},
+					{Venue: canonical.VenuePolymarket, InstrumentID: seedPolyB, Quantity: dec("60"), AllInPerContract: dec("0.5335"), Route: "direct", Outcome: canonical.OutcomeYes},
+					{Venue: canonical.VenueKalshi, InstrumentID: seedKalshiA, Quantity: dec("40"), AllInPerContract: dec("0.5375"), Route: "direct", Outcome: canonical.OutcomeYes},
 				},
 			},
-			wantChip: "chip-ok",
-			want:     []string{"Routed across 2 venues", "filled 100 contracts"},
+			wantChip:    "chip-ok",
+			wantPhrase:  "Routed across 2 venues",
+			wantSummary: []string{"filled 100 contracts"},
 		},
 		{
 			name: "partially_routed",
 			decision: canonical.Decision{
 				TargetID: seedKalshiA,
 				Order:    canonical.Order{Side: canonical.SideBuy, Outcome: canonical.OutcomeYes, Quantity: &qty, TIF: canonical.TIFIOC},
-				Chosen:   []canonical.Leg{{Venue: canonical.VenuePolymarket, InstrumentID: seedPolyB, Quantity: dec("80"), AllInPerContract: dec("0.5335"), Route: "direct"}},
+				Chosen:   []canonical.Leg{{Venue: canonical.VenuePolymarket, InstrumentID: seedPolyB, Quantity: dec("80"), AllInPerContract: dec("0.5335"), Route: "direct", Outcome: canonical.OutcomeYes}},
 			},
-			wantChip: "chip-warn",
-			want:     []string{"Partially routed", "filled 80 of 100"},
+			wantChip:    "chip-warn",
+			wantPhrase:  "Partially routed",
+			wantSummary: []string{"filled 80 of 100"},
 		},
 		{
-			name: "complement_route",
+			name: "complement_says_NO",
 			decision: canonical.Decision{
 				TargetID: seedKalshiA,
 				Order:    canonical.Order{Side: canonical.SideBuy, Outcome: canonical.OutcomeYes, Quantity: &qty},
 				Chosen:   []canonical.Leg{{Venue: canonical.VenuePolymarket, InstrumentID: seedPolyB, Quantity: qty, AllInPerContract: dec("0.5335"), Route: "complement", Outcome: canonical.OutcomeNo}},
 			},
-			wantChip: "chip-ok",
-			want:     []string{"Routed as complement", "filled 100 contracts"},
+			wantChip:    "chip-ok",
+			wantPhrase:  "Routed as NO on polymarket (complement)",
+			wantSummary: []string{"buy 100 NO on polymarket", "filled 100 contracts"},
 		},
 		{
-			name: "not_routed",
+			name: "notional_order",
+			decision: canonical.Decision{
+				TargetID: seedKalshiA,
+				Order: func() canonical.Order {
+					n := dec("50")
+					return canonical.Order{Side: canonical.SideBuy, Outcome: canonical.OutcomeYes, Notional: &n}
+				}(),
+				Chosen: []canonical.Leg{{Venue: canonical.VenuePolymarket, InstrumentID: seedPolyB, Quantity: dec("100"), AllInPerContract: dec("0.5000"), Route: "direct", Outcome: canonical.OutcomeYes}},
+			},
+			wantChip:    "chip-ok",
+			wantPhrase:  "Routed",
+			wantSummary: []string{"filled 100 contracts"},
+		},
+		{
+			name: "not_routed_sorted",
 			decision: canonical.Decision{
 				TargetID:   seedKalshiA,
 				Order:      canonical.Order{Side: canonical.SideBuy, Outcome: canonical.OutcomeYes, Quantity: &qty},
 				Exclusions: []canonical.Exclusion{{Reason: "stale"}, {Reason: "insufficient_depth"}, {Reason: "insufficient_depth"}},
 			},
-			wantChip: "chip-danger",
-			want:     []string{"Not routed", "1 stale", "2 too shallow"},
+			wantChip:    "chip-danger",
+			wantPhrase:  "Not routed",
+			wantSummary: []string{"1 stale, 2 too shallow"},
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			view := newDecisionView(tc.decision, 2, time.Now(), map[string]string{})
+			view := newDecisionView(tc.decision, 2, time.Now(), map[string]string{}, dec("0.01"))
 			if view.OutcomeChipClass != tc.wantChip {
 				t.Errorf("chip class = %q, want %q", view.OutcomeChipClass, tc.wantChip)
 			}
-			for _, want := range tc.want {
-				if !strings.Contains(view.OutcomePhrase, want) && !strings.Contains(view.OutcomeSummary, want) {
-					t.Errorf("outcome phrase %q or summary %q lacks %q", view.OutcomePhrase, view.OutcomeSummary, want)
+			if view.OutcomePhrase != tc.wantPhrase {
+				t.Errorf("outcome phrase = %q, want %q", view.OutcomePhrase, tc.wantPhrase)
+			}
+			for _, want := range tc.wantSummary {
+				if !strings.Contains(view.OutcomeSummary, want) {
+					t.Errorf("summary %q lacks %q", view.OutcomeSummary, want)
 				}
 			}
 		})
@@ -316,4 +344,57 @@ func TestRouteExclusionReasonPhrases(t *testing.T) {
 			t.Errorf("exclusionReasonPhrase(%q) = %q, want %q", code, got, wantPhrase)
 		}
 	}
+}
+
+// TestRouteResultRendering tests that route_result renders correctly for sweeps and complements (Cursor review round 1).
+func TestRouteResultRendering(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+
+	// Two-leg sweep
+	sweepForm := validRouteForm(sd.eqID, seedKalshiA)
+	sweepRec := postForm(s.Handler(), "/route", sweepForm, true)
+	wantHTML(t, sweepRec, http.StatusOK)
+	sweepBody := sweepRec.Body.String()
+	wantContains(t, sweepBody,
+		`class="chip chip-ok"`, "Chosen legs", `<tr class="totals">`,
+		"100 of 100", // Totals row with filled
+		`<strong>Total</strong>`,
+	)
+
+	// Complement leg: create a decision with a complement route
+	ctx := context.Background()
+	qty100 := dec("100")
+	compDec := canonical.Decision{
+		RoundID:  sd.round.ID,
+		TargetID: seedKalshiA,
+		Order:    canonical.Order{Side: canonical.SideBuy, Outcome: canonical.OutcomeYes, Quantity: &qty100, Type: canonical.OrderMarket, TIF: canonical.TIFIOC},
+		Chosen: []canonical.Leg{{
+			InstrumentID: seedPolyB, Venue: canonical.VenuePolymarket, Side: canonical.SideBuy,
+			Outcome: canonical.OutcomeNo, Quantity: dec("100"), VWAP: dec("0.50"),
+			FeePerContract: dec("0.01"), BasisPenaltyPerContract: dec("0.005"), AllInPerContract: dec("0.515"),
+			Route: "complement",
+		}},
+		Alternatives: []canonical.Alternative{{
+			Rank: 1, Legs: []canonical.Leg{{InstrumentID: seedKalshiA, Venue: canonical.VenueKalshi}},
+			AllInPerContract: dec("0.52"), Note: "direct route",
+		}},
+		Exclusions:  []canonical.Exclusion{{InstrumentID: seedKalshiC, Venue: canonical.VenueKalshi, Reason: "not_routable", Detail: "related only"}},
+		Explanation: "Complement was cheaper than direct.",
+		DecidedAt:   sd.round.FinishedAt,
+	}
+	compID, err := st.InsertRoutingDecision(ctx, compDec)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	compRec := get(s.Handler(), "/decisions/"+strconv.FormatInt(compID, 10))
+	wantHTML(t, compRec, http.StatusOK)
+	compBody := compRec.Body.String()
+	wantContains(t, compBody,
+		"Routed as NO on polymarket (complement)", `class="chip chip-ok"`,
+		"complement",                    // Route cell shows complement
+		"+0.0050",                       // Gap column
+		"<strong>not routable</strong>", // Exclusion phrase in bold
+	)
 }

@@ -43,7 +43,7 @@
       </tr>
     </tbody>
   </table>
-  {{if .BasisPenaltyNote}}<p class="note">{{.BasisPenaltyNote}}</p>{{end}}
+  {{if .BasisPenaltyNote}}<p class="note">basis penalty = score × {{money .BasisMultiplier}} per contract</p>{{end}}
   {{else}}
   <h3>Chosen route</h3>
   <p><mark>No venue can fill this order.</mark> Every candidate was excluded; see below.</p>
