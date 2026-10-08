@@ -120,7 +120,7 @@ type page struct {
 	Round        *roundInfo
 	StaleWarning string // "Data is N minutes old" when round is stale (NFR-09, D-077)
 	Banner       banner // Demo mode or no-round banner (NFR-04, M3-07)
-	Timezone     string // User's timezone preference (ET/CT/UTC/Local, M3-08)
+	Timezone     string // User's timezone preference (ET/CT/UTC, M3-08)
 }
 
 // banner is the structured data for the demo/no-round banner (M3-07).
