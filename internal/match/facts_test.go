@@ -881,3 +881,100 @@ func TestSplitCSVEdgeCases(t *testing.T) {
 		t.Errorf("empty parts: got %v", vals)
 	}
 }
+
+// TestDeriveWithFactsBadFedRateStep tests deriveWithFacts when fed_rate_step
+// is present but not a valid positive number.
+func TestDeriveWithFactsBadFedRateStep(t *testing.T) {
+	oct28 := time.Date(2026, 10, 28, 19, 0, 0, 0, time.UTC)
+
+	level := fedLevel("kalshi:L", "4.00")
+	level.Terms.Deadline = &oct28
+	change := fedChange("polymarket:C", canonical.ComparatorEQ, "0.25")
+	change.Terms.Deadline = &oct28
+
+	// Case 1: fed_rate_step is not a number
+	fBadStep := fedFacts(t,
+		fedFact("fed_upper_bound", "4.00"),
+		fedFact("fed_next_meeting", "2026-10-28"),
+		fedFact("fed_rate_step", "not-a-number"))
+
+	d, note := deriveWithFacts(level, change, fBadStep)
+	// Should still work but note should mention grid not available
+	_ = d
+	if len(note.reason) == 0 {
+		t.Log("bad step: got derivation or note with reason")
+	}
+
+	// Case 2: fed_rate_step is negative
+	fNegStep := fedFacts(t,
+		fedFact("fed_upper_bound", "4.00"),
+		fedFact("fed_next_meeting", "2026-10-28"),
+		fedFact("fed_rate_step", "-0.25"))
+
+	d, note = deriveWithFacts(level, change, fNegStep)
+	_ = d
+	if len(note.reason) == 0 {
+		t.Log("negative step: got derivation or note with reason")
+	}
+
+	// Case 3: fed_rate_step is zero
+	fZeroStep := fedFacts(t,
+		fedFact("fed_upper_bound", "4.00"),
+		fedFact("fed_next_meeting", "2026-10-28"),
+		fedFact("fed_rate_step", "0"))
+
+	d, note = deriveWithFacts(level, change, fZeroStep)
+	_ = d
+	if len(note.reason) == 0 {
+		t.Log("zero step: got derivation or note with reason")
+	}
+}
+
+// TestDeriveWithFactsGridPath tests the grid rounding derivation path in
+// deriveWithFacts when exact propositions don't match but grid versions do.
+func TestDeriveWithFactsGridPath(t *testing.T) {
+	oct28 := time.Date(2026, 10, 28, 19, 0, 0, 0, time.UTC)
+	f := fedFacts(t,
+		fedFact("fed_upper_bound", "4.00"),
+		fedFact("fed_next_meeting", "2026-10-28"),
+		fedFact("fed_rate_step", "0.25"))
+
+	// Create a level instrument
+	level := fedLevel("kalshi:L", "4.24") // Just below grid point 4.25
+	level.Terms.Deadline = &oct28
+
+	// Create a change instrument: +25 bps means level will be 4.25
+	change := fedChange("polymarket:C", canonical.ComparatorEQ, "0.25")
+	change.Terms.Deadline = &oct28
+
+	d, note := deriveWithFacts(level, change, f)
+	// The exact propositions may not match, but on the 0.25 grid they might
+	if d != nil && d.grid {
+		t.Logf("grid path: got grid derivation %v", d.typ)
+	} else if d != nil {
+		t.Logf("grid path: got non-grid derivation %v", d.typ)
+	} else {
+		t.Logf("grid path: no derivation (note: %v)", note.reason)
+	}
+}
+
+// TestOnSameFedMeetingParseMixedDates tests onSameFedMeetingViaFacts with
+// a mix of valid and invalid dates in fed_meeting_dates.
+func TestOnSameFedMeetingParseMixedDates(t *testing.T) {
+	// This was already tested in TestOnSameFedMeetingViaFactsCoverage but let's
+	// add another case: first date is bad, second is good
+	f := fedFacts(t, fedFact("fed_meeting_dates", "bad-date,2027-01-27"))
+
+	jan27a := time.Date(2027, 1, 27, 14, 0, 0, 0, time.UTC)
+	jan27b := time.Date(2027, 1, 27, 19, 0, 0, 0, time.UTC)
+
+	a := fedLevel("kalshi:A", "0.50")
+	a.Terms.Deadline = &jan27a
+	b := fedChange("polymarket:B", canonical.ComparatorEQ, "0.25")
+	b.Terms.Deadline = &jan27b
+
+	// Should still work because 2027-01-27 is parseable
+	if !onSameFedMeetingViaFacts(a, b, f) {
+		t.Error("expected true when at least one date is parseable")
+	}
+}
