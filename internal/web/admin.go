@@ -175,25 +175,37 @@ func (s *Server) handleAdminIndex(w http.ResponseWriter, r *http.Request) {
 		p.LLMVerifierStateChip = "chip-ok"
 		p.LLMVerifierStateText = "ready: 0 of 200 calls used today"
 	} else {
-		// Check daily usage
-		dailyCap := s.deps.LLMDailyCallCap
-		if dailyCap <= 0 {
-			dailyCap = 200
+		// UI-08 follow-up (issue #40): check for last run summary first
+		if lastRun, ok, err := s.deps.Store.GetLLMVerifyLastRun(ctx); err != nil {
+			s.log.Error("getting LLM verify last run for admin page", "error", err)
+		} else if ok {
+			// Show "last run" state (design.md § 4)
+			p.LLMVerifierState = "last_run"
+			p.LLMVerifierStateChip = "chip-info"
+			p.LLMVerifierStateText = fmt.Sprintf("last run: %d verified, %d downgraded, %d cache hits", lastRun.Verified, lastRun.Downgraded, lastRun.CacheHits)
 		}
-		calls, _, _, err := s.deps.Store.GetLLMUsage(ctx, s.now())
-		if err != nil {
-			s.log.Error("getting LLM usage for admin page", "error", err)
-			p.LLMVerifierState = "ready"
-			p.LLMVerifierStateChip = "chip-ok"
-			p.LLMVerifierStateText = fmt.Sprintf("ready: 0 of %d calls used today", dailyCap)
-		} else if calls >= int64(dailyCap) {
-			p.LLMVerifierState = "cap_reached"
-			p.LLMVerifierStateChip = "chip-danger"
-			p.LLMVerifierStateText = fmt.Sprintf("cap reached: %d of %d", calls, dailyCap)
-		} else {
-			p.LLMVerifierState = "ready"
-			p.LLMVerifierStateChip = "chip-ok"
-			p.LLMVerifierStateText = fmt.Sprintf("ready: %d of %d calls used today", calls, dailyCap)
+
+		// Check daily usage for ready/cap_reached states (only if no last run shown)
+		if p.LLMVerifierState == "" {
+			dailyCap := s.deps.LLMDailyCallCap
+			if dailyCap <= 0 {
+				dailyCap = 200
+			}
+			calls, _, _, err := s.deps.Store.GetLLMUsage(ctx, s.now())
+			if err != nil {
+				s.log.Error("getting LLM usage for admin page", "error", err)
+				p.LLMVerifierState = "ready"
+				p.LLMVerifierStateChip = "chip-ok"
+				p.LLMVerifierStateText = fmt.Sprintf("ready: 0 of %d calls used today", dailyCap)
+			} else if calls >= int64(dailyCap) {
+				p.LLMVerifierState = "cap_reached"
+				p.LLMVerifierStateChip = "chip-danger"
+				p.LLMVerifierStateText = fmt.Sprintf("cap reached: %d of %d", calls, dailyCap)
+			} else {
+				p.LLMVerifierState = "ready"
+				p.LLMVerifierStateChip = "chip-ok"
+				p.LLMVerifierStateText = fmt.Sprintf("ready: %d of %d calls used today", calls, dailyCap)
+			}
 		}
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -439,7 +451,7 @@ func (s *Server) handleAdminLLMVerify(w http.ResponseWriter, r *http.Request) {
 	// FR-17: log every relationship verdict to decision_log
 	dlog := decisionlog.New(s.deps.Store)
 
-	var verified, downgraded int
+	var verified, downgraded, cacheHits int
 	var budgetExhausted bool
 	var consecutiveErrors int
 	const maxConsecutiveErrors = 10 // AO review issue #4: stop after N transport errors
@@ -460,6 +472,10 @@ func (s *Server) handleAdminLLMVerify(w http.ResponseWriter, r *http.Request) {
 
 		// Verify with the cached+budgeted stack
 		verifyResult, err := cachedVerifier.Verify(ctx, aRec.Instrument, bRec.Instrument, rel)
+		// Track cache hits: zero usage means it was served from cache
+		if err == nil && verifyResult.Usage.InputTokens == 0 && verifyResult.Usage.OutputTokens == 0 {
+			cacheHits++
+		}
 		if err != nil {
 			if errors.Is(err, llm.ErrBudgetExhausted) {
 				budgetExhausted = true
@@ -504,6 +520,26 @@ func (s *Server) handleAdminLLMVerify(w http.ResponseWriter, r *http.Request) {
 			s.log.Warn("logging relationship verdict", "error", err, "relationship_id", relID)
 			// Don't fail the verification on log error - verdict is already saved
 		}
+	}
+
+	// UI-08 follow-up (issue #40): persist the last run summary
+	if verified > 0 || cacheHits > 0 {
+		summary := store.LLMVerifyLastRun{
+			Verified:   verified,
+			Downgraded: downgraded,
+			CacheHits:  cacheHits,
+			RanAt:      s.now(),
+		}
+		if err := s.deps.Store.PutLLMVerifyLastRun(ctx, summary); err != nil {
+			s.log.Error("storing llm verify last run summary", "error", err)
+			// Don't fail the request on summary storage error
+		}
+	}
+
+	// UI-08 follow-up (issue #40): redirect to /admin for browser form posts (like ingest and unpin)
+	if wantsHTML(r) {
+		http.Redirect(w, r, "/admin", http.StatusSeeOther)
+		return
 	}
 
 	s.writeJSON(w, http.StatusOK, llmVerifyResponse{

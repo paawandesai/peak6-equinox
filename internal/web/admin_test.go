@@ -546,7 +546,7 @@ func TestAdminUnpinRouteOrder(t *testing.T) {
 	}
 }
 
-// TestAdminLLMVerifierStates: admin page shows the three verifier states (UI-08).
+// TestAdminLLMVerifierStates: admin page shows the four verifier states (UI-08, issue #40).
 func TestAdminLLMVerifierStates(t *testing.T) {
 	st := store.New(tdb.Pool(t))
 	tdb.Reset(t)
@@ -556,14 +556,16 @@ func TestAdminLLMVerifierStates(t *testing.T) {
 		apiKey       string
 		callsUsed    int64
 		dailyCap     int
+		lastRun      *store.LLMVerifyLastRun
 		wantChip     string
 		wantText     string
 		wantDisabled bool
 	}{
-		{"disabled no key", "", 0, 200, "chip-muted", "disabled: ANTHROPIC_API_KEY not set", true},
-		{"ready zero calls", "sk-test", 0, 200, "chip-ok", "ready: 0 of 200 calls used today", false},
-		{"ready some calls", "sk-test", 12, 200, "chip-ok", "ready: 12 of 200 calls used today", false},
-		{"cap reached", "sk-test", 200, 200, "chip-danger", "cap reached: 200 of 200", true},
+		{"disabled no key", "", 0, 200, nil, "chip-muted", "disabled: ANTHROPIC_API_KEY not set", true},
+		{"ready zero calls", "sk-test", 0, 200, nil, "chip-ok", "ready: 0 of 200 calls used today", false},
+		{"ready some calls", "sk-test", 12, 200, nil, "chip-ok", "ready: 12 of 200 calls used today", false},
+		{"cap reached", "sk-test", 200, 200, nil, "chip-danger", "cap reached: 200 of 200", true},
+		{"last run", "sk-test", 5, 200, &store.LLMVerifyLastRun{Verified: 14, Downgraded: 2, CacheHits: 9, RanAt: t0}, "chip-info", "last run: 14 verified, 2 downgraded, 9 cache hits", false},
 	}
 
 	for _, tt := range tests {
@@ -574,6 +576,13 @@ func TestAdminLLMVerifierStates(t *testing.T) {
 			// Seed LLM usage if needed
 			if tt.callsUsed > 0 {
 				if err := st.IncrementLLMUsage(ctx, t0, int(tt.callsUsed), 1000, 500); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			// Seed last run summary if needed (issue #40)
+			if tt.lastRun != nil {
+				if err := st.PutLLMVerifyLastRun(ctx, *tt.lastRun); err != nil {
 					t.Fatal(err)
 				}
 			}

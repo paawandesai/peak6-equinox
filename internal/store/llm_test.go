@@ -141,3 +141,89 @@ func TestLLMVerdictCacheRoundTrip(t *testing.T) {
 		t.Errorf("after update: got %s, want related", got2.Relationship)
 	}
 }
+
+// TestGetLLMVerifyLastRunEmpty verifies that reading from an empty table
+// returns false, not an error (UI-08 follow-up: issue #40).
+func TestGetLLMVerifyLastRunEmpty(t *testing.T) {
+	ctx := context.Background()
+	pool := tdb.Pool(t)
+	st := store.New(pool)
+
+	_, found, err := st.GetLLMVerifyLastRun(ctx)
+	if err != nil {
+		t.Fatalf("GetLLMVerifyLastRun on empty table: %v", err)
+	}
+	if found {
+		t.Errorf("empty table returned found=true")
+	}
+}
+
+// TestLLMVerifyLastRunRoundTrip verifies storing and retrieving the last run
+// summary (UI-08 follow-up: issue #40).
+func TestLLMVerifyLastRunRoundTrip(t *testing.T) {
+	ctx := context.Background()
+	pool := tdb.Pool(t)
+	st := store.New(pool)
+
+	now := time.Date(2026, 10, 8, 12, 34, 56, 0, time.UTC)
+	run := store.LLMVerifyLastRun{
+		Verified:   14,
+		Downgraded: 2,
+		CacheHits:  9,
+		RanAt:      now,
+	}
+
+	// Store
+	if err := st.PutLLMVerifyLastRun(ctx, run); err != nil {
+		t.Fatal(err)
+	}
+
+	// Retrieve
+	got, found, err := st.GetLLMVerifyLastRun(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !found {
+		t.Fatal("stored run not found")
+	}
+	if got.Verified != run.Verified {
+		t.Errorf("verified: got %d, want %d", got.Verified, run.Verified)
+	}
+	if got.Downgraded != run.Downgraded {
+		t.Errorf("downgraded: got %d, want %d", got.Downgraded, run.Downgraded)
+	}
+	if got.CacheHits != run.CacheHits {
+		t.Errorf("cache_hits: got %d, want %d", got.CacheHits, run.CacheHits)
+	}
+	if !got.RanAt.Equal(run.RanAt) {
+		t.Errorf("ran_at: got %v, want %v", got.RanAt, run.RanAt)
+	}
+
+	// Update (should replace)
+	run2 := store.LLMVerifyLastRun{
+		Verified:   20,
+		Downgraded: 5,
+		CacheHits:  15,
+		RanAt:      now.Add(time.Hour),
+	}
+	if err := st.PutLLMVerifyLastRun(ctx, run2); err != nil {
+		t.Fatal(err)
+	}
+
+	got2, found, err := st.GetLLMVerifyLastRun(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !found {
+		t.Fatal("updated run not found")
+	}
+	if got2.Verified != run2.Verified {
+		t.Errorf("after update: verified got %d, want %d", got2.Verified, run2.Verified)
+	}
+	if got2.Downgraded != run2.Downgraded {
+		t.Errorf("after update: downgraded got %d, want %d", got2.Downgraded, run2.Downgraded)
+	}
+	if got2.CacheHits != run2.CacheHits {
+		t.Errorf("after update: cache_hits got %d, want %d", got2.CacheHits, run2.CacheHits)
+	}
+}
