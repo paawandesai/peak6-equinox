@@ -10,7 +10,7 @@
   <script src="{{.Assets.HtmxURL}}" integrity="{{.Assets.HtmxSRI}}" crossorigin="anonymous" defer></script>
 </head>
 <body>
-  {{if .Banner.Show}}<div class="banner">{{if .Banner.Pinned}}Demo mode: data as of {{.Banner.AsOf}} (round {{.Banner.RoundID}}). <a href="/admin">Unpin</a>{{else}}No data available yet. Run ingest from <a href="/admin">/admin</a>.{{end}}</div>{{end}}
+  {{if .Banner.Show}}<div class="banner {{if .Banner.Pinned}}banner-info{{else}}banner-warn{{end}}" {{if .Banner.Pinned}}role="status"{{else}}role="alert"{{end}}>{{if .Banner.Pinned}}Demo mode: data as of {{.Banner.AsOf}} (round {{.Banner.RoundID}}). <a href="/admin">Unpin</a>{{else}}No data available yet. Run ingest from <a href="/admin">/admin</a>.{{end}}</div>{{end}}
   <header>
     <nav>
       <ul><li><strong><a href="/">Equinox</a></strong> cross-venue contract matcher and router</li></ul>
@@ -19,10 +19,10 @@
         <li><a href="/near-misses">Near misses</a></li>
         <li><a href="/log">Decision log</a></li>
         <li><a href="/eval">Eval</a></li>
-        {{if .Round}}<li><small>round {{.Round.ID}} ({{.Round.Status}}{{if .Round.Pinned}}, pinned{{end}}) as of {{.Round.AsOf}}</small></li>{{end}}
       </ul>
     </nav>
-    {{if .StaleWarning}}<p role="alert"><mark>{{.StaleWarning}}</mark></p>{{end}}
+    {{if .Round}}<p class="asof">Data as of {{.Round.AsOf}} (round {{.Round.ID}}{{if .Round.Pinned}}, pinned{{end}})</p>{{end}}
+    {{if .StaleWarning}}<div class="banner banner-warn" role="alert">{{.StaleWarning}}</div>{{end}}
     <p class="question">{{.Question}}</p>
     <form method="post" action="/timezone" class="timezone-selector">
       <label>Timezone:
@@ -43,4 +43,24 @@
   </footer>
 </body>
 </html>
+{{end}}
+
+{{/* Component template defines (UI-02, design.md § 5) */}}
+
+{{define "banner"}}{{/* .Variant (ok/info/warn/danger), .Role (status/alert), .Text */}}
+<div class="banner banner-{{.Variant}}" role="{{.Role}}">{{.Text}}</div>
+{{end}}
+
+{{define "asof"}}{{/* .AsOf (formatted time string), .RoundID, .Pinned (bool) */}}
+<p class="asof">Data as of {{.AsOf}} (round {{.RoundID}}{{if .Pinned}}, pinned{{end}})</p>
+{{end}}
+
+{{define "chip"}}{{/* .Variant (ok/info/warn/danger/muted), .Text */}}
+<span class="chip chip-{{.Variant}}">{{.Text}}</span>
+{{end}}
+
+{{define "strip"}}{{/* .Items (slice of {Label, Value}) */}}
+<dl class="strip">
+{{range .Items}}<div><dt>{{.Label}}:</dt> <dd>{{.Value}}</dd></div>{{end}}
+</dl>
 {{end}}
