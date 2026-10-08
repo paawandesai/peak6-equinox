@@ -546,7 +546,8 @@ func TestAdminUnpinRouteOrder(t *testing.T) {
 	}
 }
 
-// TestAdminLLMVerifierStates: admin page shows the three verifier states (UI-08).
+// TestAdminLLMVerifierStates: admin page shows the verifier states with correct precedence (UI-08, issue #40).
+// Precedence: disabled > cap_reached > last_run > ready (operator review !59).
 func TestAdminLLMVerifierStates(t *testing.T) {
 	st := store.New(tdb.Pool(t))
 	tdb.Reset(t)
@@ -556,14 +557,17 @@ func TestAdminLLMVerifierStates(t *testing.T) {
 		apiKey       string
 		callsUsed    int64
 		dailyCap     int
+		lastRun      *store.LLMVerifyLastRun
 		wantChip     string
 		wantText     string
 		wantDisabled bool
 	}{
-		{"disabled no key", "", 0, 200, "chip-muted", "disabled: ANTHROPIC_API_KEY not set", true},
-		{"ready zero calls", "sk-test", 0, 200, "chip-ok", "ready: 0 of 200 calls used today", false},
-		{"ready some calls", "sk-test", 12, 200, "chip-ok", "ready: 12 of 200 calls used today", false},
-		{"cap reached", "sk-test", 200, 200, "chip-danger", "cap reached: 200 of 200", true},
+		{"disabled no key", "", 0, 200, nil, "chip-muted", "disabled: ANTHROPIC_API_KEY not set", true},
+		{"ready zero calls", "sk-test", 0, 200, nil, "chip-ok", "ready: 0 of 200 calls used today", false},
+		{"ready some calls", "sk-test", 12, 200, nil, "chip-ok", "ready: 12 of 200 calls used today", false},
+		{"cap reached", "sk-test", 200, 200, nil, "chip-danger", "cap reached: 200 of 200", true},
+		{"last run", "sk-test", 5, 200, &store.LLMVerifyLastRun{Verified: 14, Downgraded: 2, CacheHits: 9, RanAt: t0}, "chip-info", "last run: 14 verified, 2 downgraded, 9 cache hits", false},
+		{"cap reached hides last run", "sk-test", 200, 200, &store.LLMVerifyLastRun{Verified: 10, Downgraded: 1, CacheHits: 5, RanAt: t0}, "chip-danger", "cap reached: 200 of 200", true},
 	}
 
 	for _, tt := range tests {
@@ -574,6 +578,13 @@ func TestAdminLLMVerifierStates(t *testing.T) {
 			// Seed LLM usage if needed
 			if tt.callsUsed > 0 {
 				if err := st.IncrementLLMUsage(ctx, t0, int(tt.callsUsed), 1000, 500); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			// Seed last run summary if needed (issue #40)
+			if tt.lastRun != nil {
+				if err := st.PutLLMVerifyLastRun(ctx, *tt.lastRun); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -597,15 +608,32 @@ func TestAdminLLMVerifierStates(t *testing.T) {
 				t.Errorf("body lacks state text %q", tt.wantText)
 			}
 
-			// Check button disabled state
-			if tt.wantDisabled {
-				if !strings.Contains(body, "disabled") {
-					t.Error("button should be disabled")
+			// Check button disabled state (operator review: assert button lacks disabled in enabled cases)
+			buttonIdx := strings.Index(body, "Verify equivalent pairs")
+			if tt.wantDisabled && tt.apiKey == "" {
+				// When disabled due to no API key, the form/button is not rendered at all
+				if buttonIdx >= 0 {
+					t.Error("button should not be present when API key is missing")
 				}
+			} else if buttonIdx < 0 {
+				t.Error("verify button missing from page")
 			} else {
-				// For enabled states, check the button is present and not disabled
-				if !strings.Contains(body, "Verify equivalent pairs") {
-					t.Error("verify button missing")
+				// Find the button tag before the text
+				buttonStart := strings.LastIndex(body[:buttonIdx], "<button")
+				if buttonStart < 0 {
+					t.Error("button tag not found before button text")
+				} else {
+					buttonHTML := body[buttonStart : buttonIdx+len("Verify equivalent pairs")+100]
+					if tt.wantDisabled {
+						if !strings.Contains(buttonHTML, "disabled") {
+							t.Errorf("button should be disabled, got: %s", buttonHTML)
+						}
+					} else {
+						// For enabled states, check the button lacks disabled attribute
+						if strings.Contains(buttonHTML, "disabled") {
+							t.Errorf("button should not be disabled in enabled state, got: %s", buttonHTML)
+						}
+					}
 				}
 			}
 		})
@@ -696,5 +724,53 @@ func TestAdminAB15Banner(t *testing.T) {
 	}
 	if strings.Contains(body, `class="banner banner-danger"`) {
 		t.Error("below threshold: banner present")
+	}
+}
+
+// TestAdminLLMVerifyRedirect: POST /admin/llm-verify redirects to /admin for browser posts (issue #40).
+func TestAdminLLMVerifyRedirect(t *testing.T) {
+	st := store.New(tdb.Pool(t))
+	tdb.Reset(t)
+	ctx := context.Background()
+
+	// Create a round with no equivalent pairs
+	r, err := st.CreateRound(ctx, t0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.FinishRound(ctx, r.ID, store.RoundOK, nil, t0.Add(time.Second)); err != nil {
+		t.Fatal(err)
+	}
+
+	deps := Deps{Store: st, AnthropicAPIKey: "sk-test", LLMDailyCallCap: 200}
+	s, _ := newAdminServer(t, deps, "ci")
+
+	tests := []struct {
+		name       string
+		acceptHdr  string
+		wantStatus int
+		wantBody   string
+	}{
+		{"HTML Accept redirects", "text/html", http.StatusSeeOther, ""},
+		{"JSON gets JSON", "application/json", http.StatusOK, `"verified":0`},
+		{"*/* gets JSON", "*/*", http.StatusOK, `"verified":0`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rec := do(s.Handler(), request(http.MethodPost, "/admin/llm-verify", withAuth(testUser, testPass), withHeader("Accept", tt.acceptHdr)))
+			if rec.Code != tt.wantStatus {
+				t.Errorf("status = %d, want %d", rec.Code, tt.wantStatus)
+			}
+			if tt.wantStatus == http.StatusSeeOther {
+				if loc := rec.Header().Get("Location"); loc != "/admin" {
+					t.Errorf("Location = %q, want /admin", loc)
+				}
+			} else {
+				if !strings.Contains(rec.Body.String(), tt.wantBody) {
+					t.Errorf("body lacks %q", tt.wantBody)
+				}
+			}
+		})
 	}
 }

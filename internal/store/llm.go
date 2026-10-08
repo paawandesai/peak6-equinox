@@ -123,3 +123,45 @@ func (s *Store) PutLLMVerdict(ctx context.Context, cacheKey, model, promptVersio
 	}
 	return nil
 }
+
+// LLMVerifyLastRun holds the summary of the last LLM verification run.
+type LLMVerifyLastRun struct {
+	Verified   int
+	Downgraded int
+	CacheHits  int
+	RanAt      time.Time
+}
+
+// GetLLMVerifyLastRun retrieves the last LLM verify run summary, or returns
+// (empty, false, nil) if no run has been recorded yet.
+func (s *Store) GetLLMVerifyLastRun(ctx context.Context) (LLMVerifyLastRun, bool, error) {
+	var run LLMVerifyLastRun
+	row := s.pool.QueryRow(ctx, `SELECT verified, downgraded, cache_hits, ran_at FROM llm_verify_last_run WHERE id = true`)
+	err := row.Scan(&run.Verified, &run.Downgraded, &run.CacheHits, &run.RanAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return LLMVerifyLastRun{}, false, nil
+	}
+	if err != nil {
+		return LLMVerifyLastRun{}, false, fmt.Errorf("reading llm_verify_last_run: %w", err)
+	}
+	run.RanAt = run.RanAt.UTC()
+	return run, true, nil
+}
+
+// PutLLMVerifyLastRun stores the last LLM verify run summary, replacing any
+// existing entry.
+func (s *Store) PutLLMVerifyLastRun(ctx context.Context, run LLMVerifyLastRun) error {
+	_, err := s.pool.Exec(ctx, `
+		INSERT INTO llm_verify_last_run (id, verified, downgraded, cache_hits, ran_at)
+		VALUES (true, $1, $2, $3, $4)
+		ON CONFLICT (id) DO UPDATE
+		SET verified = EXCLUDED.verified,
+		    downgraded = EXCLUDED.downgraded,
+		    cache_hits = EXCLUDED.cache_hits,
+		    ran_at = EXCLUDED.ran_at
+	`, run.Verified, run.Downgraded, run.CacheHits, run.RanAt.UTC())
+	if err != nil {
+		return fmt.Errorf("storing llm_verify_last_run: %w", err)
+	}
+	return nil
+}

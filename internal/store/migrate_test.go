@@ -14,7 +14,7 @@ import (
 // dataModelTables lists every table in architecture.md § Data model.
 var dataModelTables = []string{
 	"fetch_rounds", "raw_responses", "instruments", "quotes", "relationships",
-	"llm_verdicts", "llm_usage", "routing_decisions", "decision_log",
+	"llm_verdicts", "llm_usage", "llm_verify_last_run", "routing_decisions", "decision_log",
 }
 
 func tablesIn(t *testing.T, dsn string) map[string]bool {
@@ -63,13 +63,14 @@ func TestMigrateUpDownCleanly(t *testing.T) {
 	if err := store.Migrate(ctx, dsn, store.MigrateStatus, &out); err != nil || !strings.Contains(out.String(), "applied") {
 		t.Errorf("status = %v %q", err, out.String())
 	}
-	if err := store.Migrate(ctx, dsn, store.MigrateDown, &out); err != nil {
-		t.Fatalf("down: %v", err)
+	// Reset rolls back all migrations; Down rolls back only one (issue #40).
+	if err := store.Migrate(ctx, dsn, store.MigrateReset, &out); err != nil {
+		t.Fatalf("reset: %v", err)
 	}
 	tables = tablesIn(t, dsn)
 	for _, name := range dataModelTables {
 		if tables[name] {
-			t.Errorf("table %s still present after down", name)
+			t.Errorf("table %s still present after reset", name)
 		}
 	}
 	// Up again after down, then reset.
