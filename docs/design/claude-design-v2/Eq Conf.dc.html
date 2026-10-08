@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<span style="display:inline-flex;flex-direction:column;gap:4px;vertical-align:top"><span style="display:inline-flex;align-items:baseline;gap:6px;white-space:nowrap"><strong style="font-weight:600;font-variant-numeric:tabular-nums">{{ num }}</strong><span style="font-weight:600;color:{{ fg }}"><span aria-hidden="true">{{ glyph }}</span> {{ word }}</span></span><span aria-hidden="true" style="position:relative;display:block;width:84px;height:4px;background:#e1e5ea;border-radius:2px"><span style="position:absolute;left:0;top:0;bottom:0;width:{{ pct }};background:{{ fg }};border-radius:2px"></span><span title="route floor 0.90" style="position:absolute;left:90%;top:-2px;width:2px;height:8px;background:#1b2230"></span></span></span>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:160,&quot;height&quot;:44},&quot;v&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;min&quot;:0,&quot;max&quot;:1,&quot;step&quot;:0.01,&quot;default&quot;:0.93,&quot;tsType&quot;:&quot;number&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const v = Number(this.props.v ?? 0.93);
+    const hi = v >= 0.9, med = v >= 0.7;
+    return {
+      num: v.toFixed(2),
+      word: hi ? 'High' : med ? 'Medium' : 'Low',
+      glyph: hi ? '▲' : med ? '■' : '▼',
+      fg: hi ? '#1b6e3a' : med ? '#8a5a00' : '#4f5866',
+      pct: Math.round(v * 100) + '%'
+    };
+  }
+}
+</script>
+</body>
+</html>

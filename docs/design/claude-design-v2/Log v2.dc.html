@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><style>body{margin:0;background:#e6e9ed;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue","Noto Sans",sans-serif;color:#1b2230;-webkit-font-smoothing:antialiased}a{color:#0172ad}a:hover{color:#01527d}</style></helmet>
+<section style="display:flex;gap:48px;padding:48px;align-items:flex-start">
+
+<div style="display:flex;flex-direction:column;gap:10px">
+  <div style="font:600 12px ui-monospace,Menlo,monospace;color:#3a4350">Decision log · desktop 1280 · templates/log.html · shown with kind=routing</div>
+  <div style="width:1280px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.06);border-radius:4px;overflow:hidden">
+    <dc-import name="Eq Header v2" active="log" banner="none" hint-size="100%,100px"></dc-import>
+    <main style="padding:28px 40px 48px;display:flex;flex-direction:column;gap:22px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <h1 style="margin:0;font-size:30px;line-height:1.2;font-weight:700">Decision log</h1>
+        <p style="margin:0;font-size:17px;color:#5d6675">What did Equinox decide, when, and on what data?</p>
+        <p style="margin:6px 0 0;font-size:14px;line-height:1.55;color:#3a4350;max-width:900px">Every verdict and simulated order Equinox stored, newest first: relationship verdicts from <code>equinox match</code>, routing decisions from the pair pages and <code>equinox route</code>, LLM verifier results (when enabled; never from a public request) and fetch rounds. Each line links to the pair or decision it is about.</p>
+      </div>
+
+      <form method="get" action="/log" style="margin:0;display:flex;flex-direction:column;gap:12px;padding:14px 16px;border-radius:8px;background:#f5f7f9;box-shadow:inset 0 0 0 1px #e1e5ea">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px">
+          <span style="font-size:14px;font-weight:600;width:72px">Show</span>
+          <a href="/log" style="display:inline-flex;align-items:center;height:30px;padding:0 12px;border-radius:15px;font-size:13px;font-weight:600;text-decoration:none;color:#1b2230;background:#fff;box-shadow:inset 0 0 0 1px #c9cfd6">everything</a>
+          <a href="/log?kind=routing" aria-current="true" style="display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:15px;font-size:13px;font-weight:600;text-decoration:none;color:#fff;background:#1b2230">✓ routing</a>
+          <a href="/log?kind=verdict" style="display:inline-flex;align-items:center;height:30px;padding:0 12px;border-radius:15px;font-size:13px;font-weight:600;text-decoration:none;color:#1b2230;background:#fff;box-shadow:inset 0 0 0 1px #c9cfd6">verdict</a>
+          <a href="/log?kind=llm_verify" style="display:inline-flex;align-items:center;height:30px;padding:0 12px;border-radius:15px;font-size:13px;font-weight:600;text-decoration:none;color:#1b2230;background:#fff;box-shadow:inset 0 0 0 1px #c9cfd6">llm_verify</a>
+          <a href="/log?kind=round" style="display:inline-flex;align-items:center;height:30px;padding:0 12px;border-radius:15px;font-size:13px;font-weight:600;text-decoration:none;color:#1b2230;background:#fff;box-shadow:inset 0 0 0 1px #c9cfd6">round</a>
+          <noscript><button type="submit">Filter</button></noscript>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px">
+          <span style="font-size:14px;font-weight:600;width:72px">Group by</span>
+          <a href="/log?kind=routing" style="display:inline-flex;align-items:center;height:30px;padding:0 12px;border-radius:15px;font-size:13px;font-weight:600;text-decoration:none;color:#fff;background:#1b2230">✓ none</a>
+          <a href="/log?kind=routing&amp;group=venue" style="display:inline-flex;align-items:center;height:30px;padding:0 12px;border-radius:15px;font-size:13px;font-weight:600;text-decoration:none;color:#1b2230;background:#fff;box-shadow:inset 0 0 0 1px #c9cfd6">venue</a>
+          <a href="/log?kind=routing&amp;group=staleness" style="display:inline-flex;align-items:center;height:30px;padding:0 12px;border-radius:15px;font-size:13px;font-weight:600;text-decoration:none;color:#1b2230;background:#fff;box-shadow:inset 0 0 0 1px #c9cfd6">staleness</a>
+          <a href="/log?kind=routing&amp;group=label" style="display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:15px;font-size:13px;font-weight:600;text-decoration:none;color:#6b2fa0;background:#faf6fd;outline:1px dashed #6b2fa0">◆ label at decision</a>
+          <p style="margin:0 0 0 auto;font-size:13px;color:#3a4350">Latest 6 entries (at most 200). Newest: <strong>2026-10-08 11:05:12 EDT</strong></p>
+        </div>
+      </form>
+
+      <section style="display:flex;flex-direction:column;gap:8px;padding:14px 16px;border-radius:8px;background:#fff8ea;box-shadow:inset 0 0 0 1px #d9b45a">
+        <h2 style="margin:0;font-size:16px;color:#8a5a00">! Outliers in this view (2)</h2>
+        <ul style="margin:0;padding-left:18px;font-size:14px;line-height:1.6"><li><a href="/decisions/53">Decision #53</a>: slippage (212) bps, the worst in view; it walked 6 levels on POLYMARKET.</li><li><a href="/decisions/49">Decision #49</a>: max quote age 118 s, the oldest input in view.</li></ul>
+      </section>
+
+      <table style="width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums">
+        <thead><tr>
+          <th style="text-align:left;padding:8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">When</th>
+          <th style="text-align:left;padding:8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">About</th>
+          <th style="text-align:left;padding:8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Order</th>
+          <th style="text-align:left;padding:8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Outcome · venues</th>
+          <th style="text-align:right;padding:8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">All-in</th>
+          <th style="text-align:right;padding:8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Saving vs best alt</th>
+          <th style="text-align:left;padding:8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Max quote age</th>
+          <th style="text-align:left;padding:8px;font-size:13px;color:#6b2fa0;border-bottom:1px solid #d5dae0">◆ Label at decision</th>
+          <th style="text-align:left;padding:8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0;width:230px">Summary</th>
+        </tr></thead>
+        <tbody>
+          <sc-for list="{{ rows }}" as="r" hint-placeholder-count="5">
+          <tr style="background:{{ r.bg }}">
+            <td style="padding:10px 8px;border-bottom:1px solid #eceff2;vertical-align:top;font-size:13px;white-space:nowrap">{{ r.when }}</td>
+            <td style="padding:10px 8px;border-bottom:1px solid #eceff2;vertical-align:top"><a href="/decisions/{{ r.id }}" style="font-weight:600">Decision #{{ r.id }}</a><span style="display:block;font-size:12px;color:#4f5866">pair <a href="/pairs/{{ r.pair }}">#{{ r.pair }}</a></span></td>
+            <td style="padding:10px 8px;border-bottom:1px solid #eceff2;vertical-align:top">{{ r.order }}</td>
+            <td style="padding:10px 8px;border-bottom:1px solid #eceff2;vertical-align:top"><div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px"><dc-import name="Eq Badge" k="{{ r.ok }}" hint-size="120px,22px"></dc-import><span style="font-size:12px;font-weight:700;letter-spacing:.05em;color:#4f5866">{{ r.venues }}</span></div></td>
+            <td style="padding:10px 8px;border-bottom:1px solid #eceff2;vertical-align:top;text-align:right;font-weight:600">{{ r.allin }}</td>
+            <td style="padding:10px 8px;border-bottom:1px solid #eceff2;vertical-align:top;text-align:right;color:{{ r.dfg }}">{{ r.delta }}</td>
+            <td style="padding:10px 8px;border-bottom:1px solid #eceff2;vertical-align:top"><dc-import name="Eq Badge" k="{{ r.fk }}" text="{{ r.age }}" hint-size="96px,22px"></dc-import></td>
+            <td style="padding:10px 8px;border-bottom:1px solid #eceff2;vertical-align:top;background:#faf6fd"><dc-import name="Eq Badge" k="{{ r.lk }}" hint-size="180px,22px"></dc-import></td>
+            <td style="padding:10px 8px;border-bottom:1px solid #eceff2;vertical-align:top;font-size:13px"><details><summary title="{{ r.sum }}" style="cursor:pointer"><span style="display:-webkit-inline-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;vertical-align:top;max-width:200px">{{ r.sum }}</span></summary><p style="margin:6px 0 0">{{ r.sum }}</p></details></td>
+          </tr>
+          </sc-for>
+        </tbody>
+      </table>
+      <p style="margin:0;font-size:13px;color:#4f5866">Example values for illustration only. Saving = best ranked alternative's all-in minus this decision's all-in. Positive is favourable; parentheses mean the alternative was cheaper (only possible on a partial fill).</p>
+
+      <section style="display:flex;flex-direction:column;gap:8px">
+        <h2 style="margin:0;font-size:17px">Same page, kind = everything</h2>
+        <table style="width:100%;border-collapse:collapse;font-size:14px">
+          <thead><tr><th style="text-align:left;padding:7px 8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0;width:190px">When</th><th style="text-align:left;padding:7px 8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0;width:120px">Kind</th><th style="text-align:left;padding:7px 8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0;width:300px">About</th><th style="text-align:left;padding:7px 8px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Summary</th></tr></thead>
+          <tbody>
+            <tr><td style="padding:9px 8px;border-bottom:1px solid #eceff2;font-size:13px">2026-10-08 11:04:02 EDT</td><td style="padding:9px 8px;border-bottom:1px solid #eceff2"><dc-import name="Eq Badge" tone="info" glyph="≡" text="verdict" hint-size="80px,22px"></dc-import></td><td style="padding:9px 8px;border-bottom:1px solid #eceff2"><a href="/pairs/924">Pair #924</a><span style="display:block;font-size:12px;color:#4f5866">Fed upper bound &gt; 4.25% / Fed +50 bps Oct</span></td><td style="padding:9px 8px;border-bottom:1px solid #eceff2">Matched as equivalent_given_facts (0.93, rules).</td></tr>
+            <tr><td style="padding:9px 8px;border-bottom:1px solid #eceff2;font-size:13px">2026-10-08 11:03:20 EDT</td><td style="padding:9px 8px;border-bottom:1px solid #eceff2"><dc-import name="Eq Badge" tone="muted" glyph="↻" text="round" hint-size="80px,22px"></dc-import></td><td style="padding:9px 8px;border-bottom:1px solid #eceff2"><span style="font-size:13px;color:#4f5866">round 49</span></td><td style="padding:9px 8px;border-bottom:1px solid #eceff2">Fetched 2,453 instruments, 2,410 quotes from 2 venues in 18.2 s.</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+  <div style="font:600 12px ui-monospace,Menlo,monospace;color:#3a4350">Decision log · mobile 390</div>
+  <div style="width:390px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.06);border-radius:4px;overflow:hidden">
+    <dc-import name="Eq Header v2" active="log" banner="none" mobile="{{ true }}" hint-size="100%,170px"></dc-import>
+    <main style="padding:18px 16px 32px;display:flex;flex-direction:column;gap:14px">
+      <h1 style="margin:0;font-size:26px">Decision log</h1>
+      <details style="font-size:14px"><summary style="min-height:44px;display:flex;align-items:center;font-weight:600;color:#0172ad">What is logged</summary></details>
+      <div style="display:flex;gap:8px;overflow-x:auto"><a href="/log" style="display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border-radius:22px;font-size:14px;font-weight:600;text-decoration:none;color:#1b2230;box-shadow:inset 0 0 0 1px #c9cfd6;white-space:nowrap">everything</a><a href="/log?kind=routing" style="display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border-radius:22px;font-size:14px;font-weight:600;text-decoration:none;color:#fff;background:#1b2230;white-space:nowrap">✓ routing</a><a href="/log?kind=verdict" style="display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border-radius:22px;font-size:14px;font-weight:600;text-decoration:none;color:#1b2230;box-shadow:inset 0 0 0 1px #c9cfd6;white-space:nowrap">verdict</a></div>
+      <p style="margin:0;font-size:13px;color:#3a4350">Latest 6 entries (at most 200). Newest: <strong>11:05:12 EDT</strong></p>
+      <sc-for list="{{ rowsM }}" as="r" hint-placeholder-count="2">
+      <article style="display:flex;flex-direction:column;gap:6px;padding:12px;border:1px solid #e1e5ea;border-radius:6px;font-size:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><a href="/decisions/{{ r.id }}" style="font-weight:600">Decision #{{ r.id }}</a><span style="font-size:12px;color:#4f5866">{{ r.when }}</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center"><dc-import name="Eq Badge" k="{{ r.ok }}" hint-size="120px,22px"></dc-import><dc-import name="Eq Badge" k="{{ r.fk }}" text="{{ r.age }}" hint-size="96px,22px"></dc-import></div>
+        <span>{{ r.order }} · {{ r.venues }}</span>
+        <span><strong>{{ r.allin }}</strong> all-in · <span style="color:{{ r.dfg }}">{{ r.delta }}</span> saving vs best alt</span>
+      </article>
+      </sc-for>
+    </main>
+  </div>
+</div>
+
+<aside style="width:340px;display:flex;flex-direction:column;gap:16px;font-size:14px;line-height:1.5;color:#3a4350">
+  <h2 style="margin:0;font-size:18px;color:#1b2230">Decision log: build notes</h2>
+  <p style="margin:0">Template: <code>log.html</code>. Modelled on a TCA report. The existing kind <code>&lt;select&gt;</code> becomes chip links (<code>?kind=</code>), with a no-JS submit kept. When kind is routing, the table shows the order columns. Every other kind keeps When / Kind / About / Summary.</p>
+  <div><strong style="color:#1b2230">Components</strong><ul style="margin:4px 0 0;padding-left:18px"><li>filter chips (<code>a.chip-filter[aria-current]</code>)</li><li>group-by chips</li><li>outliers panel</li><li>outcome and freshness badges</li><li>clamped summary inside <code>details</code></li></ul></div>
+  <div><strong style="color:#1b2230">VM fields (data already stored)</strong><ul style="margin:4px 0 0;padding-left:18px"><li>For routing entries, from the stored decision: pair, side, size, outcome, venues, average all-in, Δ to rank-2 alternative</li><li>max quote age (from the snapshot inputs, as on the decision page)</li><li><code>group=venue|staleness</code> handler grouping</li><li>Outliers: the worst slippage and the oldest input among the listed rows</li><li><code>AboutTitle</code> on verdict rows</li></ul></div>
+  <div style="padding:12px;border-radius:6px;background:#f5eefb;box-shadow:inset 0 0 0 1px #6b2fa0"><strong style="color:#6b2fa0">◆ Needs new data</strong><ul style="margin:4px 0 0;padding-left:18px"><li>Label at decision time: the pair's relationship type when the order was routed. Decisions do not store it, and the pair may be re-matched later.</li><li>Group by label, which depends on it</li></ul></div>
+</aside>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const rows = [
+      { when:'10-08 11:05:12', id:57, pair:924, order:'buy 100 YES · IOC', ok:'routed', venues:'KALSHI + POLYMARKET', allin:'0.5451', delta:'+0.71¢', dfg:'#1b6e3a', fk:'fresh', age:'Fresh · 40 s', lk:'egf', sum:'Routed across 2 venues: 60 + 40 contracts, 0.5451 average all-in.', bg:'transparent' },
+      { when:'10-08 10:58:40', id:56, pair:918, order:'sell 50 YES · IOC', ok:'routed', venues:'POLYMARKET (NO)', allin:'0.4710', delta:'+0.32¢', dfg:'#1b6e3a', fk:'fresh', age:'Fresh · 22 s', lk:'complement', sum:'Routed as NO on polymarket (complement of the target).', bg:'transparent' },
+      { when:'10-08 10:41:07', id:53, pair:924, order:'buy 500 YES · IOC', ok:'partial', venues:'POLYMARKET', allin:'0.5920', delta:'(0.40¢)', dfg:'#b3261e', fk:'fresh', age:'Fresh · 51 s', lk:'egf', sum:'Partially routed: 380 of 500 contracts. Kalshi excluded: too shallow, 12 contracts available.', bg:'#fff8ea' },
+      { when:'10-08 10:12:55', id:49, pair:918, order:'buy 20 YES · FOK', ok:'notrouted', venues:'—', allin:'—', delta:'—', dfg:'#4f5866', fk:'stale', age:'Stale · 118 s', lk:'complement', sum:'Not routed: every candidate was excluded (2 stale, 1 not routable).', bg:'#fff8ea' },
+      { when:'10-08 09:47:31', id:47, pair:924, order:'buy 10 YES · limit 0.55', ok:'routed', venues:'KALSHI', allin:'0.5318', delta:'+1.10¢', dfg:'#1b6e3a', fk:'fresh', age:'Fresh · 12 s', lk:'egf', sum:'Routed: buy 10 YES on kalshi at 0.5318 all-in.', bg:'transparent' }
+    ];
+    return { rows, rowsM: rows.slice(0,2) };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><style>body{margin:0;background:#e6e9ed;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue","Noto Sans",sans-serif;color:#1b2230;-webkit-font-smoothing:antialiased}a{color:#0172ad}a:hover{color:#01527d}</style></helmet>
+<section style="display:flex;gap:48px;padding:48px;align-items:flex-start">
+
+<div style="display:flex;flex-direction:column;gap:10px">
+  <div style="font:600 12px ui-monospace,Menlo,monospace;color:#3a4350">Near misses · desktop 1280 · templates/near_misses.html</div>
+  <div style="width:1280px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.06);border-radius:4px;overflow:hidden">
+    <dc-import name="Eq Header" active="near" banner="demo" hint-size="100%,140px"></dc-import>
+    <main style="padding:32px 40px 48px;display:flex;flex-direction:column;gap:28px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <h1 style="margin:0;font-size:30px;line-height:1.2;font-weight:700">Near misses</h1>
+        <p style="margin:0;font-size:17px;line-height:1.45;color:#5d6675">Which pairs looked like the same bet but were rejected, and by which rule?</p>
+      </div>
+      <div style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:32px;align-items:start">
+        <dl style="margin:0;display:grid;grid-template-columns:auto auto;border:1px solid #e1e5ea;border-radius:6px;background:#f5f7f9">
+          <div style="padding:12px 20px"><dt style="font-size:13px;color:#5d6675">Count</dt><dd style="margin:2px 0 0;font-size:18px;font-weight:600">851 near misses</dd></div>
+          <div style="padding:12px 20px;border-left:1px solid #e1e5ea"><dt style="font-size:13px;color:#5d6675">Stopped by a veto</dt><dd style="margin:2px 0 0;font-size:18px;font-weight:600;color:#b3261e">851</dd></div>
+        </dl>
+        <p style="margin:0;max-width:78ch;font-size:15px;line-height:1.55;color:#3a4350">A near miss is a <em>related</em> pair the matcher kept because it was close: the same subject with one term off, or a pair an external fact was consulted for but did not close. Each veto on its own blocks <em>equivalent</em>; a false "same bet" is the worst failure, so these are shown rather than hidden.</p>
+      </div>
+
+      <table style="width:100%;border-collapse:collapse;font-size:15px;line-height:1.45">
+        <thead><tr>
+          <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0;width:500px">Veto that fired</th>
+          <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0">Contracts</th>
+          <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0;width:110px">Explanation</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td style="padding:14px 10px;border-bottom:1px solid #eceff2;vertical-align:top">
+              <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px">
+                <li style="display:grid;grid-template-columns:190px 1fr;gap:10px;align-items:baseline"><span><span style="display:inline-block;padding:1px 8px;border-radius:4px;font:600 12.5px/20px ui-monospace,Menlo,monospace;background:#fbe9e7;color:#b3261e">metric_mismatch</span></span><span><strong>metric</strong>: price vs price_low</span></li>
+                <li style="display:grid;grid-template-columns:190px 1fr;gap:10px;align-items:baseline"><span><span style="display:inline-block;padding:1px 8px;border-radius:4px;font:600 12.5px/20px ui-monospace,Menlo,monospace;background:#fbe9e7;color:#b3261e">comparator_mismatch</span></span><span><strong>comparator</strong>: gt vs lte</span></li>
+                <li style="display:grid;grid-template-columns:190px 1fr;gap:10px;align-items:baseline"><span><span style="display:inline-block;padding:1px 8px;border-radius:4px;font:600 12.5px/20px ui-monospace,Menlo,monospace;background:#fbe9e7;color:#b3261e">threshold_mismatch</span></span><span><strong>threshold</strong>: 77999.99 vs 78000</span></li>
+                <li style="display:grid;grid-template-columns:190px 1fr;gap:10px;align-items:baseline"><span><span style="display:inline-block;padding:1px 8px;border-radius:4px;font:600 12.5px/20px ui-monospace,Menlo,monospace;background:#fbe9e7;color:#b3261e">deadline_mismatch</span></span><span><strong>deadline</strong>: 2026-10-07T02:00:00Z vs 2026-10-07T04:00:00Z: 2h0m0s apart; crypto deadlines are the measurement instant and must be identical</span></li>
+              </ul>
+            </td>
+            <td style="padding:14px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><a href="/pairs/1" style="font-weight:600">#1</a><div style="display:grid;grid-template-columns:96px 1fr;gap:4px 8px;margin-top:6px"><span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#5d6675;padding-top:3px">KALSHI</span><span>Bitcoin price on Oct 6, 2026? — $78,000 or above</span><span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#5d6675;padding-top:3px">POLYMARKET</span><span>Will Bitcoin dip to $78,000 on October 6?</span></div></td>
+            <td style="padding:14px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><details><summary style="cursor:pointer;color:#0172ad;font-weight:500">Why</summary></details></td>
+          </tr>
+          <tr>
+            <td style="padding:14px 10px;border-bottom:1px solid #eceff2;vertical-align:top">
+              <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px">
+                <li style="display:grid;grid-template-columns:190px 1fr;gap:10px;align-items:baseline"><span><span style="display:inline-block;padding:1px 8px;border-radius:4px;font:600 12.5px/20px ui-monospace,Menlo,monospace;background:#fbe9e7;color:#b3261e">threshold_mismatch</span></span><span><strong>threshold</strong>: 4.50 vs 4.25</span></li>
+              </ul>
+            </td>
+            <td style="padding:14px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><a href="/pairs/912" style="font-weight:600">#912</a><div style="display:grid;grid-template-columns:96px 1fr;gap:4px 8px;margin-top:6px"><span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#5d6675;padding-top:3px">KALSHI</span><span>Will the upper bound of the federal funds rate be above 4.50% following the Fed's Oct 28, 2026 meeting? — Above 4.50%</span><span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#5d6675;padding-top:3px">POLYMARKET</span><span>Will the upper bound be above 4.25% after the October 2026 meeting?</span></div></td>
+            <td style="padding:14px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><details open=""><summary style="cursor:pointer;color:#0172ad;font-weight:500">Why</summary></details></td>
+          </tr>
+          <tr>
+            <td colspan="3" style="padding:0 10px 14px 10px;border-bottom:1px solid #eceff2"><p style="margin:0;padding:12px 14px;background:#f5f7f9;border-radius:6px;font-size:14px;line-height:1.55;color:#3a4350">Both contracts measure the same upper bound at the same meeting, but at different thresholds (4.50 vs 4.25). A YES on one does not settle the other the same way, so the pair is <em>related</em>, not equivalent. (Expanded "Why" spans the full row width at desktop.)</p></td>
+          </tr>
+          <tr>
+            <td style="padding:14px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><div style="display:flex;flex-wrap:wrap;gap:10px;align-items:baseline"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e8f0fb;color:#1a56a8">no veto</span><span>a fact was consulted but did not apply</span></div></td>
+            <td style="padding:14px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><a href="/pairs/877" style="font-weight:600">#877</a><div style="display:grid;grid-template-columns:96px 1fr;gap:4px 8px;margin-top:6px"><span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#5d6675;padding-top:3px">KALSHI</span><span>Will the Fed cut rates at the October 2026 meeting?</span><span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#5d6675;padding-top:3px">POLYMARKET</span><span>Will the upper bound be below 4.00% after the October 2026 meeting?</span></div></td>
+            <td style="padding:14px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><details><summary style="cursor:pointer;color:#0172ad;font-weight:500">Why</summary></details></td>
+          </tr>
+          <tr><td colspan="3" style="padding:10px;font-size:13px;color:#5d6675;font-style:italic">… 848 more rows (mock only)</td></tr>
+        </tbody>
+      </table>
+    </main>
+    <footer style="padding:20px 40px;border-top:1px solid #e1e5ea;font-size:13px;color:#5d6675">Everything here is a simulation over recorded venue data. Equinox never places orders. Prices are per $1 payout, in [0,1].</footer>
+  </div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+  <div style="font:600 12px ui-monospace,Menlo,monospace;color:#3a4350">Near misses · mobile 390</div>
+  <div style="width:390px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.06);border-radius:4px;overflow:hidden">
+    <dc-import name="Eq Header" mobile="{{ true }}" active="near" banner="demo" hint-size="100%,220px"></dc-import>
+    <main style="padding:20px 16px 32px;display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <h1 style="margin:0;font-size:26px;font-weight:700">Near misses</h1>
+        <p style="margin:0;font-size:16px;line-height:1.45;color:#5d6675">Which pairs looked like the same bet but were rejected, and by which rule?</p>
+      </div>
+      <dl style="margin:0;display:grid;grid-template-columns:1fr 1fr;border:1px solid #e1e5ea;border-radius:6px;background:#f5f7f9">
+        <div style="padding:10px 12px"><dt style="font-size:13px;color:#5d6675">Count</dt><dd style="margin:0;font-size:16px;font-weight:600">851 near misses</dd></div>
+        <div style="padding:10px 12px;border-left:1px solid #e1e5ea"><dt style="font-size:13px;color:#5d6675">Stopped by a veto</dt><dd style="margin:0;font-size:16px;font-weight:600;color:#b3261e">851</dd></div>
+      </dl>
+      <p style="margin:0;font-size:14px;line-height:1.55;color:#3a4350">A near miss is a <em>related</em> pair the matcher kept because it was close: the same subject with one term off, or a pair an external fact was consulted for but did not close. Each veto on its own blocks <em>equivalent</em>; a false "same bet" is the worst failure, so these are shown rather than hidden.</p>
+      <article style="border:1px solid #e1e5ea;border-radius:6px;padding:14px;display:flex;flex-direction:column;gap:12px">
+        <a href="/pairs/1" style="font-weight:600">#1</a>
+        <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;font-size:14px">
+          <li style="display:flex;flex-direction:column;gap:2px"><span><span style="display:inline-block;padding:1px 8px;border-radius:4px;font:600 12.5px/20px ui-monospace,Menlo,monospace;background:#fbe9e7;color:#b3261e">metric_mismatch</span></span><span><strong>metric</strong>: price vs price_low</span></li>
+          <li style="display:flex;flex-direction:column;gap:2px"><span><span style="display:inline-block;padding:1px 8px;border-radius:4px;font:600 12.5px/20px ui-monospace,Menlo,monospace;background:#fbe9e7;color:#b3261e">comparator_mismatch</span></span><span><strong>comparator</strong>: gt vs lte</span></li>
+          <li style="display:flex;flex-direction:column;gap:2px"><span><span style="display:inline-block;padding:1px 8px;border-radius:4px;font:600 12.5px/20px ui-monospace,Menlo,monospace;background:#fbe9e7;color:#b3261e">threshold_mismatch</span></span><span><strong>threshold</strong>: 77999.99 vs 78000</span></li>
+          <li style="display:flex;flex-direction:column;gap:2px"><span><span style="display:inline-block;padding:1px 8px;border-radius:4px;font:600 12.5px/20px ui-monospace,Menlo,monospace;background:#fbe9e7;color:#b3261e">deadline_mismatch</span></span><span style="overflow-wrap:anywhere"><strong>deadline</strong>: 2026-10-07T02:00:00Z vs 2026-10-07T04:00:00Z: 2h0m0s apart; crypto deadlines are the measurement instant and must be identical</span></li>
+        </ul>
+        <div style="display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:1px solid #eceff2;font-size:15px"><span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#5d6675">KALSHI</span><span>Bitcoin price on Oct 6, 2026? — $78,000 or above</span><span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#5d6675">POLYMARKET</span><span>Will Bitcoin dip to $78,000 on October 6?</span></div>
+        <details><summary style="min-height:44px;display:flex;align-items:center;color:#0172ad;font-weight:500">Why</summary></details>
+      </article>
+      <article style="border:1px solid #e1e5ea;border-radius:6px;padding:14px;display:flex;flex-direction:column;gap:12px">
+        <a href="/pairs/877" style="font-weight:600">#877</a>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:baseline;font-size:14px"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e8f0fb;color:#1a56a8">no veto</span><span>a fact was consulted but did not apply</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:1px solid #eceff2;font-size:15px"><span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#5d6675">KALSHI</span><span>Will the Fed cut rates at the October 2026 meeting?</span><span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#5d6675">POLYMARKET</span><span>Will the upper bound be below 4.00% after the October 2026 meeting?</span></div>
+        <details><summary style="min-height:44px;display:flex;align-items:center;color:#0172ad;font-weight:500">Why</summary></details>
+      </article>
+    </main>
+    <footer style="padding:16px;border-top:1px solid #e1e5ea;font-size:13px;line-height:1.45;color:#5d6675">Everything here is a simulation over recorded venue data. Equinox never places orders. Prices are per $1 payout, in [0,1].</footer>
+  </div>
+</div>
+
+<aside style="width:300px;display:flex;flex-direction:column;gap:10px;font-size:14px;line-height:1.5;color:#3a4350">
+  <div style="font:600 12px ui-monospace,Menlo,monospace">Notes</div>
+  <ol style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px">
+    <li>The veto is the first column, as before, but each veto is now a two-column line: code chip, then the term and its detail. Long deadline details wrap without pushing the chip.</li>
+    <li>The header reads "Veto that fired". The "no veto" variant keeps the info chip and its phrase.</li>
+    <li>The strip and the definition paragraph sit side by side at desktop.</li>
+    <li>When <code>.Truncated</code> is set, a warn note sits under the paragraph: "Showing the first N near misses only (M more not shown)." See Design System.</li>
+    <li>Contract titles are not clamped here; the reviewer needs the full wording to judge the veto.</li>
+  </ol>
+</aside>
+</section>
+</x-dc>
+</body>
+</html>

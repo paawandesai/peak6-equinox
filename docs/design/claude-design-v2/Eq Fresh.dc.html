@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<span style="display:inline-flex;align-items:center;flex-wrap:wrap;gap:6px 8px;font-size:13px;color:#3a4350;line-height:1.4"><dc-import name="Eq Badge" k="{{ k }}" hint-size="70px,22px"></dc-import><span>{{ src }}as of <time style="font-weight:600;font-variant-numeric:tabular-nums;color:#1b2230">{{ asof }}</time>{{ agePart }}</span></span>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:360,&quot;height&quot;:32},&quot;state&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;fresh&quot;,&quot;warn&quot;,&quot;stale&quot;,&quot;unknown&quot;],&quot;default&quot;:&quot;fresh&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;asof&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;21:15:56 EDT&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;age&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;14 s ago&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;source&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const s = this.props.state ?? 'fresh';
+    const k = { fresh:'fresh', warn:'warnage', stale:'stale', unknown:'unknown' }[s] || 'unknown';
+    return {
+      k,
+      src: this.props.source ? this.props.source + ' ' : '',
+      asof: this.props.asof ?? '21:15:56 EDT',
+      agePart: this.props.age ? ' · ' + this.props.age : ''
+    };
+  }
+}
+</script>
+</body>
+</html>

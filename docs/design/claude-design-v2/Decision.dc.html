@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><style>body{margin:0;background:#e6e9ed;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue","Noto Sans",sans-serif;color:#1b2230;-webkit-font-smoothing:antialiased}a{color:#0172ad}a:hover{color:#01527d}</style></helmet>
+<section style="display:flex;gap:48px;padding:48px;align-items:flex-start">
+
+<div style="display:flex;flex-direction:column;gap:10px">
+  <div style="font:600 12px ui-monospace,Menlo,monospace;color:#3a4350">Decision trace · desktop 1280 · templates/decision.html + route_result.html</div>
+  <div style="width:1280px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.06);border-radius:4px;overflow:hidden">
+    <dc-import name="Eq Header" active="log" banner="demo" hint-size="100%,140px"></dc-import>
+    <main style="padding:28px 40px 48px;display:flex;flex-direction:column;gap:24px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <nav aria-label="Breadcrumb" style="font-size:14px;color:#5d6675"><a href="/log?kind=routing">All routing decisions</a> · <a href="/">Matches</a></nav>
+        <h1 style="margin:6px 0 0;font-size:30px;line-height:1.2;font-weight:700">Routing decision #2</h1>
+        <p style="margin:0;font-size:17px;line-height:1.45;color:#5d6675">What did this simulated order do, and why did the router choose that venue?</p>
+        <p style="margin:8px 0 0;max-width:90ch;font-size:15px;line-height:1.55;color:#3a4350">A stored simulation: the order below was routed against the books of round 3 and the decision was written to the decision log at 2026-10-08 11:03:20 EDT. Nothing was sent to a venue.</p>
+      </div>
+      <article style="border:1px solid #d5dae0;border-radius:8px;overflow:hidden">
+        <header style="display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;padding:12px 24px;background:#f5f7f9;border-bottom:1px solid #e1e5ea;font-size:14px;color:#3a4350;font-variant-numeric:tabular-nums"><strong style="color:#1b2230;font-size:15px">Decision #2</strong><span>round 3</span><span>as of 2026-10-06 21:15:56 EDT</span><span>decided 2026-10-08 11:03:20 EDT</span></header>
+        <div style="padding:24px;display:flex;flex-direction:column;gap:28px">
+          <div style="display:flex;flex-direction:column;gap:10px;padding:18px 20px;border-radius:6px;background:#e6f4ea;border:1px solid #1b6e3a">
+            <div style="display:flex;align-items:center;gap:12px"><span style="font-size:13px;font-weight:600;color:#1b6e3a">Outcome</span><span style="display:inline-block;padding:3px 10px;border-radius:4px;font-size:15px;font-weight:700;line-height:22px;background:#1b6e3a;color:#fff">Routed</span></div>
+            <p style="margin:0;font-size:20px;line-height:1.4;font-weight:600;font-variant-numeric:tabular-nums">buy 100 YES on polymarket at 0.0080 all-in per contract, filled 100 contracts</p>
+            <p style="margin:0;font-size:15px"><strong>Order:</strong> buy 100 contracts YES, market IOC. Partners considered: 5.</p>
+          </div>
+          <section style="display:flex;flex-direction:column;gap:10px">
+            <h3 style="margin:0;font-size:18px;font-weight:700">Chosen legs</h3>
+            <table style="width:100%;border-collapse:collapse;font-size:15px;line-height:1.45">
+              <thead><tr>
+                <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0;width:110px">Venue</th>
+                <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0">Instrument</th>
+                <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0;width:120px">Route</th>
+                <th style="text-align:right;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0;width:70px">Filled</th>
+                <th style="text-align:right;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0;width:80px">VWAP</th>
+                <th style="text-align:right;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0;width:80px">+ Fee</th>
+                <th style="text-align:right;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0;width:80px">+ Basis</th>
+                <th style="text-align:right;padding:8px 10px;font-size:13px;font-weight:700;color:#1b2230;border-bottom:1px solid #d5dae0;width:90px;background:#f5f7f9">= All-in</th>
+              </tr></thead>
+              <tbody style="font-variant-numeric:tabular-nums">
+                <tr>
+                  <td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><span style="font-size:11px;font-weight:700;letter-spacing:.07em">POLYMARKET</span></td>
+                  <td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><div>Will the Fed increase interest rates by 50+ bps after the October 2026 meeting?</div><code style="display:block;margin-top:4px;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#5d6675;overflow-wrap:anywhere">polymarket:0x4f1c9e2b7a6d03e8b5c1f9a27d64e0b3c8a91f5d2e7b6c40a19d38f2e5b7c6a1</code></td>
+                  <td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top">direct</td>
+                  <td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top;text-align:right">100</td>
+                  <td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top;text-align:right">0.0040</td>
+                  <td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top;text-align:right">0.0002</td>
+                  <td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top;text-align:right">0.0038</td>
+                  <td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top;text-align:right;font-weight:700;background:#f5f7f9">0.0080</td>
+                </tr>
+                <tr style="border-top:2px solid #1b2230">
+                  <td colspan="3" style="padding:12px 10px;font-weight:700">Total</td>
+                  <td style="padding:12px 10px;text-align:right;font-weight:700">100 of 100</td>
+                  <td colspan="3" style="padding:12px 10px;text-align:right;font-size:13px;color:#5d6675">average all-in</td>
+                  <td style="padding:12px 10px;text-align:right;font-weight:700;font-size:17px;background:#e6f4ea;color:#1b6e3a">0.0080</td>
+                </tr>
+              </tbody>
+            </table>
+            <p style="margin:0;font-size:13px;color:#5d6675">basis penalty = score × 0.0100 per contract</p>
+          </section>
+          <section style="display:flex;flex-direction:column;gap:10px">
+            <h3 style="margin:0;font-size:18px;font-weight:700">Ranked alternatives</h3>
+            <table style="width:100%;border-collapse:collapse;font-size:15px;line-height:1.45">
+              <thead><tr><th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0;width:36px">#</th><th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0;width:110px">Venue</th><th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0">Instrument</th><th style="text-align:right;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0;width:64px">Filled</th><th style="text-align:right;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0;width:72px">VWAP</th><th style="text-align:right;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0;width:72px">Fee</th><th style="text-align:right;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0;width:72px">Basis</th><th style="text-align:right;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0;width:78px">All-in</th><th style="text-align:right;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0;width:78px">Gap</th><th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0;width:180px">Note</th></tr></thead>
+              <tbody style="font-variant-numeric:tabular-nums">
+                <tr><td style="padding:12px 10px;border-bottom:1px solid #eceff2;font-weight:600">2</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2"><span style="font-size:11px;font-weight:700;letter-spacing:.07em">KALSHI</span></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2"><div>Above 4.25% following the Fed's Oct 28, 2026 meeting</div><code style="font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#5d6675">kalshi:KXFED-26OCT-T4.25</code></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right">100</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right">0.0110</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right">0.0007</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right">0.0000</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right">0.0117</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;text-align:right;color:#b3261e;font-weight:600">+0.0037</td><td style="padding:12px 10px;border-bottom:1px solid #eceff2;font-size:14px">the target itself</td></tr>
+              </tbody>
+            </table>
+          </section>
+          <section style="display:flex;flex-direction:column;gap:10px">
+            <h3 style="margin:0;font-size:18px;font-weight:700">Excluded candidates (3)</h3>
+            <table style="width:100%;border-collapse:collapse;font-size:15px;line-height:1.45">
+              <thead><tr><th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0;width:110px">Venue</th><th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0">Instrument</th><th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0;width:440px">Reason</th></tr></thead>
+              <tbody>
+                <tr><td style="padding:12px 10px;border-bottom:1px solid #eceff2"><span style="font-size:11px;font-weight:700;letter-spacing:.07em">POLYMARKET</span></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2"><div>Will the Fed increase interest rates by 25 bps after the October 2026 meeting?</div><code style="font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#5d6675">polymarket:0x2a8f…91bd</code></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2"><strong style="color:#b3261e">not routable</strong>: related pairs are never routed</td></tr>
+                <tr><td style="padding:12px 10px;border-bottom:1px solid #eceff2"><span style="font-size:11px;font-weight:700;letter-spacing:.07em">KALSHI</span></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2"><div>Above 4.50% following the Fed's Oct 28, 2026 meeting</div><code style="font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#5d6675">kalshi:KXFED-26OCT-T4.50</code></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2"><strong style="color:#b3261e">stale</strong>: fetched 140 s before the snapshot</td></tr>
+                <tr><td style="padding:12px 10px;border-bottom:1px solid #eceff2"><span style="font-size:11px;font-weight:700;letter-spacing:.07em">POLYMARKET</span></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2"><div>Will the Fed raise rates in October?</div><code style="font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#5d6675">polymarket:0x55c0…7e3f</code></td><td style="padding:12px 10px;border-bottom:1px solid #eceff2"><strong style="color:#b3261e">too shallow</strong>: 12 contracts available</td></tr>
+              </tbody>
+            </table>
+          </section>
+          <section style="display:flex;flex-direction:column;gap:8px">
+            <h3 style="margin:0;font-size:18px;font-weight:700">Explanation</h3>
+            <p style="margin:0;max-width:78ch;font-size:16px;line-height:1.6;white-space:pre-wrap;padding-left:16px;border-left:3px solid #d5dae0">Polymarket "Will the Fed increase interest rates by 50+ bps…" is equivalent to the target given facts, with basis risk 0.38. Its book fills all 100 at 0.0040, and with a 0.0002 fee and a 0.0038 basis penalty it costs 0.0080 all-in, 0.0037 less than the target on kalshi. Three partners were excluded: one related pair, one stale quote and one book too shallow to fill.</p>
+          </section>
+        </div>
+      </article>
+    </main>
+    <footer style="padding:20px 40px;border-top:1px solid #e1e5ea;font-size:13px;color:#5d6675">Everything here is a simulation over recorded venue data. Equinox never places orders. Prices are per $1 payout, in [0,1].</footer>
+  </div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+  <div style="font:600 12px ui-monospace,Menlo,monospace;color:#3a4350">Decision trace · mobile 390</div>
+  <div style="width:390px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.06);border-radius:4px;overflow:hidden">
+    <dc-import name="Eq Header" mobile="{{ true }}" active="log" banner="demo" hint-size="100%,220px"></dc-import>
+    <main style="padding:16px 16px 32px;display:flex;flex-direction:column;gap:16px">
+      <nav style="font-size:14px;display:flex;gap:16px"><a href="/log?kind=routing" style="min-height:44px;display:flex;align-items:center">All routing decisions</a><a href="/" style="min-height:44px;display:flex;align-items:center">Matches</a></nav>
+      <h1 style="margin:0;font-size:26px;font-weight:700">Routing decision #2</h1>
+      <p style="margin:0;font-size:16px;line-height:1.45;color:#5d6675">What did this simulated order do, and why did the router choose that venue?</p>
+      <p style="margin:0;font-size:14px;line-height:1.55;color:#3a4350">A stored simulation: the order below was routed against the books of round 3 and the decision was written to the decision log at 2026-10-08 11:03:20 EDT. Nothing was sent to a venue.</p>
+      <article style="border:1px solid #d5dae0;border-radius:8px;overflow:hidden">
+        <header style="display:flex;flex-direction:column;gap:2px;padding:10px 14px;background:#f5f7f9;border-bottom:1px solid #e1e5ea;font-size:13px;color:#3a4350"><strong style="color:#1b2230;font-size:14px">Decision #2 · round 3</strong><span>as of 2026-10-06 21:15:56 EDT</span><span>decided 2026-10-08 11:03:20 EDT</span></header>
+        <div style="padding:14px;display:flex;flex-direction:column;gap:16px">
+          <div style="padding:14px;border-radius:6px;background:#e6f4ea;border:1px solid #1b6e3a;display:flex;flex-direction:column;gap:8px"><span style="align-self:flex-start;display:inline-block;padding:2px 10px;border-radius:4px;font-size:14px;font-weight:700;line-height:22px;background:#1b6e3a;color:#fff">Routed</span><p style="margin:0;font-size:16px;line-height:1.4;font-weight:600">buy 100 YES on polymarket at 0.0080 all-in per contract, filled 100 contracts</p><p style="margin:0;font-size:14px"><strong>Order:</strong> buy 100 contracts YES, market IOC. Partners considered: 5.</p></div>
+          <h3 style="margin:0;font-size:17px">Chosen legs</h3>
+          <div style="border:1px solid #e1e5ea;border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;justify-content:space-between"><span style="font-size:11px;font-weight:700;letter-spacing:.07em">POLYMARKET</span><span style="font-size:13px">direct</span></div>
+            <span style="font-size:14px">Will the Fed increase interest rates by 50+ bps after the October 2026 meeting?</span>
+            <code style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#5d6675;overflow-wrap:anywhere">polymarket:0x4f1c9e2b7a6d03e8b5c1f9a27d64e0b3c8a91f5d2e7b6c40a19d38f2e5b7c6a1</code>
+            <dl style="margin:0;display:grid;grid-template-columns:1fr auto;gap:2px 12px;font-size:14px;font-variant-numeric:tabular-nums"><dt style="color:#5d6675">Filled</dt><dd style="margin:0;text-align:right">100</dd><dt style="color:#5d6675">VWAP</dt><dd style="margin:0;text-align:right">0.0040</dd><dt style="color:#5d6675">+ Fee</dt><dd style="margin:0;text-align:right">0.0002</dd><dt style="color:#5d6675">+ Basis</dt><dd style="margin:0;text-align:right">0.0038</dd><dt style="font-weight:700;border-top:1px solid #d5dae0;padding-top:4px">= All-in</dt><dd style="margin:0;text-align:right;font-weight:700;border-top:1px solid #d5dae0;padding-top:4px">0.0080</dd></dl>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;padding:10px 12px;border-radius:6px;background:#e6f4ea"><span style="font-weight:700">Total 100 of 100</span><span style="font-size:13px">average all-in <strong style="font-size:17px;color:#1b6e3a">0.0080</strong></span></div>
+          <h3 style="margin:0;font-size:17px">Ranked alternatives</h3>
+          <div style="border:1px solid #e1e5ea;border-radius:6px;padding:12px;font-size:14px;display:grid;grid-template-columns:1fr auto;gap:2px 12px;font-variant-numeric:tabular-nums"><strong style="grid-column:1 / -1">#2 · <span style="font-size:11px;letter-spacing:.07em">KALSHI</span> · kalshi:KXFED-26OCT-T4.25</strong><span style="color:#5d6675">All-in</span><span>0.0117</span><span style="color:#5d6675">Gap</span><span style="color:#b3261e;font-weight:600">+0.0037</span><span style="grid-column:1 / -1;color:#3a4350">the target itself</span></div>
+          <h3 style="margin:0;font-size:17px">Excluded candidates (3)</h3>
+          <div style="display:flex;flex-direction:column;gap:8px;font-size:14px"><div style="padding:10px 12px;border:1px solid #e1e5ea;border-radius:6px"><strong style="color:#b3261e">not routable</strong>: related pairs are never routed</div><div style="padding:10px 12px;border:1px solid #e1e5ea;border-radius:6px"><strong style="color:#b3261e">stale</strong>: fetched 140 s before the snapshot</div><div style="padding:10px 12px;border:1px solid #e1e5ea;border-radius:6px"><strong style="color:#b3261e">too shallow</strong>: 12 contracts available</div></div>
+          <h3 style="margin:0;font-size:17px">Explanation</h3>
+          <p style="margin:0;font-size:15px;line-height:1.6;padding-left:12px;border-left:3px solid #d5dae0">Polymarket "Will the Fed increase interest rates by 50+ bps…" is equivalent to the target given facts, with basis risk 0.38. …</p>
+        </div>
+      </article>
+    </main>
+  </div>
+</div>
+
+<aside style="width:280px;display:flex;flex-direction:column;gap:10px;font-size:14px;line-height:1.5;color:#3a4350">
+  <div style="font:600 12px ui-monospace,Menlo,monospace">Notes</div>
+  <ol style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px">
+    <li>Same <code>route_result</code> partial as Route.dc.html; only the page head differs.</li>
+    <li>The back links move above the h1 as a breadcrumb. The stored-simulation sentence stays below the question.</li>
+    <li>Decision log is the active nav item, because decision pages are reached from the log.</li>
+    <li>Mobile exclusion cards show the venue and title too. They are trimmed here for space.</li>
+  </ol>
+</aside>
+</section>
+</x-dc>
+</body>
+</html>

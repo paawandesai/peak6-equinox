@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><style>body{margin:0;background:#e6e9ed;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue","Noto Sans",sans-serif;color:#1b2230;-webkit-font-smoothing:antialiased}a{color:#0172ad}a:hover{color:#01527d}</style></helmet>
+<section style="display:flex;gap:48px;padding:48px;align-items:flex-start">
+
+<div style="display:flex;flex-direction:column;gap:10px">
+  <div style="font:600 12px ui-monospace,Menlo,monospace;color:#3a4350">Pair detail · desktop 1280 · templates/pair.html + history.html</div>
+  <div style="width:1280px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.06);border-radius:4px;overflow:hidden">
+    <dc-import name="Eq Header" active="" banner="demo" hint-size="100%,140px"></dc-import>
+    <main style="padding:28px 40px 48px;display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:48px">
+      <div style="display:flex;flex-direction:column;gap:40px;min-width:0">
+
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <nav aria-label="Breadcrumb" style="font-size:14px;color:#5d6675"><a href="/">Matches</a> / Pair #924</nav>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <h1 style="margin:0;font-size:30px;line-height:1.2;font-weight:700">Pair #924</h1>
+            <p style="margin:0;font-size:17px;line-height:1.45;color:#5d6675">Why does Equinox think these two contracts are, or are not, the same bet, and where would an order fill best?</p>
+          </div>
+          <div style="border:1px solid #1b6e3a;border-radius:6px;overflow:hidden">
+            <div style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:#e6f4ea">
+              <span style="display:inline-block;padding:3px 10px;border-radius:4px;font-size:15px;font-weight:700;line-height:22px;background:#fff;color:#1b6e3a;box-shadow:inset 0 0 0 1px #1b6e3a">equivalent_given_facts</span>
+              <p style="margin:0;font-size:18px;font-weight:600;color:#1b2230">Same bet once a documented external fact is applied.</p>
+            </div>
+            <dl style="margin:0;display:grid;grid-template-columns:repeat(5,auto);justify-content:start">
+              <div style="padding:12px 20px"><dt style="font-size:13px;color:#5d6675">Confidence</dt><dd style="margin:2px 0 0;font-size:16px"><strong>0.93</strong> <span style="color:#1b6e3a;font-weight:600">high</span></dd></div>
+              <div style="padding:12px 20px;border-left:1px solid #e1e5ea"><dt style="font-size:13px;color:#5d6675">Method</dt><dd style="margin:2px 0 0;font-size:16px;font-weight:600">rules</dd></div>
+              <div style="padding:12px 20px;border-left:1px solid #e1e5ea"><dt style="font-size:13px;color:#5d6675">Basis risk</dt><dd style="margin:2px 0 0;font-size:16px"><strong>0.38</strong> <span style="color:#8a5a00;font-weight:600">moderate</span></dd></div>
+              <div style="padding:12px 20px;border-left:1px solid #e1e5ea"><dt style="font-size:13px;color:#5d6675">Routable</dt><dd style="margin:2px 0 0;font-size:16px;font-weight:600;color:#1b6e3a">yes</dd></div>
+              <div style="padding:12px 20px;border-left:1px solid #e1e5ea"><dt style="font-size:13px;color:#5d6675">Round</dt><dd style="margin:2px 0 0;font-size:16px"><strong>3</strong>, as of 2026-10-06 21:15:56 EDT</dd></div>
+            </dl>
+          </div>
+          <details style="font-size:14px">
+            <summary style="cursor:pointer;color:#0172ad;font-weight:500">The full set of relationship types</summary>
+            <ul style="margin:10px 0 0;padding:0;list-style:none;display:grid;grid-template-columns:200px 1fr;gap:6px 12px">
+              <li style="display:contents"><span><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#1b6e3a;color:#fff">equivalent</span></span><span>routable: same bet, same payout.</span></li>
+              <li style="display:contents"><span><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e6f4ea;color:#1b6e3a;box-shadow:inset 0 0 0 1px #1b6e3a">equivalent_given_facts</span></span><span>routable: same bet once a documented external fact is applied.</span></li>
+              <li style="display:contents"><span><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e6f4ea;color:#1b6e3a">complement</span></span><span>routable: one pays YES exactly when the other pays NO.</span></li>
+              <li style="display:contents"><span><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e8f0fb;color:#1a56a8">implies</span></span><span>one resolving YES forces the other YES.</span></li>
+              <li style="display:contents"><span><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#fff3d6;color:#8a5a00">related</span></span><span>same event, different payout; never routed.</span></li>
+              <li style="display:contents"><span><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;color:#5d6675;box-shadow:inset 0 0 0 1px #c9cfd6">unrelated</span></span><span>no economic link.</span></li>
+            </ul>
+          </details>
+        </div>
+
+        <section style="display:flex;flex-direction:column;gap:14px">
+          <h2 id="contracts" style="margin:0;font-size:21px;font-weight:700">The two contracts</h2>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <article style="border:1px solid #e1e5ea;border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0">
+              <header style="display:flex;flex-direction:column;gap:4px"><span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#5d6675">A · KALSHI</span><strong style="font-size:16px;line-height:1.4">Will the upper bound of the federal funds rate be above 4.25% following the Fed's Oct 28, 2026 meeting? — Above 4.25%</strong></header>
+              <dl style="margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:13px"><dt style="color:#5d6675">ID</dt><dd style="margin:0"><code style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:#f2f4f6;padding:1px 5px;border-radius:3px;overflow-wrap:anywhere">kalshi:KXFED-26OCT-T4.25</code></dd><dt style="color:#5d6675">Market</dt><dd style="margin:0"><code style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:#f2f4f6;padding:1px 5px;border-radius:3px">KXFED-26OCT-T4.25</code></dd><dt style="color:#5d6675">Event</dt><dd style="margin:0"><code style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:#f2f4f6;padding:1px 5px;border-radius:3px">KXFED-26OCT</code></dd></dl>
+              <p style="margin:0;font-size:14px;color:#3a4350">fed · open · closes 2026-10-28 13:55:00 EDT</p>
+              <details style="font-size:14px"><summary style="cursor:pointer;color:#0172ad">Rules text</summary></details>
+            </article>
+            <article style="border:1px solid #e1e5ea;border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0">
+              <header style="display:flex;flex-direction:column;gap:4px"><span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#5d6675">B · POLYMARKET</span><strong style="font-size:16px;line-height:1.4">Will the Fed increase interest rates by 50+ bps after the October 2026 meeting?</strong></header>
+              <dl style="margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:13px"><dt style="color:#5d6675">ID</dt><dd style="margin:0"><code style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:#f2f4f6;padding:1px 5px;border-radius:3px;overflow-wrap:anywhere">polymarket:0x4f1c9e2b7a6d03e8b5c1f9a27d64e0b3c8a91f5d2e7b6c40a19d38f2e5b7c6a1</code></dd><dt style="color:#5d6675">Market</dt><dd style="margin:0"><code style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:#f2f4f6;padding:1px 5px;border-radius:3px">fed-increase-50-bps-oct-2026</code></dd><dt style="color:#5d6675">Event</dt><dd style="margin:0"><code style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:#f2f4f6;padding:1px 5px;border-radius:3px">fed-decision-in-october-2026</code></dd></dl>
+              <p style="margin:0;font-size:14px;color:#3a4350">fed · open · closes 2026-10-28 23:59:00 EDT</p>
+              <details style="font-size:14px"><summary style="cursor:pointer;color:#0172ad">Rules text</summary></details>
+              <p style="margin:0;font-size:13px;color:#5d6675">Quality flags: <code style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:#fff3d6;color:#8a5a00;padding:1px 5px;border-radius:3px">no_venue_ts</code></p>
+            </article>
+          </div>
+        </section>
+
+        <section id="diff" style="display:flex;flex-direction:column;gap:14px">
+          <div><h2 style="margin:0;font-size:21px;font-weight:700">Contract diff</h2><p style="margin:6px 0 0;font-size:15px;color:#3a4350">Every term the normaliser extracted, side by side. <em>unknown</em> means a term could not be parsed on at least one side; it is never guessed.</p></div>
+          <table style="width:100%;border-collapse:collapse;font-size:15px;line-height:1.45">
+            <thead><tr>
+              <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0;width:120px">Term</th>
+              <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0">A: KALSHI</th>
+              <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0">B: POLYMARKET</th>
+              <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#5d6675;border-bottom:1px solid #d5dae0;width:290px">Status</th>
+            </tr></thead>
+            <tbody style="font-variant-numeric:tabular-nums">
+              <tr><td style="padding:10px;border-bottom:1px solid #eceff2;font-weight:600">subject</td><td style="padding:10px;border-bottom:1px solid #eceff2">fed_funds_rate</td><td style="padding:10px;border-bottom:1px solid #eceff2">fed_funds_rate</td><td style="padding:10px;border-bottom:1px solid #eceff2"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e6f4ea;color:#1b6e3a">match</span></td></tr>
+              <tr style="background:#fbfcfe"><td style="padding:10px;border-bottom:1px solid #eceff2;font-weight:600;box-shadow:inset 3px 0 0 #b3261e">metric</td><td style="padding:10px;border-bottom:1px solid #eceff2">rate_upper_bound</td><td style="padding:10px;border-bottom:1px solid #eceff2">rate_change</td><td style="padding:10px;border-bottom:1px solid #eceff2"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#fbe9e7;color:#b3261e">differ</span><div style="margin-top:4px;font-size:13px;color:#1a56a8">veto <code style="font-family:ui-monospace,Menlo,monospace;font-size:12px">metric_mismatch</code>, closed by fact <code style="font-family:ui-monospace,Menlo,monospace;font-size:12px">fed_upper_bound</code> = 4.00</div></td></tr>
+              <tr style="background:#fbfcfe"><td style="padding:10px;border-bottom:1px solid #eceff2;font-weight:600;box-shadow:inset 3px 0 0 #b3261e">comparator</td><td style="padding:10px;border-bottom:1px solid #eceff2">gt</td><td style="padding:10px;border-bottom:1px solid #eceff2">gte</td><td style="padding:10px;border-bottom:1px solid #eceff2"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#fbe9e7;color:#b3261e">differ</span><div style="margin-top:4px;font-size:13px;color:#1a56a8">veto <code style="font-family:ui-monospace,Menlo,monospace;font-size:12px">comparator_mismatch</code>, closed by fact <code style="font-family:ui-monospace,Menlo,monospace;font-size:12px">fed_rate_step</code> = 0.25</div></td></tr>
+              <tr style="background:#fbfcfe"><td style="padding:10px;border-bottom:1px solid #eceff2;font-weight:600;box-shadow:inset 3px 0 0 #b3261e">threshold</td><td style="padding:10px;border-bottom:1px solid #eceff2">4.25</td><td style="padding:10px;border-bottom:1px solid #eceff2">0.5</td><td style="padding:10px;border-bottom:1px solid #eceff2"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#fbe9e7;color:#b3261e">differ</span><div style="margin-top:4px;font-size:13px;color:#1a56a8">veto <code style="font-family:ui-monospace,Menlo,monospace;font-size:12px">threshold_mismatch</code>, closed by facts</div></td></tr>
+              <tr><td style="padding:10px;border-bottom:1px solid #eceff2;font-weight:600">deadline</td><td style="padding:10px;border-bottom:1px solid #eceff2">2026-10-28 14:05 EDT</td><td style="padding:10px;border-bottom:1px solid #eceff2">2026-10-28 23:59 EDT</td><td style="padding:10px;border-bottom:1px solid #eceff2"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e6f4ea;color:#1b6e3a">match</span><div style="margin-top:4px;font-size:13px;color:#5d6675">9h54m apart, within 24 h</div></td></tr>
+              <tr><td style="padding:10px;border-bottom:1px solid #eceff2;font-weight:600">source</td><td style="padding:10px;border-bottom:1px solid #eceff2">federalreserve_gov</td><td style="padding:10px;border-bottom:1px solid #eceff2">federalreserve_gov</td><td style="padding:10px;border-bottom:1px solid #eceff2"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e6f4ea;color:#1b6e3a">match</span></td></tr>
+              <tr><td style="padding:10px;border-bottom:1px solid #eceff2;font-weight:600">polarity</td><td style="padding:10px;border-bottom:1px solid #eceff2">yes</td><td style="padding:10px;border-bottom:1px solid #eceff2">yes</td><td style="padding:10px;border-bottom:1px solid #eceff2"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e6f4ea;color:#1b6e3a">match</span></td></tr>
+              <tr><td style="padding:10px;border-bottom:1px solid #eceff2;font-weight:600">edge rules</td><td style="padding:10px;border-bottom:1px solid #eceff2;font-style:italic;color:#5d6675">unknown</td><td style="padding:10px;border-bottom:1px solid #eceff2;font-style:italic;color:#5d6675">unknown</td><td style="padding:10px;border-bottom:1px solid #eceff2"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;font-style:italic;line-height:20px;color:#5d6675;box-shadow:inset 0 0 0 1px #c9cfd6">unknown</span><div style="margin-top:4px;font-size:13px;color:#5d6675">not compared</div></td></tr>
+            </tbody>
+          </table>
+
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px;padding:16px;border-radius:6px;background:#e8f0fb">
+            <h3 style="margin:0;font-size:16px;font-weight:700;color:#1a56a8">3 term differences, closed by facts</h3>
+            <p style="margin:0;font-size:14px;color:#1b2230">These term differences exist, but documented external facts close them.</p>
+            <table style="width:100%;border-collapse:collapse;font-size:14px;background:#fff;border-radius:4px">
+              <thead><tr><th style="text-align:left;padding:8px 10px;font-size:13px;color:#5d6675;border-bottom:1px solid #d5dae0;width:200px">Code</th><th style="text-align:left;padding:8px 10px;font-size:13px;color:#5d6675;border-bottom:1px solid #d5dae0;width:110px">Term</th><th style="text-align:left;padding:8px 10px;font-size:13px;color:#5d6675;border-bottom:1px solid #d5dae0">Detail</th></tr></thead>
+              <tbody>
+                <tr><td style="padding:8px 10px;border-bottom:1px solid #eceff2"><code style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px">metric_mismatch</code></td><td style="padding:8px 10px;border-bottom:1px solid #eceff2">metric</td><td style="padding:8px 10px;border-bottom:1px solid #eceff2">rate_upper_bound vs rate_change</td></tr>
+                <tr><td style="padding:8px 10px;border-bottom:1px solid #eceff2"><code style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px">comparator_mismatch</code></td><td style="padding:8px 10px;border-bottom:1px solid #eceff2">comparator</td><td style="padding:8px 10px;border-bottom:1px solid #eceff2">gt vs gte</td></tr>
+                <tr><td style="padding:8px 10px"><code style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px">threshold_mismatch</code></td><td style="padding:8px 10px">threshold</td><td style="padding:8px 10px">4.25 vs 0.5</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="facts" style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+          <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+            <h3 style="margin:0;font-size:17px;font-weight:700">External facts consulted (3)</h3>
+            <p style="margin:0;font-size:14px;color:#3a4350">Each fact is reviewed data from <code style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:#f2f4f6;padding:1px 4px;border-radius:3px">config/facts.yaml</code> (FR-10). For <em>equivalent_given_facts</em> the verdict rests on them; for a <em>related</em> verdict they are the facts that were tried and did not close the gap.</p>
+            <table style="width:100%;border-collapse:collapse;font-size:14px">
+              <thead><tr><th style="text-align:left;padding:6px 8px;font-size:13px;color:#5d6675;border-bottom:1px solid #d5dae0">Fact</th><th style="text-align:right;padding:6px 8px;font-size:13px;color:#5d6675;border-bottom:1px solid #d5dae0">Value</th><th style="text-align:left;padding:6px 8px;font-size:13px;color:#5d6675;border-bottom:1px solid #d5dae0">Source</th><th style="text-align:left;padding:6px 8px;font-size:13px;color:#5d6675;border-bottom:1px solid #d5dae0">As of</th></tr></thead>
+              <tbody style="font-variant-numeric:tabular-nums">
+                <tr><td style="padding:8px;border-bottom:1px solid #eceff2"><code style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:#1a56a8">fed_upper_bound</code></td><td style="padding:8px;border-bottom:1px solid #eceff2;text-align:right">4.00</td><td style="padding:8px;border-bottom:1px solid #eceff2"><a href="#">federalreserve.gov</a></td><td style="padding:8px;border-bottom:1px solid #eceff2">2026-09-16</td></tr>
+                <tr><td style="padding:8px;border-bottom:1px solid #eceff2"><code style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:#1a56a8">fed_rate_step</code></td><td style="padding:8px;border-bottom:1px solid #eceff2;text-align:right">0.25</td><td style="padding:8px;border-bottom:1px solid #eceff2"><a href="#">federalreserve.gov</a></td><td style="padding:8px;border-bottom:1px solid #eceff2">2026-09-16</td></tr>
+                <tr><td style="padding:8px;border-bottom:1px solid #eceff2"><code style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:#1a56a8">fomc_2026_10</code></td><td style="padding:8px;border-bottom:1px solid #eceff2;text-align:right">2026-10-28</td><td style="padding:8px;border-bottom:1px solid #eceff2"><a href="#">federalreserve.gov</a></td><td style="padding:8px;border-bottom:1px solid #eceff2">2026-01-29</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+            <h3 id="basis" style="margin:0;font-size:17px;font-weight:700">Basis risk: 0.38 <span style="color:#8a5a00">moderate</span></h3>
+            <p style="margin:0;font-size:14px;color:#3a4350">The residual chance that the two contracts settle differently even though they are matched, as a score in [0,1] built from documented components (FR-11). The router charges it as a per-contract penalty.</p>
+            <table style="width:100%;border-collapse:collapse;font-size:14px">
+              <thead><tr><th style="text-align:left;padding:6px 8px;font-size:13px;color:#5d6675;border-bottom:1px solid #d5dae0">Component</th><th style="text-align:right;padding:6px 8px;font-size:13px;color:#5d6675;border-bottom:1px solid #d5dae0">Score</th><th style="text-align:left;padding:6px 8px;font-size:13px;color:#5d6675;border-bottom:1px solid #d5dae0">Detail</th></tr></thead>
+              <tbody style="font-variant-numeric:tabular-nums">
+                <tr><td style="padding:8px;border-bottom:1px solid #eceff2"><code style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px">cutoff_gap</code></td><td style="padding:8px;border-bottom:1px solid #eceff2;text-align:right">0.10</td><td style="padding:8px;border-bottom:1px solid #eceff2">deadlines 9h54m apart</td></tr>
+                <tr><td style="padding:8px;border-bottom:1px solid #eceff2"><code style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px">source_difference</code></td><td style="padding:8px;border-bottom:1px solid #eceff2;text-align:right">0.00</td><td style="padding:8px;border-bottom:1px solid #eceff2">same resolution source</td></tr>
+                <tr><td style="padding:8px;border-bottom:1px solid #eceff2"><code style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px">edge_rules</code></td><td style="padding:8px;border-bottom:1px solid #eceff2;text-align:right">0.20</td><td style="padding:8px;border-bottom:1px solid #eceff2">edge-case rules unknown on both sides</td></tr>
+                <tr><td style="padding:8px;border-bottom:1px solid #eceff2"><code style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px">fact_reliance</code></td><td style="padding:8px;border-bottom:1px solid #eceff2;text-align:right">0.08</td><td style="padding:8px;border-bottom:1px solid #eceff2">verdict rests on 3 facts</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="why" style="display:flex;flex-direction:column;gap:10px">
+          <h2 style="margin:0;font-size:21px;font-weight:700">Why: the explanation</h2>
+          <p style="margin:0;max-width:72ch;font-size:16px;line-height:1.6;white-space:pre-wrap;padding-left:16px;border-left:3px solid #d5dae0">Kalshi asks whether the upper bound will be above 4.25% after the 28 Oct meeting; Polymarket asks whether the Fed raises by 50 bps or more. The fact fed_upper_bound = 4.00 (federalreserve.gov, 2026-09-16) means "above 4.25%" needs a rise of more than 0.25, and fed_rate_step = 0.25 makes the next possible step 0.50, so both pay YES on the same outcome. Deadlines are 9h54m apart, inside the 24 h limit. Edge-case rules could not be parsed on either side and are scored as basis risk.</p>
+        </section>
+
+        <section id="touch" style="display:flex;flex-direction:column;gap:10px">
+          <div><h2 style="margin:0;font-size:21px;font-weight:700">Current touch in round 3</h2><p style="margin:6px 0 0;font-size:15px;color:#3a4350">Best YES bid and ask on each venue as fetched in this round. Mid is for display only; routing walks the book.</p></div>
+          <table style="width:100%;border-collapse:collapse;font-size:14px">
+            <thead><tr>
+              <th style="text-align:left;padding:8px;font-size:13px;color:#5d6675;border-bottom:1px solid #d5dae0">Venue</th><th style="text-align:right;padding:8px;font-size:13px;color:#5d6675;border-bottom:1px solid #d5dae0">Best bid</th><th style="text-align:right;padding:8px;font-size:13px;color:#5d6675;border-bottom:1px solid #d5dae0">Best ask</th><th style="text-align:right;padding:8px;font-size:13px;color:#5d6675;border-bottom:1px solid #d5dae0">Mid</th><th style="text-align:right;padding:8px;font-size:13px;color:#5d6675;border-bottom:1px solid #d5dae0">Levels (bid/ask)</th><th style="text-align:left;padding:8px;font-size:13px;color:#5d6675;border-bottom:1px solid #d5dae0">Fetched</th><th style="text-align:left;padding:8px;font-size:13px;color:#5d6675;border-bottom:1px solid #d5dae0">Venue time</th><th style="text-align:left;padding:8px;font-size:13px;color:#5d6675;border-bottom:1px solid #d5dae0">Quality</th>
+            </tr></thead>
+            <tbody style="font-variant-numeric:tabular-nums">
+              <tr><td style="padding:10px 8px;border-bottom:1px solid #eceff2"><span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#3a4350">KALSHI</span></td><td style="padding:10px 8px;border-bottom:1px solid #eceff2;text-align:right">0.0090</td><td style="padding:10px 8px;border-bottom:1px solid #eceff2;text-align:right">0.0110</td><td style="padding:10px 8px;border-bottom:1px solid #eceff2;text-align:right;font-weight:600">0.0100</td><td style="padding:10px 8px;border-bottom:1px solid #eceff2;text-align:right">4/6</td><td style="padding:10px 8px;border-bottom:1px solid #eceff2">21:15:41 EDT</td><td style="padding:10px 8px;border-bottom:1px solid #eceff2">21:15:40 EDT</td><td style="padding:10px 8px;border-bottom:1px solid #eceff2;color:#1b6e3a;font-weight:600">ok</td></tr>
+              <tr><td style="padding:10px 8px;border-bottom:1px solid #eceff2"><span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#3a4350">POLYMARKET</span></td><td style="padding:10px 8px;border-bottom:1px solid #eceff2;text-align:right">0.0030</td><td style="padding:10px 8px;border-bottom:1px solid #eceff2;text-align:right">0.0050</td><td style="padding:10px 8px;border-bottom:1px solid #eceff2;text-align:right;font-weight:600">0.0040</td><td style="padding:10px 8px;border-bottom:1px solid #eceff2;text-align:right">3/9</td><td style="padding:10px 8px;border-bottom:1px solid #eceff2">21:15:48 EDT</td><td style="padding:10px 8px;border-bottom:1px solid #eceff2;color:#5d6675">not provided</td><td style="padding:10px 8px;border-bottom:1px solid #eceff2"><code style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:#fff3d6;color:#8a5a00;padding:1px 5px;border-radius:3px">no_venue_ts</code></td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="history" style="display:flex;flex-direction:column;gap:10px">
+          <div><h2 style="margin:0;font-size:21px;font-weight:700">Price history</h2><p style="margin:6px 0 0;font-size:15px;line-height:1.5;color:#3a4350">12 touches across 6 rounds, from 2026-10-06 20:50:11 EDT to 21:15:48 EDT. Solid line: mid of the best YES bid and ask; thin lines: best bid and best ask. Prices are per $1 payout on a fixed 0 to 1 axis so both venues share one scale.</p></div>
+          <figure style="margin:0;border:1px solid #e1e5ea;border-radius:6px;padding:16px">
+            <svg viewBox="0 0 860 240" width="100%" role="img" aria-label="Price history of the two contracts across fetch rounds" style="display:block">
+              <rect x="44" y="10" width="800" height="200" fill="#fff" stroke="#d5dae0"></rect>
+              <line x1="44" y1="60" x2="844" y2="60" stroke="#e1e5ea" stroke-dasharray="2 4"></line><line x1="44" y1="110" x2="844" y2="110" stroke="#e1e5ea" stroke-dasharray="2 4"></line><line x1="44" y1="160" x2="844" y2="160" stroke="#e1e5ea" stroke-dasharray="2 4"></line>
+              <text x="36" y="14" text-anchor="end" font-size="11" fill="#5d6675">1.00</text><text x="36" y="64" text-anchor="end" font-size="11" fill="#5d6675">0.75</text><text x="36" y="114" text-anchor="end" font-size="11" fill="#5d6675">0.50</text><text x="36" y="164" text-anchor="end" font-size="11" fill="#5d6675">0.25</text><text x="36" y="214" text-anchor="end" font-size="11" fill="#5d6675">0.00</text>
+              <text x="44" y="230" font-size="11" fill="#5d6675">20:50</text><text x="364" y="230" text-anchor="middle" font-size="11" fill="#5d6675">21:00</text><text x="684" y="230" text-anchor="middle" font-size="11" fill="#5d6675">21:10</text><text x="844" y="230" text-anchor="end" font-size="11" fill="#5d6675">21:15</text>
+              <polyline points="44,207.6 204,207.8 364,207.2 524,207.4 684,207.8 844,208.0" fill="none" stroke="#1a56a8" stroke-width="2"></polyline>
+              <polyline points="44,208.8 204,209.0 364,208.6 524,208.8 684,209.0 844,209.2" fill="none" stroke="#8a5a00" stroke-width="2"></polyline>
+              <circle cx="844" cy="208.0" r="3" fill="#1a56a8"></circle><circle cx="844" cy="209.2" r="3" fill="#8a5a00"></circle>
+            </svg>
+            <figcaption><ul style="list-style:none;margin:12px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:8px 28px;font-size:14px">
+              <li style="display:flex;align-items:center;gap:8px"><span aria-hidden="true" style="width:22px;height:3px;background:#1a56a8"></span><span style="font-size:11px;font-weight:700;letter-spacing:.07em">KALSHI</span> <code style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px">kalshi:KXFED-26OCT-T4.25</code>: 6 points, last mid 0.0100</li>
+              <li style="display:flex;align-items:center;gap:8px"><span aria-hidden="true" style="width:22px;height:3px;background:#8a5a00"></span><span style="font-size:11px;font-weight:700;letter-spacing:.07em">POLYMARKET</span> <code style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px">polymarket:0x4f1c…c6a1</code>: 6 points, last mid 0.0040</li>
+            </ul></figcaption>
+          </figure>
+          <details style="font-size:14px"><summary style="cursor:pointer;color:#0172ad">Data points (12)</summary></details>
+        </section>
+
+        <section id="log" style="display:flex;flex-direction:column;gap:10px">
+          <h3 style="margin:0;font-size:17px;font-weight:700">Decision-log entries for this pair</h3>
+          <table style="width:100%;border-collapse:collapse;font-size:14px">
+            <thead><tr><th style="text-align:left;padding:8px;font-size:13px;color:#5d6675;border-bottom:1px solid #d5dae0;width:190px">When</th><th style="text-align:left;padding:8px;font-size:13px;color:#5d6675;border-bottom:1px solid #d5dae0;width:130px">Kind</th><th style="text-align:left;padding:8px;font-size:13px;color:#5d6675;border-bottom:1px solid #d5dae0">Summary</th></tr></thead>
+            <tbody>
+              <tr><td style="padding:10px 8px;border-bottom:1px solid #eceff2;font-variant-numeric:tabular-nums;color:#3a4350">2026-10-08 11:03:20 EDT</td><td style="padding:10px 8px;border-bottom:1px solid #eceff2"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e6f4ea;color:#1b6e3a">routing</span></td><td style="padding:10px 8px;border-bottom:1px solid #eceff2">decision #2: buy 100 YES on polymarket at 0.0080 all-in per contract, filled 100 contracts</td></tr>
+              <tr><td style="padding:10px 8px;border-bottom:1px solid #eceff2;font-variant-numeric:tabular-nums;color:#3a4350">2026-10-06 21:16:02 EDT</td><td style="padding:10px 8px;border-bottom:1px solid #eceff2"><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;line-height:20px;background:#e8f0fb;color:#1a56a8">relationship</span></td><td style="padding:10px 8px;border-bottom:1px solid #eceff2">equivalent_given_facts 0.93 via rules: 3 term differences closed by facts fed_upper_bound, fed_rate_step</td></tr>
+            </tbody>
+          </table>
+          <a href="/log" style="font-size:14px">Full decision log →</a>
+        </section>
+
+        <section id="route" style="display:flex;flex-direction:column;gap:14px;padding:24px;border:2px solid #0172ad;border-radius:8px">
+          <div><h2 style="margin:0;font-size:21px;font-weight:700">Route a hypothetical order</h2><p style="margin:6px 0 0;font-size:15px;color:#3a4350">Simulates the order against the target's book and every routable partner in this round, then explains the choice. Nothing is sent to a venue.</p></div>
+          <form style="display:flex;flex-direction:column;gap:16px">
+            <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:16px">
+              <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600">Target<select style="height:40px;padding:0 10px;border:1px solid #c9cfd6;border-radius:5px;background:#fff;font-size:14px"><option>kalshi:KXFED-26OCT-T4.25</option></select></label>
+              <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600">Side<select style="height:40px;padding:0 10px;border:1px solid #c9cfd6;border-radius:5px;background:#fff;font-size:14px"><option>buy</option></select></label>
+              <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600">Outcome<select style="height:40px;padding:0 10px;border:1px solid #c9cfd6;border-radius:5px;background:#fff;font-size:14px"><option>yes</option></select></label>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px">
+              <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600">Quantity<input type="number" value="100" style="height:40px;padding:0 10px;border:1px solid #c9cfd6;border-radius:5px;font-size:14px;font-variant-numeric:tabular-nums"><span style="font-weight:400;font-size:13px;color:#5d6675">contracts, 1 to 100,000</span></label>
+              <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600">Order type<select style="height:40px;padding:0 10px;border:1px solid #c9cfd6;border-radius:5px;background:#fff;font-size:14px"><option>market</option></select></label>
+              <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600">Limit price<input type="number" placeholder="0.50" style="height:40px;padding:0 10px;border:1px solid #c9cfd6;border-radius:5px;font-size:14px"><span style="font-weight:400;font-size:13px;color:#5d6675">0 to 1, limit orders only</span></label>
+              <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600">Time in force<select style="height:40px;padding:0 10px;border:1px solid #c9cfd6;border-radius:5px;background:#fff;font-size:14px"><option>IOC (fill what you can)</option></select></label>
+            </div>
+            <div><button type="submit" style="height:44px;padding:0 24px;border:0;border-radius:5px;background:#0172ad;color:#fff;font-size:15px;font-weight:600">Route it</button></div>
+          </form>
+          <div id="route-result" style="padding:14px;border:1px dashed #c9cfd6;border-radius:6px;font-size:14px;color:#5d6675">The routing trace replaces this box (htmx swap of <code style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px">#route-result</code>). See Route.dc.html.</div>
+        </section>
+      </div>
+
+      <aside style="position:relative">
+        <nav aria-label="On this page" style="position:sticky;top:24px;display:flex;flex-direction:column;gap:14px">
+          <a href="#route" style="display:flex;align-items:center;justify-content:center;height:44px;border-radius:5px;background:#0172ad;color:#fff;font-size:15px;font-weight:600;text-decoration:none">Route an order ↓</a>
+          <div style="font-size:13px;font-weight:600;color:#5d6675;margin-top:8px">On this page</div>
+          <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;border-left:1px solid #e1e5ea;font-size:14px">
+            <li><a href="#contracts" style="display:block;padding:6px 12px;text-decoration:none">The two contracts</a></li>
+            <li><a href="#diff" style="display:block;padding:6px 12px;text-decoration:none;font-weight:600;box-shadow:inset 2px 0 0 #0172ad">Contract diff</a></li>
+            <li><a href="#facts" style="display:block;padding:6px 12px;text-decoration:none">Facts and basis risk</a></li>
+            <li><a href="#why" style="display:block;padding:6px 12px;text-decoration:none">Why</a></li>
+            <li><a href="#touch" style="display:block;padding:6px 12px;text-decoration:none">Current touch</a></li>
+            <li><a href="#history" style="display:block;padding:6px 12px;text-decoration:none">Price history</a></li>
+            <li><a href="#log" style="display:block;padding:6px 12px;text-decoration:none">Decision log</a></li>
+          </ul>
+        </nav>
+      </aside>
+    </main>
+    <footer style="padding:20px 40px;border-top:1px solid #e1e5ea;font-size:13px;color:#5d6675">Everything here is a simulation over recorded venue data. Equinox never places orders. Prices are per $1 payout, in [0,1].</footer>
+  </div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+  <div style="font:600 12px ui-monospace,Menlo,monospace;color:#3a4350">Pair detail · mobile 390</div>
+  <div style="width:390px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.06);border-radius:4px;overflow:hidden">
+    <dc-import name="Eq Header" mobile="{{ true }}" active="" banner="demo" hint-size="100%,220px"></dc-import>
+    <main style="padding:16px 16px 32px;display:flex;flex-direction:column;gap:28px">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <nav aria-label="Breadcrumb" style="font-size:14px;color:#5d6675"><a href="/">Matches</a> / Pair #924</nav>
+        <h1 style="margin:0;font-size:26px;font-weight:700">Pair #924</h1>
+        <p style="margin:0;font-size:16px;line-height:1.45;color:#5d6675">Why does Equinox think these two contracts are, or are not, the same bet, and where would an order fill best?</p>
+        <div style="border:1px solid #1b6e3a;border-radius:6px;overflow:hidden">
+          <div style="display:flex;flex-direction:column;gap:8px;padding:14px;background:#e6f4ea"><span style="align-self:flex-start;display:inline-block;padding:3px 10px;border-radius:4px;font-size:14px;font-weight:700;line-height:20px;background:#fff;color:#1b6e3a;box-shadow:inset 0 0 0 1px #1b6e3a">equivalent_given_facts</span><p style="margin:0;font-size:16px;font-weight:600">Same bet once a documented external fact is applied.</p></div>
+          <dl style="margin:0;display:grid;grid-template-columns:1fr 1fr;font-size:14px">
+            <div style="padding:10px 14px"><dt style="font-size:13px;color:#5d6675">Confidence</dt><dd style="margin:0"><strong>0.93</strong> <span style="color:#1b6e3a;font-weight:600">high</span></dd></div>
+            <div style="padding:10px 14px;border-left:1px solid #e1e5ea"><dt style="font-size:13px;color:#5d6675">Method</dt><dd style="margin:0;font-weight:600">rules</dd></div>
+            <div style="padding:10px 14px;border-top:1px solid #e1e5ea"><dt style="font-size:13px;color:#5d6675">Basis risk</dt><dd style="margin:0"><strong>0.38</strong> <span style="color:#8a5a00;font-weight:600">moderate</span></dd></div>
+            <div style="padding:10px 14px;border-top:1px solid #e1e5ea;border-left:1px solid #e1e5ea"><dt style="font-size:13px;color:#5d6675">Routable</dt><dd style="margin:0;font-weight:600;color:#1b6e3a">yes</dd></div>
+            <div style="padding:10px 14px;border-top:1px solid #e1e5ea;grid-column:1 / -1"><dt style="font-size:13px;color:#5d6675">Round</dt><dd style="margin:0"><strong>3</strong>, as of 2026-10-06 21:15:56 EDT</dd></div>
+          </dl>
+        </div>
+        <a href="#route-m" style="display:flex;align-items:center;justify-content:center;height:44px;border-radius:5px;background:#0172ad;color:#fff;font-size:15px;font-weight:600;text-decoration:none">Route an order ↓</a>
+        <details style="font-size:14px"><summary style="min-height:44px;display:flex;align-items:center;color:#0172ad">The full set of relationship types</summary></details>
+      </div>
+      <section style="display:flex;flex-direction:column;gap:12px">
+        <h2 style="margin:0;font-size:20px;font-weight:700">The two contracts</h2>
+        <article style="border:1px solid #e1e5ea;border-radius:6px;padding:14px;display:flex;flex-direction:column;gap:8px"><span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#5d6675">A · KALSHI</span><strong style="font-size:15px;line-height:1.4">Will the upper bound of the federal funds rate be above 4.25% following the Fed's Oct 28, 2026 meeting? — Above 4.25%</strong><p style="margin:0;font-size:13px;color:#3a4350">ID <code style="font-family:ui-monospace,Menlo,monospace;font-size:12px;background:#f2f4f6;padding:1px 4px;border-radius:3px;overflow-wrap:anywhere">kalshi:KXFED-26OCT-T4.25</code> · market <code style="font-family:ui-monospace,Menlo,monospace;font-size:12px;background:#f2f4f6;padding:1px 4px;border-radius:3px">KXFED-26OCT-T4.25</code> · event <code style="font-family:ui-monospace,Menlo,monospace;font-size:12px;background:#f2f4f6;padding:1px 4px;border-radius:3px">KXFED-26OCT</code></p><p style="margin:0;font-size:13px;color:#3a4350">fed · open · closes 2026-10-28 13:55:00 EDT</p><details style="font-size:14px"><summary style="min-height:44px;display:flex;align-items:center;color:#0172ad">Rules text</summary></details></article>
+        <article style="border:1px solid #e1e5ea;border-radius:6px;padding:14px;display:flex;flex-direction:column;gap:8px"><span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#5d6675">B · POLYMARKET</span><strong style="font-size:15px;line-height:1.4">Will the Fed increase interest rates by 50+ bps after the October 2026 meeting?</strong><p style="margin:0;font-size:13px;color:#3a4350;overflow-wrap:anywhere">ID <code style="font-family:ui-monospace,Menlo,monospace;font-size:12px;background:#f2f4f6;padding:1px 4px;border-radius:3px;overflow-wrap:anywhere">polymarket:0x4f1c9e2b7a6d03e8b5c1f9a27d64e0b3c8a91f5d2e7b6c40a19d38f2e5b7c6a1</code></p><p style="margin:0;font-size:13px;color:#3a4350">fed · open · closes 2026-10-28 23:59:00 EDT</p><p style="margin:0;font-size:13px;color:#5d6675">Quality flags: <code style="font-family:ui-monospace,Menlo,monospace;font-size:12px;background:#fff3d6;color:#8a5a00;padding:1px 4px;border-radius:3px">no_venue_ts</code></p></article>
+      </section>
+      <section style="display:flex;flex-direction:column;gap:12px">
+        <div><h2 style="margin:0;font-size:20px;font-weight:700">Contract diff</h2><p style="margin:6px 0 0;font-size:14px;color:#3a4350"><em>unknown</em> means a term could not be parsed on at least one side; it is never guessed.</p></div>
+        <div style="display:flex;flex-direction:column;border:1px solid #e1e5ea;border-radius:6px">
+          <div style="padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:2px 8px;font-size:14px"><strong>subject</strong><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;background:#e6f4ea;color:#1b6e3a">match</span><span style="color:#3a4350">fed_funds_rate · fed_funds_rate</span></div>
+          <div style="padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:2px 8px;font-size:14px;border-top:1px solid #e1e5ea;box-shadow:inset 3px 0 0 #b3261e"><strong>metric</strong><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;background:#fbe9e7;color:#b3261e">differ</span><span style="grid-column:1 / -1"><span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#5d6675">A</span> rate_upper_bound · <span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#5d6675">B</span> rate_change</span><span style="grid-column:1 / -1;font-size:13px;color:#1a56a8">veto metric_mismatch, closed by fact fed_upper_bound = 4.00</span></div>
+          <div style="padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:2px 8px;font-size:14px;border-top:1px solid #e1e5ea;box-shadow:inset 3px 0 0 #b3261e"><strong>comparator</strong><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;background:#fbe9e7;color:#b3261e">differ</span><span style="grid-column:1 / -1"><span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#5d6675">A</span> gt · <span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#5d6675">B</span> gte</span><span style="grid-column:1 / -1;font-size:13px;color:#1a56a8">veto comparator_mismatch, closed by fact fed_rate_step = 0.25</span></div>
+          <div style="padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:2px 8px;font-size:14px;border-top:1px solid #e1e5ea;box-shadow:inset 3px 0 0 #b3261e"><strong>threshold</strong><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;background:#fbe9e7;color:#b3261e">differ</span><span style="grid-column:1 / -1"><span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#5d6675">A</span> 4.25 · <span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#5d6675">B</span> 0.5</span><span style="grid-column:1 / -1;font-size:13px;color:#1a56a8">veto threshold_mismatch, closed by facts</span></div>
+          <div style="padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:2px 8px;font-size:14px;border-top:1px solid #e1e5ea"><strong>deadline</strong><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;background:#e6f4ea;color:#1b6e3a">match</span><span style="grid-column:1 / -1">2026-10-28 14:05 EDT · 23:59 EDT</span><span style="grid-column:1 / -1;font-size:13px;color:#5d6675">9h54m apart, within 24 h</span></div>
+          <div style="padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:2px 8px;font-size:14px;border-top:1px solid #e1e5ea"><strong>source</strong><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;background:#e6f4ea;color:#1b6e3a">match</span><span style="color:#3a4350">federalreserve_gov · federalreserve_gov</span></div>
+          <div style="padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:2px 8px;font-size:14px;border-top:1px solid #e1e5ea"><strong>polarity</strong><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;background:#e6f4ea;color:#1b6e3a">match</span><span style="color:#3a4350">yes · yes</span></div>
+          <div style="padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:2px 8px;font-size:14px;border-top:1px solid #e1e5ea"><strong>edge rules</strong><span style="display:inline-block;padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;font-style:italic;color:#5d6675;box-shadow:inset 0 0 0 1px #c9cfd6">unknown</span><span style="font-style:italic;color:#5d6675">unknown · unknown, not compared</span></div>
+        </div>
+        <div style="padding:14px;border-radius:6px;background:#e8f0fb;display:flex;flex-direction:column;gap:8px;font-size:14px"><h3 style="margin:0;font-size:15px;color:#1a56a8">3 term differences, closed by facts</h3><p style="margin:0">These term differences exist, but documented external facts close them.</p><p style="margin:0"><code style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px">metric_mismatch</code> metric: rate_upper_bound vs rate_change<br><code style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px">comparator_mismatch</code> comparator: gt vs gte<br><code style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px">threshold_mismatch</code> threshold: 4.25 vs 0.5</p></div>
+      </section>
+      <section style="display:flex;flex-direction:column;gap:10px;font-size:14px">
+        <h3 style="margin:0;font-size:17px">External facts consulted (3)</h3>
+        <dl style="margin:0;display:flex;flex-direction:column;gap:8px"><div style="padding:10px 12px;border:1px solid #e1e5ea;border-radius:6px"><dt><code style="font-family:ui-monospace,Menlo,monospace;color:#1a56a8">fed_upper_bound</code> = <strong>4.00</strong></dt><dd style="margin:2px 0 0;color:#3a4350"><a href="#">federalreserve.gov</a>, as of 2026-09-16</dd></div><div style="padding:10px 12px;border:1px solid #e1e5ea;border-radius:6px"><dt><code style="font-family:ui-monospace,Menlo,monospace;color:#1a56a8">fed_rate_step</code> = <strong>0.25</strong></dt><dd style="margin:2px 0 0;color:#3a4350"><a href="#">federalreserve.gov</a>, as of 2026-09-16</dd></div><div style="padding:10px 12px;border:1px solid #e1e5ea;border-radius:6px"><dt><code style="font-family:ui-monospace,Menlo,monospace;color:#1a56a8">fomc_2026_10</code> = <strong>2026-10-28</strong></dt><dd style="margin:2px 0 0;color:#3a4350"><a href="#">federalreserve.gov</a>, as of 2026-01-29</dd></div></dl>
+        <h3 style="margin:8px 0 0;font-size:17px">Basis risk: 0.38 <span style="color:#8a5a00">moderate</span></h3>
+        <dl style="margin:0;display:grid;grid-template-columns:auto auto 1fr;gap:6px 10px;font-variant-numeric:tabular-nums"><dt><code style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px">cutoff_gap</code></dt><dd style="margin:0">0.10</dd><dd style="margin:0;color:#3a4350">deadlines 9h54m apart</dd><dt><code style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px">source_difference</code></dt><dd style="margin:0">0.00</dd><dd style="margin:0;color:#3a4350">same source</dd><dt><code style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px">edge_rules</code></dt><dd style="margin:0">0.20</dd><dd style="margin:0;color:#3a4350">unknown both sides</dd><dt><code style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px">fact_reliance</code></dt><dd style="margin:0">0.08</dd><dd style="margin:0;color:#3a4350">rests on 3 facts</dd></dl>
+      </section>
+      <section style="display:flex;flex-direction:column;gap:10px">
+        <h2 style="margin:0;font-size:20px;font-weight:700">Why: the explanation</h2>
+        <p style="margin:0;font-size:15px;line-height:1.6;padding-left:12px;border-left:3px solid #d5dae0">Kalshi asks whether the upper bound will be above 4.25% after the 28 Oct meeting; Polymarket asks whether the Fed raises by 50 bps or more. The fact fed_upper_bound = 4.00 … (full prose, never clamped)</p>
+      </section>
+      <section style="display:flex;flex-direction:column;gap:10px;font-size:14px">
+        <h2 style="margin:0;font-size:20px;font-weight:700">Current touch in round 3</h2>
+        <div style="border:1px solid #e1e5ea;border-radius:6px;padding:12px;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-variant-numeric:tabular-nums"><span style="grid-column:1 / -1;font-size:11px;font-weight:700;letter-spacing:.07em">KALSHI</span><span style="color:#5d6675">Bid / ask / mid</span><span>0.0090 / 0.0110 / <strong>0.0100</strong></span><span style="color:#5d6675">Levels</span><span>4/6</span><span style="color:#5d6675">Fetched</span><span>21:15:41 EDT</span><span style="color:#5d6675">Venue time</span><span>21:15:40 EDT</span><span style="color:#5d6675">Quality</span><span style="color:#1b6e3a;font-weight:600">ok</span></div>
+        <div style="border:1px solid #e1e5ea;border-radius:6px;padding:12px;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-variant-numeric:tabular-nums"><span style="grid-column:1 / -1;font-size:11px;font-weight:700;letter-spacing:.07em">POLYMARKET</span><span style="color:#5d6675">Bid / ask / mid</span><span>0.0030 / 0.0050 / <strong>0.0040</strong></span><span style="color:#5d6675">Levels</span><span>3/9</span><span style="color:#5d6675">Fetched</span><span>21:15:48 EDT</span><span style="color:#5d6675">Venue time</span><span style="color:#5d6675">not provided</span><span style="color:#5d6675">Quality</span><span><code style="font-family:ui-monospace,Menlo,monospace;font-size:12px;background:#fff3d6;color:#8a5a00;padding:1px 4px;border-radius:3px">no_venue_ts</code></span></div>
+      </section>
+      <section style="display:flex;flex-direction:column;gap:10px">
+        <h2 style="margin:0;font-size:20px;font-weight:700">Price history</h2>
+        <p style="margin:0;font-size:14px;color:#3a4350">12 touches across 6 rounds. The chart scales to the column (SVG viewBox); the legend wraps to one venue per line.</p>
+        <svg viewBox="0 0 860 240" width="100%" role="img" aria-label="Price history" style="display:block;border:1px solid #e1e5ea;border-radius:6px"><rect x="44" y="10" width="800" height="200" fill="#fff" stroke="#d5dae0"></rect><text x="36" y="18" text-anchor="end" font-size="20" fill="#5d6675">1</text><text x="36" y="214" text-anchor="end" font-size="20" fill="#5d6675">0</text><polyline points="44,207.6 204,207.8 364,207.2 524,207.4 684,207.8 844,208.0" fill="none" stroke="#1a56a8" stroke-width="4"></polyline><polyline points="44,203 204,203 364,202 524,202 684,203 844,203" fill="none" stroke="#8a5a00" stroke-width="4"></polyline></svg>
+        <details style="font-size:14px"><summary style="min-height:44px;display:flex;align-items:center;color:#0172ad">Data points (12)</summary></details>
+      </section>
+      <section style="display:flex;flex-direction:column;gap:10px;font-size:14px">
+        <h3 style="margin:0;font-size:17px">Decision-log entries for this pair</h3>
+        <div style="padding:10px 12px;border:1px solid #e1e5ea;border-radius:6px;display:flex;flex-direction:column;gap:4px"><span style="display:flex;justify-content:space-between;align-items:center"><span style="color:#3a4350">2026-10-08 11:03:20 EDT</span><span style="padding:1px 8px;border-radius:4px;font-size:13px;font-weight:600;background:#e6f4ea;color:#1b6e3a">routing</span></span><span>decision #2: buy 100 YES on polymarket at 0.0080 all-in per contract, filled 100 contracts</span></div>
+        <a href="/log">Full decision log →</a>
+      </section>
+      <section id="route-m" style="display:flex;flex-direction:column;gap:12px;padding:16px;border:2px solid #0172ad;border-radius:8px">
+        <h2 style="margin:0;font-size:20px;font-weight:700">Route a hypothetical order</h2>
+        <p style="margin:0;font-size:14px;color:#3a4350">Simulates the order against the target's book and every routable partner in this round. Nothing is sent to a venue.</p>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600">Target<select style="height:44px;padding:0 10px;border:1px solid #c9cfd6;border-radius:5px;background:#fff;font-size:14px"><option>kalshi:KXFED-26OCT-T4.25</option></select></label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600">Side<select style="height:44px;padding:0 10px;border:1px solid #c9cfd6;border-radius:5px;background:#fff;font-size:14px"><option>buy</option></select></label><label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600">Outcome<select style="height:44px;padding:0 10px;border:1px solid #c9cfd6;border-radius:5px;background:#fff;font-size:14px"><option>yes</option></select></label></div>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600">Quantity<input type="number" value="100" style="height:44px;padding:0 10px;border:1px solid #c9cfd6;border-radius:5px;font-size:15px"><span style="font-weight:400;font-size:13px;color:#5d6675">contracts, 1 to 100,000</span></label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600">Order type<select style="height:44px;padding:0 10px;border:1px solid #c9cfd6;border-radius:5px;background:#fff;font-size:14px"><option>market</option></select></label><label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600">Limit price<input type="number" placeholder="0.50" style="height:44px;padding:0 10px;border:1px solid #c9cfd6;border-radius:5px;font-size:15px"></label></div>
+        <span style="font-size:13px;color:#5d6675;margin-top:-6px">Limit price: 0 to 1, limit orders only</span>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600">Time in force<select style="height:44px;padding:0 10px;border:1px solid #c9cfd6;border-radius:5px;background:#fff;font-size:14px"><option>IOC (fill what you can)</option></select></label>
+        <button type="submit" style="height:48px;border:0;border-radius:5px;background:#0172ad;color:#fff;font-size:16px;font-weight:600">Route it</button>
+      </section>
+    </main>
+    <footer style="padding:16px;border-top:1px solid #e1e5ea;font-size:13px;line-height:1.45;color:#5d6675">Everything here is a simulation over recorded venue data. Equinox never places orders. Prices are per $1 payout, in [0,1].</footer>
+  </div>
+</div>
+
+<aside style="width:300px;display:flex;flex-direction:column;gap:10px;font-size:14px;line-height:1.5;color:#3a4350">
+  <div style="font:600 12px ui-monospace,Menlo,monospace">Notes</div>
+  <ol style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px">
+    <li>The verdict card holds the type chip, the plain-English <code>.TypeLabel</code> and the strip. It takes the type's tint, so the verdict reads before anything else.</li>
+    <li>The near-miss sentence (when <code>.NearMiss</code> is set) sits inside the verdict card under the label.</li>
+    <li>Order is unchanged: contracts → diff → facts/basis → why → touch → history → log → route. Only the visual weight changes.</li>
+    <li>Diff rows that differ get a red edge. The veto and fact annotation sits on the row it explains.</li>
+    <li>For <code>equivalent_given_facts</code> the veto box is info blue and titled "closed by facts". Otherwise it is danger red, titled "Vetoes (n): each blocks equivalent".</li>
+    <li>The right rail is sticky: Route CTA plus jump links. Plain anchors, no JS. Hidden under 1024px.</li>
+    <li>Facts and basis risk sit side by side at desktop and stack under 1024px.</li>
+    <li>The price chart keeps the fixed 0–1 axis (history.html), restyled with tokens only.</li>
+  </ol>
+</aside>
+</section>
+</x-dc>
+</body>
+</html>

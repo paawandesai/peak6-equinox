@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<span style="display:inline-flex;align-items:center;gap:5px;padding:{{ pad }};border-radius:4px;font-size:{{ fs }};font-weight:600;line-height:1.35;white-space:nowrap;font-family:{{ ff }};background:{{ bg }};color:{{ fg }};box-shadow:{{ ring }};font-style:{{ fst }}"><span aria-hidden="true" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700">{{ glyph }}</span><span>{{ label }}</span></span>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:260,&quot;height&quot;:40},&quot;k&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;equivalent&quot;,&quot;egf&quot;,&quot;implies&quot;,&quot;complement&quot;,&quot;related&quot;,&quot;unrelated&quot;,&quot;fresh&quot;,&quot;warnage&quot;,&quot;stale&quot;,&quot;unknown&quot;,&quot;healthy&quot;,&quot;warning&quot;,&quot;degraded&quot;,&quot;match&quot;,&quot;differs&quot;,&quot;missing&quot;,&quot;closed&quot;,&quot;routed&quot;,&quot;partial&quot;,&quot;notrouted&quot;,&quot;excluded&quot;,&quot;chosen&quot;,&quot;newdata&quot;,&quot;vm&quot;,&quot;review&quot;,&quot;pinned&quot;],&quot;default&quot;:&quot;equivalent&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;text&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;glyph&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;tone&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;ok&quot;,&quot;info&quot;,&quot;warn&quot;,&quot;danger&quot;,&quot;muted&quot;],&quot;default&quot;:&quot;muted&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;fill&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;tint&quot;,&quot;solid&quot;,&quot;outline&quot;],&quot;default&quot;:&quot;tint&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;size&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;m&quot;,&quot;l&quot;],&quot;default&quot;:&quot;m&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;mono&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const C = { ok:['#1b6e3a','#e6f4ea'], info:['#1a56a8','#e8f0fb'], warn:['#8a5a00','#fff3d6'], danger:['#b3261e','#fbe9e7'], muted:['#4f5866','#f2f4f6'], new:['#6b2fa0','#f5eefb'] };
+    const P = {
+      equivalent:['solid','ok','≡','equivalent'],
+      egf:['outline','ok','≡*','equivalent_given_facts'],
+      implies:['tint','info','⇒','implies'],
+      complement:['tint','info','¬','complement'],
+      related:['tint','warn','~','related'],
+      unrelated:['outline','muted','∅','unrelated'],
+      fresh:['tint','ok','✓','Fresh'], warnage:['tint','warn','◐','Warn'], stale:['tint','danger','✕','Stale'], unknown:['outline','muted','?','Unknown'],
+      healthy:['tint','ok','✓','Healthy'], warning:['tint','warn','!','Warning'], degraded:['tint','danger','✕','Degraded'],
+      match:['tint','ok','✓','match'], differs:['tint','danger','✕','differs'], missing:['outline','muted','?','unknown'], closed:['tint','info','◇','closed by fact'],
+      routed:['solid','ok','✓','Routed'], partial:['solid','warn','◐','Partially routed'], notrouted:['solid','danger','✕','Not routed'],
+      excluded:['tint','danger','✕','excluded'], chosen:['solid','ok','✓','chosen'],
+      newdata:['dashed','new','◆','needs new data'], vm:['dashed','info','+','VM field'],
+      review:['tint','danger','⚠','review: large edge, low confidence'],
+      pinned:['tint','info','◆','Pinned']
+    };
+    const p = P[this.props.k] || [this.props.fill || 'tint', this.props.tone || 'muted', this.props.glyph || '•', ''];
+    const [fill, tone, g, l] = p;
+    const [fg, bg] = C[tone] || C.muted;
+    const lg = this.props.size === 'l';
+    return {
+      glyph: this.props.glyph ?? g,
+      label: this.props.text ?? l,
+      fg: fill === 'solid' ? '#fff' : fg,
+      bg: fill === 'solid' ? fg : (fill === 'outline' ? '#fff' : bg),
+      ring: fill === 'solid' ? 'none' : fill === 'dashed' ? 'none' : `inset 0 0 0 ${fill === 'outline' ? '1.5px' : '1px'} ${fg}`,
+      pad: fill === 'dashed' ? '0 7px' : (lg ? '4px 12px' : '1px 8px'),
+      fs: lg ? '16px' : (fill === 'dashed' ? '11px' : '13px'),
+      ff: this.props.mono ? 'ui-monospace,Menlo,Consolas,monospace' : 'inherit',
+      fst: this.props.k === 'missing' ? 'italic' : 'normal',
+      ...(fill === 'dashed' ? { ring: `0 0 0 1px ${fg}`, bg: `${bg}` } : {})
+    };
+  }
+}
+</script>
+</body>
+</html>
