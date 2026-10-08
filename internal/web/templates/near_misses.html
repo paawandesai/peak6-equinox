@@ -3,7 +3,7 @@
 {{if .NoRound}}
 <p>No completed fetch round yet, so there is nothing to compare. Run <code>equinox seed</code> or <code>equinox ingest</code>, then <code>equinox match</code>.</p>
 {{else}}
-<p>Round <strong>{{.Round.ID}}</strong>{{if .Round.Pinned}} (pinned for the demo){{end}}, as of <strong>{{.Round.AsOf}}</strong>: {{.Total}} near miss{{if ne .Total 1}}es{{end}}, {{.VetoCount}} of them stopped by a hard veto. A near miss is a <em>related</em> pair the matcher kept because it was close: the same subject with one term off, or a pair an external fact was consulted for but did not close. Each veto on its own blocks <em>equivalent</em>; a false "same bet" is the worst failure, so these are shown rather than hidden.</p>
+<p>Round <strong>{{.Round.ID}}</strong>{{if .Round.Pinned}} (pinned for the demo){{end}}, as of <strong>{{formatTime .Round.AsOf .Timezone}}</strong>: {{.Total}} near miss{{if ne .Total 1}}es{{end}}, {{.VetoCount}} of them stopped by a hard veto. A near miss is a <em>related</em> pair the matcher kept because it was close: the same subject with one term off, or a pair an external fact was consulted for but did not close. Each veto on its own blocks <em>equivalent</em>; a false "same bet" is the worst failure, so these are shown rather than hidden.</p>
 {{if .Truncated}}<p><mark>Showing the first {{.Total}} near misses only ({{.Truncated}} more not shown).</mark></p>{{end}}
 {{if not .Rows}}
 <p>Round {{.Round.ID}} has no stored near misses. Run <code>equinox match</code> against it, or see the <a href="/">matches</a>.</p>

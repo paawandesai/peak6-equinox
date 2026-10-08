@@ -95,8 +95,9 @@ type evalRow struct {
 // configured artifact, read-only.
 func (s *Server) handleEval(w http.ResponseWriter, r *http.Request) {
 	round := roundFromContext(r.Context())
+	tz := timezoneFromRequest(r)
 	data := evalPage{
-		page:   s.pageBase(round, "Eval", "How accurate is the matcher on human-labelled pairs, per relationship type?"),
+		page:   s.pageBase(round, "Eval", "How accurate is the matcher on human-labelled pairs, per relationship type?", tz),
 		File:   s.cfg.EvalSummaryFile,
 		Target: equivalentPrecisionTarget.StringFixed(2),
 	}

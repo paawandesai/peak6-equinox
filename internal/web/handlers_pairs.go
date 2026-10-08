@@ -54,28 +54,26 @@ const maxPairLogEntries = 20
 
 // touchView is one venue's current touch in the round, for display only.
 type touchView struct {
-	Venue     string
-	Present   bool
-	BestBid   string
-	BestAsk   string
-	Mid       string
-	BidLevels int
-	AskLevels int
-	FetchedAt string
-	VenueTS   string
-	Quality   []canonical.QualityIssue
+	Venue      string
+	Present    bool
+	BestBid    string
+	BestAsk    string
+	Mid        string
+	BidLevels  int
+	AskLevels  int
+	FetchedAt  time.Time  // Raw UTC time, formatted with formatTime in templates (M3-08)
+	VenueTS    *time.Time // Optional venue timestamp (M3-08)
+	VenueTSStr string     // "not sent" when VenueTS is nil
+	Quality    []canonical.QualityIssue
 }
 
 func newTouchView(q store.QuoteRecord) touchView {
-	v := touchView{
+	venueTSStr := "not sent"
+	return touchView{
 		Present: true, BestBid: nullPrice(q.BestBid), BestAsk: nullPrice(q.BestAsk), Mid: nullPrice(q.Mid),
-		BidLevels: len(q.YesBids), AskLevels: len(q.YesAsks), FetchedAt: formatUTC(q.FetchedAt), VenueTS: "not sent",
-		Quality: q.Quality,
+		BidLevels: len(q.YesBids), AskLevels: len(q.YesAsks), FetchedAt: q.FetchedAt, VenueTS: q.VenueTS,
+		VenueTSStr: venueTSStr, Quality: q.Quality,
 	}
-	if q.VenueTS != nil {
-		v.VenueTS = formatUTC(*q.VenueTS)
-	}
-	return v
 }
 
 // handlePair answers GET /pairs/{id}.
@@ -127,8 +125,9 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 		s.dbError(w, "loading the pair's instruments", err)
 		return
 	}
+	tz := timezoneFromRequest(r)
 	data := pairPage{
-		page: s.pageBase(round, "Pair "+r.PathValue("id"), "Why does Equinox think these two contracts are, or are not, the same bet, and where would an order fill best?"),
+		page: s.pageBase(round, "Pair "+r.PathValue("id"), "Why does Equinox think these two contracts are, or are not, the same bet, and where would an order fill best?", tz),
 		ID:   rel.ID, Type: string(rel.Type), TypeLabel: typeLabels[rel.Type], Confidence: rel.Confidence.StringFixed(2),
 		Method: string(rel.Method), Explanation: rel.Explanation, A: views[rel.AID], B: views[rel.BID],
 		Diff: rel.Diff, Vetoes: rel.Vetoes, Facts: rel.FactsUsed, BasisRisk: rel.BasisRisk,

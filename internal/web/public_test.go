@@ -302,7 +302,8 @@ func TestGroupPairsOrdering(t *testing.T) {
 	for _, id := range ids {
 		views[id] = missingInstrumentView(id)
 	}
-	groups := groupPairs(rels, views, "now")
+	now := time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)
+	groups := groupPairs(rels, views, now)
 	if len(groups) != 2 || groups[0].Type != "equivalent" || groups[1].Type != "related" {
 		t.Fatalf("groups = %+v", groups)
 	}
@@ -313,7 +314,7 @@ func TestGroupPairsOrdering(t *testing.T) {
 	if len(order) != 3 || order[0] != 2 || order[1] != 4 || order[2] != 1 {
 		t.Errorf("equivalent order = %v, want [2 4 1] (confidence desc, then id)", order)
 	}
-	if !groups[0].Pairs[0].A.Missing || groups[0].Pairs[0].AsOf != "now" || groups[0].Pairs[0].Confidence != "0.95" {
+	if !groups[0].Pairs[0].A.Missing || groups[0].Pairs[0].AsOf != now || groups[0].Pairs[0].Confidence != "0.95" {
 		t.Errorf("row = %+v", groups[0].Pairs[0])
 	}
 }
@@ -326,7 +327,8 @@ func TestLoadInstrumentViewsMarksMissing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if views[seedKalshiA].Missing || views[seedKalshiA].Title != seedTitleA || views[seedKalshiA].Close != "2026-10-07 17:00:00 UTC" {
+	wantClose := time.Date(2026, 10, 7, 17, 0, 0, 0, time.UTC)
+	if views[seedKalshiA].Missing || views[seedKalshiA].Title != seedTitleA || views[seedKalshiA].Close != wantClose {
 		t.Errorf("A = %+v", views[seedKalshiA])
 	}
 	if !views["kalshi:NOPE"].Missing || views["kalshi:NOPE"].Venue != "kalshi" {
@@ -385,7 +387,8 @@ func TestFormatHelpers(t *testing.T) {
 		t.Errorf("nullPrice = %q", got)
 	}
 	info := newRoundInfo(store.Round{ID: 3, StartedAt: seedNow, Status: store.RoundRunning})
-	if info.AsOf != "2026-10-06 17:00:00 UTC" || info.Status != "running" {
+	wantAsOf := time.Date(2026, 10, 6, 17, 0, 0, 0, time.UTC)
+	if info.AsOf != wantAsOf || info.Status != "running" {
 		t.Errorf("roundInfo = %+v", info)
 	}
 }

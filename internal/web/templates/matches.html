@@ -3,7 +3,7 @@
 {{if .NoRound}}
 <p>No completed fetch round yet, so there is nothing to compare. Run <code>equinox seed</code> (offline fixtures) or <code>equinox ingest</code>, then <code>equinox match</code>.</p>
 {{else}}
-<p>Round <strong>{{.Round.ID}}</strong>{{if .Round.Pinned}} (pinned for the demo){{end}}, as of <strong>{{.Round.AsOf}}</strong>: {{.Total}} pair{{if ne .Total 1}}s{{end}} compared and kept, grouped by relationship type, strongest first. Click a pair for the contract diff and the routing form.</p>
+<p>Round <strong>{{.Round.ID}}</strong>{{if .Round.Pinned}} (pinned for the demo){{end}}, as of <strong>{{formatTime .Round.AsOf .Timezone}}</strong>: {{.Total}} pair{{if ne .Total 1}}s{{end}} compared and kept, grouped by relationship type, strongest first. Click a pair for the contract diff and the routing form.</p>
 {{if .Truncated}}<p><mark>Showing the first {{.Total}} pairs only.</mark></p>{{end}}
 {{if not .Groups}}
 <p>Round {{.Round.ID}} has no stored relationships. Run <code>equinox match</code> against it.</p>
@@ -26,7 +26,7 @@
         <td>{{.Confidence}}</td>
         <td>{{.Method}}</td>
         <td>{{.Vetoes}}</td>
-        <td><small>{{.AsOf}}</small></td>
+        <td><small>{{formatTime .AsOf $.Timezone}}</small></td>
       </tr>
     {{end}}
     </tbody>

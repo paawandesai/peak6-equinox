@@ -1,5 +1,5 @@
 {{define "content"}}
 <h1>Routing decision #{{.DecisionID}}</h1>
-<p>A stored simulation: the order below was routed against the books of round {{with .Round}}{{.ID}}{{else}}?{{end}} and the decision was written to the decision log at {{.CreatedAt}}. Nothing was sent to a venue. <a href="/log?kind=routing">All routing decisions</a> · <a href="/">Matches</a></p>
+<p>A stored simulation: the order below was routed against the books of round {{with .Round}}{{.ID}}{{else}}?{{end}} and the decision was written to the decision log at {{formatTime .CreatedAt .Timezone}}. Nothing was sent to a venue. <a href="/log?kind=routing">All routing decisions</a> · <a href="/">Matches</a></p>
 {{template "route_result" .}}
 {{end}}

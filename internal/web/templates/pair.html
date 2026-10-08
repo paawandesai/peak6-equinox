@@ -32,7 +32,7 @@
   <p>Each fact is reviewed data from <code>config/facts.yaml</code> (FR-10). For <em>equivalent_given_facts</em> the verdict rests on them; for a <em>related</em> verdict they are the facts that were tried and did not close the gap.</p>
   <table class="facts">
     <thead><tr><th>Fact</th><th>Value</th><th>Source</th><th>As of</th></tr></thead>
-    <tbody>{{range .Facts}}<tr><td><code>{{.Key}}</code></td><td>{{.Value}}</td><td>{{with httpURL .Source}}<a href="{{.}}" rel="noopener noreferrer">{{.}}</a>{{else}}{{.Source}}{{end}}</td><td>{{utc .AsOf}}</td></tr>{{end}}</tbody>
+    <tbody>{{range .Facts}}<tr><td><code>{{.Key}}</code></td><td>{{.Value}}</td><td>{{with httpURL .Source}}<a href="{{.}}" rel="noopener noreferrer">{{.}}</a>{{else}}{{.Source}}{{end}}</td><td>{{formatTime .AsOf $.Timezone}}</td></tr>{{end}}</tbody>
   </table>
   {{else}}
   <p>None: this verdict rests on the contract terms alone.</p>
@@ -129,7 +129,7 @@
   <p>This instrument is no longer in the store.</p>
   {{else}}
   <p><small>ID <code>{{.ID}}</code> · market <code>{{.MarketID}}</code>{{if .EventID}} · event <code>{{.EventID}}</code>{{end}}</small></p>
-  <p><small>{{.Category}} · {{.Status}} · closes {{.Close}}</small></p>
+  <p><small>{{.Category}} · {{.Status}} · closes {{formatTime .Close $.Timezone}}</small></p>
   <details>
     <summary>Rules text</summary>
     <p class="rules">{{.Rules}}</p>
@@ -143,7 +143,7 @@
 <tr>
   <td><span class="venue">{{.Venue}}</span></td>
   {{if .Present}}
-  <td>{{.BestBid}}</td><td>{{.BestAsk}}</td><td>{{.Mid}}</td><td>{{.BidLevels}}/{{.AskLevels}}</td><td>{{.FetchedAt}}</td><td>{{.VenueTS}}</td>
+  <td>{{.BestBid}}</td><td>{{.BestAsk}}</td><td>{{.Mid}}</td><td>{{.BidLevels}}/{{.AskLevels}}</td><td>{{formatTime .FetchedAt $.Timezone}}</td><td>{{if .VenueTS}}{{formatTime .VenueTS $.Timezone}}{{else}}{{.VenueTSStr}}{{end}}</td>
   <td>{{if .Quality}}{{range .Quality}}<code>{{.Flag}}</code> {{end}}{{else}}ok{{end}}</td>
   {{else}}
   <td colspan="7">No quote for this instrument in the round.</td>

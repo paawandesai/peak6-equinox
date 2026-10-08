@@ -34,3 +34,8 @@ polyline.hist-b, circle.hist-b, .hist-swatch.hist-b { stroke: #ef6c00; fill: #ef
 polyline.hist-mid, polyline.hist-side { fill: none; }
 .hist-legend { list-style: none; padding: 0; margin: 0.5rem 0 0; font-size: 0.9rem; }
 .hist-swatch { display: inline-block; width: 1.5rem; height: 0.3rem; vertical-align: middle; }
+/* Timezone selector in header (M3-08) */
+.timezone-selector { display: inline-block; margin: 0; padding: 0; }
+.timezone-selector label { display: inline-block; margin: 0 0.5rem 0 0; font-size: 0.9rem; }
+.timezone-selector select { display: inline-block; width: auto; margin: 0 0.5rem 0 0; padding: 0.25rem 0.5rem; font-size: 0.9rem; }
+.timezone-selector button { display: inline-block; margin: 0; padding: 0.25rem 0.75rem; font-size: 0.9rem; }

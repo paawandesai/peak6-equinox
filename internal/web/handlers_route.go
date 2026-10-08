@@ -298,7 +298,8 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 	s.log.Info("routing decision stored", "decision_id", id, "round_id", dec.RoundID, "target", dec.TargetID,
 		"chosen", len(dec.Chosen), "alternatives", len(dec.Alternatives), "exclusions", len(dec.Exclusions))
 
-	p := s.routePageHeader(in.PairID, round)
+	tz := timezoneFromRequest(r)
+	p := s.routePageHeader(in.PairID, round, tz)
 	p.StaleWarning = s.staleRoundWarning(round)
 	data := routePage{
 		page:       p,
@@ -309,8 +310,8 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 	s.renderRoute(w, r, http.StatusOK, data)
 }
 
-func (s *Server) routePageHeader(pairID int64, round store.Round) page {
-	return s.pageBase(round, "Routing trace", fmt.Sprintf("Where would this order fill best, and why? (pair %d)", pairID))
+func (s *Server) routePageHeader(pairID int64, round store.Round, tz string) page {
+	return s.pageBase(round, "Routing trace", fmt.Sprintf("Where would this order fill best, and why? (pair %d)", pairID), tz)
 }
 
 // routeFailure renders the problems at the given status: as a fragment for
@@ -318,7 +319,8 @@ func (s *Server) routePageHeader(pairID int64, round store.Round) page {
 // full page otherwise.
 func (s *Server) routeFailure(w http.ResponseWriter, r *http.Request, status int, pairID int64, problems ...string) {
 	round := roundFromContext(r.Context())
-	s.renderRoute(w, r, status, routePage{page: s.routePageHeader(pairID, round), PairID: pairID, Errors: problems})
+	tz := timezoneFromRequest(r)
+	s.renderRoute(w, r, status, routePage{page: s.routePageHeader(pairID, round, tz), PairID: pairID, Errors: problems})
 }
 
 func (s *Server) renderRoute(w http.ResponseWriter, r *http.Request, status int, data routePage) {

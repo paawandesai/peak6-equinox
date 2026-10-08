@@ -19,7 +19,7 @@
   <tbody>
   {{range .Entries}}
     <tr>
-      <td><small>{{.At}}</small></td>
+      <td><small>{{formatTime .At $.Timezone}}</small></td>
       <td><code>{{.Kind}}</code></td>
       <td>{{if .Link}}<a href="{{.Link}}">{{.LinkLabel}}</a>{{else if .LinkLabel}}{{.LinkLabel}}{{else}}<small>{{.Ref}}</small>{{end}}</td>
       <td class="summary">{{.Summary}}</td>

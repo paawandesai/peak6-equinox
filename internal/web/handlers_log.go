@@ -31,7 +31,7 @@ type logKindOption struct {
 // built by this package from a validated numeric ref, never from free text.
 type logEntryView struct {
 	ID        int64
-	At        string
+	At        time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
 	Kind      string
 	Ref       string
 	Link      string
@@ -68,8 +68,9 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 	}
 
 	round := roundFromContext(r.Context())
+	tz := timezoneFromRequest(r)
 	data := logPage{
-		page:  s.pageBase(round, "Decision log", "What did Equinox decide recently, and why?"),
+		page:  s.pageBase(round, "Decision log", "What did Equinox decide recently, and why?", tz),
 		Kind:  string(kind),
 		Limit: maxLogRows,
 	}
@@ -89,7 +90,7 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 }
 
 func newLogEntryView(e store.LogEntry) logEntryView {
-	v := logEntryView{ID: e.ID, At: formatUTC(e.CreatedAt), Kind: string(e.Kind), Ref: e.Ref, Summary: e.Summary}
+	v := logEntryView{ID: e.ID, At: e.CreatedAt, Kind: string(e.Kind), Ref: e.Ref, Summary: e.Summary}
 	v.Link, v.LinkLabel = logEntryLink(e.Kind, e.Ref)
 	return v
 }
@@ -116,7 +117,7 @@ func logEntryLink(kind store.LogKind, ref string) (href, label string) {
 // rendered with the same trace as POST /route.
 type decisionPage struct {
 	routePage
-	CreatedAt string
+	CreatedAt time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
 }
 
 // handleDecision answers GET /decisions/{id}: a stored routing decision
@@ -155,13 +156,14 @@ func (s *Server) handleDecision(w http.ResponseWriter, r *http.Request) {
 
 	// Use current round from context for the page banner (not the decision's own round)
 	currentRound := roundFromContext(r.Context())
+	tz := timezoneFromRequest(r)
 	data := decisionPage{
 		routePage: routePage{
-			page:       s.pageBase(currentRound, "Decision "+r.PathValue("id"), "What did this simulated order do, and why did the router choose that venue?"),
+			page:       s.pageBase(currentRound, "Decision "+r.PathValue("id"), "What did this simulated order do, and why did the router choose that venue?", tz),
 			DecisionID: rd.ID,
 			Decision:   newDecisionView(rd.Decision, countPartners(rd.Decision), snapshot),
 		},
-		CreatedAt: formatUTC(rd.CreatedAt),
+		CreatedAt: rd.CreatedAt,
 	}
 	s.render(w, http.StatusOK, "decision", data)
 }

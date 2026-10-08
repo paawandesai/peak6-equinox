@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"sort"
+	"time"
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/store"
@@ -37,7 +38,7 @@ type pairRow struct {
 	Confidence string
 	Method     string
 	Vetoes     int
-	AsOf       string
+	AsOf       time.Time // Round timestamp, formatted with formatTime in templates (M3-08)
 }
 
 // typeLabels say what each relationship type means (domain.md), in one line.
@@ -61,8 +62,9 @@ func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	round := roundFromContext(r.Context())
+	tz := timezoneFromRequest(r)
 	data := matchesPage{
-		page: s.pageBase(round, "Matches", "Which Kalshi and Polymarket contracts are the same bet, and how sure is Equinox?"),
+		page: s.pageBase(round, "Matches", "Which Kalshi and Polymarket contracts are the same bet, and how sure is Equinox?", tz),
 	}
 	if round.ID == 0 {
 		data.NoRound = true
@@ -106,7 +108,7 @@ func relationshipInstrumentIDs(rels []canonical.Relationship) []string {
 
 // groupPairs buckets rels by type, strongest type first, and orders each
 // bucket by confidence (highest first) then ID so the page is deterministic.
-func groupPairs(rels []canonical.Relationship, views map[string]instrumentView, asOf string) []pairGroup {
+func groupPairs(rels []canonical.Relationship, views map[string]instrumentView, asOf time.Time) []pairGroup {
 	byType := make(map[canonical.RelationshipType][]pairRow)
 	for _, r := range rels {
 		byType[r.Type] = append(byType[r.Type], pairRow{
