@@ -3,24 +3,40 @@
 {{if .NoRound}}
 <p>No completed fetch round yet, so there is nothing to compare. Run <code>equinox seed</code> or <code>equinox ingest</code>, then <code>equinox match</code>.</p>
 {{else}}
-<p>Round <strong>{{.Round.ID}}</strong>{{if .Round.Pinned}} (pinned for the demo){{end}}, as of <strong>{{.Round.AsOf}}</strong>: {{.Total}} near miss{{if ne .Total 1}}es{{end}}, {{.VetoCount}} of them stopped by a hard veto. A near miss is a <em>related</em> pair the matcher kept because it was close: the same subject with one term off, or a pair an external fact was consulted for but did not close. Each veto on its own blocks <em>equivalent</em>; a false "same bet" is the worst failure, so these are shown rather than hidden.</p>
+<dl class="strip">
+  <div><dt>Count:</dt><dd>{{.Total}} near miss{{if ne .Total 1}}es{{end}}</dd></div>
+  <div><dt>Stopped by a veto:</dt><dd>{{.VetoCount}}</dd></div>
+</dl>
+<p>A near miss is a <em>related</em> pair the matcher kept because it was close: the same subject with one term off, or a pair an external fact was consulted for but did not close. Each veto on its own blocks <em>equivalent</em>; a false "same bet" is the worst failure, so these are shown rather than hidden.</p>
 {{if .Truncated}}<p><mark>Showing the first {{.Total}} near misses only ({{.Truncated}} more not shown).</mark></p>{{end}}
 {{if not .Rows}}
 <p>Round {{.Round.ID}} has no stored near misses. Run <code>equinox match</code> against it, or see the <a href="/">matches</a>.</p>
 {{else}}
-<table class="pairs">
+<table class="data stack">
   <thead>
-    <tr><th>Pair</th><th>Contract A</th><th>Contract B</th><th>Confidence</th><th>Veto that fired</th><th>Why</th></tr>
+    <tr><th>Veto / Fact</th><th>Contracts</th><th>Explanation</th></tr>
   </thead>
   <tbody>
   {{range .Rows}}
     <tr>
-      <td><a href="/pairs/{{.ID}}">#{{.ID}}</a></td>
-      <td><span class="venue">{{.A.Venue}}</span> {{.A.Title}}</td>
-      <td><span class="venue">{{.B.Venue}}</span> {{.B.Title}}</td>
-      <td>{{.Confidence}}</td>
-      <td>{{if .Vetoes}}<ul class="vetoes">{{range .Vetoes}}<li><code>{{.Code}}</code> on <em>{{.Field}}</em>: {{.Detail}}</li>{{end}}</ul>{{else}}<small>no veto; {{if .Facts}}a fact was consulted but did not apply{{else}}a term differs{{end}}</small>{{end}}</td>
-      <td><small>{{.Explanation}}</small></td>
+      <td data-label="Veto / Fact">
+        {{if .Vetoes}}
+          {{range .Vetoes}}<span class="chip chip-danger"><code>{{.Code}}</code></span> <strong>{{.Field}}</strong>: {{.Detail}}<br>{{end}}
+        {{else}}
+          <span class="chip chip-info">no veto</span>: {{if .Facts}}a fact was consulted but did not apply{{else}}a term differs{{end}}
+        {{end}}
+      </td>
+      <td data-label="Contracts">
+        <a href="/pairs/{{.ID}}">#{{.ID}}</a><br>
+        <span class="venue">{{.A.Venue}}</span> {{.A.Title}}<br>
+        <span class="venue">{{.B.Venue}}</span> {{.B.Title}}
+      </td>
+      <td data-label="Explanation">
+        <details>
+          <summary>Why</summary>
+          <p>{{.Explanation}}</p>
+        </details>
+      </td>
     </tr>
   {{end}}
   </tbody>
