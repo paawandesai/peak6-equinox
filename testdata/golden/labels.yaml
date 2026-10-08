@@ -27,15 +27,15 @@
 # catch the matcher being wrong. Copy a_id and b_id exactly. Each pair appears
 # once. Then run `equinox eval` (or `make eval`).
 #
-# Provenance of the entries below (2026-10-07): the operator checked each pair
-# against both venues' official rules text (Kalshi trade API rules_primary and
-# rules_secondary, plus the series contract terms; Polymarket Gamma description
-# and resolution source) and, for the Fed pairs, against federalreserve.gov.
-# Paawan Desai approved the labels in operator chat on 2026-10-07 8:38 PM CT,
-# conditional on that rules check, and reports he personally spot-checked them
-# (8:44 PM CT). He did not read every pair line by line. Only the pairs whose
-# proposed label the rules check CONFIRMED are here. Corrected pairs and new
-# drafts are in labels.proposed.yaml and wait for his review.
+# Provenance of the entries below (2026-10-07): the operator checked each of
+# the 40 round-2 pairs against both venues' official rules text (Kalshi trade
+# API rules_primary and rules_secondary, plus the series contract terms;
+# Polymarket Gamma description and resolution source) and, for the Fed pairs,
+# against federalreserve.gov. Paawan Desai approved the labels in operator chat
+# on 2026-10-07 8:38 PM CT, conditional on that rules check, reports he
+# personally spot-checked them (8:44 PM CT), and accepted the six corrections
+# the rules check made (9:30 PM CT; last block). He did not read every pair
+# line by line. New drafts wait in labels.proposed.yaml for his review.
 version: 1
 round_id: 2
 labels:
@@ -52,7 +52,7 @@ labels:
     label: complement
     confirmed_by: paawandesai
     confirmed_on: 2026-10-07
-    note: "Kalshi: upper bound above 3.50% following the Oct 28, 2026 meeting. Polymarket: cut of 50 bps or more (any cut above 25 bps after the round-up rule), i.e. new upper bound below 3.75% given fed_upper_bound=4.00. On the 25 bp grid (fed_rate_step) Kalshi YES (at least 3.75%) is exactly PM NO. Caveat: an off-grid cut to e.g. 3.60% would make both YES; the matcher's candidate entry does not list fed_rate_step for this pair. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXFED-26OCT-T3.50) and Polymarket Gamma description (market 2589810, 'Fed Decision in October?'), plus federalreserve.gov monetary20260916a and openmarket.htm (target range 3.75-4.00 since 2026-09-17, unchanged as of 2026-10-07). Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+    note: "Kalshi: upper bound above 3.50% following the Oct 28, 2026 meeting. Polymarket: cut of 50 bps or more (any cut above 25 bps after the round-up rule), i.e. new upper bound below 3.75% given fed_upper_bound=4.00. Relies on the fact that the Fed moves in 25 bp steps (fed_rate_step=0.25, config/facts.yaml; D-083): on that grid Kalshi YES (at least 3.75%) is exactly PM NO. Kept as complement by Paawan's D-083 decision (2026-10-07 9:30 PM CT); an off-grid cut to e.g. 3.60% would make both YES. The matcher's candidate entry does not list fed_rate_step for this pair. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXFED-26OCT-T3.50) and Polymarket Gamma description (market 2589810, 'Fed Decision in October?'), plus federalreserve.gov monetary20260916a and openmarket.htm (target range 3.75-4.00 since 2026-09-17, unchanged as of 2026-10-07). Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
   # --- fed / implies
   - a_id: kalshi:KXFED-26OCT-T2.75
     b_id: polymarket:111061902544814266207267295505639408607400625795891618462682726460921782993748
@@ -248,3 +248,40 @@ labels:
     confirmed_by: paawandesai
     confirmed_on: 2026-10-07
     note: "Kalshi: upper bound above 3.75% after the Dec 9, 2026 meeting. Polymarket: upper bound (rounded to nearest 25 bps) after the Dec 7-8, 2027 meeting. Different decisions a year apart, no payout constraint between them, and the pair fails blocking (deadlines more than 7 days apart, equivalence.md §2): unrelated. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXFED-26DEC-T3.75) and Polymarket Gamma description and resolution source (market 4895206), fetched 2026-10-07. Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  # --- fed / corrections from the rules check (accepted by Paawan 2026-10-07 9:30 PM CT)
+  - a_id: kalshi:KXFED-27JAN-T0.00
+    b_id: polymarket:63563009510989471204377539732457086916124654411092982704760023438039220215330
+    label: implies
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "PM 'no change after the Jan 26-27, 2027 meeting' YES leaves the upper bound at its pre-meeting level, which is at least 0.25% while the target range stays non-negative (lowest ever 0-0.25%, openmarket.htm), so Kalshi 'above 0.00% after Jan 27, 2027' is YES; Kalshi YES also covers every other bucket. One-way, and it needs no fed_upper_bound fact; the only assumption is no negative target range. Relies on the target range staying non-negative (upper bound at least 0.25%; lowest ever 0-0.25%, openmarket.htm). Correction of the round-2 proposal (related -> implies) accepted by Paawan in operator chat 2026-10-07 9:30 PM CT. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXFED-27JAN-T0.00) and Polymarket Gamma description and resolution source (market 3215012), plus federalreserve.gov openmarket.htm, fetched 2026-10-07. Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXFED-27JAN-T0.25
+    b_id: polymarket:58421987972100586826330616250690474504359298033602990223828098109695719571344
+    label: implies
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "PM '+25 bps in Jan 2027' YES means a positive change of at most 25 bps on a pre-meeting upper bound of at least 0.25% (non-negative range), so the new upper bound is above 0.25% and Kalshi 'above 0.25%' is YES; not the reverse. Same no-negative-range assumption; no fed_upper_bound needed. Relies on the target range staying non-negative (upper bound at least 0.25%; lowest ever 0-0.25%, openmarket.htm). Correction of the round-2 proposal (related -> implies) accepted by Paawan in operator chat 2026-10-07 9:30 PM CT. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXFED-27JAN-T0.25) and Polymarket Gamma description and resolution source (market 3215013), plus federalreserve.gov openmarket.htm, fetched 2026-10-07. Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXFED-27JAN-T0.50
+    b_id: polymarket:42452047366442275682382090045397807109079755041679563479952649068752467853296
+    label: implies
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "PM '+50 bps or more in Jan 2027' YES means a change above +25 bps (round-up rule) on a pre-meeting upper bound of at least 0.25%, so the new upper bound is above 0.50% and Kalshi 'above 0.50%' is YES; not the reverse. Same no-negative-range assumption. Relies on the target range staying non-negative (upper bound at least 0.25%; lowest ever 0-0.25%, openmarket.htm). Correction of the round-2 proposal (related -> implies) accepted by Paawan in operator chat 2026-10-07 9:30 PM CT. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXFED-27JAN-T0.50) and Polymarket Gamma description and resolution source (market 3215014), plus federalreserve.gov openmarket.htm, fetched 2026-10-07. Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXFED-26DEC-T2.75
+    b_id: polymarket:10021099765479877880206130084102113471770375449510519368096296649508325006675
+    label: related
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Both settle on the same decision: PM's rules resolve on the upper bound after the Dec 8-9, 2026 FOMC meeting (Dec 31 is only the no-decision fallback, which is where the matcher's 537 h gap comes from). PM '= 2.75%' (rounded to nearest 25 bps) YES forces Kalshi '> 2.75%' NO on the 25 bp grid: mutually exclusive but not complementary, so related, not unrelated. Correction of the round-2 proposal (unrelated -> related) accepted by Paawan in operator chat 2026-10-07 9:30 PM CT. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXFED-26DEC-T2.75) and Polymarket Gamma description and resolution source (market 1168135), plus federalreserve.gov openmarket.htm, fetched 2026-10-07. Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXFED-26DEC-T3.00
+    b_id: polymarket:22030816399818413560467152256926658656366292051273475071688151582132139764281
+    label: related
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Same as the 2.75% pair: PM resolves on the upper bound after the Dec 8-9, 2026 meeting, the same decision Kalshi reads. PM '= 3.00%' YES forces Kalshi '> 3.00%' NO on the grid; dependent payouts, not complements, so related, not unrelated. Correction of the round-2 proposal (unrelated -> related) accepted by Paawan in operator chat 2026-10-07 9:30 PM CT. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXFED-26DEC-T3.00) and Polymarket Gamma description and resolution source (market 1168136), plus federalreserve.gov openmarket.htm, fetched 2026-10-07. Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXFED-26DEC-T3.25
+    b_id: polymarket:16971068639386640502659657646781431904217162229211786665483266631137687560030
+    label: related
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "PM pays if the lower (or upper) bound reaches 3.25% or lower at any point by Dec 31, 2026 12:59 PM ET, emergency moves included; that window contains the Dec 9 decision. Kalshi NO (upper bound at most 3.25% after Dec 9) forces PM YES, and both can be YES, so the payouts are linked: related, not unrelated. Correction of the round-2 proposal (unrelated -> related) accepted by Paawan in operator chat 2026-10-07 9:30 PM CT. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXFED-26DEC-T3.25) and Polymarket Gamma description and resolution source (market 690221), plus federalreserve.gov openmarket.htm, fetched 2026-10-07. Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."

@@ -8,106 +8,33 @@
 #     candidates.yaml round 2.
 #   - 2026-10-07 8:38 PM CT: Paawan approved them in operator chat, on
 #     condition that each one was checked against the venues' rules. The
-#     operator checked all 40 (Kalshi trade API rules plus the series contract
-#     terms; Polymarket Gamma description and resolution source;
-#     federalreserve.gov for the Fed fact). 34 were CONFIRMED and moved into
-#     labels.yaml, 6 were CORRECTED (section A), and none were UNVERIFIABLE.
-#     Paawan reports he spot-checked the labels (8:44 PM CT).
-#   - 2026-10-07: the operator added 33 new cross-venue drafts (section B),
-#     rules already checked, so that NFR-06 has `equivalent` pairs to measure.
-#     Paawan has NOT seen them.
+#     operator checked all 40: 34 were CONFIRMED and 6 CORRECTED; none were
+#     UNVERIFIABLE. At 9:30 PM CT Paawan accepted the 6 corrections, so all 40
+#     round-2 pairs are now in labels.yaml and none remain here.
+#   - 2026-10-07: the operator added 33 new cross-venue drafts (below), rules
+#     already checked. Paawan has NOT reviewed these pairs one by one. Their
+#     labels follow his D-083 decision (9:30 PM CT): Fed pairs that match
+#     except on edge cases (a rescheduled meeting, rounding of odd-sized moves,
+#     25 bp steps) are equivalent_given_facts, with the facts named in `why`
+#     and recorded in config/facts.yaml; the 2028 nominee pairs stay
+#     equivalent.
 #
 # Review: for each entry, accept or change proposed_label, then move it into
-# labels.yaml (strict schema, confirmed_by/confirmed_on). Section B pairs come
+# labels.yaml (strict schema, confirmed_by/confirmed_on). These pairs come
 # from live venue data (2026-10-07), not from round 2. Several use Kalshi
 # series that are not in config/universe/kalshi.yaml (KXFEDDECISION,
 # KXRATECUTCOUNT, KXRATECUT), so `equinox eval` cannot score them until those
-# series are ingested (see D-083).
+# series are ingested (D-083 follow-up).
 #
 # Loose schema (this file only): a_id, b_id, a_title, b_title, category,
-# suggested_by_matcher, proposed_label, why, review_status. Section A also has
-# original_proposal and verification. Section B also has rules_checked.
+# suggested_by_matcher, proposed_label, why, rules_checked, review_status.
 #
 version: 1
 proposals:
   # =========================================================================
-  # A. CORRECTED BY THE RULES CHECK (6): the round-2 proposal was wrong
-  # =========================================================================
-  - a_id: kalshi:KXFED-27JAN-T0.00
-    b_id: polymarket:63563009510989471204377539732457086916124654411092982704760023438039220215330
-    a_title: "Will the upper bound of the federal funds rate be above 0.00% following the Fed's Jan 27, 2027 meeting? — Above 0.00%"
-    b_title: "Will there be no change in Fed interest rates after the January 2027 meeting?"
-    category: fed
-    suggested_by_matcher: related
-    original_proposal: related
-    proposed_label: implies
-    verification: CORRECTED
-    why: "PM 'no change after the Jan 26-27, 2027 meeting' YES leaves the upper bound at its pre-meeting level, which is at least 0.25% while the target range stays non-negative (lowest ever 0-0.25%, openmarket.htm), so Kalshi 'above 0.00% after Jan 27, 2027' is YES; Kalshi YES also covers every other bucket. One-way, and it needs no fed_upper_bound fact; the only assumption is no negative target range."
-    review_status: pending_human
-
-  - a_id: kalshi:KXFED-27JAN-T0.25
-    b_id: polymarket:58421987972100586826330616250690474504359298033602990223828098109695719571344
-    a_title: "Will the upper bound of the federal funds rate be above 0.25% following the Fed's Jan 27, 2027 meeting? — Above 0.25%"
-    b_title: "Will the Fed increase interest rates by 25 bps after the January 2027 meeting?"
-    category: fed
-    suggested_by_matcher: related
-    original_proposal: related
-    proposed_label: implies
-    verification: CORRECTED
-    why: "PM '+25 bps in Jan 2027' YES means a positive change of at most 25 bps on a pre-meeting upper bound of at least 0.25% (non-negative range), so the new upper bound is above 0.25% and Kalshi 'above 0.25%' is YES; not the reverse. Same no-negative-range assumption; no fed_upper_bound needed."
-    review_status: pending_human
-
-  - a_id: kalshi:KXFED-27JAN-T0.50
-    b_id: polymarket:42452047366442275682382090045397807109079755041679563479952649068752467853296
-    a_title: "Will the upper bound of the federal funds rate be above 0.50% following the Fed's Jan 27, 2027 meeting? — Above 0.50%"
-    b_title: "Will the Fed increase interest rates by 50+ bps after the January 2027 meeting?"
-    category: fed
-    suggested_by_matcher: related
-    original_proposal: related
-    proposed_label: implies
-    verification: CORRECTED
-    why: "PM '+50 bps or more in Jan 2027' YES means a change above +25 bps (round-up rule) on a pre-meeting upper bound of at least 0.25%, so the new upper bound is above 0.50% and Kalshi 'above 0.50%' is YES; not the reverse. Same no-negative-range assumption."
-    review_status: pending_human
-
-  - a_id: kalshi:KXFED-26DEC-T2.75
-    b_id: polymarket:10021099765479877880206130084102113471770375449510519368096296649508325006675
-    a_title: "Will the upper bound of the federal funds rate be above 2.75% following the Fed's Dec 9, 2026 meeting? — Above 2.75%"
-    b_title: "Will the upper bound of the target federal funds rate be 2.75% at the end of 2026?"
-    category: fed
-    suggested_by_matcher: unrelated
-    original_proposal: unrelated
-    proposed_label: related
-    verification: CORRECTED
-    why: "Both settle on the same decision: PM's rules resolve on the upper bound after the Dec 8-9, 2026 FOMC meeting (Dec 31 is only the no-decision fallback, which is where the matcher's 537 h gap comes from). PM '= 2.75%' (rounded to nearest 25 bps) YES forces Kalshi '> 2.75%' NO on the 25 bp grid: mutually exclusive but not complementary, so related, not unrelated."
-    review_status: pending_human
-
-  - a_id: kalshi:KXFED-26DEC-T3.00
-    b_id: polymarket:22030816399818413560467152256926658656366292051273475071688151582132139764281
-    a_title: "Will the upper bound of the federal funds rate be above 3.00% following the Fed's Dec 9, 2026 meeting? — Above 3.00%"
-    b_title: "Will the upper bound of the target federal funds rate be 3.0% at the end of 2026?"
-    category: fed
-    suggested_by_matcher: unrelated
-    original_proposal: unrelated
-    proposed_label: related
-    verification: CORRECTED
-    why: "Same as the 2.75% pair: PM resolves on the upper bound after the Dec 8-9, 2026 meeting, the same decision Kalshi reads. PM '= 3.00%' YES forces Kalshi '> 3.00%' NO on the grid; dependent payouts, not complements, so related, not unrelated."
-    review_status: pending_human
-
-  - a_id: kalshi:KXFED-26DEC-T3.25
-    b_id: polymarket:16971068639386640502659657646781431904217162229211786665483266631137687560030
-    a_title: "Will the upper bound of the federal funds rate be above 3.25% following the Fed's Dec 9, 2026 meeting? — Above 3.25%"
-    b_title: "Will the Fed's lower bound reach 3.25% or lower before 2027?"
-    category: fed
-    suggested_by_matcher: unrelated
-    original_proposal: unrelated
-    proposed_label: related
-    verification: CORRECTED
-    why: "PM pays if the lower (or upper) bound reaches 3.25% or lower at any point by Dec 31, 2026 12:59 PM ET, emergency moves included; that window contains the Dec 9 decision. Kalshi NO (upper bound at most 3.25% after Dec 9) forces PM YES, and both can be YES, so the payouts are linked: related, not unrelated."
-    review_status: pending_human
-
-  # =========================================================================
-  # B. NEW DRAFTS (33), 2026-10-07, from live venue APIs; rules checked by the operator
-  #    equivalent 27 (fed 18, politics 9) · complement 1 (fed) · related 5 (politics 2, crypto 3)
+  # NEW DRAFTS (33), 2026-10-07, from live venue APIs; rules checked by the operator
+  #    equivalent_given_facts 18 (fed) · equivalent 9 (politics) · complement 1 (fed) · related 5 (politics 2, crypto 3)
+  #    Labels follow D-083 (Paawan 2026-10-07 9:30 PM CT)
   # =========================================================================
   - a_id: kalshi:KXFEDDECISION-26OCT-C26
     b_id: polymarket:17010377994663817312158123655937348199252960045746746128731746451645055725586
@@ -115,8 +42,8 @@ proposals:
     b_title: "Will the Fed decrease interest rates by 50+ bps after the October 2026 meeting?"
     category: fed
     suggested_by_matcher: not_drafted
-    proposed_label: equivalent
-    why: "Same proposition: the change the FOMC decides at the Oct 27-28, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26OCT-C26 (Cut >25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Edge cases to decide (D-083): (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say. Both are remote, but strictly they break 'same edge-case handling'."
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Oct 27-28, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26OCT-C26 (Cut >25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
     rules_checked: "Kalshi KXFEDDECISION-26OCT-C26 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 2589810 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Cut of [>]25bps (the API text drops the > sign; yes_sub_title and rules_secondary give >25bps) on October 28, 2026, then the market resolves to Yes."
     review_status: pending_human
 
@@ -126,8 +53,8 @@ proposals:
     b_title: "Will the Fed decrease interest rates by 25 bps after the October 2026 meeting?"
     category: fed
     suggested_by_matcher: not_drafted
-    proposed_label: equivalent
-    why: "Same proposition: the change the FOMC decides at the Oct 27-28, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26OCT-C25 (Cut 25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Edge cases to decide (D-083): (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say. Both are remote, but strictly they break 'same edge-case handling'."
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Oct 27-28, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26OCT-C25 (Cut 25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
     rules_checked: "Kalshi KXFEDDECISION-26OCT-C25 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 2589811 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Cut of 25bps on October 28, 2026, then the market resolves to Yes."
     review_status: pending_human
 
@@ -137,8 +64,8 @@ proposals:
     b_title: "Will there be no change in Fed interest rates after the October 2026 meeting?"
     category: fed
     suggested_by_matcher: not_drafted
-    proposed_label: equivalent
-    why: "Same proposition: the change the FOMC decides at the Oct 27-28, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26OCT-H0 (Fed maintains rate): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Edge cases to decide (D-083): (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say. Both are remote, but strictly they break 'same edge-case handling'."
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Oct 27-28, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26OCT-H0 (Fed maintains rate): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
     rules_checked: "Kalshi KXFEDDECISION-26OCT-H0 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 2589812 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Hike of 0bps on October 28, 2026, then the market resolves to Yes."
     review_status: pending_human
 
@@ -148,8 +75,8 @@ proposals:
     b_title: "Will the Fed increase interest rates by 25 bps after the October 2026 meeting?"
     category: fed
     suggested_by_matcher: not_drafted
-    proposed_label: equivalent
-    why: "Same proposition: the change the FOMC decides at the Oct 27-28, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26OCT-H25 (Hike 25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Edge cases to decide (D-083): (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say. Both are remote, but strictly they break 'same edge-case handling'."
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Oct 27-28, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26OCT-H25 (Hike 25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
     rules_checked: "Kalshi KXFEDDECISION-26OCT-H25 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 2589813 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Hike of 25bps on October 28, 2026, then the market resolves to Yes."
     review_status: pending_human
 
@@ -159,8 +86,8 @@ proposals:
     b_title: "Will the Fed increase interest rates by 50+ bps after the October 2026 meeting?"
     category: fed
     suggested_by_matcher: not_drafted
-    proposed_label: equivalent
-    why: "Same proposition: the change the FOMC decides at the Oct 27-28, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26OCT-H26 (Hike >25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Edge cases to decide (D-083): (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say. Both are remote, but strictly they break 'same edge-case handling'."
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Oct 27-28, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26OCT-H26 (Hike >25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
     rules_checked: "Kalshi KXFEDDECISION-26OCT-H26 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 2589814 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Hike of [>]25bps (the API text drops the > sign; yes_sub_title and rules_secondary give >25bps) on October 28, 2026, then the market resolves to Yes."
     review_status: pending_human
 
@@ -170,8 +97,8 @@ proposals:
     b_title: "Will the Fed decrease interest rates by 50+ bps after the December 2026 meeting?"
     category: fed
     suggested_by_matcher: not_drafted
-    proposed_label: equivalent
-    why: "Same proposition: the change the FOMC decides at the Dec 8-9, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26DEC-C26 (Cut >25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Edge cases to decide (D-083): (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say. Both are remote, but strictly they break 'same edge-case handling'."
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Dec 8-9, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26DEC-C26 (Cut >25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
     rules_checked: "Kalshi KXFEDDECISION-26DEC-C26 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 3215005 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Cut of [>]25bps (the API text drops the > sign; yes_sub_title and rules_secondary give >25bps) on December 09, 2026, then the market resolves to Yes."
     review_status: pending_human
 
@@ -181,8 +108,8 @@ proposals:
     b_title: "Will the Fed decrease interest rates by 25 bps after the December 2026 meeting?"
     category: fed
     suggested_by_matcher: not_drafted
-    proposed_label: equivalent
-    why: "Same proposition: the change the FOMC decides at the Dec 8-9, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26DEC-C25 (Cut 25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Edge cases to decide (D-083): (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say. Both are remote, but strictly they break 'same edge-case handling'."
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Dec 8-9, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26DEC-C25 (Cut 25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
     rules_checked: "Kalshi KXFEDDECISION-26DEC-C25 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 3215006 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Cut of 25bps on December 09, 2026, then the market resolves to Yes."
     review_status: pending_human
 
@@ -192,8 +119,8 @@ proposals:
     b_title: "Will there be no change in Fed interest rates after the December 2026 meeting?"
     category: fed
     suggested_by_matcher: not_drafted
-    proposed_label: equivalent
-    why: "Same proposition: the change the FOMC decides at the Dec 8-9, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26DEC-H0 (Fed maintains rate): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Edge cases to decide (D-083): (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say. Both are remote, but strictly they break 'same edge-case handling'."
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Dec 8-9, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26DEC-H0 (Fed maintains rate): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
     rules_checked: "Kalshi KXFEDDECISION-26DEC-H0 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 3215007 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Hike of 0bps on December 09, 2026, then the market resolves to Yes."
     review_status: pending_human
 
@@ -203,8 +130,8 @@ proposals:
     b_title: "Will the Fed increase interest rates by 25 bps after the December 2026 meeting?"
     category: fed
     suggested_by_matcher: not_drafted
-    proposed_label: equivalent
-    why: "Same proposition: the change the FOMC decides at the Dec 8-9, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26DEC-H25 (Hike 25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Edge cases to decide (D-083): (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say. Both are remote, but strictly they break 'same edge-case handling'."
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Dec 8-9, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26DEC-H25 (Hike 25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
     rules_checked: "Kalshi KXFEDDECISION-26DEC-H25 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 3215008 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Hike of 25bps on December 09, 2026, then the market resolves to Yes."
     review_status: pending_human
 
@@ -214,8 +141,8 @@ proposals:
     b_title: "Will the Fed increase interest rates by 50+ bps after the December 2026 meeting?"
     category: fed
     suggested_by_matcher: not_drafted
-    proposed_label: equivalent
-    why: "Same proposition: the change the FOMC decides at the Dec 8-9, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26DEC-H26 (Hike >25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Edge cases to decide (D-083): (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say. Both are remote, but strictly they break 'same edge-case handling'."
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Dec 8-9, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26DEC-H26 (Hike >25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
     rules_checked: "Kalshi KXFEDDECISION-26DEC-H26 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 3215009 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Hike of [>]25bps (the API text drops the > sign; yes_sub_title and rules_secondary give >25bps) on December 09, 2026, then the market resolves to Yes."
     review_status: pending_human
 
@@ -225,8 +152,8 @@ proposals:
     b_title: "Will the Fed decrease interest rates by 50+ bps after the January 2027 meeting?"
     category: fed
     suggested_by_matcher: not_drafted
-    proposed_label: equivalent
-    why: "Same proposition: the change the FOMC decides at the Jan 26-27, 2027 meeting, in the same bucket. Kalshi KXFEDDECISION-27JAN-C26 (Cut >25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Edge cases to decide (D-083): (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say. Both are remote, but strictly they break 'same edge-case handling'."
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Jan 26-27, 2027 meeting, in the same bucket. Kalshi KXFEDDECISION-27JAN-C26 (Cut >25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
     rules_checked: "Kalshi KXFEDDECISION-27JAN-C26 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 3215010 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Cut of [>]25bps (the API text drops the > sign; yes_sub_title and rules_secondary give >25bps) on January 27, 2027, then the market resolves to Yes."
     review_status: pending_human
 
@@ -236,8 +163,8 @@ proposals:
     b_title: "Will the Fed decrease interest rates by 25 bps after the January 2027 meeting?"
     category: fed
     suggested_by_matcher: not_drafted
-    proposed_label: equivalent
-    why: "Same proposition: the change the FOMC decides at the Jan 26-27, 2027 meeting, in the same bucket. Kalshi KXFEDDECISION-27JAN-C25 (Cut 25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Edge cases to decide (D-083): (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say. Both are remote, but strictly they break 'same edge-case handling'."
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Jan 26-27, 2027 meeting, in the same bucket. Kalshi KXFEDDECISION-27JAN-C25 (Cut 25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
     rules_checked: "Kalshi KXFEDDECISION-27JAN-C25 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 3215011 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Cut of 25bps on January 27, 2027, then the market resolves to Yes."
     review_status: pending_human
 
@@ -247,8 +174,8 @@ proposals:
     b_title: "Will there be no change in Fed interest rates after the January 2027 meeting?"
     category: fed
     suggested_by_matcher: not_drafted
-    proposed_label: equivalent
-    why: "Same proposition: the change the FOMC decides at the Jan 26-27, 2027 meeting, in the same bucket. Kalshi KXFEDDECISION-27JAN-H0 (Fed maintains rate): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Edge cases to decide (D-083): (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say. Both are remote, but strictly they break 'same edge-case handling'."
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Jan 26-27, 2027 meeting, in the same bucket. Kalshi KXFEDDECISION-27JAN-H0 (Fed maintains rate): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
     rules_checked: "Kalshi KXFEDDECISION-27JAN-H0 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 3215012 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Hike of 0bps on January 27, 2027, then the market resolves to Yes."
     review_status: pending_human
 
@@ -258,8 +185,8 @@ proposals:
     b_title: "Will the Fed increase interest rates by 25 bps after the January 2027 meeting?"
     category: fed
     suggested_by_matcher: not_drafted
-    proposed_label: equivalent
-    why: "Same proposition: the change the FOMC decides at the Jan 26-27, 2027 meeting, in the same bucket. Kalshi KXFEDDECISION-27JAN-H25 (Hike 25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Edge cases to decide (D-083): (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say. Both are remote, but strictly they break 'same edge-case handling'."
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Jan 26-27, 2027 meeting, in the same bucket. Kalshi KXFEDDECISION-27JAN-H25 (Hike 25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
     rules_checked: "Kalshi KXFEDDECISION-27JAN-H25 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 3215013 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Hike of 25bps on January 27, 2027, then the market resolves to Yes."
     review_status: pending_human
 
@@ -269,8 +196,8 @@ proposals:
     b_title: "Will the Fed increase interest rates by 50+ bps after the January 2027 meeting?"
     category: fed
     suggested_by_matcher: not_drafted
-    proposed_label: equivalent
-    why: "Same proposition: the change the FOMC decides at the Jan 26-27, 2027 meeting, in the same bucket. Kalshi KXFEDDECISION-27JAN-H26 (Hike >25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Edge cases to decide (D-083): (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say. Both are remote, but strictly they break 'same edge-case handling'."
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the change the FOMC decides at the Jan 26-27, 2027 meeting, in the same bucket. Kalshi KXFEDDECISION-27JAN-H26 (Hike >25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Polymarket: change in the upper bound vs the pre-meeting level, off-grid changes rounded up to the next 25 bps, source the FOMC statement. Bucket map: Kalshi 'Cut >25bps' = PM '50+ bps decrease', 'Cut 25bps' = '25 bps decrease', 'maintains' = 'No change', 'Hike 25bps' = '25 bps increase', 'Hike >25bps' = '50+ bps increase'. Deadlines are under 10 h apart on the same day. Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT): the payouts match whenever the facts hold. Facts relied on: fed_meeting_dates (the meeting is held on its scheduled FOMC-calendar date, config/facts.yaml) and fed_rate_step=0.25 (the Fed moves in 25 bp steps, config/facts.yaml). Where they could diverge if a fact fails: (1) a meeting moved off its scheduled date: Kalshi's rules_secondary resolves 'Fed maintains rate' YES, while PM waits for a statement until the end of the next scheduled meeting and resolves on it; (2) an off-grid move such as 12.5 bps: PM rounds up to the 25 bps bucket, Kalshi's terms do not say."
     rules_checked: "Kalshi KXFEDDECISION-27JAN-H26 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 3215014 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve does a Hike of [>]25bps (the API text drops the > sign; yes_sub_title and rules_secondary give >25bps) on January 27, 2027, then the market resolves to Yes."
     review_status: pending_human
 
@@ -280,8 +207,8 @@ proposals:
     b_title: "Will no Fed rate cuts happen in 2026?"
     category: fed
     suggested_by_matcher: not_drafted
-    proposed_label: equivalent
-    why: "Same proposition: the count of 25 bp cuts in calendar 2026, emergency cuts included. Kalshi KXRATECUTCOUNT-26DEC31-T0: 'Fed cuts 0 times starting Jan 1, 2026 and before 2027', 25 bp = one cut (RATECUTS terms, source openmarket.htm). Polymarket: exact number of 25 bp cuts in 2026, emergency cuts count, cuts of 1-24 bps count as one, closes Dec 31, 2026 11:59 PM ET. Same close instant (2027-01-01T04:59Z). Caveat: for off-grid sizes Kalshi's terms count a cut of more than 25 bps as two and more than 50 as three, while PM counts whole 25 bp steps; the two agree for every 25 bp multiple up to 75 bps. No cuts so far in 2026 (openmarket.htm)."
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the count of 25 bp cuts in calendar 2026, emergency cuts included. Kalshi KXRATECUTCOUNT-26DEC31-T0: 'Fed cuts 0 times starting Jan 1, 2026 and before 2027', 25 bp = one cut (RATECUTS terms, source openmarket.htm). Polymarket: exact number of 25 bp cuts in 2026, emergency cuts count, cuts of 1-24 bps count as one, closes Dec 31, 2026 11:59 PM ET. Same close instant (2027-01-01T04:59Z). Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT). Fact relied on: fed_rate_step=0.25 (every cut is a whole number of 25 bp steps, config/facts.yaml); emergency cuts count on both venues, so meeting dates do not matter here. If the fact fails: Kalshi's terms count a cut of more than 25 bps as two and more than 50 as three, while PM counts whole 25 bp steps (1-24 bps = one cut); the two agree for every 25 bp multiple up to 75 bps. No cuts so far in 2026 (openmarket.htm)."
     rules_checked: "Kalshi KXRATECUTCOUNT-26DEC31-T0 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 616902 description; fetched 2026-10-07. Kalshi rules: If the Fed cuts 0 times starting Jan 1, 2026 and before 2027, then the market resolves to Yes."
     review_status: pending_human
 
@@ -291,8 +218,8 @@ proposals:
     b_title: "Will 1 Fed rate cut happen in 2026?"
     category: fed
     suggested_by_matcher: not_drafted
-    proposed_label: equivalent
-    why: "Same proposition: the count of 25 bp cuts in calendar 2026, emergency cuts included. Kalshi KXRATECUTCOUNT-26DEC31-T1: 'Fed cuts 1 times starting Jan 1, 2026 and before 2027', 25 bp = one cut (RATECUTS terms, source openmarket.htm). Polymarket: exact number of 25 bp cuts in 2026, emergency cuts count, cuts of 1-24 bps count as one, closes Dec 31, 2026 11:59 PM ET. Same close instant (2027-01-01T04:59Z). Caveat: for off-grid sizes Kalshi's terms count a cut of more than 25 bps as two and more than 50 as three, while PM counts whole 25 bp steps; the two agree for every 25 bp multiple up to 75 bps. No cuts so far in 2026 (openmarket.htm)."
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the count of 25 bp cuts in calendar 2026, emergency cuts included. Kalshi KXRATECUTCOUNT-26DEC31-T1: 'Fed cuts 1 times starting Jan 1, 2026 and before 2027', 25 bp = one cut (RATECUTS terms, source openmarket.htm). Polymarket: exact number of 25 bp cuts in 2026, emergency cuts count, cuts of 1-24 bps count as one, closes Dec 31, 2026 11:59 PM ET. Same close instant (2027-01-01T04:59Z). Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT). Fact relied on: fed_rate_step=0.25 (every cut is a whole number of 25 bp steps, config/facts.yaml); emergency cuts count on both venues, so meeting dates do not matter here. If the fact fails: Kalshi's terms count a cut of more than 25 bps as two and more than 50 as three, while PM counts whole 25 bp steps (1-24 bps = one cut); the two agree for every 25 bp multiple up to 75 bps. No cuts so far in 2026 (openmarket.htm)."
     rules_checked: "Kalshi KXRATECUTCOUNT-26DEC31-T1 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 616903 description; fetched 2026-10-07. Kalshi rules: If the Fed cuts 1 times starting Jan 1, 2026 and before 2027, then the market resolves to Yes."
     review_status: pending_human
 
@@ -302,8 +229,8 @@ proposals:
     b_title: "Will 2 Fed rate cuts happen in 2026?"
     category: fed
     suggested_by_matcher: not_drafted
-    proposed_label: equivalent
-    why: "Same proposition: the count of 25 bp cuts in calendar 2026, emergency cuts included. Kalshi KXRATECUTCOUNT-26DEC31-T2: 'Fed cuts 2 times starting Jan 1, 2026 and before 2027', 25 bp = one cut (RATECUTS terms, source openmarket.htm). Polymarket: exact number of 25 bp cuts in 2026, emergency cuts count, cuts of 1-24 bps count as one, closes Dec 31, 2026 11:59 PM ET. Same close instant (2027-01-01T04:59Z). Caveat: for off-grid sizes Kalshi's terms count a cut of more than 25 bps as two and more than 50 as three, while PM counts whole 25 bp steps; the two agree for every 25 bp multiple up to 75 bps. No cuts so far in 2026 (openmarket.htm)."
+    proposed_label: equivalent_given_facts
+    why: "Same proposition: the count of 25 bp cuts in calendar 2026, emergency cuts included. Kalshi KXRATECUTCOUNT-26DEC31-T2: 'Fed cuts 2 times starting Jan 1, 2026 and before 2027', 25 bp = one cut (RATECUTS terms, source openmarket.htm). Polymarket: exact number of 25 bp cuts in 2026, emergency cuts count, cuts of 1-24 bps count as one, closes Dec 31, 2026 11:59 PM ET. Same close instant (2027-01-01T04:59Z). Labelled equivalent_given_facts per D-083 (Paawan, 2026-10-07 9:30 PM CT). Fact relied on: fed_rate_step=0.25 (every cut is a whole number of 25 bp steps, config/facts.yaml); emergency cuts count on both venues, so meeting dates do not matter here. If the fact fails: Kalshi's terms count a cut of more than 25 bps as two and more than 50 as three, while PM counts whole 25 bp steps (1-24 bps = one cut); the two agree for every 25 bp multiple up to 75 bps. No cuts so far in 2026 (openmarket.htm)."
     rules_checked: "Kalshi KXRATECUTCOUNT-26DEC31-T2 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 616904 description; fetched 2026-10-07. Kalshi rules: If the Fed cuts 2 times starting Jan 1, 2026 and before 2027, then the market resolves to Yes."
     review_status: pending_human
 
@@ -314,7 +241,7 @@ proposals:
     category: fed
     suggested_by_matcher: not_drafted
     proposed_label: complement
-    why: "Kalshi KXRATECUT-26DEC31 pays if the Fed cuts at least once between Feb 26 and Dec 31, 2026 (RATECUT terms, federalreserve.gov). Polymarket 'no Fed rate cuts in 2026' pays if there are zero cuts in all of 2026. The only gap is Jan 1 to Feb 25, 2026, and that window is already settled: openmarket.htm shows no 2026 cut (the only 2026 change is the Sep 17 hike). So in every reachable world Kalshi YES is exactly PM NO: complement. Both count emergency cuts and any cut size."
+    why: "Kalshi KXRATECUT-26DEC31 pays if the Fed cuts at least once between Feb 26 and Dec 31, 2026 (RATECUT terms, federalreserve.gov). Polymarket 'no Fed rate cuts in 2026' pays if there are zero cuts in all of 2026. The only gap is Jan 1 to Feb 25, 2026, and that window is already settled: openmarket.htm shows no 2026 cut (the only 2026 change is the Sep 17 hike). So in every reachable world Kalshi YES is exactly PM NO: complement. Fact relied on: no cut between Jan 1 and Feb 25, 2026 (openmarket.htm, as of 2026-10-07; already settled history, so not a forward assumption). Both count emergency cuts and any cut size."
     rules_checked: "Kalshi KXRATECUT-26DEC31 rules_primary/rules_secondary + series contract terms; Polymarket Gamma market 616902 description; fetched 2026-10-07. Kalshi rules: If the Federal Reserve cuts its target federal funds rate range at least once between February 26, 2026 and December 31, 2026, then the market resolves to Yes."
     review_status: pending_human
 
