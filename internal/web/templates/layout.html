@@ -30,8 +30,8 @@
     </nav>
     {{if .Round}}<div class="context-bar">
       <div class="container">
-        {{/* Freshness stamp (static for now; GET /stamp is out of scope per UI-10 AC) */}}
-        <span class="asof{{if .Round.Pinned}} asof-pinned{{end}}"><strong>as of</strong> {{.Round.AsOf}} · round {{.Round.ID}}{{if .Round.Pinned}}, pinned{{end}}</span>
+        {{/* Freshness stamp (UI-10 AC: static, no GET /stamp route) */}}
+        {{if .Stamp}}{{template "stamp" .Stamp}} · {{end}}round {{.Round.ID}}{{if .Round.Pinned}}, pinned{{end}}
         <form method="post" action="/timezone" class="timezone-selector">
           <label>Timezone:
             <select name="tz">

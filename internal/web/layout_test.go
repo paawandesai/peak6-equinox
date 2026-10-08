@@ -10,22 +10,37 @@ import (
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/store"
 )
 
-// TestLayoutAsOfLine verifies the .asof stamp is present with a timezone abbreviation (UI-10).
-func TestLayoutAsOfLine(t *testing.T) {
+// TestLayoutStamp verifies the stamp template is used with freshness badge, time, and age (UI-10).
+func TestLayoutStamp(t *testing.T) {
 	srv, st := newTestServer(t)
 	seedPublic(t, st)
 	body := get(srv.Handler(), "/").Body.String()
 
-	// Extract the .asof stamp content (now a span in the context bar)
-	asofPattern := regexp.MustCompile(`<span class="asof[^"]*">.*?as of.*?</span>`)
-	if !asofPattern.MatchString(body) {
-		t.Fatal("layout missing <span class=\"asof\"> element with 'as of' text")
+	// Stamp should contain a freshness badge (Fresh/Stale/Unknown/Pinned)
+	badgePattern := regexp.MustCompile(`<span class="badge [fb]-[a-z]+">`)
+	if !badgePattern.MatchString(body) {
+		t.Error("stamp missing freshness badge")
 	}
 
-	// Check for a timezone abbreviation (ET, CT, UTC, or EDT/EST/CDT/CST) within the context bar
+	// Stamp should have "as of" with <time datetime>
+	if !strings.Contains(body, "as of") {
+		t.Error("stamp missing 'as of' text")
+	}
+	timePattern := regexp.MustCompile(`<time datetime="[^"]+">`)
+	if !timePattern.MatchString(body) {
+		t.Error("stamp missing <time datetime> element")
+	}
+
+	// Stamp should have age ("s ago", "min ago", etc.)
+	agePattern := regexp.MustCompile(`\d+\s+(s|min|h|days)\s+ago`)
+	if !agePattern.MatchString(body) {
+		t.Error("stamp missing age text")
+	}
+
+	// Check for a timezone abbreviation (ET, CT, UTC, or EDT/EST/CDT/CST)
 	tzPattern := regexp.MustCompile(`(ET|CT|UTC|EDT|EST|CDT|CST)`)
 	if !tzPattern.MatchString(body) {
-		t.Error(".asof stamp missing timezone abbreviation")
+		t.Error("stamp missing timezone abbreviation")
 	}
 }
 
@@ -190,12 +205,16 @@ func TestLayoutContextBar(t *testing.T) {
 	if !strings.Contains(body, `<div class="context-bar">`) {
 		t.Error("layout missing context-bar")
 	}
-	// Should contain the stamp structure: .asof with "as of" text and round
-	if !strings.Contains(body, `<span class="asof`) {
-		t.Error("context bar missing .asof stamp")
+	// Should contain the stamp (.stamp span with freshness badge)
+	if !strings.Contains(body, `<span class="stamp">`) {
+		t.Error("context bar missing .stamp element")
 	}
 	if !strings.Contains(body, "as of") {
 		t.Error("stamp missing 'as of' text")
+	}
+	// Should contain "round N"
+	if !strings.Contains(body, "round ") {
+		t.Error("context bar missing round text")
 	}
 	// Should contain timezone selector
 	if !strings.Contains(body, `<form method="post" action="/timezone" class="timezone-selector">`) {

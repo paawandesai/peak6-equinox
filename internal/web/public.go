@@ -118,10 +118,19 @@ type page struct {
 	Question     string
 	Assets       assets
 	Round        *roundInfo
-	StaleWarning string // "Data is N minutes old" when round is stale (NFR-09, D-077)
-	Banner       banner // Demo mode or no-round banner (NFR-04, M3-07)
-	Timezone     string // User's timezone preference (ET/CT/UTC, M3-08)
-	Page         string // Current page name for aria-current (UI-10)
+	Stamp        *stampInfo // Freshness stamp data (UI-10)
+	StaleWarning string     // "Data is N minutes old" when round is stale (NFR-09, D-077)
+	Banner       banner     // Demo mode or no-round banner (NFR-04, M3-07)
+	Timezone     string     // User's timezone preference (ET/CT/UTC, M3-08)
+	Page         string     // Current page name for aria-current (UI-10)
+}
+
+// stampInfo is the data for the freshness stamp template (UI-10).
+type stampInfo struct {
+	Badge    Badge  // Freshness badge (Fresh/Stale/Unknown/Pinned)
+	AsOf     string // Formatted timestamp
+	DateTime string // ISO 8601 for <time datetime>
+	Age      string // Human-readable age ("14 s ago")
 }
 
 // banner is the structured data for the demo/no-round banner (M3-07).
