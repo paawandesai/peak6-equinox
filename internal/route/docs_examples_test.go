@@ -249,6 +249,7 @@ func TestDocsExample3ComplementRoute(t *testing.T) {
 	wantJSON := `{
   "round_id": 7,
   "target_id": "kalshi:A",
+  "target_type": "complement",
   "order": {
     "side": "buy",
     "outcome": "yes",

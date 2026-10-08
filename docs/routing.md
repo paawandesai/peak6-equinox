@@ -132,6 +132,7 @@ Every `Decision` includes:
 |---|---|
 | `RoundID` | The fetch round the quotes came from. |
 | `TargetID` | The instrument the user named. |
+| `TargetType` | (UI-25, D-099) The relationship type of the pair being routed (e.g., `equivalent`, `complement`), used by the UI to label and group decisions. |
 | `Order` | The order as submitted. |
 | `Chosen` | The legs the router chose, in cost order (empty if no venue could fill). |
 | `Alternatives` | All viable single-venue options ranked by all-in cost, plus the multi-venue sweep if it differs from rank 1. The chosen option is marked with `Note: "chosen"`; partial fills under IOC are marked `"partial fill: N of M contracts"`. FOK excludes partials from Alternatives. |
@@ -139,7 +140,7 @@ Every `Decision` includes:
 | `Warnings` | Non-fatal issues: skew warnings, approximate fees, notional conversions, partial fills. |
 | `Explanation` | A prose summary of the decision: what was chosen, why, cost breakdown per leg, ranked alternatives with their gap to the chosen cost, exclusions, and fee verification status. |
 | `DecidedAt` | The UTC instant the decision was made. |
-| `Inputs` | (UI-25, D-099) The input snapshot recorded at decision time: one entry per candidate considered (target + partners, eligible and excluded), with venue, instrument id, relationship type (empty for the target itself) and confidence, outcome side checked, best ask, ask depth (top 10 levels), quote times and round id. Empty for decisions stored before UI-25. |
+| `Inputs` | (UI-25, D-099) The input snapshot recorded at decision time: one entry per candidate considered (target + partners, eligible and excluded), with venue, instrument id, relationship type (`"self"` for the target, otherwise the partner's relationship type), confidence, outcome side checked, best ask, ask depth (top 10 levels), quote times and round id. Uses the correct book side based on order side + outcome. Empty for decisions stored before UI-25. |
 
 ### Exclusion reasons
 

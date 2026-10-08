@@ -143,7 +143,7 @@ func runRoute(ctx context.Context, args []string, stdout io.Writer) error {
 			MinBookDepth: cfg.MinBookDepth,
 		},
 	}
-	dec, err := route.Route(o, in.target, in.partners, rcfg, time.Now().UTC())
+	dec, err := route.Route(o, in.target, in.partners, rcfg, in.targetType, time.Now().UTC())
 	if err != nil {
 		return err
 	}
@@ -175,9 +175,10 @@ func runRoute(ctx context.Context, args []string, stdout io.Writer) error {
 
 // routeInputs is everything Route needs from the database.
 type routeInputs struct {
-	round    store.Round
-	target   canonical.Candidate
-	partners []canonical.Candidate
+	round      store.Round
+	target     canonical.Candidate
+	partners   []canonical.Candidate
+	targetType canonical.RelationshipType // strongest relationship type for UI-25
 }
 
 // loadRouteInputs reads the round (pinned or latest unless roundID is given),
@@ -218,6 +219,14 @@ func loadRouteInputs(ctx context.Context, st *store.Store, logger *slog.Logger, 
 		}
 		c.Relationship = &r
 		in.partners = append(in.partners, c)
+		// Use the first (strongest per domain.md § Relationships) relationship type for targetType (UI-25).
+		if in.targetType == "" {
+			in.targetType = r.Type
+		}
+	}
+	// If no partners, default to "equivalent" for targetType.
+	if in.targetType == "" {
+		in.targetType = canonical.RelEquivalent
 	}
 	return in, nil
 }

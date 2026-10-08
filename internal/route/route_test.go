@@ -89,7 +89,15 @@ func scenario() (canonical.Candidate, []canonical.Candidate) {
 
 func mustRoute(t *testing.T, o canonical.Order, target canonical.Candidate, partners []canonical.Candidate) canonical.Decision {
 	t.Helper()
-	dec, err := Route(o, target, partners, cfg, t0)
+	// Default targetType for tests: use "equivalent" unless partners define otherwise.
+	targetType := canonical.RelEquivalent
+	for _, p := range partners {
+		if p.Relationship != nil && p.Relationship.Type == canonical.RelComplement {
+			targetType = canonical.RelComplement
+			break
+		}
+	}
+	dec, err := Route(o, target, partners, cfg, targetType, t0)
 	if err != nil {
 		t.Fatalf("Route: %v", err)
 	}
@@ -423,20 +431,20 @@ func TestRouteErrors(t *testing.T) {
 	target, partners := scenario()
 	bad := buy("10")
 	bad.Side = "hold"
-	if _, err := Route(bad, target, partners, cfg, t0); err == nil || !strings.Contains(err.Error(), "order") {
+	if _, err := Route(bad, target, partners, cfg, canonical.RelEquivalent, t0); err == nil || !strings.Contains(err.Error(), "order") {
 		t.Errorf("invalid order err = %v", err)
 	}
-	if _, err := Route(buy("10"), target, partners, Config{}, t0); err == nil || !strings.Contains(err.Error(), "round id") {
+	if _, err := Route(buy("10"), target, partners, Config{}, canonical.RelEquivalent, t0); err == nil || !strings.Contains(err.Error(), "round id") {
 		t.Errorf("no round err = %v", err)
 	}
 	badTarget := target
 	badTarget.Instrument.ID = "nowhere:1"
-	if _, err := Route(buy("10"), badTarget, partners, cfg, t0); err == nil || !strings.Contains(err.Error(), "target") {
+	if _, err := Route(buy("10"), badTarget, partners, cfg, canonical.RelEquivalent, t0); err == nil || !strings.Contains(err.Error(), "target") {
 		t.Errorf("bad target err = %v", err)
 	}
 	badTarget = target
 	badTarget.Quote.InstrumentID = otherID
-	if _, err := Route(buy("10"), badTarget, partners, cfg, t0); err == nil || !strings.Contains(err.Error(), "target quote") {
+	if _, err := Route(buy("10"), badTarget, partners, cfg, canonical.RelEquivalent, t0); err == nil || !strings.Contains(err.Error(), "target quote") {
 		t.Errorf("target quote mismatch err = %v", err)
 	}
 }
@@ -448,7 +456,7 @@ func TestRouteDecidedAtIsUTC(t *testing.T) {
 	if dec.DecidedAt.Location() != time.UTC {
 		t.Errorf("decided_at zone = %v", dec.DecidedAt.Location())
 	}
-	dec, err := Route(buy("1"), target, partners, cfg, t0.In(time.FixedZone("X", 3600)))
+	dec, err := Route(buy("1"), target, partners, cfg, canonical.RelEquivalent, t0.In(time.FixedZone("X", 3600)))
 	if err != nil || dec.DecidedAt.Location() != time.UTC || !dec.DecidedAt.Equal(t0) {
 		t.Errorf("decided_at = %v (%v)", dec.DecidedAt, err)
 	}
@@ -508,7 +516,7 @@ func TestRouteProperties(t *testing.T) {
 		if err := target.Quote.Validate(); err != nil {
 			t.Fatalf("generator produced an invalid book: %v", err)
 		}
-		dec, err := Route(o, target, []canonical.Candidate{partner}, cfg, t0)
+		dec, err := Route(o, target, []canonical.Candidate{partner}, cfg, canonical.RelEquivalent, t0)
 		if err != nil {
 			t.Fatalf("Route: %v", err)
 		}
@@ -588,7 +596,7 @@ func TestRouteEligibilityAndSkew(t *testing.T) {
 	// Use a config with snapshot=now so quotes at t0 are 150s old.
 	staleCfg := cfg
 	staleCfg.Eligibility.Snapshot = now
-	dec, err := Route(buy("10"), target, partners, staleCfg, now)
+	dec, err := Route(buy("10"), target, partners, staleCfg, canonical.RelEquivalent, now)
 	if err != nil {
 		t.Fatalf("Route: %v", err)
 	}
@@ -604,7 +612,7 @@ func TestRouteEligibilityAndSkew(t *testing.T) {
 	freshTarget.Quote.FetchedAt = now
 	skewedPartner := partners[0]
 	skewedPartner.Quote.FetchedAt = now.Add(-40 * time.Second)
-	dec, err = Route(buy("10"), freshTarget, []canonical.Candidate{skewedPartner}, cfg, now)
+	dec, err = Route(buy("10"), freshTarget, []canonical.Candidate{skewedPartner}, cfg, canonical.RelEquivalent, now)
 	if err != nil {
 		t.Fatalf("Route: %v", err)
 	}
@@ -615,7 +623,7 @@ func TestRouteEligibilityAndSkew(t *testing.T) {
 	// Skew warning: partner 10s old (between 5s SkewWarn and 30s SkewMax).
 	warnPartner := partners[0]
 	warnPartner.Quote.FetchedAt = now.Add(-10 * time.Second)
-	dec, err = Route(buy("10"), freshTarget, []canonical.Candidate{warnPartner}, cfg, now)
+	dec, err = Route(buy("10"), freshTarget, []canonical.Candidate{warnPartner}, cfg, canonical.RelEquivalent, now)
 	if err != nil {
 		t.Fatalf("Route: %v", err)
 	}
@@ -627,7 +635,7 @@ func TestRouteEligibilityAndSkew(t *testing.T) {
 	shallow := cand(polymarketID, []canonical.Level{lv("0.49", "0.3")}, []canonical.Level{lv("0.50", "0.4")},
 		rel(kalshiID, polymarketID, canonical.RelEquivalent, "0.97"))
 	shallow.Quote.FetchedAt = now
-	dec, err = Route(buy("10"), freshTarget, []canonical.Candidate{shallow}, cfg, now)
+	dec, err = Route(buy("10"), freshTarget, []canonical.Candidate{shallow}, cfg, canonical.RelEquivalent, now)
 	if err != nil {
 		t.Fatalf("Route: %v", err)
 	}
@@ -647,7 +655,7 @@ func TestRouteTargetExcludedBySkew(t *testing.T) {
 		oldTarget := target
 		oldTarget.Quote.FetchedAt = now.Add(-50 * time.Second) // 50s skew > 30s max
 
-		dec, err := Route(buy("10"), oldTarget, []canonical.Candidate{freshPartner}, cfg, now)
+		dec, err := Route(buy("10"), oldTarget, []canonical.Candidate{freshPartner}, cfg, canonical.RelEquivalent, now)
 		if err != nil {
 			t.Fatalf("Route: %v", err)
 		}
@@ -685,7 +693,7 @@ func TestRouteTargetExcludedBySkew(t *testing.T) {
 		staleTarget := target
 		staleTarget.Quote.FetchedAt = now.Add(-150 * time.Second) // stale, also skewed
 
-		dec, err := Route(buy("10"), staleTarget, []canonical.Candidate{freshPartner}, staleCfg, now)
+		dec, err := Route(buy("10"), staleTarget, []canonical.Candidate{freshPartner}, staleCfg, canonical.RelEquivalent, now)
 		if err != nil {
 			t.Fatalf("Route: %v", err)
 		}
@@ -733,7 +741,7 @@ func TestRoutePartnerVsPartnerSkew(t *testing.T) {
 
 	staleCfg := cfg
 	staleCfg.Eligibility.Snapshot = now
-	dec, err := Route(buy("10"), target, []canonical.Candidate{freshPartner, oldPartner}, staleCfg, now)
+	dec, err := Route(buy("10"), target, []canonical.Candidate{freshPartner, oldPartner}, staleCfg, canonical.RelEquivalent, now)
 	if err != nil {
 		t.Fatalf("Route: %v", err)
 	}
@@ -776,11 +784,11 @@ func TestRouteSkewOrderIndependence(t *testing.T) {
 	staleCfg.Eligibility.Snapshot = now
 
 	// Run with partners in both orders.
-	dec1, err := Route(buy("10"), target, []canonical.Candidate{fresh, old}, staleCfg, now)
+	dec1, err := Route(buy("10"), target, []canonical.Candidate{fresh, old}, staleCfg, canonical.RelEquivalent, now)
 	if err != nil {
 		t.Fatalf("Route order 1: %v", err)
 	}
-	dec2, err := Route(buy("10"), target, []canonical.Candidate{old, fresh}, staleCfg, now)
+	dec2, err := Route(buy("10"), target, []canonical.Candidate{old, fresh}, staleCfg, canonical.RelEquivalent, now)
 	if err != nil {
 		t.Fatalf("Route order 2: %v", err)
 	}

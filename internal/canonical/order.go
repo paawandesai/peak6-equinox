@@ -159,13 +159,14 @@ type DecisionInput struct {
 
 // Decision is the router's output for one Order (FR-12/FR-13).
 type Decision struct {
-	RoundID      int64         `json:"round_id"`
-	TargetID     string        `json:"target_id"`
-	Order        Order         `json:"order"`
-	Chosen       []Leg         `json:"chosen"`
-	Alternatives []Alternative `json:"alternatives"`
-	Exclusions   []Exclusion   `json:"exclusions"`
-	Warnings     []string      `json:"warnings"`
+	RoundID      int64            `json:"round_id"`
+	TargetID     string           `json:"target_id"`
+	TargetType   RelationshipType `json:"target_type"` // relationship type of the pair being routed (UI-25, D-098 call 3)
+	Order        Order            `json:"order"`
+	Chosen       []Leg            `json:"chosen"`
+	Alternatives []Alternative    `json:"alternatives"`
+	Exclusions   []Exclusion      `json:"exclusions"`
+	Warnings     []string         `json:"warnings"`
 	// Explanation is the one-paragraph plain-English summary. Required.
 	Explanation string    `json:"explanation"`
 	DecidedAt   time.Time `json:"decided_at"`

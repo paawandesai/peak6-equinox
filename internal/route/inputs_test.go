@@ -25,8 +25,8 @@ func TestRouteRecordsInputs(t *testing.T) {
 	if targetInput.Venue != canonical.VenueKalshi {
 		t.Errorf("target input venue = %s, want kalshi", targetInput.Venue)
 	}
-	if targetInput.RelationshipType != "" {
-		t.Errorf("target input relationship type = %q, want empty (self)", targetInput.RelationshipType)
+	if targetInput.RelationshipType != "self" {
+		t.Errorf("target input relationship type = %q, want self", targetInput.RelationshipType)
 	}
 	if !targetInput.Confidence.Equal(d("1.0")) {
 		t.Errorf("target input confidence = %s, want 1.0", targetInput.Confidence)
