@@ -1,7 +1,7 @@
 <!-- OWNER: operator. -->
 # Status
 
-_Last updated: 2026-10-08 17:30 UTC by orchestrator (M3 + UI-02…08 merged; #39 and UI-09 open). Previous:_ _Last updated: 2026-10-08 ~03:43 UTC by operator (D-087: Paawan kept D-073/074/076/079 after the PRD check; ci-gate manual MR pipelines in force since !35 merged as fb21cd3b)._
+_Last updated: 2026-10-08 17:30 UTC by orchestrator (M3-01…10, UI-01…08 and their follow-ups merged; open: #39 MR !58, UI-09 #41 awaiting design approval, Q-7 labels). Previous update 03:43 UTC by operator: D-087 kept D-073/074/076/079 after the PRD check; ci-gate manual MR pipelines in force since !35 merged as fb21cd3b._
 
 ## Current milestone
 
