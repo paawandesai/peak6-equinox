@@ -396,15 +396,30 @@ func TestRouteSellSideGreedySweep(t *testing.T) {
 
 // TestSweepGreedyProperty: greedy never leaves a cheaper unfilled contract when
 // a more expensive one was filled (M3-03 #7: non-vacuous property test).
+// M3-04: fixed flaky test when random prices round to same 4-decimal value.
 func TestSweepGreedyProperty(t *testing.T) {
 	rapid.Check(t, func(rt *rapid.T) {
 		qty := rapid.IntRange(1, 200).Draw(rt, "qty")
 
-		// Generate two price levels at different prices
+		// Generate two price levels at different prices (after rounding to 4 dp)
 		p1 := rapid.Float64Range(0.01, 0.99).Draw(rt, "p1")
 		p2 := rapid.Float64Range(0.01, 0.99).Draw(rt, "p2")
-		if p1 >= p2 {
-			p1, p2 = p2, p1+0.01 // ensure p1 < p2 with gap
+
+		// Format to 4 dp immediately to check for ties
+		p1Str := fmt.Sprintf("%.4f", p1)
+		p2Str := fmt.Sprintf("%.4f", p2)
+
+		// If they round to the same value, skip this iteration
+		if p1Str == p2Str {
+			rt.Skip("prices round to same 4-decimal value")
+		}
+
+		// Ensure p1 < p2 after formatting
+		p1Dec := d(p1Str)
+		p2Dec := d(p2Str)
+		if p1Dec.GreaterThanOrEqual(p2Dec) {
+			p1Str, p2Str = p2Str, p1Str
+			p1Dec = d(p1Str) // Reload after swap
 		}
 
 		sz1 := rapid.IntRange(1, 100).Draw(rt, "sz1")
@@ -412,8 +427,8 @@ func TestSweepGreedyProperty(t *testing.T) {
 
 		o := buy(fmt.Sprintf("%d", qty))
 		cand := cand(kalshiID, nil, []canonical.Level{
-			lv(fmt.Sprintf("%.4f", p1), fmt.Sprintf("%d", sz1)),
-			lv(fmt.Sprintf("%.4f", p2), fmt.Sprintf("%d", sz2)),
+			lv(p1Str, fmt.Sprintf("%d", sz1)),
+			lv(p2Str, fmt.Sprintf("%d", sz2)),
 		}, nil)
 
 		legs := Sweep(o, []canonical.Candidate{cand}, cfg)
@@ -428,9 +443,9 @@ func TestSweepGreedyProperty(t *testing.T) {
 		if totalFilled.GreaterThan(availableAtP1) {
 			vwap := legs[0].VWAP
 			// VWAP must be > p1 (consumed into more expensive p2)
-			if vwap.LessThanOrEqual(d(fmt.Sprintf("%.4f", p1))) {
-				rt.Fatalf("filled %s (> %s), but VWAP %s <= p1 %.4f",
-					totalFilled, availableAtP1, vwap, p1)
+			if vwap.LessThanOrEqual(p1Dec) {
+				rt.Fatalf("filled %s (> %s), but VWAP %s <= p1 %s",
+					totalFilled, availableAtP1, vwap, p1Str)
 			}
 		}
 
