@@ -114,7 +114,7 @@ func TestSmoke_DemoPath(t *testing.T) {
 
 	// 8. GET /pairs/{id} shows the diff table.
 	body = get(t, client, site.URL+"/pairs/"+strconv.FormatInt(pairID, 10))
-	if !strings.Contains(body, `<table class="diff">`) {
+	if !strings.Contains(body, `<table class="data diff">`) {
 		t.Fatal("GET /pairs/{id}: no diff table")
 	}
 	if n := strings.Count(body, `<tr class="diff-`); n == 0 {

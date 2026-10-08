@@ -2,8 +2,10 @@ package web
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
@@ -14,24 +16,40 @@ import (
 // the touch on each venue and the route form (US-02).
 type pairPage struct {
 	page
-	ID          int64
-	Type        string
-	TypeLabel   string
-	Confidence  string
-	Method      string
-	Explanation string
-	A, B        instrumentView
-	QuoteA      touchView
-	QuoteB      touchView
-	Diff        []canonical.FieldDiff
-	Vetoes      []canonical.Veto
-	Facts       []canonical.FactUse
-	BasisRisk   *canonical.BasisRisk
-	NearMiss    bool // a stored related pair: shown with the veto that fired
-	Types       []typeView
-	History     historyChart
-	LogEntries  []logEntryView
-	Form        routeFormView
+	ID             int64
+	Type           string
+	TypeLabel      string
+	TypeChipClass  string // UI-04: chip class for the type
+	Confidence     string
+	ConfidenceWord string // UI-04: bucket word
+	Method         string
+	BasisRiskScore string // UI-04: score as string or "not scored"
+	BasisRiskWord  string // UI-04: bucket word
+	Routable       bool   // UI-04: yes/no in the strip
+	VetoHeading    string // UI-04: heading variant
+	Explanation    string
+	A, B           instrumentView
+	QuoteA         touchView
+	QuoteB         touchView
+	DiffRows       []diffRowView // UI-04: diff with annotations
+	Vetoes         []canonical.Veto
+	Facts          []canonical.FactUse
+	BasisRisk      *canonical.BasisRisk
+	NearMiss       bool // a stored related pair: shown with the veto that fired
+	Types          []typeView
+	History        historyChart
+	LogEntries     []logEntryView
+	Form           routeFormView
+}
+
+// diffRowView is one diff row with annotations for vetoes and facts (UI-04).
+type diffRowView struct {
+	Field      string
+	A          string
+	B          string
+	Status     string // "match", "differ", "unknown"
+	StatusText string // status word with color token
+	Annotation string // veto or fact annotation, or empty
 }
 
 // typeView is one relationship type for the legend on the pair page.
@@ -129,13 +147,52 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 	tz := timezoneFromRequest(r)
 	viewA, viewB := views[rel.AID], views[rel.BID]
 	viewA.Tz, viewB.Tz = tz, tz
+
+	// UI-04: build diff rows with veto and fact annotations
+	diffRows := buildDiffRows(rel)
+
+	// UI-04: veto heading variant
+	vetoHeading := ""
+	if len(rel.Vetoes) > 0 {
+		if rel.Type == canonical.RelEquivalentGivenFacts {
+			vetoHeading = fmt.Sprintf("%d term differences, closed by facts", len(rel.Vetoes))
+		} else {
+			vetoHeading = fmt.Sprintf("Vetoes (%d): each blocks equivalent", len(rel.Vetoes))
+		}
+	}
+
+	// UI-04: basis risk score and word
+	basisRiskScore := ""
+	basisRiskWord := BasisRiskWord(rel.BasisRisk)
+	if rel.BasisRisk != nil {
+		basisRiskScore = rel.BasisRisk.Score.StringFixed(2) + " " + basisRiskWord
+	} else {
+		basisRiskScore = basisRiskWord
+	}
+
 	data := pairPage{
-		page: s.pageBase(round, "Pair "+r.PathValue("id"), "Why does Equinox think these two contracts are, or are not, the same bet, and where would an order fill best?", tz),
-		ID:   rel.ID, Type: string(rel.Type), TypeLabel: typeLabels[rel.Type], Confidence: rel.Confidence.StringFixed(2),
-		Method: string(rel.Method), Explanation: rel.Explanation, A: viewA, B: viewB,
-		Diff: rel.Diff, Vetoes: rel.Vetoes, Facts: rel.FactsUsed, BasisRisk: rel.BasisRisk,
-		NearMiss: rel.Type == canonical.RelRelated, Types: allTypeViews(),
-		Form: defaultRouteForm(rel),
+		page:           s.pageBase(round, "Pair "+r.PathValue("id"), "Why does Equinox think these two contracts are, or are not, the same bet, and where would an order fill best?", tz),
+		ID:             rel.ID,
+		Type:           string(rel.Type),
+		TypeLabel:      typeLabels[rel.Type],
+		TypeChipClass:  TypeChipClass(rel.Type), // UI-04
+		Confidence:     rel.Confidence.StringFixed(2),
+		ConfidenceWord: ConfidenceWord(rel.Confidence), // UI-04
+		Method:         string(rel.Method),
+		BasisRiskScore: basisRiskScore,      // UI-04
+		BasisRiskWord:  basisRiskWord,       // UI-04
+		Routable:       rel.Type.Routable(), // UI-04
+		VetoHeading:    vetoHeading,         // UI-04
+		Explanation:    rel.Explanation,
+		A:              viewA,
+		B:              viewB,
+		DiffRows:       diffRows, // UI-04
+		Vetoes:         rel.Vetoes,
+		Facts:          rel.FactsUsed,
+		BasisRisk:      rel.BasisRisk,
+		NearMiss:       rel.Type == canonical.RelRelated,
+		Types:          allTypeViews(),
+		Form:           defaultRouteForm(rel),
 	}
 	points, err := st.QuoteHistory(ctx, []string{rel.AID, rel.BID}, maxHistoryPt)
 	if err != nil {
@@ -169,6 +226,52 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 		q.dest.Tz = tz
 	}
 	s.render(w, http.StatusOK, "pair", data)
+}
+
+// buildDiffRows maps vetoes and facts onto diff rows by term name (UI-04).
+func buildDiffRows(rel canonical.Relationship) []diffRowView {
+	rows := make([]diffRowView, 0, len(rel.Diff))
+
+	// Build veto map by field
+	vetoByField := make(map[string]canonical.Veto)
+	for _, v := range rel.Vetoes {
+		vetoByField[v.Field] = v
+	}
+
+	// Build fact list for equivalent_given_facts annotation
+	var factsList string
+	if rel.Type == canonical.RelEquivalentGivenFacts && len(rel.FactsUsed) > 0 {
+		factPairs := make([]string, 0, len(rel.FactsUsed))
+		for _, f := range rel.FactsUsed {
+			factPairs = append(factPairs, fmt.Sprintf("%s=%s", f.Key, f.Value))
+		}
+		factsList = strings.Join(factPairs, ", ")
+	}
+
+	for _, d := range rel.Diff {
+		row := diffRowView{
+			Field:      d.Field,
+			A:          d.A,
+			B:          d.B,
+			Status:     string(d.Status),
+			StatusText: string(d.Status),
+		}
+
+		// Add veto annotation if present
+		if veto, ok := vetoByField[d.Field]; ok {
+			if factsList != "" {
+				// For pairs with facts, show all facts
+				row.Annotation = fmt.Sprintf("veto %s, closed by facts: %s", veto.Code, factsList)
+			} else {
+				// For other types or pairs without facts, just show the veto
+				row.Annotation = fmt.Sprintf("veto %s", veto.Code)
+			}
+		}
+
+		rows = append(rows, row)
+	}
+
+	return rows
 }
 
 // quoteFor builds the router's view of an instrument's book in a round. A

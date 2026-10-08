@@ -1,5 +1,14 @@
 {{define "content"}}
-<h1>Pair #{{.ID}}: <span class="type-{{.Type}}">{{.Type}}</span> <small>confidence {{.Confidence}}, {{.Method}}</small></h1>
+<h1>Pair #{{.ID}}</h1>
+<dl class="strip">
+  <div><dt>Type</dt><dd><span class="chip {{.TypeChipClass}}">{{.Type}}</span></dd></div>
+  <div><dt>Confidence</dt><dd>{{.Confidence}} {{.ConfidenceWord}}</dd></div>
+  <div><dt>Method</dt><dd>{{.Method}}</dd></div>
+  <div><dt>Basis risk</dt><dd>{{.BasisRiskScore}}</dd></div>
+  <div><dt>Routable</dt><dd>{{if .Routable}}yes{{else}}no{{end}}</dd></div>
+  <div><dt>Round</dt><dd>{{.Round.ID}}, as of {{.Round.AsOf}}</dd></div>
+  <div><dt></dt><dd><a href="#route">Route an order ↓</a></dd></div>
+</dl>
 <p>{{.TypeLabel}}{{if .NearMiss}} This pair is a <a href="/near-misses">near miss</a>: {{if .Vetoes}}a hard veto fired{{else}}no veto fired, but the external fact consulted did not close the gap{{end}}.{{end}}</p>
 <details class="types">
   <summary>The full set of relationship types</summary>
@@ -14,23 +23,33 @@
   </div>
 </section>
 
-<section>
-  <h2>Why: the explanation</h2>
-  <p class="explanation">{{.Explanation}}</p>
+<section id="diff">
+  <h2>Contract diff</h2>
+  <p>Every term the normaliser extracted, side by side. <em>unknown</em> means a term could not be parsed on at least one side; it is never guessed.</p>
+  <table class="data diff">
+    <thead><tr><th>Term</th><th>A: {{.A.Venue}}</th><th>B: {{.B.Venue}}</th><th>Status</th></tr></thead>
+    <tbody>
+    {{range .DiffRows}}<tr class="diff-{{.Status}}"><td>{{.Field}}</td><td>{{.A}}</td><td>{{.B}}</td><td>{{.StatusText}}{{if .Annotation}} <small>{{.Annotation}}</small>{{end}}</td></tr>{{end}}
+    {{if not .DiffRows}}<tr><td colspan="4">No diff was stored for this pair.</td></tr>{{end}}
+    </tbody>
+  </table>
   {{if .Vetoes}}
-  <h3>Vetoes ({{len .Vetoes}})</h3>
-  <p>Each veto on its own blocks <em>equivalent</em>.</p>
-  <table>
+  <h3>{{.VetoHeading}}</h3>
+  {{if eq .Type "equivalent_given_facts"}}<p>These term differences exist, but documented external facts close them.</p>{{else}}<p>Each veto on its own blocks <em>equivalent</em>.</p>{{end}}
+  <table class="data">
     <thead><tr><th>Code</th><th>Term</th><th>Detail</th></tr></thead>
     <tbody>{{range .Vetoes}}<tr><td><code>{{.Code}}</code></td><td>{{.Field}}</td><td>{{.Detail}}</td></tr>{{end}}</tbody>
   </table>
   {{else}}
   <p>No vetoes.</p>
   {{end}}
+</section>
+
+<section>
   <h3>External facts {{if .Facts}}consulted ({{len .Facts}}){{else}}consulted{{end}}</h3>
   {{if .Facts}}
   <p>Each fact is reviewed data from <code>config/facts.yaml</code> (FR-10). For <em>equivalent_given_facts</em> the verdict rests on them; for a <em>related</em> verdict they are the facts that were tried and did not close the gap.</p>
-  <table class="facts">
+  <table class="data facts">
     <thead><tr><th>Fact</th><th>Value</th><th>Source</th><th>As of</th></tr></thead>
     <tbody>{{range .Facts}}<tr><td><code>{{.Key}}</code></td><td>{{.Value}}</td><td>{{with httpURL .Source}}<a href="{{.}}" rel="noopener noreferrer">{{.}}</a>{{else}}{{.Source}}{{end}}</td><td>{{formatTime .AsOf $.Timezone}}</td></tr>{{end}}</tbody>
   </table>
@@ -40,33 +59,18 @@
   <h3>Basis risk{{if .BasisRisk}}: {{conf .BasisRisk.Score}}{{end}}</h3>
   {{if .BasisRisk}}
   <p>The residual chance that the two contracts settle differently even though they are matched, as a score in [0,1] built from documented components (FR-11). The router charges it as a per-contract penalty.</p>
-  <table class="basis">
+  <table class="data basis">
     <thead><tr><th>Component</th><th>Score</th><th>Detail</th></tr></thead>
     <tbody>{{range .BasisRisk.Components}}<tr><td><code>{{.Name}}</code></td><td>{{conf .Score}}</td><td>{{.Detail}}</td></tr>{{end}}</tbody>
   </table>
   {{else}}
   <p>Not scored for this pair. Basis risk is computed for routable and implication verdicts by matcher v1 (pairs matched earlier have none stored); <em>related</em> and <em>unrelated</em> pairs are never scored.</p>
   {{end}}
-  {{if .LogEntries}}
-  <h3>Decision-log entries for this pair</h3>
-  <table class="log">
-    <thead><tr><th>When</th><th>Kind</th><th>Summary</th></tr></thead>
-    <tbody>{{range .LogEntries}}<tr><td><small>{{formatTime .At $.Timezone}}</small></td><td><code>{{.Kind}}</code></td><td class="summary">{{.Summary}}</td></tr>{{end}}</tbody>
-  </table>
-  <p><a href="/log">Full decision log</a></p>
-  {{end}}
 </section>
 
 <section>
-  <h2>Contract diff</h2>
-  <p>Every term the normaliser extracted, side by side. <em>unknown</em> means a term could not be parsed on at least one side; it is never guessed.</p>
-  <table class="diff">
-    <thead><tr><th>Term</th><th>A: {{.A.Venue}}</th><th>B: {{.B.Venue}}</th><th>Status</th></tr></thead>
-    <tbody>
-    {{range .Diff}}<tr class="diff-{{.Status}}"><td>{{.Field}}</td><td>{{.A}}</td><td>{{.B}}</td><td>{{.Status}}</td></tr>{{end}}
-    {{if not .Diff}}<tr><td colspan="4">No diff was stored for this pair.</td></tr>{{end}}
-    </tbody>
-  </table>
+  <h2>Why: the explanation</h2>
+  <p class="explanation">{{.Explanation}}</p>
 </section>
 
 <section>
@@ -85,6 +89,17 @@
   <h2>Price history</h2>
   {{template "history" .History}}
 </section>
+
+{{if .LogEntries}}
+<section>
+  <h3>Decision-log entries for this pair</h3>
+  <table class="data log">
+    <thead><tr><th>When</th><th>Kind</th><th>Summary</th></tr></thead>
+    <tbody>{{range .LogEntries}}<tr><td><small>{{formatTime .At $.Timezone}}</small></td><td><code>{{.Kind}}</code></td><td class="summary">{{.Summary}}</td></tr>{{end}}</tbody>
+  </table>
+  <p><a href="/log">Full decision log</a></p>
+</section>
+{{end}}
 
 <section id="route">
   <h2>Route a hypothetical order</h2>
