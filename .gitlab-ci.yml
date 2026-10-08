@@ -1,5 +1,8 @@
 # Equinox CI (D-047). Every MR pipeline and every main pipeline runs all gates;
 # scheduled pipelines run only log-freshness. Go image = go.mod toolchain version.
+# MR pipelines are manual (shared-GitLab load): every MR job waits on the manual
+# `ci-gate` job, which the operator plays once, after local tests pass and Cursor
+# approves the head. Main-branch and scheduled pipelines still start automatically.
 
 workflow:
   rules:
@@ -21,6 +24,19 @@ default:
   image: golang:1.27.1
   interruptible: true
 
+# One manual click per MR pipeline. Absent on main and schedule pipelines, so the
+# `optional: true` needs below are then ignored and those jobs run as before.
+ci-gate:
+  stage: .pre
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: manual
+  allow_failure: false
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - echo "MR pipeline started by the operator."
+
 .go:
   stage: check
   rules:
@@ -33,7 +49,9 @@ default:
       - .go/pkg/mod/
       - .cache/go-build/
       - bin/
-  needs: []
+  needs:
+    - job: ci-gate
+      optional: true
 
 # Throwaway CI-only Postgres (docs/environment.md: CI never uses real secrets).
 .postgres:
@@ -97,7 +115,9 @@ gitleaks:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"
   variables:
     GIT_DEPTH: "0"
-  needs: []
+  needs:
+    - job: ci-gate
+      optional: true
   script:
     - git config --global --add safe.directory "$CI_PROJECT_DIR"
     - gitleaks git --redact --verbose --no-banner --config .gitleaks.toml .
@@ -108,7 +128,9 @@ guard-human-files:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
   variables:
     GIT_DEPTH: "0"
-  needs: []
+  needs:
+    - job: ci-gate
+      optional: true
   script:
     - bash scripts/guard-human-files.sh
 
