@@ -27,7 +27,224 @@
 # catch the matcher being wrong. Copy a_id and b_id exactly. Each pair appears
 # once. Then run `equinox eval` (or `make eval`).
 #
-# This file ships with NO labels: nothing below was invented by tooling.
+# Provenance of the entries below (2026-10-07): the operator checked each pair
+# against both venues' official rules text (Kalshi trade API rules_primary and
+# rules_secondary, plus the series contract terms; Polymarket Gamma description
+# and resolution source) and, for the Fed pairs, against federalreserve.gov.
+# Paawan Desai approved the labels in operator chat on 2026-10-07 8:38 PM CT,
+# conditional on that rules check, and reports he personally spot-checked them
+# (8:44 PM CT). He did not read every pair line by line. Only the pairs whose
+# proposed label the rules check CONFIRMED are here. Corrected pairs and new
+# drafts are in labels.proposed.yaml and wait for his review.
 version: 1
-round_id: 0
-labels: []
+round_id: 2
+labels:
+  # --- fed / equivalent_given_facts
+  - a_id: kalshi:KXFED-26OCT-T4.25
+    b_id: polymarket:18246296022868501258060085368606280205967114341141276439803424448463050819498
+    label: equivalent_given_facts
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Kalshi: upper bound above 4.25% following the Oct 28, 2026 meeting (federalreserve.gov). Polymarket: change in the upper bound vs the level before the Oct 27-28 meeting is +50 bps or more, off-grid changes rounded up to the next 25 bps. Given fed_upper_bound=4.00, PM YES iff the change is above +25 bps iff the new upper bound is above 4.25%: the same set, even off the 25 bp grid. Edge: no statement means PM 'No change' and Kalshi reads an unchanged 4.00%, both NO. Rests on fed_upper_bound=4.00 staying current until Oct 28. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXFED-26OCT-T4.25) and Polymarket Gamma description (market 2589814, 'Fed Decision in October?'), plus federalreserve.gov monetary20260916a and openmarket.htm (target range 3.75-4.00 since 2026-09-17, unchanged as of 2026-10-07). Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  # --- fed / complement
+  - a_id: kalshi:KXFED-26OCT-T3.50
+    b_id: polymarket:17010377994663817312158123655937348199252960045746746128731746451645055725586
+    label: complement
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Kalshi: upper bound above 3.50% following the Oct 28, 2026 meeting. Polymarket: cut of 50 bps or more (any cut above 25 bps after the round-up rule), i.e. new upper bound below 3.75% given fed_upper_bound=4.00. On the 25 bp grid (fed_rate_step) Kalshi YES (at least 3.75%) is exactly PM NO. Caveat: an off-grid cut to e.g. 3.60% would make both YES; the matcher's candidate entry does not list fed_rate_step for this pair. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXFED-26OCT-T3.50) and Polymarket Gamma description (market 2589810, 'Fed Decision in October?'), plus federalreserve.gov monetary20260916a and openmarket.htm (target range 3.75-4.00 since 2026-09-17, unchanged as of 2026-10-07). Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  # --- fed / implies
+  - a_id: kalshi:KXFED-26OCT-T2.75
+    b_id: polymarket:111061902544814266207267295505639408607400625795891618462682726460921782993748
+    label: implies
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Given fed_upper_bound=4.00, PM 'no change' YES means the new upper bound is exactly 4.00%, which is above 2.75%, so PM YES forces Kalshi 'above 2.75% after Oct 28, 2026' YES; Kalshi YES also covers other buckets, so not the reverse. Holds off the 25 bp grid too. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXFED-26OCT-T2.75) and Polymarket Gamma description (market 2589812, 'Fed Decision in October?'), plus federalreserve.gov monetary20260916a and openmarket.htm (target range 3.75-4.00 since 2026-09-17, unchanged as of 2026-10-07). Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXFED-26OCT-T3.00
+    b_id: polymarket:33268510350568915228897273528353467773422190590579607471427765079749830445947
+    label: implies
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Given fed_upper_bound=4.00, PM '-25 bps' YES means the cut is in (0, 25] bps after the round-up rule, so the new upper bound is in [3.75, 4.00)%, which is above 3.00%, so PM YES forces Kalshi 'above 3.00% after Oct 28, 2026' YES; Kalshi YES also covers other buckets, so not the reverse. Holds off the 25 bp grid too. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXFED-26OCT-T3.00) and Polymarket Gamma description (market 2589811, 'Fed Decision in October?'), plus federalreserve.gov monetary20260916a and openmarket.htm (target range 3.75-4.00 since 2026-09-17, unchanged as of 2026-10-07). Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXFED-26OCT-T3.25
+    b_id: polymarket:55159722761418013044126414276680602270318000841690689684819994448621694923050
+    label: implies
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Given fed_upper_bound=4.00, PM '+25 bps' YES means the change is in (0, +25] bps after the round-up rule, so the new upper bound is in (4.00, 4.25]%, which is above 3.25%, so PM YES forces Kalshi 'above 3.25% after Oct 28, 2026' YES; Kalshi YES also covers other buckets, so not the reverse. Holds off the 25 bp grid too. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXFED-26OCT-T3.25) and Polymarket Gamma description (market 2589813, 'Fed Decision in October?'), plus federalreserve.gov monetary20260916a and openmarket.htm (target range 3.75-4.00 since 2026-09-17, unchanged as of 2026-10-07). Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXFED-26OCT-T2.75
+    b_id: polymarket:18246296022868501258060085368606280205967114341141276439803424448463050819498
+    label: implies
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Given fed_upper_bound=4.00, PM '+50 bps or more' YES means the change is above +25 bps after the round-up rule, so the new upper bound is above 4.25%, which is above 2.75%, so PM YES forces Kalshi 'above 2.75% after Oct 28, 2026' YES; Kalshi YES also covers other buckets, so not the reverse. Holds off the 25 bp grid too. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXFED-26OCT-T2.75) and Polymarket Gamma description (market 2589814, 'Fed Decision in October?'), plus federalreserve.gov monetary20260916a and openmarket.htm (target range 3.75-4.00 since 2026-09-17, unchanged as of 2026-10-07). Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXFED-26OCT-T2.75
+    b_id: polymarket:33268510350568915228897273528353467773422190590579607471427765079749830445947
+    label: implies
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Given fed_upper_bound=4.00, PM '-25 bps' YES means the cut is in (0, 25] bps after the round-up rule, so the new upper bound is in [3.75, 4.00)%, which is above 2.75%, so PM YES forces Kalshi 'above 2.75% after Oct 28, 2026' YES; Kalshi YES also covers other buckets, so not the reverse. Holds off the 25 bp grid too. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXFED-26OCT-T2.75) and Polymarket Gamma description (market 2589811, 'Fed Decision in October?'), plus federalreserve.gov monetary20260916a and openmarket.htm (target range 3.75-4.00 since 2026-09-17, unchanged as of 2026-10-07). Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXFED-26OCT-T2.75
+    b_id: polymarket:55159722761418013044126414276680602270318000841690689684819994448621694923050
+    label: implies
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Given fed_upper_bound=4.00, PM '+25 bps' YES means the change is in (0, +25] bps after the round-up rule, so the new upper bound is in (4.00, 4.25]%, which is above 2.75%, so PM YES forces Kalshi 'above 2.75% after Oct 28, 2026' YES; Kalshi YES also covers other buckets, so not the reverse. Holds off the 25 bp grid too. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXFED-26OCT-T2.75) and Polymarket Gamma description (market 2589813, 'Fed Decision in October?'), plus federalreserve.gov monetary20260916a and openmarket.htm (target range 3.75-4.00 since 2026-09-17, unchanged as of 2026-10-07). Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXFED-26OCT-T3.00
+    b_id: polymarket:111061902544814266207267295505639408607400625795891618462682726460921782993748
+    label: implies
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Given fed_upper_bound=4.00, PM 'no change' YES means the new upper bound is exactly 4.00%, which is above 3.00%, so PM YES forces Kalshi 'above 3.00% after Oct 28, 2026' YES; Kalshi YES also covers other buckets, so not the reverse. Holds off the 25 bp grid too. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXFED-26OCT-T3.00) and Polymarket Gamma description (market 2589812, 'Fed Decision in October?'), plus federalreserve.gov monetary20260916a and openmarket.htm (target range 3.75-4.00 since 2026-09-17, unchanged as of 2026-10-07). Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXFED-26OCT-T3.00
+    b_id: polymarket:18246296022868501258060085368606280205967114341141276439803424448463050819498
+    label: implies
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Given fed_upper_bound=4.00, PM '+50 bps or more' YES means the change is above +25 bps after the round-up rule, so the new upper bound is above 4.25%, which is above 3.00%, so PM YES forces Kalshi 'above 3.00% after Oct 28, 2026' YES; Kalshi YES also covers other buckets, so not the reverse. Holds off the 25 bp grid too. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXFED-26OCT-T3.00) and Polymarket Gamma description (market 2589814, 'Fed Decision in October?'), plus federalreserve.gov monetary20260916a and openmarket.htm (target range 3.75-4.00 since 2026-09-17, unchanged as of 2026-10-07). Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXFED-26OCT-T3.00
+    b_id: polymarket:55159722761418013044126414276680602270318000841690689684819994448621694923050
+    label: implies
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Given fed_upper_bound=4.00, PM '+25 bps' YES means the change is in (0, +25] bps after the round-up rule, so the new upper bound is in (4.00, 4.25]%, which is above 3.00%, so PM YES forces Kalshi 'above 3.00% after Oct 28, 2026' YES; Kalshi YES also covers other buckets, so not the reverse. Holds off the 25 bp grid too. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXFED-26OCT-T3.00) and Polymarket Gamma description (market 2589813, 'Fed Decision in October?'), plus federalreserve.gov monetary20260916a and openmarket.htm (target range 3.75-4.00 since 2026-09-17, unchanged as of 2026-10-07). Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXFED-26OCT-T3.25
+    b_id: polymarket:111061902544814266207267295505639408607400625795891618462682726460921782993748
+    label: implies
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Given fed_upper_bound=4.00, PM 'no change' YES means the new upper bound is exactly 4.00%, which is above 3.25%, so PM YES forces Kalshi 'above 3.25% after Oct 28, 2026' YES; Kalshi YES also covers other buckets, so not the reverse. Holds off the 25 bp grid too. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXFED-26OCT-T3.25) and Polymarket Gamma description (market 2589812, 'Fed Decision in October?'), plus federalreserve.gov monetary20260916a and openmarket.htm (target range 3.75-4.00 since 2026-09-17, unchanged as of 2026-10-07). Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXFED-26OCT-T3.25
+    b_id: polymarket:18246296022868501258060085368606280205967114341141276439803424448463050819498
+    label: implies
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Given fed_upper_bound=4.00, PM '+50 bps or more' YES means the change is above +25 bps after the round-up rule, so the new upper bound is above 4.25%, which is above 3.25%, so PM YES forces Kalshi 'above 3.25% after Oct 28, 2026' YES; Kalshi YES also covers other buckets, so not the reverse. Holds off the 25 bp grid too. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXFED-26OCT-T3.25) and Polymarket Gamma description (market 2589814, 'Fed Decision in October?'), plus federalreserve.gov monetary20260916a and openmarket.htm (target range 3.75-4.00 since 2026-09-17, unchanged as of 2026-10-07). Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXFED-26OCT-T3.25
+    b_id: polymarket:33268510350568915228897273528353467773422190590579607471427765079749830445947
+    label: implies
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Given fed_upper_bound=4.00, PM '-25 bps' YES means the cut is in (0, 25] bps after the round-up rule, so the new upper bound is in [3.75, 4.00)%, which is above 3.25%, so PM YES forces Kalshi 'above 3.25% after Oct 28, 2026' YES; Kalshi YES also covers other buckets, so not the reverse. Holds off the 25 bp grid too. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXFED-26OCT-T3.25) and Polymarket Gamma description (market 2589811, 'Fed Decision in October?'), plus federalreserve.gov monetary20260916a and openmarket.htm (target range 3.75-4.00 since 2026-09-17, unchanged as of 2026-10-07). Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXFED-26OCT-T3.50
+    b_id: polymarket:111061902544814266207267295505639408607400625795891618462682726460921782993748
+    label: implies
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Given fed_upper_bound=4.00, PM 'no change' YES means the new upper bound is exactly 4.00%, which is above 3.50%, so PM YES forces Kalshi 'above 3.50% after Oct 28, 2026' YES; Kalshi YES also covers other buckets, so not the reverse. Holds off the 25 bp grid too. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXFED-26OCT-T3.50) and Polymarket Gamma description (market 2589812, 'Fed Decision in October?'), plus federalreserve.gov monetary20260916a and openmarket.htm (target range 3.75-4.00 since 2026-09-17, unchanged as of 2026-10-07). Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXFED-26OCT-T3.50
+    b_id: polymarket:18246296022868501258060085368606280205967114341141276439803424448463050819498
+    label: implies
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Given fed_upper_bound=4.00, PM '+50 bps or more' YES means the change is above +25 bps after the round-up rule, so the new upper bound is above 4.25%, which is above 3.50%, so PM YES forces Kalshi 'above 3.50% after Oct 28, 2026' YES; Kalshi YES also covers other buckets, so not the reverse. Holds off the 25 bp grid too. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXFED-26OCT-T3.50) and Polymarket Gamma description (market 2589814, 'Fed Decision in October?'), plus federalreserve.gov monetary20260916a and openmarket.htm (target range 3.75-4.00 since 2026-09-17, unchanged as of 2026-10-07). Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  # --- crypto / related
+  - a_id: kalshi:KXBTCD-26OCT0618-T76699.99
+    b_id: polymarket:100185403350267155386341199712915055705179878891606575463769617454294511388358
+    label: related
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Kalshi: 60-second average of CF Benchmarks BRTI before 6 PM EDT Oct 6, 2026 above 76699.99. Polymarket: Binance BTC/USDT 1-minute candle close at 12:00 ET on the date in the title above the title price. Different source, different instant (90 h apart) and a different strict threshold; no payout constraint links them. Labelled related per equivalence.md §1-§2: the pair passes blocking (same subject, deadlines within ±7 days) and its vetoes cannot be derived away; a pair that fails blocking is unrelated. Never routable. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXBTCD-26OCT0618-T76699.99) and Polymarket Gamma description and resolution source (market 5238640), fetched 2026-10-07. Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXBTCD-26OCT0618-T76799.99
+    b_id: polymarket:10028560817328439091287345817781494578924455844768660780135978081903535146808
+    label: related
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Kalshi: 60-second average of CF Benchmarks BRTI before 6 PM EDT Oct 6, 2026 above 76799.99. Polymarket: Binance BTC/USDT 1-minute candle close at 12:00 ET on the date in the title above the title price. Different source, different instant (90 h apart) and a different strict threshold; no payout constraint links them. Labelled related per equivalence.md §1-§2: the pair passes blocking (same subject, deadlines within ±7 days) and its vetoes cannot be derived away; a pair that fails blocking is unrelated. Never routable. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXBTCD-26OCT0618-T76799.99) and Polymarket Gamma description and resolution source (market 5238649), fetched 2026-10-07. Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXBTCD-26OCT0618-T76899.99
+    b_id: polymarket:102213575204902074760005916744838468334765332333994096763253127452371697884776
+    label: related
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Kalshi: 60-second average of CF Benchmarks BRTI before 6 PM EDT Oct 6, 2026 above 76899.99. Polymarket: Binance BTC/USDT 1-minute candle close at 12:00 ET on the date in the title above the title price. Different source, different instant (138 h apart) and a different strict threshold; no payout constraint links them. Labelled related per equivalence.md §1-§2: the pair passes blocking (same subject, deadlines within ±7 days) and its vetoes cannot be derived away; a pair that fails blocking is unrelated. Never routable. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXBTCD-26OCT0618-T76899.99) and Polymarket Gamma description and resolution source (market 5330080), fetched 2026-10-07. Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXBTCD-26OCT0618-T76999.99
+    b_id: polymarket:103859404789311093235506940881605202929661897822734537621299315222240048152974
+    label: related
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Kalshi: 60-second average of CF Benchmarks BRTI before 6 PM EDT Oct 6, 2026 above 76999.99. Polymarket: Binance BTC/USDT 1-minute candle close at 12:00 ET on the date in the title above the title price. Different source, different instant (18 h apart) and a different strict threshold; no payout constraint links them. Labelled related per equivalence.md §1-§2: the pair passes blocking (same subject, deadlines within ±7 days) and its vetoes cannot be derived away; a pair that fails blocking is unrelated. Never routable. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXBTCD-26OCT0618-T76999.99) and Polymarket Gamma description and resolution source (market 5156709), fetched 2026-10-07. Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXBTCD-26OCT0618-T77099.99
+    b_id: polymarket:105408180158893292490017390271613327537614788203882236057777017554863813982997
+    label: related
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Kalshi: 60-second average of CF Benchmarks BRTI before 6 PM EDT Oct 6, 2026 above 77099.99. Polymarket: Binance BTC/USDT 1-minute candle close at 12:00 ET on the date in the title above the title price. Different source, different instant (90 h apart) and a different strict threshold; no payout constraint links them. Labelled related per equivalence.md §1-§2: the pair passes blocking (same subject, deadlines within ±7 days) and its vetoes cannot be derived away; a pair that fails blocking is unrelated. Never routable. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXBTCD-26OCT0618-T77099.99) and Polymarket Gamma description and resolution source (market 5238628), fetched 2026-10-07. Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXBTCD-26OCT0618-T77999.99
+    b_id: polymarket:16598363009235347286916760788518519639479429965831389385438637439430901253751
+    label: related
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Kalshi: 60-second average of CF Benchmarks BRTI before 6 PM EDT Oct 6, 2026 above 77999.99. Polymarket: Binance BTC/USDT 1-minute candle close at 12:00 ET on the date in the title above the title price. Different source, different instant (138 h apart) and a different strict threshold; no payout constraint links them. Labelled related per equivalence.md §1-§2: the pair passes blocking (same subject, deadlines within ±7 days) and its vetoes cannot be derived away; a pair that fails blocking is unrelated. Never routable. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXBTCD-26OCT0618-T77999.99) and Polymarket Gamma description and resolution source (market 5330072), fetched 2026-10-07. Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXBTCD-26OCT0618-T79999.99
+    b_id: polymarket:22248712962079319450417067102036039452563816152881685719209990911110593172178
+    label: related
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Kalshi: 60-second average of CF Benchmarks BRTI before 6 PM EDT Oct 6, 2026 above 79999.99. Polymarket: Binance BTC/USDT 1-minute candle close at 12:00 ET on the date in the title above the title price. Different source, different instant (90 h apart) and a different strict threshold; no payout constraint links them. Labelled related per equivalence.md §1-§2: the pair passes blocking (same subject, deadlines within ±7 days) and its vetoes cannot be derived away; a pair that fails blocking is unrelated. Never routable. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXBTCD-26OCT0618-T79999.99) and Polymarket Gamma description and resolution source (market 5238636), fetched 2026-10-07. Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXBTCD-26OCT0618-T81999.99
+    b_id: polymarket:58100326529466815661410944022020977939794449485588814468318733550215282047446
+    label: related
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Kalshi: 60-second average of CF Benchmarks BRTI before 6 PM EDT Oct 6, 2026 above 81999.99. Polymarket: Binance BTC/USDT 1-minute candle close at 12:00 ET on the date in the title above the title price. Different source, different instant (138 h apart) and a different strict threshold; no payout constraint links them. Labelled related per equivalence.md §1-§2: the pair passes blocking (same subject, deadlines within ±7 days) and its vetoes cannot be derived away; a pair that fails blocking is unrelated. Never routable. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXBTCD-26OCT0618-T81999.99) and Polymarket Gamma description and resolution source (market 5330077), fetched 2026-10-07. Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXBTCD-26OCT0618-T83999.99
+    b_id: polymarket:19237762638725087250431461906504177217210669994224395220619355341866160991623
+    label: related
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Kalshi: 60-second average of CF Benchmarks BRTI before 6 PM EDT Oct 6, 2026 above 83999.99. Polymarket: Binance BTC/USDT 1-minute candle close at 12:00 ET on the date in the title above the title price. Different source, different instant (66 h apart) and a different strict threshold; no payout constraint links them. Labelled related per equivalence.md §1-§2: the pair passes blocking (same subject, deadlines within ±7 days) and its vetoes cannot be derived away; a pair that fails blocking is unrelated. Never routable. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXBTCD-26OCT0618-T83999.99) and Polymarket Gamma description and resolution source (market 5207028), fetched 2026-10-07. Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXBTCD-26OCT0618-T85999.99
+    b_id: polymarket:111011310183365094358362017447202533181946750125663899150123756370710791740925
+    label: related
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Kalshi: 60-second average of CF Benchmarks BRTI before 6 PM EDT Oct 6, 2026 above 85999.99. Polymarket: Binance BTC/USDT 1-minute candle close at 12:00 ET on the date in the title above the title price. Different source, different instant (138 h apart) and a different strict threshold; no payout constraint links them. Labelled related per equivalence.md §1-§2: the pair passes blocking (same subject, deadlines within ±7 days) and its vetoes cannot be derived away; a pair that fails blocking is unrelated. Never routable. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXBTCD-26OCT0618-T85999.99) and Polymarket Gamma description and resolution source (market 5330083), fetched 2026-10-07. Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXBTCD-26OCT0618-T87999.99
+    b_id: polymarket:105589724003080100803412935658600436479802204395220085111135708089827949726481
+    label: related
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Kalshi: 60-second average of CF Benchmarks BRTI before 6 PM EDT Oct 6, 2026 above 87999.99. Polymarket: Binance BTC/USDT 1-minute candle close at 12:00 ET on the date in the title above the title price. Different source, different instant (66 h apart) and a different strict threshold; no payout constraint links them. Labelled related per equivalence.md §1-§2: the pair passes blocking (same subject, deadlines within ±7 days) and its vetoes cannot be derived away; a pair that fails blocking is unrelated. Never routable. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXBTCD-26OCT0618-T87999.99) and Polymarket Gamma description and resolution source (market 5207032), fetched 2026-10-07. Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXBTCD-26OCT0618-T89999.99
+    b_id: polymarket:12623735082940725132244113806888303048952230805983476777293815826015310613871
+    label: related
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Kalshi: 60-second average of CF Benchmarks BRTI before 6 PM EDT Oct 6, 2026 above 89999.99. Polymarket: Binance BTC/USDT 1-minute candle close at 12:00 ET on the date in the title above the title price. Different source, different instant (42 h apart) and a different strict threshold; no payout constraint links them. Labelled related per equivalence.md §1-§2: the pair passes blocking (same subject, deadlines within ±7 days) and its vetoes cannot be derived away; a pair that fails blocking is unrelated. Never routable. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXBTCD-26OCT0618-T89999.99) and Polymarket Gamma description and resolution source (market 5179267), fetched 2026-10-07. Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXBTCD-26OCT0618-T91999.99
+    b_id: polymarket:114133472419289424694347093470084941298231282893005921899014407374667805150802
+    label: related
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Kalshi: 60-second average of CF Benchmarks BRTI before 6 PM EDT Oct 6, 2026 above 91999.99. Polymarket: Binance BTC/USDT 1-minute candle close at 12:00 ET on the date in the title above the title price. Different source, different instant (162 h apart) and a different strict threshold; no payout constraint links them. Labelled related per equivalence.md §1-§2: the pair passes blocking (same subject, deadlines within ±7 days) and its vetoes cannot be derived away; a pair that fails blocking is unrelated. Never routable. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXBTCD-26OCT0618-T91999.99) and Polymarket Gamma description and resolution source (market 5377309), fetched 2026-10-07. Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXBTCD-26OCT0618-T93999.99
+    b_id: polymarket:109996532530988617378994822231191266689686464368373802860902777846614732732791
+    label: related
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Kalshi: 60-second average of CF Benchmarks BRTI before 6 PM EDT Oct 6, 2026 above 93999.99. Polymarket: Binance BTC/USDT 1-minute candle close at 12:00 ET on the date in the title above the title price. Different source, different instant (42 h apart) and a different strict threshold; no payout constraint links them. Labelled related per equivalence.md §1-§2: the pair passes blocking (same subject, deadlines within ±7 days) and its vetoes cannot be derived away; a pair that fails blocking is unrelated. Never routable. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXBTCD-26OCT0618-T93999.99) and Polymarket Gamma description and resolution source (market 5179243), fetched 2026-10-07. Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXBTCD-26OCT0717-T75999.99
+    b_id: polymarket:38763845066534679924437973749316418212546344504468860507354215523953316186679
+    label: related
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Kalshi: 60-second average of CF Benchmarks BRTI before 5 PM EDT Oct 7, 2026 above 75999.99. Polymarket: Binance BTC/USDT 1-minute candle close at 12:00 ET on the date in the title above the title price. Different source, different instant (43 h apart) and a different strict threshold; no payout constraint links them. Labelled related per equivalence.md §1-§2: the pair passes blocking (same subject, deadlines within ±7 days) and its vetoes cannot be derived away; a pair that fails blocking is unrelated. Never routable. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXBTCD-26OCT0717-T75999.99) and Polymarket Gamma description and resolution source (market 5207020), fetched 2026-10-07. Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXBTCD-26OCT0717-T77999.99
+    b_id: polymarket:2835445683557365895963410649908857115066546839275774543214248831686655490726
+    label: related
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Kalshi: 60-second average of CF Benchmarks BRTI before 5 PM EDT Oct 7, 2026 above 77999.99. Polymarket: Binance BTC/USDT 1-minute candle close at 12:00 ET on the date in the title above the title price. Different source, different instant (91 h apart) and a different strict threshold; no payout constraint links them. Labelled related per equivalence.md §1-§2: the pair passes blocking (same subject, deadlines within ±7 days) and its vetoes cannot be derived away; a pair that fails blocking is unrelated. Never routable. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXBTCD-26OCT0717-T77999.99) and Polymarket Gamma description and resolution source (market 5286491), fetched 2026-10-07. Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  # --- fed / unrelated
+  - a_id: kalshi:KXFED-26DEC-T3.50
+    b_id: polymarket:13469338817388460729834022714290521037522577154587934145079627411549531574027
+    label: unrelated
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Kalshi: upper bound above 3.50% after the Dec 9, 2026 meeting. Polymarket: upper bound (rounded to nearest 25 bps) after the Dec 7-8, 2027 meeting. Different decisions a year apart, no payout constraint between them, and the pair fails blocking (deadlines more than 7 days apart, equivalence.md §2): unrelated. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXFED-26DEC-T3.50) and Polymarket Gamma description and resolution source (market 4895205), fetched 2026-10-07. Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  - a_id: kalshi:KXFED-26DEC-T3.75
+    b_id: polymarket:61078851078420927336908319350034407566038974210410444154944749944889389332268
+    label: unrelated
+    confirmed_by: paawandesai
+    confirmed_on: 2026-10-07
+    note: "Kalshi: upper bound above 3.75% after the Dec 9, 2026 meeting. Polymarket: upper bound (rounded to nearest 25 bps) after the Dec 7-8, 2027 meeting. Different decisions a year apart, no payout constraint between them, and the pair fails blocking (deadlines more than 7 days apart, equivalence.md §2): unrelated. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXFED-26DEC-T3.75) and Polymarket Gamma description and resolution source (market 4895206), fetched 2026-10-07. Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
