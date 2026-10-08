@@ -65,6 +65,8 @@ Next operator action (Tier 2): human verification of Fed demo rendering (criteri
 
 ## In progress
 
+- M4 tickets written (docs/tickets/M4.md, GitLab issues labelled M4): M4-01 README, M4-02 ai-usage, M4-04 review-window script and M4-05 live smoke script can start now; M4-03 pin after #39 deploys; M4-06/07/08 after UI-v2 pages merge; M4-H1 is Paawan's recording.
+
 - #39 M2 follow-up: matcher misses the 6 corrected golden pairs (D-083) — MR !58 in operator review (round 4 asked for the 17 overwritten fixtures to be restored; worker steered 2026-10-08 17:30 UTC).
 - UI-09 (#41): Claude Design v2 approved by Paawan 2026-10-08 1:41 PM CT (D-098, with three calls). Design committed under `docs/design/claude-design-v2/` and the build tickets UI-10..UI-26 written in `docs/tickets/UI-v2.md`, all in one docs MR. Workers start once that MR merges: UI-10 (design system) and UI-25 (router stores inputs) first, then dependency-ready tickets, Sonnet, max 3.
 - Golden labels (Q-7 / D-083): human item.
@@ -102,6 +104,8 @@ None.
 | D-084 | Q-7: labels.yaml added to guard-human-files.sh. The test that required an empty labels.yaml now checks the schema, provenance and that each label has a note. Tier 2. | 2026-10-07 |
 | D-097 | UI-08 follow-up (issue #40): llm_verify_last_run singleton table persists last LLM verify run summary (verified, downgraded, cache_hits, ran_at). Admin page shows "last run" state (chip-info); /admin/llm-verify redirects for browser posts. State precedence: disabled > cap_reached > last_run > ready. Migration 0002. Tier 2 schema change. | 2026-10-08 |
 | D-099 | Router stores input quotes with each decision (UI-25, D-098 call 3). `canonical.Decision` gains `Inputs []DecisionInput` (venue, instrument id, relationship type `"self"` for target, confidence at decision time, outcome side, best ask, ask depth capped at 10 levels, quote times, round id). Stored as optional jsonb field; no SQL migration. Old decisions decode with empty Inputs. | 2026-10-08 |
+| D-101 | M4-04: Cloud Run `min-instances=1` for the review window and the revert (`scripts/review-window.sh`); window, cost estimate and dry-run filled in by the M4-04 MR. Tier 2 (prod config, cost). Number reserved by the M4 tickets MR. | 2026-10-08 |
+| D-102 | M4-07: final production deploy of `main` for submission; sha, revision and smoke output filled in by the M4-07 MR. Tier 2 (prod deploy). Number reserved by the M4 tickets MR. | 2026-10-08 |
 
 ## Kept decisions (veto closed)
 

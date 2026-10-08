@@ -109,9 +109,10 @@ func TestKalshiFetchInstrumentsFixtures(t *testing.T) {
 	if err != nil {
 		t.Fatalf("FetchInstruments: %v", err)
 	}
-	// 318 KXBTCD + 390 KXETHD + 247 KXFED markets, and 31 KXPRESPERSON + 48
-	// KXPRESNOMD + 39 KXPRESNOMR (M2-02), were recorded, none MVE.
-	const wantCount = 318 + 390 + 247 + 31 + 48 + 39
+	// 318 KXBTCD + 390 KXETHD + 247 KXFED + 55 KXFEDDECISION + 21 KXRATECUTCOUNT
+	// + 1 KXRATECUT markets, and 31 KXPRESPERSON + 48 KXPRESNOMD + 39 KXPRESNOMR
+	// (M2-02), were recorded, none MVE.
+	const wantCount = 318 + 390 + 247 + 55 + 21 + 1 + 31 + 48 + 39
 	if len(ins) != wantCount {
 		t.Errorf("got %d instruments, want %d", len(ins), wantCount)
 	}
@@ -119,6 +120,9 @@ func TestKalshiFetchInstrumentsFixtures(t *testing.T) {
 		"/events?series_ticker=KXBTCD&status=open&with_nested_markets=true&limit=200",
 		"/events?series_ticker=KXETHD&status=open&with_nested_markets=true&limit=200",
 		"/events?series_ticker=KXFED&status=open&with_nested_markets=true&limit=200",
+		"/events?series_ticker=KXFEDDECISION&status=open&with_nested_markets=true&limit=200",
+		"/events?series_ticker=KXRATECUTCOUNT&status=open&with_nested_markets=true&limit=200",
+		"/events?series_ticker=KXRATECUT&status=open&with_nested_markets=true&limit=200",
 		"/events?series_ticker=KXPRESPERSON&status=open&with_nested_markets=true&limit=200",
 		"/events?series_ticker=KXPRESNOMD&status=open&with_nested_markets=true&limit=200",
 		"/events?series_ticker=KXPRESNOMR&status=open&with_nested_markets=true&limit=200",
