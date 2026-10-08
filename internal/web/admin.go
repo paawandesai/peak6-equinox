@@ -293,7 +293,11 @@ func (s *Server) handleAdminLLMVerify(w http.ResponseWriter, r *http.Request) {
 	}
 	defer s.llmVerifyMutex.Unlock()
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Minute)
+	// AO review: extend write deadline to prevent client disconnect mid-run (like ingest handler)
+	const llmTimeout = 5 * time.Minute
+	_ = http.NewResponseController(w).SetWriteDeadline(s.now().Add(llmTimeout + 10*time.Second))
+	// Use WithoutCancel so client disconnect doesn't leave round partly verified
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), llmTimeout)
 	defer cancel()
 
 	// Get the current or pinned round

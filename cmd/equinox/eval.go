@@ -75,12 +75,20 @@ func runEval(ctx context.Context, args []string, stdout io.Writer) error {
 		evalMethod = canonical.MethodRules
 	case "rules+llm":
 		evalMethod = canonical.MethodRulesLLM
+		// AO review: use method-specific default to avoid overwriting rules summary
+		if *outPath == defaultSummaryFile {
+			*outPath = "config/eval_summary_llm.json"
+		}
 	default:
 		return fmt.Errorf("--method must be 'rules' or 'rules+llm'; got %q: %w", *method, errUsage)
 	}
 	labels, err := eval.LoadLabels(*labelsPath)
 	if err != nil {
 		return err
+	}
+	// AO review: reject --method rules+llm with --candidates (candidates carry rules verdicts only)
+	if evalMethod == canonical.MethodRulesLLM && *candidatesPath != "" {
+		return fmt.Errorf("--method rules+llm requires --candidates to be empty (candidates carry rules verdicts only): %w", errUsage)
 	}
 	if len(labels.Labels) == 0 {
 		if *require {
@@ -173,6 +181,10 @@ func storePredictor(ctx context.Context, st *store.Store, labels eval.Labels, fs
 		rels, err := st.ListRelationships(ctx, store.RelationshipFilter{RoundID: roundID, Limit: 10000})
 		if err != nil {
 			return nil, fmt.Errorf("loading relationships for rules+llm eval: %w", err)
+		}
+		// AO review: warn if we hit the limit (larger rounds would silently fall back to rules)
+		if len(rels) == 10000 {
+			return nil, fmt.Errorf("round %d has 10000+ relationships; increase ListRelationships limit in eval.go", roundID)
 		}
 		// Build a map of (aID, bID) -> type for rules+llm relationships
 		llmMap := make(map[string]canonical.RelationshipType)
