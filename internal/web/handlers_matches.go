@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sort"
 	"time"
@@ -17,10 +18,16 @@ const maxMatchRows = 1000
 // matchesPage is the data for matches.html.
 type matchesPage struct {
 	page
-	NoRound   bool
-	Groups    []pairGroup
-	Total     int
-	Truncated bool
+	NoRound       bool
+	Groups        []pairGroup // All groups (for legacy routes); UI-03 uses Routable, Implies, Related separately
+	Routable      []pairGroup // Routable types: equivalent, equivalent_given_facts, complement
+	Implies       *pairGroup  // Implies group (nil if empty)
+	Related       *pairGroup  // Related group (nil if empty)
+	Total         int         // Total pairs kept
+	RoutableCount int         // Count of routable pairs
+	ImpliesCount  int         // Count of implies pairs
+	RelatedCount  int         // Count of related pairs
+	Truncated     bool
 }
 
 // pairGroup is every pair of one relationship type, strongest type first.
@@ -32,13 +39,16 @@ type pairGroup struct {
 
 // pairRow is one relationship as the matches table shows it.
 type pairRow struct {
-	ID         int64
-	A, B       instrumentView
-	Type       string
-	Confidence string
-	Method     string
-	Vetoes     int
-	AsOf       time.Time // Round timestamp, formatted with formatTime in templates (M3-08)
+	ID             int64
+	A, B           instrumentView
+	Type           string
+	Confidence     string
+	ConfidenceWord string // "high", "medium", "low" from design.md § 4
+	ChipClass      string // "chip-ok", "chip-warn", etc. from TypeChipClass
+	Method         string
+	Vetoes         int
+	VetoPhrase     string    // "3 vetoes" or "closed by facts" per design.md § 6
+	AsOf           time.Time // Round timestamp, formatted with formatTime in templates (M3-08)
 }
 
 // typeLabels say what each relationship type means (domain.md), in one line.
@@ -93,6 +103,35 @@ func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
 		asOf = round.StartedAt
 	}
 	data.Groups = groupPairs(rels, views, asOf)
+
+	// UI-03: split groups into Routable (combined, sorted by confidence), Implies, Related.
+	// Routable pairs are shown as one combined group, not separated by type.
+	var routablePairs []pairRow
+	for i := range data.Groups {
+		g := &data.Groups[i]
+		typ := canonical.RelationshipType(g.Type)
+		if typ.Routable() {
+			routablePairs = append(routablePairs, g.Pairs...)
+			data.RoutableCount += len(g.Pairs)
+		} else if typ == canonical.RelImplies {
+			data.Implies = g
+			data.ImpliesCount = len(g.Pairs)
+		} else if typ == canonical.RelRelated {
+			data.Related = g
+			data.RelatedCount = len(g.Pairs)
+		}
+	}
+	// Sort all routable pairs by confidence desc, then ID (across all routable types).
+	sort.SliceStable(routablePairs, func(i, j int) bool {
+		if routablePairs[i].Confidence != routablePairs[j].Confidence {
+			return routablePairs[i].Confidence > routablePairs[j].Confidence
+		}
+		return routablePairs[i].ID < routablePairs[j].ID
+	})
+	if len(routablePairs) > 0 {
+		data.Routable = []pairGroup{{Type: "routable", Label: "Routable pairs", Pairs: routablePairs}}
+	}
+
 	s.render(w, http.StatusOK, "matches", data)
 }
 
@@ -116,9 +155,31 @@ func relationshipInstrumentIDs(rels []canonical.Relationship) []string {
 func groupPairs(rels []canonical.Relationship, views map[string]instrumentView, asOf time.Time) []pairGroup {
 	byType := make(map[canonical.RelationshipType][]pairRow)
 	for _, r := range rels {
+		// UI-03: compute veto phrase per design.md § 6.
+		vetoPhrase := ""
+		if len(r.Vetoes) > 0 {
+			if r.Type == canonical.RelEquivalentGivenFacts {
+				vetoPhrase = "closed by facts"
+			} else {
+				vetoPhrase = fmt.Sprintf("%d veto", len(r.Vetoes))
+				if len(r.Vetoes) > 1 {
+					vetoPhrase += "es"
+				}
+			}
+		}
+
 		byType[r.Type] = append(byType[r.Type], pairRow{
-			ID: r.ID, A: views[r.AID], B: views[r.BID], Type: string(r.Type), Confidence: r.Confidence.StringFixed(2),
-			Method: string(r.Method), Vetoes: len(r.Vetoes), AsOf: asOf,
+			ID:             r.ID,
+			A:              views[r.AID],
+			B:              views[r.BID],
+			Type:           string(r.Type),
+			Confidence:     r.Confidence.StringFixed(2),
+			ConfidenceWord: ConfidenceWord(r.Confidence),
+			ChipClass:      TypeChipClass(r.Type),
+			Method:         string(r.Method),
+			Vetoes:         len(r.Vetoes),
+			VetoPhrase:     vetoPhrase,
+			AsOf:           asOf,
 		})
 	}
 	var groups []pairGroup

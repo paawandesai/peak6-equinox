@@ -3,35 +3,124 @@
 {{if .NoRound}}
 <p>No completed fetch round yet, so there is nothing to compare. Run <code>equinox seed</code> (offline fixtures) or <code>equinox ingest</code>, then <code>equinox match</code>.</p>
 {{else}}
-<p>Round <strong>{{.Round.ID}}</strong>{{if .Round.Pinned}} (pinned for the demo){{end}}, as of <strong>{{.Round.AsOf}}</strong>: {{.Total}} pair{{if ne .Total 1}}s{{end}} compared and kept, grouped by relationship type, strongest first. Click a pair for the contract diff and the routing form.</p>
-{{if .Truncated}}<p><mark>Showing the first {{.Total}} pairs only.</mark></p>{{end}}
+{{/* UI-03 strip under h1: round, as of, counts, truncation */}}
+<dl class="strip">
+  <div><dt>Round</dt><dd>{{.Round.ID}}</dd></div>
+  <div><dt>As of</dt><dd>{{.Round.AsOf}}</dd></div>
+  <div><dt>Pairs kept</dt><dd>{{.Total}}</dd></div>
+  <div><dt>Routable</dt><dd><a href="#routable">{{.RoutableCount}}</a></dd></div>
+  <div><dt>Implies</dt><dd>{{.ImpliesCount}}</dd></div>
+  <div><dt>Related</dt><dd>{{.RelatedCount}}</dd></div>
+  {{if .Truncated}}<div><dt></dt><dd>showing first {{.Total}}</dd></div>{{end}}
+</dl>
+
 {{if not .Groups}}
 <p>Round {{.Round.ID}} has no stored relationships. Run <code>equinox match</code> against it.</p>
 {{end}}
-{{range .Groups}}
+
+{{/* Routable pairs: equivalent, equivalent_given_facts, complement */}}
+{{if gt .RoutableCount 0}}
 <section>
-  <h2 id="type-{{.Type}}">{{.Type}} <small>({{len .Pairs}})</small></h2>
-  <p>{{.Label}}</p>
-  <table class="pairs">
+  <h2 id="routable">Routable pairs ({{.RoutableCount}})</h2>
+  <table class="data stack">
     <thead>
-      <tr><th>Pair</th><th>Contract A</th><th>Contract B</th><th>Type</th><th>Confidence</th><th>Method</th><th>Vetoes</th><th>As of</th></tr>
+      <tr>
+        <th>Contracts</th>
+        <th>Type</th>
+        <th>Confidence</th>
+        <th>Method</th>
+        <th>Vetoes</th>
+        <th>Route</th>
+      </tr>
     </thead>
     <tbody>
-    {{range .Pairs}}
+    {{range .Routable}}
+      {{range .Pairs}}
       <tr>
-        <td><a href="/pairs/{{.ID}}">#{{.ID}}</a></td>
-        <td><span class="venue">{{.A.Venue}}</span> {{.A.Title}}</td>
-        <td><span class="venue">{{.B.Venue}}</span> {{.B.Title}}</td>
-        <td class="type-{{.Type}}">{{.Type}}</td>
-        <td>{{.Confidence}}</td>
-        <td>{{.Method}}</td>
-        <td>{{.Vetoes}}</td>
-        <td><small>{{formatTime .AsOf $.Timezone}}</small></td>
+        <td data-label="Contracts">
+          <a href="/pairs/{{.ID}}">#{{.ID}}</a><br>
+          <span class="venue">{{.A.Venue}}</span> <span class="clamp-2" title="{{.A.Title}}">{{.A.Title}}</span><br>
+          <span class="venue">{{.B.Venue}}</span> <span class="clamp-2" title="{{.B.Title}}">{{.B.Title}}</span>
+        </td>
+        <td data-label="Type"><span class="chip {{.ChipClass}}">{{.Type}}</span></td>
+        <td data-label="Confidence">{{.Confidence}} {{.ConfidenceWord}}</td>
+        <td data-label="Method">{{.Method}}</td>
+        <td data-label="Vetoes">{{if .VetoPhrase}}<a href="/pairs/{{.ID}}#diff">{{.VetoPhrase}}</a>{{else}}—{{end}}</td>
+        <td data-label="Route"><a href="/pairs/{{.ID}}#route"><strong>Route</strong></a></td>
+      </tr>
+      {{end}}
+    {{end}}
+    </tbody>
+  </table>
+</section>
+{{end}}
+
+{{/* Implies section */}}
+{{if .Implies}}
+<section>
+  <h2 id="type-implies">implies ({{.ImpliesCount}})</h2>
+  <p>{{.Implies.Label}}</p>
+  <table class="data stack">
+    <thead>
+      <tr>
+        <th>Contracts</th>
+        <th>Type</th>
+        <th>Confidence</th>
+        <th>Method</th>
+        <th>Vetoes</th>
+      </tr>
+    </thead>
+    <tbody>
+    {{range .Implies.Pairs}}
+      <tr>
+        <td data-label="Contracts">
+          <a href="/pairs/{{.ID}}">#{{.ID}}</a><br>
+          <span class="venue">{{.A.Venue}}</span> <span class="clamp-2" title="{{.A.Title}}">{{.A.Title}}</span><br>
+          <span class="venue">{{.B.Venue}}</span> <span class="clamp-2" title="{{.B.Title}}">{{.B.Title}}</span>
+        </td>
+        <td data-label="Type"><span class="chip {{.ChipClass}}">{{.Type}}</span></td>
+        <td data-label="Confidence">{{.Confidence}} {{.ConfidenceWord}}</td>
+        <td data-label="Method">{{.Method}}</td>
+        <td data-label="Vetoes">{{if .VetoPhrase}}<a href="/pairs/{{.ID}}#diff">{{.VetoPhrase}}</a>{{else}}—{{end}}</td>
       </tr>
     {{end}}
     </tbody>
   </table>
 </section>
 {{end}}
+
+{{/* Related pairs: collapsed in details */}}
+{{if .Related}}
+<details>
+  <summary>related ({{.RelatedCount}}): same event, different payout; never routed</summary>
+  <table class="data stack">
+    <thead>
+      <tr>
+        <th>Contracts</th>
+        <th>Type</th>
+        <th>Confidence</th>
+        <th>Method</th>
+        <th>Vetoes</th>
+      </tr>
+    </thead>
+    <tbody>
+    {{range .Related.Pairs}}
+      <tr>
+        <td data-label="Contracts">
+          <a href="/pairs/{{.ID}}">#{{.ID}}</a><br>
+          <span class="venue">{{.A.Venue}}</span> <span class="clamp-2" title="{{.A.Title}}">{{.A.Title}}</span><br>
+          <span class="venue">{{.B.Venue}}</span> <span class="clamp-2" title="{{.B.Title}}">{{.B.Title}}</span>
+        </td>
+        <td data-label="Type"><span class="chip {{.ChipClass}}">{{.Type}}</span></td>
+        <td data-label="Confidence">{{.Confidence}} {{.ConfidenceWord}}</td>
+        <td data-label="Method">{{.Method}}</td>
+        <td data-label="Vetoes">{{if .VetoPhrase}}<a href="/pairs/{{.ID}}#diff">{{.VetoPhrase}}</a>{{else}}—{{end}}</td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+</details>
+{{end}}
+
 {{end}}
 {{end}}

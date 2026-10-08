@@ -170,16 +170,27 @@ func TestPublicMatchesPage(t *testing.T) {
 	body := rec.Body.String()
 	wantContains(t, body,
 		"Which Kalshi and Polymarket contracts are the same bet",
-		`id="type-equivalent"`, `id="type-related"`,
+		`<h2 id="routable">Routable pairs (1)</h2>`, // UI-03: routable section with count
 		seedTitleA, seedTitleB, seedTitleC,
 		"0.97", "0.40", "2026-10-06 13:03:00 EDT", // seedNow+3min (17:03 UTC) in ET (M3-08 Cursor round 2)
 		`href="/pairs/`+strconv.FormatInt(sd.eqID, 10)+`"`,
 		`href="/pairs/`+strconv.FormatInt(sd.relID, 10)+`"`,
-		"round "+strconv.FormatInt(sd.round.ID, 10),
-		"2 pairs compared",
+		// UI-03: strip replaces the old paragraph with round info.
+		`<dt>Round</dt><dd>`+strconv.FormatInt(sd.round.ID, 10)+`</dd>`,
+		`<dt>Pairs kept</dt><dd>2</dd>`,
+		`<dt>Routable</dt><dd><a href="#routable">1</a></dd>`,
+		`<dt>Related</dt><dd>1</dd>`,
+		// UI-03: type chips and confidence words.
+		`<span class="chip chip-ok">equivalent</span>`,
+		`0.97 high`, // confidence with bucket word
+		// UI-03: related is inside <details>.
+		`<summary>related (1): same event, different payout; never routed</summary>`,
+		`<span class="chip chip-warn">related</span>`,
+		`0.40 low`,
 	)
-	if strings.Index(body, `id="type-equivalent"`) > strings.Index(body, `id="type-related"`) {
-		t.Error("equivalent group should come before related")
+	// UI-03: routable section comes before related details.
+	if strings.Index(body, `id="routable"`) > strings.Index(body, `<summary>related`) {
+		t.Error("routable section should come before related")
 	}
 	if strings.Contains(body, `id="type-unrelated"`) {
 		t.Error("empty groups must not render")
@@ -199,7 +210,8 @@ func TestPublicMatchesPrefersPinnedRound(t *testing.T) {
 	}
 	// The latest finished round is empty: the page says so.
 	body := get(s.Handler(), "/").Body.String()
-	wantContains(t, body, "round "+strconv.FormatInt(later.ID, 10), "has no stored relationships")
+	// UI-03: round is in the strip now.
+	wantContains(t, body, `<dt>Round</dt><dd>`+strconv.FormatInt(later.ID, 10)+`</dd>`, "has no stored relationships")
 	if strings.Contains(body, seedTitleA) {
 		t.Error("latest round shows the earlier round's pairs")
 	}
@@ -208,13 +220,16 @@ func TestPublicMatchesPrefersPinnedRound(t *testing.T) {
 		t.Fatal(err)
 	}
 	body = get(s.Handler(), "/").Body.String()
-	wantContains(t, body, "pinned for the demo", seedTitleA)
+	// UI-03: "pinned for the demo" is in the demo banner (UI-02), not in the page content.
+	// The strip shows the pinned round's data.
+	wantContains(t, body, seedTitleA, `<dt>Round</dt><dd>`+strconv.FormatInt(first.round.ID, 10)+`</dd>`)
 }
 
 func TestPublicMatchesNoRound(t *testing.T) {
 	s, _ := newTestServer(t)
 	rec := get(s.Handler(), "/")
 	wantHTML(t, rec, http.StatusOK)
+	// UI-03: empty state copy unchanged.
 	wantContains(t, rec.Body.String(), "No completed fetch round yet")
 }
 
@@ -314,8 +329,10 @@ func TestGroupPairsOrdering(t *testing.T) {
 	if len(order) != 3 || order[0] != 2 || order[1] != 4 || order[2] != 1 {
 		t.Errorf("equivalent order = %v, want [2 4 1] (confidence desc, then id)", order)
 	}
-	if !groups[0].Pairs[0].A.Missing || groups[0].Pairs[0].AsOf != now || groups[0].Pairs[0].Confidence != "0.95" {
-		t.Errorf("row = %+v", groups[0].Pairs[0])
+	// UI-03: check new fields (ConfidenceWord, ChipClass).
+	row := groups[0].Pairs[0]
+	if !row.A.Missing || row.AsOf != now || row.Confidence != "0.95" || row.ConfidenceWord != "high" || row.ChipClass != "chip-ok" {
+		t.Errorf("row = %+v", row)
 	}
 }
 
