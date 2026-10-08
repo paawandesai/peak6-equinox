@@ -82,10 +82,10 @@ func TestNearMissesPage(t *testing.T) {
 	body := rec.Body.String()
 	wantContains(t, body,
 		"Which pairs looked like the same bet but were rejected, and by which rule?",
-		"2 near misses, 1 of them stopped by a hard veto",
+		"2 near misses", "Stopped by a veto:", "1",
 		`href="/pairs/`+strconv.FormatInt(sd.relID, 10)+`"`, `href="/pairs/`+strconv.FormatInt(factMissID, 10)+`"`,
-		"<code>subject_mismatch</code> on <em>subject</em>: BTC is not ETH", "Different subject: BTC vs ETH.",
-		"no veto; a fact was consulted but did not apply", seedTitleC,
+		`<span class="chip chip-danger"><code>subject_mismatch</code></span>`, "BTC is not ETH", "Different subject: BTC vs ETH.",
+		`<span class="chip chip-info">no veto</span>`, "a fact was consulted but did not apply", seedTitleC,
 	)
 	if strings.Contains(body, seedExplainEq) {
 		t.Error("the equivalent pair must not be listed as a near miss")
@@ -141,19 +141,20 @@ func TestDecisionLogPage(t *testing.T) {
 	body := rec.Body.String()
 	wantContains(t, body,
 		"What did Equinox decide recently, and why?",
-		`href="/pairs/`+strconv.FormatInt(sd.eqID, 10)+`">pair #`+strconv.FormatInt(sd.eqID, 10)+`</a>`,
-		`href="/decisions/`+strconv.FormatInt(decisionID, 10)+`">decision #`+strconv.FormatInt(decisionID, 10)+`</a>`,
-		"<code>relationship</code>", "<code>routing</code>", "route buy 100 contracts yes on "+seedKalshiA,
+		`href="/pairs/`+strconv.FormatInt(sd.eqID, 10)+`">pair #`+strconv.FormatInt(sd.eqID, 10)+`: kalshi / polymarket</a>`,
+		`href="/decisions/`+strconv.FormatInt(decisionID, 10)+`">decision #`+strconv.FormatInt(decisionID, 10)+`: Routed</a>`,
+		`<span class="chip chip-info">relationship</span>`, `<span class="chip chip-ok">routing</span>`,
+		"route buy 100 contracts yes on "+seedKalshiA,
 		seedExplainEq, "Latest 3 entries",
 		`<option value="routing">routing decisions</option>`,
 	)
 	// Newest first: the routing decision (now = seedNow+1h) precedes the verdicts.
-	if strings.Index(body, "<code>routing</code>") > strings.Index(body, "<code>relationship</code>") {
+	if strings.Index(body, `chip-ok">routing`) > strings.Index(body, `chip-info">relationship`) {
 		t.Error("entries are not newest first")
 	}
 	body = get(s.Handler(), "/log?kind=routing").Body.String()
 	wantContains(t, body, "Latest 1 entry", `<option value="routing" selected>`)
-	if strings.Contains(body, "<code>relationship</code>") {
+	if strings.Contains(body, `chip-info">relationship`) {
 		t.Error("kind filter did not apply")
 	}
 	wantContains(t, get(s.Handler(), "/log?kind=llm").Body.String(), "No decision-log entries of kind <code>llm</code> yet")
