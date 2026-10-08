@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><style>body{margin:0;background:#e6e9ed;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue","Noto Sans",sans-serif;color:#1b2230;-webkit-font-smoothing:antialiased}a{color:#0172ad}a:hover{color:#01527d}</style></helmet>
+<section style="display:flex;gap:48px;padding:48px;align-items:flex-start">
+
+<div style="display:flex;flex-direction:column;gap:10px">
+  <div style="font:600 12px ui-monospace,Menlo,monospace;color:#3a4350">Near misses · desktop 1280 · templates/near_misses.html</div>
+  <div style="width:1280px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.06);border-radius:4px;overflow:hidden">
+    <dc-import name="Eq Header v2" active="near" banner="none" hint-size="100%,100px"></dc-import>
+    <main style="padding:28px 40px 48px;display:flex;flex-direction:column;gap:24px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <h1 style="margin:0;font-size:30px;line-height:1.2;font-weight:700">Near misses</h1>
+        <p style="margin:0;font-size:17px;color:#5d6675">Which pairs almost matched, and exactly what stopped them?</p>
+      </div>
+      <div style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:24px;align-items:start">
+        <dl style="margin:0;display:flex;border:1px solid #e1e5ea;border-radius:6px;background:#f5f7f9">
+          <div style="padding:12px 20px"><dt style="font-size:13px;color:#4f5866">Count</dt><dd style="margin:0;font-size:18px;font-weight:600">40 near misses</dd></div>
+          <div style="padding:12px 20px;border-left:1px solid #e1e5ea;background:#fbe9e7"><dt style="font-size:13px;color:#b3261e;font-weight:600">Stopped by a veto</dt><dd style="margin:0;font-size:18px;font-weight:600;color:#b3261e">✕ 33</dd></div>
+          <div style="padding:12px 20px;border-left:1px solid #e1e5ea"><dt style="font-size:13px;color:#4f5866">Fact did not close</dt><dd style="margin:0;font-size:18px;font-weight:600">◇ 7</dd></div>
+        </dl>
+        <p style="margin:0;font-size:14px;line-height:1.55;color:#3a4350">A near miss is a <em>related</em> pair the matcher kept because it was close: the same subject with one term off, or a pair an external fact was consulted for but did not close. Each veto on its own blocks <em>equivalent</em>; a false "same bet" is the worst failure, so these are shown rather than hidden.</p>
+      </div>
+      <p style="margin:0;padding:10px 14px;border-radius:6px;background:#fff3d6;color:#8a5a00;font-size:14px;box-shadow:inset 0 0 0 1px #d9b45a"><strong>! Showing the first 40 near misses only</strong> (1 more not shown).</p>
+
+      <nav aria-label="Failure reasons" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 0;border-top:1px solid #eceff2;border-bottom:1px solid #eceff2">
+        <span style="font-size:14px;font-weight:600;color:#3a4350">Grouped by what failed:</span>
+        <sc-for list="{{ groups }}" as="g" hint-placeholder-count="4"><a href="#{{ g.anchor }}" style="display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:15px;font-size:13px;font-weight:600;text-decoration:none;color:{{ g.fg }};background:{{ g.bg }};box-shadow:inset 0 0 0 1px {{ g.fg }}"><span aria-hidden="true">{{ g.glyph }}</span>{{ g.code }} · {{ g.n }}</a></sc-for><span style="font-size:13px;color:#4f5866">+ 4 smaller veto groups (6) · example values</span>
+      </nav>
+
+      <sc-for list="{{ groups }}" as="g" hint-placeholder-count="2">
+      <section id="{{ g.anchor }}" style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px"><h2 style="margin:0;font-size:19px;color:{{ g.fg }}"><span aria-hidden="true">{{ g.glyph }}</span> <code style="font-size:18px">{{ g.code }}</code></h2><span style="font-size:14px;color:#3a4350">{{ g.n }} pairs · {{ g.desc }}</span></div>
+        <table style="width:100%;border-collapse:collapse;font-size:14px;line-height:1.45">
+          <thead><tr>
+            <th style="text-align:left;padding:7px 10px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0;width:290px">Veto that fired</th>
+            <th style="text-align:left;padding:7px 10px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0;width:190px">How close</th>
+            <th style="text-align:left;padding:7px 10px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0">Contracts</th>
+            <th style="text-align:left;padding:7px 10px;font-size:13px;color:#4f5866;border-bottom:1px solid #d5dae0;width:150px">Explanation</th>
+          </tr></thead>
+          <tbody>
+            <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="2">
+            <tr style="box-shadow:inset 3px 0 0 {{ g.fg }}">
+              <td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px"><dc-import name="Eq Badge" tone="{{ g.tone }}" glyph="{{ g.glyph }}" text="{{ r.chip }}" mono="{{ true }}" hint-size="170px,22px"></dc-import><span><strong>{{ r.field }}</strong>: {{ r.detail }}</span></div></td>
+              <td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;font-size:13px"><span>{{ r.gap }}</span><span style="display:inline-flex;align-items:center;gap:4px;padding:0 6px;border-radius:3px;outline:1px dashed #6b2fa0;color:#6b2fa0;background:#faf6fd;font-size:12px">◆ score {{ r.score }} · needs new data</span></div></td>
+              <td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><a href="/pairs/{{ r.id }}" style="font-weight:600">#{{ r.id }}</a><div style="display:grid;grid-template-columns:92px minmax(0,1fr);gap:4px 8px;margin-top:4px"><span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#4f5866;padding-top:2px">KALSHI</span><span>{{ r.a }}</span><span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#4f5866;padding-top:2px">POLYMARKET</span><span>{{ r.b }}</span></div></td>
+              <td style="padding:12px 10px;border-bottom:1px solid #eceff2;vertical-align:top;font-size:13px"><details><summary style="cursor:pointer;color:#0172ad;font-weight:600">Why</summary><p style="margin:6px 0 0">{{ r.why }}</p></details><a href="/log?kind=verdict" style="display:inline-block;margin-top:6px">Not-a-match record →</a></td>
+            </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </section>
+      </sc-for>
+    </main>
+  </div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+  <div style="font:600 12px ui-monospace,Menlo,monospace;color:#3a4350">Near misses · mobile 390</div>
+  <div style="width:390px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.06);border-radius:4px;overflow:hidden">
+    <dc-import name="Eq Header v2" active="near" banner="none" mobile="{{ true }}" hint-size="100%,170px"></dc-import>
+    <main style="padding:18px 16px 32px;display:flex;flex-direction:column;gap:14px">
+      <h1 style="margin:0;font-size:26px">Near misses</h1>
+      <p style="margin:0;font-size:15px;color:#5d6675">Which pairs almost matched, and exactly what stopped them?</p>
+      <dl style="margin:0;display:grid;grid-template-columns:1fr 1fr 1fr;border:1px solid #e1e5ea;border-radius:6px;font-size:14px"><div style="padding:8px 10px"><dt style="font-size:12px;color:#4f5866">Count</dt><dd style="margin:0;font-weight:600">40</dd></div><div style="padding:8px 10px;border-left:1px solid #e1e5ea;background:#fbe9e7"><dt style="font-size:12px;color:#b3261e;font-weight:600">Veto</dt><dd style="margin:0;font-weight:600;color:#b3261e">✕ 33</dd></div><div style="padding:8px 10px;border-left:1px solid #e1e5ea"><dt style="font-size:12px;color:#4f5866">Fact</dt><dd style="margin:0;font-weight:600">◇ 7</dd></div></dl>
+      <details style="font-size:14px"><summary style="min-height:44px;display:flex;align-items:center;font-weight:600;color:#0172ad">What is a near miss?</summary></details>
+      <h2 style="margin:0;font-size:17px;color:#b3261e">✕ <code>threshold_mismatch</code> · 18</h2>
+      <sc-for list="{{ mrows }}" as="r" hint-placeholder-count="2">
+      <article style="display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid #e1e5ea;border-radius:6px;box-shadow:inset 3px 0 0 #b3261e;font-size:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><a href="/pairs/{{ r.id }}" style="font-weight:600">#{{ r.id }}</a><span style="font-size:13px">{{ r.gap }}</span></div>
+        <span><strong>{{ r.field }}</strong>: {{ r.detail }}</span>
+        <div><span style="display:block;font-size:11px;font-weight:700;letter-spacing:.07em;color:#4f5866">KALSHI</span>{{ r.a }}</div>
+        <div><span style="display:block;font-size:11px;font-weight:700;letter-spacing:.07em;color:#4f5866">POLYMARKET</span>{{ r.b }}</div>
+        <details><summary style="min-height:44px;display:flex;align-items:center;color:#0172ad;font-weight:600">Why</summary></details>
+      </article>
+      </sc-for>
+    </main>
+  </div>
+</div>
+
+<aside style="width:340px;display:flex;flex-direction:column;gap:16px;font-size:14px;line-height:1.5;color:#3a4350">
+  <h2 style="margin:0;font-size:18px;color:#1b2230">Near misses: build notes</h2>
+  <p style="margin:0">Template: <code>near_misses.html</code>. This is a “why not” view: each row opens with the failure, and rows are grouped by veto code. Rows with no veto are grouped under “fact did not close”.</p>
+  <div><strong style="color:#1b2230">Components</strong><ul style="margin:4px 0 0;padding-left:18px"><li>counter strip</li><li>group chips (in-page anchors)</li><li>veto badge (mono code)</li><li>row edge colour by group</li><li>“Not-a-match record” link</li></ul></div>
+  <div><strong style="color:#1b2230">VM fields (data already stored)</strong><ul style="margin:4px 0 0;padding-left:18px"><li><code>Groups[]</code>: rows grouped by first veto code (handler-side sort)</li><li><code>TermGap</code>: numeric difference between A and B for threshold and deadline vetoes, from DiffRows</li><li><code>LogLink</code>: the verdict log entry for the pair</li><li>fact-not-closed count (Total − VetoCount)</li></ul></div>
+  <div style="padding:12px;border-radius:6px;background:#f5eefb;box-shadow:inset 0 0 0 1px #6b2fa0"><strong style="color:#6b2fa0">◆ Needs new data</strong><ul style="margin:4px 0 0;padding-left:18px"><li>Match score against the required score. The matcher stores the verdict and confidence, but not the pre-veto score a near miss would have had.</li></ul></div>
+</aside>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const groups = [
+      { anchor:'g-threshold', code:'threshold_mismatch', n:18, desc:'the strike or threshold differs', glyph:'✕', tone:'danger', fg:'#b3261e', bg:'#fbe9e7', rows:[
+        { id:871, chip:'threshold_mismatch', field:'threshold', detail:'4.25 vs 4.50', gap:'term gap 0.25 (one 25 bp step)', score:'0.84 / 0.90', a:"Will the upper bound of the federal funds rate be above 4.25% following the Fed's Oct 28, 2026 meeting?", b:'Fed upper bound above 4.50% after October 2026 meeting?', why:'Same subject and deadline. The thresholds differ by one rate step, and no fact maps one to the other.' },
+        { id:866, chip:'threshold_mismatch', field:'threshold', detail:'3.0 vs 2.9', gap:'term gap 0.1 pp', score:'0.81 / 0.90', a:'Will CPI year-over-year exceed 3.0% for September 2026?', b:'September CPI above 2.9%?', why:'Both read the BLS CPI release. The strikes differ by 0.1 percentage points.' } ] },
+      { anchor:'g-deadline', code:'deadline_mismatch', n:9, desc:'cutoff times more than 24 h apart', glyph:'✕', tone:'danger', fg:'#b3261e', bg:'#fbe9e7', rows:[
+        { id:842, chip:'deadline_mismatch', field:'deadline', detail:'2026-10-31 vs 2026-12-31', gap:'61 days apart (limit 24 h)', score:'0.77 / 0.90', a:'Will Bitcoin close above $140,000 on Oct 31, 2026?', b:'Bitcoin above $140k by end of 2026?', why:'Same strike. One settles on a single day, the other on any day before year end.' } ] },
+      { anchor:'g-fact', code:'fact did not close', n:7, desc:'a fact was consulted but did not apply', glyph:'◇', tone:'info', fg:'#1a56a8', bg:'#e8f0fb', rows:[
+        { id:830, chip:'no veto', field:'metric', detail:'a fact was consulted but did not apply', gap:'fact fed_rate_step tried', score:'0.86 / 0.90', a:'Will the Fed cut rates by 50 bps in December 2026?', b:'Fed cuts at least twice in Q4 2026?', why:'fed_rate_step relates step sizes but cannot make one 50 bp cut equal to two separate cuts.' } ] }
+    ];
+    return { groups, mrows: groups[0].rows };
+  }
+}
+</script>
+</body>
+</html>

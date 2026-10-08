@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><style>body{margin:0;background:#e6e9ed;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue","Noto Sans",sans-serif;color:#1b2230;-webkit-font-smoothing:antialiased}a{color:#0172ad}a:hover{color:#01527d}</style></helmet>
+<section style="padding:48px;display:flex;justify-content:center">
+<div style="width:1180px;display:flex;flex-direction:column;gap:36px;padding:44px 48px;background:#fff;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+  <div style="display:flex;flex-direction:column;gap:6px">
+    <span style="font:600 12px ui-monospace,Menlo,monospace;color:#4f5866">UI-09 · Revision 1 · handoff/app.css</span>
+    <h1 style="margin:0;font-size:32px">Equinox design system v2</h1>
+    <p style="margin:0;font-size:16px;color:#3a4350;max-width:820px">There is one badge set and one freshness stamp, used on every page. Each state carries a word and a glyph, so colour is always a second channel. Pico.css supplies the type and form controls; these tokens sit on top of it.</p>
+  </div>
+
+  <section style="display:flex;flex-direction:column;gap:12px">
+    <h2 style="margin:0;font-size:20px">Relationship badges</h2>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+      <div style="display:flex;flex-direction:column;gap:6px;padding:14px;border:1px solid #e1e5ea;border-radius:6px"><dc-import name="Eq Badge" k="equivalent" hint-size="110px,22px"></dc-import><span style="font-size:13px;color:#3a4350">Solid green, white text 6.1:1. Routable.</span></div>
+      <div style="display:flex;flex-direction:column;gap:6px;padding:14px;border:1px solid #e1e5ea;border-radius:6px"><dc-import name="Eq Badge" k="egf" hint-size="190px,22px"></dc-import><span style="font-size:13px;color:#3a4350">Green outline. Facts are listed in <code>data-tooltip</code>. Routable.</span></div>
+      <div style="display:flex;flex-direction:column;gap:6px;padding:14px;border:1px solid #e1e5ea;border-radius:6px"><dc-import name="Eq Badge" k="complement" hint-size="110px,22px"></dc-import><span style="font-size:13px;color:#3a4350">Blue tint, directional. Routable (as NO).</span></div>
+      <div style="display:flex;flex-direction:column;gap:6px;padding:14px;border:1px solid #e1e5ea;border-radius:6px"><dc-import name="Eq Badge" k="implies" hint-size="90px,22px"></dc-import><span style="font-size:13px;color:#3a4350">Blue tint, directional. Never routed.</span></div>
+      <div style="display:flex;flex-direction:column;gap:6px;padding:14px;border:1px solid #e1e5ea;border-radius:6px"><dc-import name="Eq Badge" k="related" hint-size="80px,22px"></dc-import><span style="font-size:13px;color:#3a4350">Amber tint. Never routed.</span></div>
+      <div style="display:flex;flex-direction:column;gap:6px;padding:14px;border:1px solid #e1e5ea;border-radius:6px"><dc-import name="Eq Badge" k="unrelated" hint-size="100px,22px"></dc-import><span style="font-size:13px;color:#3a4350">Gray outline.</span></div>
+    </div>
+    <p style="margin:0;font-size:13px;color:#3a4350">The text stays the server's type string, so existing tests that match the chip text still pass. Markup: <code>&lt;span class="badge b-{{.Type}}"&gt;&lt;span aria-hidden="true" class="g"&gt;≡&lt;/span&gt;{{.Type}}&lt;/span&gt;</code>. The glyph comes from a VM helper (<code>TypeGlyph</code>), not from CSS <code>content</code>, so screen readers read only the word.</p>
+  </section>
+
+  <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px">
+    <section style="display:flex;flex-direction:column;gap:10px">
+      <h2 style="margin:0;font-size:20px">Confidence</h2>
+      <div style="display:flex;gap:28px;flex-wrap:wrap"><dc-import name="Eq Conf" v="0.93" hint-size="100px,40px"></dc-import><dc-import name="Eq Conf" v="0.78" hint-size="100px,40px"></dc-import><dc-import name="Eq Conf" v="0.52" hint-size="100px,40px"></dc-import></div>
+      <p style="margin:0;font-size:13px;color:#3a4350">Always the number plus a word: ▲ High (≥ 0.90, the route floor), ■ Medium (0.70–0.89), ▼ Low. The tick on the meter marks 0.90. Basis risk gets its own label and is never folded into confidence: <strong>0.38</strong> <span style="color:#8a5a00;font-weight:600">■ moderate</span>.</p>
+    </section>
+    <section style="display:flex;flex-direction:column;gap:10px">
+      <h2 style="margin:0;font-size:20px">Freshness stamp</h2>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <dc-import name="Eq Fresh" state="fresh" asof="11:03:20 EDT" age="14 s ago" hint-size="300px,24px"></dc-import>
+        <dc-import name="Eq Fresh" state="warn" asof="10:56:02 EDT" age="7 min ago" hint-size="300px,24px"></dc-import>
+        <dc-import name="Eq Fresh" state="stale" asof="10:21:04 EDT" age="42 min ago" hint-size="300px,24px"></dc-import>
+        <dc-import name="Eq Fresh" state="unknown" asof="—" age="no quote" hint-size="300px,24px"></dc-import>
+        <span style="display:flex;align-items:center;gap:8px;font-size:13px"><dc-import name="Eq Badge" k="pinned" hint-size="72px,22px"></dc-import>as of 2026-10-06 21:15:56 EDT · round 3 (not judged)</span>
+      </div>
+      <p style="margin:0;font-size:13px;color:#3a4350">Markup: <code>&lt;time datetime&gt;</code>. The server computes the age and the state. The stamp refreshes with <code>hx-get</code> and <code>hx-trigger="every 15s [!document.hidden]"</code>. Stale uses the existing D-077 threshold. <span style="color:#6b2fa0">◆ Warn needs a second, earlier window (new config).</span></p>
+    </section>
+  </div>
+
+  <section style="display:flex;flex-direction:column;gap:10px">
+    <h2 style="margin:0;font-size:20px">Other state sets</h2>
+    <div style="display:grid;grid-template-columns:140px minmax(0,1fr);gap:10px 16px;align-items:center;font-size:14px">
+      <span style="color:#4f5866">Diff verdict</span><div style="display:flex;flex-wrap:wrap;gap:8px"><dc-import name="Eq Badge" k="match" hint-size="70px,22px"></dc-import><dc-import name="Eq Badge" k="differs" hint-size="80px,22px"></dc-import><dc-import name="Eq Badge" k="closed" hint-size="120px,22px"></dc-import><dc-import name="Eq Badge" k="missing" hint-size="90px,22px"></dc-import></div>
+      <span style="color:#4f5866">Check strip</span><span><b style="color:#1b6e3a">✓</b> date · <b style="color:#b3261e">✕</b> strike · <b style="color:#1a56a8">◇</b> direction · <b style="color:#4f5866">?</b> source</span>
+      <span style="color:#4f5866">Routing outcome</span><div style="display:flex;flex-wrap:wrap;gap:8px"><dc-import name="Eq Badge" k="routed" hint-size="80px,22px"></dc-import><dc-import name="Eq Badge" k="partial" hint-size="130px,22px"></dc-import><dc-import name="Eq Badge" k="notrouted" hint-size="100px,22px"></dc-import></div>
+      <span style="color:#4f5866">Component health</span><div style="display:flex;flex-wrap:wrap;gap:8px"><dc-import name="Eq Badge" k="healthy" hint-size="80px,22px"></dc-import><dc-import name="Eq Badge" k="warning" hint-size="80px,22px"></dc-import><dc-import name="Eq Badge" k="degraded" hint-size="90px,22px"></dc-import><dc-import name="Eq Badge" k="unknown" hint-size="80px,22px"></dc-import></div>
+      <span style="color:#4f5866">Review flag</span><div><dc-import name="Eq Badge" k="review" hint-size="240px,22px"></dc-import></div>
+      <span style="color:#4f5866">Sign rule</span><span>Money deltas: positive is favourable, unfavourable values are shown <span style="color:#b3261e">(in parentheses)</span>. The rule is written beside every table that uses it.</span>
+    </div>
+  </section>
+
+  <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px">
+    <section style="display:flex;flex-direction:column;gap:8px">
+      <h2 style="margin:0;font-size:20px">Colour</h2>
+      <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:13px">
+        <li style="display:flex;gap:10px;align-items:center"><span style="width:28px;height:20px;border-radius:3px;background:#1b6e3a"></span><code>--eq-ok #1b6e3a</code> 6.1:1</li>
+        <li style="display:flex;gap:10px;align-items:center"><span style="width:28px;height:20px;border-radius:3px;background:#1a56a8"></span><code>--eq-info #1a56a8</code> 6.9:1</li>
+        <li style="display:flex;gap:10px;align-items:center"><span style="width:28px;height:20px;border-radius:3px;background:#8a5a00"></span><code>--eq-warn #8a5a00</code> 5.6:1</li>
+        <li style="display:flex;gap:10px;align-items:center"><span style="width:28px;height:20px;border-radius:3px;background:#b3261e"></span><code>--eq-danger #b3261e</code> 6.4:1</li>
+        <li style="display:flex;gap:10px;align-items:center"><span style="width:28px;height:20px;border-radius:3px;background:#4f5866"></span><code>--eq-muted #4f5866</code> 7.0:1</li>
+        <li style="display:flex;gap:10px;align-items:center"><span style="width:28px;height:20px;border-radius:3px;background:#0172ad"></span><code>Pico primary #0172ad</code></li>
+      </ul>
+      <p style="margin:0;font-size:12px;color:#4f5866">Contrast is measured against white. The tints (<code>-bg</code>) are unchanged from v1, and the dark-mode values carry over from design.md §5.</p>
+    </section>
+    <section style="display:flex;flex-direction:column;gap:8px">
+      <h2 style="margin:0;font-size:20px">Type and space</h2>
+      <p style="margin:0;font-size:13px;line-height:1.6">Pico system stack. <code>xs .6875 · s .8125 · m .9375 · lede 1.0625 · l 1.3125 · xl 1.875rem</code>. Numbers use <code>tabular-nums</code>. Venue labels are 11px/700 with .07em tracking, in caps. Space: 4 · 8 · 16 · 24 · 32 · 48. Radius: 4 · 6 · 8.</p>
+    </section>
+    <section style="display:flex;flex-direction:column;gap:8px">
+      <h2 style="margin:0;font-size:20px">Design-only marker</h2>
+      <span style="align-self:flex-start;padding:0 6px;border-radius:3px;outline:1px dashed #6b2fa0;background:#faf6fd;color:#6b2fa0;font-size:12px">◆ needs new data</span>
+      <p style="margin:0;font-size:13px;color:#3a4350">Dashed purple marks anything the server does not produce today. It is an annotation for these mocks only and must not ship. Each one is listed in HANDOFF.md.</p>
+    </section>
+  </div>
+
+  <section style="display:flex;flex-direction:column;gap:8px">
+    <h2 style="margin:0;font-size:20px">Pages</h2>
+    <ul style="margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;font-size:14px">
+      <li><a href="Matches v2.dc.html">Matches</a></li><li><a href="Pair v2.dc.html">Pair detail</a></li><li><a href="Near Misses v2.dc.html">Near misses</a></li><li><a href="Eval v2.dc.html">Eval</a></li><li><a href="Route v2.dc.html">Route + result</a></li><li><a href="Decision v2.dc.html">Decision trace</a></li><li><a href="Log v2.dc.html">Decision log</a></li><li><a href="Admin v2.dc.html">Admin</a></li><li><a href="Error v2.dc.html">Error</a></li><li><a href="Eq Header v2.dc.html">Header + banners</a></li>
+    </ul>
+  </section>
+</div>
+</section>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><style>body{margin:0;background:#e6e9ed;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue","Noto Sans",sans-serif;color:#1b2230;-webkit-font-smoothing:antialiased}a{color:#0172ad}a:hover{color:#01527d}</style></helmet>
+<section style="display:flex;gap:48px;padding:48px;align-items:flex-start">
+
+<div style="display:flex;flex-direction:column;gap:10px">
+  <div style="font:600 12px ui-monospace,Menlo,monospace;color:#3a4350">Matches · desktop 1280 · templates/matches.html</div>
+  <div style="width:1280px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.06);border-radius:4px;overflow:hidden">
+    <dc-import name="Eq Header v2" active="matches" banner="none" hint-size="100%,100px"></dc-import>
+    <main style="padding:32px 40px 48px;display:flex;flex-direction:column;gap:28px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <h1 style="margin:0;font-size:30px;line-height:1.2;font-weight:700;letter-spacing:-0.01em">Matches</h1>
+        <p style="margin:0;font-size:17px;line-height:1.45;color:#5d6675">Which Kalshi and Polymarket contracts are the same bet, and how sure is Equinox?</p>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <dl style="margin:0;display:flex;flex-wrap:wrap;border:1px solid #e1e5ea;border-radius:6px;background:#f5f7f9">
+          <div style="padding:12px 20px;display:flex;flex-direction:column;gap:2px"><dt style="font-size:13px;color:#4f5866">Round</dt><dd style="margin:0;font-size:18px;font-weight:600">49</dd></div>
+          <div style="padding:12px 20px;display:flex;flex-direction:column;gap:2px;border-left:1px solid #e1e5ea"><dt style="font-size:13px;color:#4f5866">As of</dt><dd style="margin:0;font-size:18px;font-weight:600;font-variant-numeric:tabular-nums">2026-10-08 11:03:20 EDT</dd></div>
+          <div style="padding:12px 20px;display:flex;flex-direction:column;gap:2px;border-left:1px solid #e1e5ea"><dt style="font-size:13px;color:#4f5866">Pairs kept</dt><dd style="margin:0;font-size:18px;font-weight:600">878</dd></div>
+          <div style="padding:12px 20px;display:flex;flex-direction:column;gap:2px;border-left:1px solid #e1e5ea;background:#e6f4ea"><dt style="font-size:13px;color:#1b6e3a;font-weight:600">Routable</dt><dd style="margin:0;font-size:18px;font-weight:600"><a href="#routable" style="color:#1b6e3a">2 pairs ↓</a></dd></div>
+          <div style="padding:12px 20px;display:flex;flex-direction:column;gap:2px;border-left:1px solid #e1e5ea"><dt style="font-size:13px;color:#4f5866">Implies</dt><dd style="margin:0;font-size:18px;font-weight:600">25</dd></div>
+          <div style="padding:12px 20px;display:flex;flex-direction:column;gap:2px;border-left:1px solid #e1e5ea"><dt style="font-size:13px;color:#4f5866">Related</dt><dd style="margin:0;font-size:18px;font-weight:600">851</dd></div>
+          <div style="padding:12px 20px;display:flex;flex-direction:column;gap:2px;border-left:1px solid #e1e5ea;background:#fbe9e7"><dt style="font-size:13px;color:#b3261e;font-weight:600">Flagged for review</dt><dd style="margin:0;font-size:18px;font-weight:600;display:flex;align-items:center;gap:8px;color:#b3261e"><span><span aria-hidden="true">⚠</span> 1</span><dc-import name="Eq Badge" k="newdata" text="new data" hint-size="80px,18px"></dc-import></dd></div>
+        </dl>
+        <p style="margin:0;font-size:13px;color:#4f5866">Example values for illustration only.</p>
+      </div>
+
+      <form method="get" action="/" style="margin:0;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:12px 0;border-top:1px solid #eceff2;border-bottom:1px solid #eceff2">
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:#3a4350">Sort
+          <select name="sort" style="height:32px;padding:0 8px;border:1px solid #c9cfd6;border-radius:5px;background:#fff;font-size:14px;color:#1b2230"><option>Review priority</option><option>Confidence</option><option>Pair id</option></select>
+        </label>
+        <span style="font-size:14px;font-weight:600;color:#3a4350">Filters</span>
+        <a href="/?min=0.70" style="display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 6px 0 12px;border-radius:15px;background:#e8f0fb;color:#1a56a8;font-size:13px;font-weight:600;text-decoration:none;box-shadow:inset 0 0 0 1px #1a56a8">Confidence ≥ 0.70<span aria-label="remove filter" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:10px;background:#fff">✕</span></a>
+        <a href="/?q=fed" style="display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 6px 0 12px;border-radius:15px;background:#e8f0fb;color:#1a56a8;font-size:13px;font-weight:600;text-decoration:none;box-shadow:inset 0 0 0 1px #1a56a8">Title contains “fed”<span aria-label="remove filter" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:10px;background:#fff">✕</span></a>
+        <a href="/" style="font-size:13px">Clear all</a>
+        <p style="margin:0 0 0 auto;font-size:13px;color:#4f5866;max-width:420px">Review priority: flagged pairs first, then routable pairs closest to the 0.90 route floor, then most open term differences. Never sorted by edge.</p>
+      </form>
+
+      <section style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px">
+          <h2 id="routable" style="margin:0;font-size:21px;font-weight:700">Routable pairs (2)</h2>
+          <p style="margin:0;font-size:14px;color:#4f5866">equivalent, equivalent_given_facts and complement. The router may use these.</p>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:15px;line-height:1.45">
+          <thead><tr>
+            <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#4f5866;border-bottom:1px solid #d5dae0;width:64px">Pair</th>
+            <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#4f5866;border-bottom:1px solid #d5dae0">Contracts</th>
+            <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#4f5866;border-bottom:1px solid #d5dae0;width:210px">Relationship</th>
+            <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#4f5866;border-bottom:1px solid #d5dae0;width:116px">Confidence</th>
+            <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#4f5866;border-bottom:1px solid #d5dae0;width:178px">Checks</th>
+            <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#4f5866;border-bottom:1px solid #d5dae0;width:128px">Market</th>
+            <th style="text-align:right;padding:8px 10px;font-size:13px;font-weight:600;color:#4f5866;border-bottom:1px solid #d5dae0;width:88px">Route</th>
+          </tr></thead>
+          <tbody>
+            <sc-for list="{{ routable }}" as="r" hint-placeholder-count="2">
+            <tr>
+              <td style="padding:14px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><a href="/pairs/{{ r.id }}" style="font-weight:600">#{{ r.id }}</a><div style="font-size:12px;color:#4f5866">round 49</div></td>
+              <td style="padding:14px 10px;border-bottom:1px solid #eceff2;vertical-align:top">
+                <div style="display:grid;grid-template-columns:92px minmax(0,1fr);gap:6px 8px">
+                  <span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#4f5866;padding-top:3px">KALSHI</span><span style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ r.a }}</span>
+                  <span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#4f5866;padding-top:3px">POLYMARKET</span><span style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ r.b }}</span>
+                </div>
+              </td>
+              <td style="padding:14px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><div style="display:flex;flex-direction:column;align-items:flex-start;gap:6px"><dc-import name="Eq Badge" k="{{ r.k }}" hint-size="190px,22px"></dc-import><span style="font-size:13px;color:#3a4350">method {{ r.method }} · basis <strong style="font-weight:600">{{ r.basis }}</strong> <span style="color:{{ r.basisFg }};font-weight:600">{{ r.basisWord }}</span></span></div></td>
+              <td style="padding:14px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><dc-import name="Eq Conf" v="{{ r.conf }}" hint-size="100px,40px"></dc-import></td>
+              <td style="padding:14px 10px;border-bottom:1px solid #eceff2;vertical-align:top">
+                <ul aria-label="Term checks" style="margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(2,auto);justify-content:start;gap:2px 12px;font-size:13px">
+                  <sc-for list="{{ r.checks }}" as="c" hint-placeholder-count="4"><li style="white-space:nowrap"><span aria-hidden="true" style="display:inline-block;width:14px;font-weight:700;color:{{ c.fg }}">{{ c.g }}</span>{{ c.w }}<span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">: {{ c.sr }}</span></li></sc-for>
+                </ul>
+                <a href="/pairs/{{ r.id }}#diff" style="display:inline-block;margin-top:4px;font-size:13px;color:{{ r.vetoFg }}">{{ r.veto }}</a>
+              </td>
+              <td style="padding:14px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><div style="display:flex;flex-direction:column;align-items:flex-start;gap:5px;font-size:13px"><span><strong style="font-size:15px;font-weight:600">{{ r.gap }}</strong> net</span><dc-import name="Eq Badge" k="fresh" text="Fresh · 38 s" hint-size="96px,22px"></dc-import></div></td>
+              <td style="padding:14px 10px;border-bottom:1px solid #eceff2;vertical-align:top;text-align:right"><a href="/pairs/{{ r.id }}#route" style="display:inline-flex;align-items:center;height:32px;padding:0 14px;border-radius:5px;background:#0172ad;color:#fff;font-size:14px;font-weight:600;text-decoration:none">Route →</a></td>
+            </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </section>
+
+      <section style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px">
+          <h2 id="type-implies" style="margin:0;font-size:21px;font-weight:700">implies (25)</h2>
+          <p style="margin:0;font-size:14px;color:#4f5866">One resolving YES forces the other YES. Never routed.</p>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:15px;line-height:1.45">
+          <thead><tr>
+            <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#4f5866;border-bottom:1px solid #d5dae0;width:64px">Pair</th>
+            <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#4f5866;border-bottom:1px solid #d5dae0">Contracts</th>
+            <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#4f5866;border-bottom:1px solid #d5dae0;width:210px">Relationship</th>
+            <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#4f5866;border-bottom:1px solid #d5dae0;width:116px">Confidence</th>
+            <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#4f5866;border-bottom:1px solid #d5dae0;width:178px">Checks</th>
+            <th style="text-align:left;padding:8px 10px;font-size:13px;font-weight:600;color:#4f5866;border-bottom:1px solid #d5dae0;width:216px">Market</th>
+          </tr></thead>
+          <tbody>
+            <sc-for list="{{ implies }}" as="r" hint-placeholder-count="3">
+            <tr style="background:{{ r.rowBg }};box-shadow:{{ r.rowEdge }}">
+              <td style="padding:14px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><a href="/pairs/{{ r.id }}" style="font-weight:600">#{{ r.id }}</a><div style="font-size:12px;color:#4f5866">round 49</div></td>
+              <td style="padding:14px 10px;border-bottom:1px solid #eceff2;vertical-align:top">
+                <div style="display:grid;grid-template-columns:92px minmax(0,1fr);gap:6px 8px">
+                  <span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#4f5866;padding-top:3px">KALSHI</span><span style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ r.a }}</span>
+                  <span style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#4f5866;padding-top:3px">POLYMARKET</span><span style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ r.b }}</span>
+                </div>
+              </td>
+              <td style="padding:14px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><div style="display:flex;flex-direction:column;align-items:flex-start;gap:6px"><dc-import name="Eq Badge" k="implies" hint-size="90px,22px"></dc-import><span style="font-size:13px;color:#3a4350">method {{ r.method }} · basis <strong style="font-weight:600">{{ r.basis }}</strong> <span style="color:{{ r.basisFg }};font-weight:600">{{ r.basisWord }}</span></span></div></td>
+              <td style="padding:14px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><dc-import name="Eq Conf" v="{{ r.conf }}" hint-size="100px,40px"></dc-import></td>
+              <td style="padding:14px 10px;border-bottom:1px solid #eceff2;vertical-align:top">
+                <ul aria-label="Term checks" style="margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(2,auto);justify-content:start;gap:2px 12px;font-size:13px">
+                  <sc-for list="{{ r.checks }}" as="c" hint-placeholder-count="4"><li style="white-space:nowrap"><span aria-hidden="true" style="display:inline-block;width:14px;font-weight:700;color:{{ c.fg }}">{{ c.g }}</span>{{ c.w }}<span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">: {{ c.sr }}</span></li></sc-for>
+                </ul>
+                <a href="/pairs/{{ r.id }}#diff" style="display:inline-block;margin-top:4px;font-size:13px;color:#b3261e">{{ r.veto }}</a>
+              </td>
+              <td style="padding:14px 10px;border-bottom:1px solid #eceff2;vertical-align:top"><div style="display:flex;flex-direction:column;align-items:flex-start;gap:5px;font-size:13px"><span><strong style="font-size:15px;font-weight:600">{{ r.gap }}</strong> apparent gap</span><sc-if value="{{ r.flag }}"><dc-import name="Eq Badge" k="review" hint-size="210px,22px"></dc-import><span style="color:#3a4350;max-width:200px">Likely a wrong pairing, not an arbitrage.</span></sc-if><sc-if value="{{ r.noflag }}" hint-placeholder-val="{{ true }}"><dc-import name="Eq Badge" k="fresh" text="Fresh · 41 s" hint-size="96px,22px"></dc-import></sc-if></div></td>
+            </tr>
+            </sc-for>
+          </tbody>
+        </table>
+        <p style="margin:0;font-size:13px;color:#4f5866">Showing 3 of 25 in this mock.</p>
+      </section>
+
+      <details style="border:1px solid #e1e5ea;border-radius:6px">
+        <summary style="display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:14px 16px;cursor:pointer;font-size:15px"><dc-import name="Eq Badge" k="related" hint-size="80px,22px"></dc-import><strong style="font-weight:600">851 pairs</strong><span style="color:#4f5866">same event, different payout; never routed</span><span style="margin-left:auto;color:#0172ad;font-weight:600">Show</span></summary>
+      </details>
+
+      <div style="display:flex;flex-wrap:wrap;gap:8px 20px;padding:12px 16px;border-radius:6px;background:#f5f7f9;font-size:13px;color:#3a4350">
+        <strong style="font-weight:600">Checks key</strong>
+        <span><b aria-hidden="true" style="color:#1b6e3a">✓</b> term matches</span>
+        <span><b aria-hidden="true" style="color:#b3261e">✕</b> differs (veto stands)</span>
+        <span><b aria-hidden="true" style="color:#1a56a8">◇</b> differs, closed by a fact</span>
+        <span><b aria-hidden="true" style="color:#4f5866">?</b> unknown, not compared</span>
+        <span>Net gap: best price difference after estimated fees (Kalshi ~1.5 %, Polymarket ~2 % taker)</span>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+  <div style="font:600 12px ui-monospace,Menlo,monospace;color:#3a4350">Matches · mobile 390</div>
+  <div style="width:390px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.06);border-radius:4px;overflow:hidden">
+    <dc-import name="Eq Header v2" active="matches" banner="none" mobile="{{ true }}" hint-size="100%,170px"></dc-import>
+    <main style="padding:20px 16px 32px;display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <h1 style="margin:0;font-size:26px;line-height:1.2;font-weight:700">Matches</h1>
+        <p style="margin:0;font-size:15px;line-height:1.45;color:#5d6675">Which Kalshi and Polymarket contracts are the same bet, and how sure is Equinox?</p>
+      </div>
+      <dl style="margin:0;display:grid;grid-template-columns:1fr 1fr;border:1px solid #e1e5ea;border-radius:6px;background:#f5f7f9;font-size:14px">
+        <div style="padding:10px 12px"><dt style="font-size:12px;color:#4f5866">Round</dt><dd style="margin:0;font-weight:600">49</dd></div>
+        <div style="padding:10px 12px;border-left:1px solid #e1e5ea"><dt style="font-size:12px;color:#4f5866">Pairs kept</dt><dd style="margin:0;font-weight:600">878</dd></div>
+        <div style="padding:10px 12px;border-top:1px solid #e1e5ea;grid-column:1 / -1"><dt style="font-size:12px;color:#4f5866">As of</dt><dd style="margin:0;font-weight:600">2026-10-08 11:03:20 EDT</dd></div>
+        <div style="padding:10px 12px;border-top:1px solid #e1e5ea;background:#e6f4ea"><dt style="font-size:12px;color:#1b6e3a;font-weight:600">Routable</dt><dd style="margin:0;font-weight:600"><a href="#routable" style="color:#1b6e3a">2 pairs ↓</a></dd></div>
+        <div style="padding:10px 12px;border-top:1px solid #e1e5ea;border-left:1px solid #e1e5ea;background:#fbe9e7"><dt style="font-size:12px;color:#b3261e;font-weight:600">Flagged</dt><dd style="margin:0;font-weight:600;color:#b3261e">⚠ 1</dd></div>
+        <div style="padding:10px 12px;border-top:1px solid #e1e5ea"><dt style="font-size:12px;color:#4f5866">Implies</dt><dd style="margin:0;font-weight:600">25</dd></div>
+        <div style="padding:10px 12px;border-top:1px solid #e1e5ea;border-left:1px solid #e1e5ea"><dt style="font-size:12px;color:#4f5866">Related</dt><dd style="margin:0;font-weight:600">851</dd></div>
+      </dl>
+      <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:2px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600;white-space:nowrap">Sort <select style="height:44px;padding:0 8px;border:1px solid #c9cfd6;border-radius:5px;background:#fff;font-size:14px"><option>Review priority</option></select></label>
+        <a href="/?min=0.70" style="display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;border-radius:22px;background:#e8f0fb;color:#1a56a8;font-size:13px;font-weight:600;white-space:nowrap;text-decoration:none;box-shadow:inset 0 0 0 1px #1a56a8">Confidence ≥ 0.70 <span aria-label="remove filter">✕</span></a>
+      </div>
+      <h2 id="routable-m" style="margin:4px 0 0;font-size:19px;font-weight:700">Routable pairs (2)</h2>
+      <sc-for list="{{ routable }}" as="r" hint-placeholder-count="2">
+      <article style="display:flex;flex-direction:column;gap:10px;padding:14px;border:1px solid #e1e5ea;border-radius:6px">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px"><a href="/pairs/{{ r.id }}" style="font-weight:600">#{{ r.id }}</a><span style="font-size:12px;color:#4f5866">round 49</span><dc-import name="Eq Badge" k="{{ r.k }}" hint-size="190px,22px"></dc-import></div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:15px;line-height:1.4">
+          <div><span style="display:block;font-size:11px;font-weight:700;letter-spacing:.07em;color:#4f5866">KALSHI</span>{{ r.a }}</div>
+          <div><span style="display:block;font-size:11px;font-weight:700;letter-spacing:.07em;color:#4f5866">POLYMARKET</span>{{ r.b }}</div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px 20px;align-items:flex-start;font-size:13px"><dc-import name="Eq Conf" v="{{ r.conf }}" hint-size="100px,40px"></dc-import><span>basis <strong>{{ r.basis }}</strong> <span style="color:{{ r.basisFg }};font-weight:600">{{ r.basisWord }}</span><br>method {{ r.method }}</span><span><strong style="font-size:15px">{{ r.gap }}</strong> net</span></div>
+        <ul aria-label="Term checks" style="margin:0;padding:8px 10px;list-style:none;display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;background:#f5f7f9;border-radius:5px">
+          <sc-for list="{{ r.checks }}" as="c" hint-placeholder-count="4"><li><span aria-hidden="true" style="font-weight:700;color:{{ c.fg }}">{{ c.g }}</span> {{ c.w }}</li></sc-for>
+          <li><a href="/pairs/{{ r.id }}#diff" style="color:{{ r.vetoFg }}">{{ r.veto }}</a></li>
+        </ul>
+        <a href="/pairs/{{ r.id }}#route" style="display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:5px;background:#0172ad;color:#fff;font-size:15px;font-weight:600;text-decoration:none">Route →</a>
+      </article>
+      </sc-for>
+      <p style="margin:0;font-size:13px;color:#4f5866">implies and related follow as the same cards; related stays collapsed.</p>
+    </main>
+  </div>
+</div>
+
+<aside style="width:340px;display:flex;flex-direction:column;gap:16px;font-size:14px;line-height:1.5;color:#3a4350">
+  <h2 style="margin:0;font-size:18px;color:#1b2230">Matches: build notes</h2>
+  <p style="margin:0">Template: <code>matches.html</code>. One row per pair. Within each group, rows are sorted by review priority.</p>
+  <div><strong style="color:#1b2230">Components</strong><ul style="margin:4px 0 0;padding-left:18px"><li>counter strip, now with a Flagged cell</li><li>filter chips (<code>a.chip-filter</code>; filter state lives in the URL query)</li><li>relationship badge, confidence, basis-risk word</li><li>check strip (<code>ul.checks</code>)</li><li>freshness badge</li><li>review flag</li></ul></div>
+  <div><strong style="color:#1b2230">VM fields (data already stored)</strong><ul style="margin:4px 0 0;padding-left:18px"><li><code>BasisRisk</code> and its word on each row</li><li><code>Checks</code>: date, strike, direction and source, from the stored DiffRows</li><li><code>ReviewPriority</code>: from type, confidence margin to 0.90 and veto count</li><li>max quote age per pair, from the round's quote FetchedAt</li><li>the <code>sort</code>, <code>min</code> and <code>q</code> query params</li></ul></div>
+  <div style="padding:12px;border-radius:6px;background:#f5eefb;box-shadow:inset 0 0 0 1px #6b2fa0"><strong style="color:#6b2fa0">◆ Needs new data</strong><ul style="margin:4px 0 0;padding-left:18px"><li>Net and apparent gap per pair: a fee-adjusted price difference. The server does not compute this for matches today.</li><li>Review flag and the Flagged count, which depend on that gap</li><li>Fee estimates in the key, which need a documented fee schedule per venue</li></ul><p style="margin:6px 0 0">Until these exist, leave out the Market gap line and the flag. Sorting by review priority still works without them.</p></div>
+</aside>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const G = { ok:['✓','#1b6e3a','matches'], x:['✕','#b3261e','differs, veto stands'], f:['◇','#1a56a8','differs, closed by fact'], u:['?','#4f5866','unknown'] };
+    const ch = (d,s,dir,src) => [['date',d],['strike',s],['direction',dir],['source',src]].map(([w,k]) => ({ w, g:G[k][0], fg:G[k][1], sr:G[k][2] }));
+    return {
+      routable: [
+        { id:924, a:"Will the upper bound of the federal funds rate be above 4.25% following the Fed's Oct 28, 2026 meeting? — Above 4.25%", b:'Will the Fed increase interest rates by 50+ bps after the October 2026 meeting?', k:'egf', method:'rules', conf:0.93, basis:'0.38', basisWord:'moderate', basisFg:'#8a5a00', checks:ch('ok','f','f','ok'), veto:'3 vetoes, closed by facts', vetoFg:'#1a56a8', gap:'+1.8¢' },
+        { id:918, a:'Will the Fed cut rates at its October 2026 meeting?', b:'Fed holds or hikes in October 2026?', k:'complement', method:'rules', conf:0.91, basis:'0.12', basisWord:'low', basisFg:'#1b6e3a', checks:ch('ok','ok','ok','ok'), veto:'no vetoes', vetoFg:'#4f5866', gap:'+0.6¢' }
+      ],
+      implies: [
+        { id:902, a:'Will CPI year-over-year exceed 3.0% for September 2026?', b:'CPI above 2.5% in September?', method:'rules', conf:0.74, basis:'0.44', basisWord:'moderate', basisFg:'#8a5a00', checks:ch('ok','x','ok','u'), veto:'1 veto', gap:'+14.2¢', flag:true, noflag:false, rowBg:'#fdf5f4', rowEdge:'inset 3px 0 0 #b3261e' },
+        { id:887, a:'Will the unemployment rate be 4.5% or higher in October 2026?', b:'US unemployment above 4.2% in October?', method:'rules', conf:0.88, basis:'0.29', basisWord:'moderate', basisFg:'#8a5a00', checks:ch('ok','x','ok','ok'), veto:'1 veto', gap:'+2.1¢', flag:false, noflag:true, rowBg:'transparent', rowEdge:'none' },
+        { id:861, a:'Will Bitcoin close above $140,000 on Oct 31, 2026?', b:'Bitcoin above $130k on October 31?', method:'rules', conf:0.81, basis:'0.31', basisWord:'moderate', basisFg:'#8a5a00', checks:ch('ok','x','ok','ok'), veto:'1 veto', gap:'+3.4¢', flag:false, noflag:true, rowBg:'transparent', rowEdge:'none' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

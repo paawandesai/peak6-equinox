@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><style>body{margin:0;background:#e6e9ed;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue","Noto Sans",sans-serif;color:#1b2230;-webkit-font-smoothing:antialiased}a{color:#0172ad}a:hover{color:#01527d}</style></helmet>
+<section style="display:flex;gap:48px;padding:48px;align-items:flex-start">
+<div style="display:flex;flex-direction:column;gap:10px">
+  <div style="font:600 12px ui-monospace,Menlo,monospace;color:#3a4350">Error · desktop 1280 · templates/error.html</div>
+  <div style="width:1280px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.06);border-radius:4px;overflow:hidden">
+    <dc-import name="Eq Header" active="" banner="demo" hint-size="100%,140px"></dc-import>
+    <main style="padding:72px 40px 96px;display:flex;justify-content:center">
+      <div style="max-width:560px;display:flex;flex-direction:column;gap:16px">
+        <span style="align-self:flex-start;display:inline-block;padding:2px 10px;border-radius:4px;font:700 14px/22px ui-monospace,Menlo,monospace;background:#fbe9e7;color:#b3261e">404</span>
+        <h1 style="margin:0;font-size:30px;line-height:1.2;font-weight:700">404 Not Found</h1>
+        <p style="margin:0;font-size:17px;line-height:1.55;color:#3a4350">Pair 9999 is not in round 3. It may belong to an earlier round, or the matcher may not have kept it.</p>
+        <p style="margin:8px 0 0"><a href="/" style="display:inline-flex;align-items:center;height:40px;padding:0 16px;border-radius:5px;background:#0172ad;color:#fff;font-size:15px;font-weight:600;text-decoration:none">Back to the matches page</a></p>
+      </div>
+    </main>
+    <footer style="padding:20px 40px;border-top:1px solid #e1e5ea;font-size:13px;color:#5d6675">Everything here is a simulation over recorded venue data. Equinox never places orders. Prices are per $1 payout, in [0,1].</footer>
+  </div>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+  <div style="font:600 12px ui-monospace,Menlo,monospace;color:#3a4350">Error · mobile 390 · 5xx variant</div>
+  <div style="width:390px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.06);border-radius:4px;overflow:hidden">
+    <dc-import name="Eq Header" mobile="{{ true }}" active="" banner="nodata" hint-size="100%,150px"></dc-import>
+    <main style="padding:40px 16px 56px;display:flex;flex-direction:column;gap:14px">
+      <span style="align-self:flex-start;display:inline-block;padding:2px 10px;border-radius:4px;font:700 14px/22px ui-monospace,Menlo,monospace;background:#fbe9e7;color:#b3261e">500</span>
+      <h1 style="margin:0;font-size:26px;font-weight:700">500 Internal Server Error</h1>
+      <p style="margin:0;font-size:16px;line-height:1.55;color:#3a4350">The store could not be read. The error is logged; nothing was changed.</p>
+      <a href="/" style="display:flex;align-items:center;justify-content:center;height:44px;border-radius:5px;background:#0172ad;color:#fff;font-size:15px;font-weight:600;text-decoration:none">Back to the matches page</a>
+    </main>
+  </div>
+</div>
+<aside style="width:280px;display:flex;flex-direction:column;gap:10px;font-size:14px;line-height:1.5;color:#3a4350">
+  <div style="font:600 12px ui-monospace,Menlo,monospace">Notes</div>
+  <ol style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px">
+    <li>The status code gets a danger chip; the h1 still renders <code>.Status</code> then <code>.Title</code>.</li>
+    <li>The back link becomes a primary button. The message is unchanged.</li>
+    <li>The mobile frame also shows the "No data available yet" banner (layout.html, <code>.Banner.Show</code> and not pinned).</li>
+  </ol>
+</aside>
+</section>
+</x-dc>
+</body>
+</html>

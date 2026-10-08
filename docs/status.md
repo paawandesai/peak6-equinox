@@ -66,7 +66,7 @@ Next operator action (Tier 2): human verification of Fed demo rendering (criteri
 ## In progress
 
 - #39 M2 follow-up: matcher misses the 6 corrected golden pairs (D-083) — MR !58 in operator review (round 4 asked for the 17 overwritten fixtures to be restored; worker steered 2026-10-08 17:30 UTC).
-- UI-09 (#41): Claude Design pass on the Equinox UI — ticket only; no implementation worker until Paawan approves the design.
+- UI-09 (#41): Claude Design v2 approved by Paawan 2026-10-08 1:41 PM CT (D-098, with three calls). Design committed under `docs/design/claude-design-v2/` and the build tickets UI-10..UI-26 written in `docs/tickets/UI-v2.md`, all in one docs MR. Workers start once that MR merges: UI-10 (design system) and UI-25 (router stores inputs) first, then dependency-ready tickets, Sonnet, max 3.
 - Golden labels (Q-7 / D-083): human item.
 
 ## Blocked

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<sc-if value="{{ isDemo }}" hint-placeholder-val="{{ true }}">
+<div role="status" style="background:#e8f0fb;color:#1a56a8;border-bottom:1px solid #1a56a8;font-size:14px;font-weight:600;line-height:1.4;padding:10px {{ padX }}">Demo mode: data as of {{ asof }} (round {{ round }}). <a href="/admin" style="color:#1a56a8;text-decoration:underline">Unpin</a></div>
+</sc-if>
+<sc-if value="{{ isNoData }}">
+<div role="alert" style="background:#fff3d6;color:#8a5a00;border-bottom:1px solid #8a5a00;font-size:14px;font-weight:600;line-height:1.4;padding:10px {{ padX }}">No data available yet. Run ingest from <a href="/admin" style="color:#8a5a00;text-decoration:underline">/admin</a>.</div>
+</sc-if>
+<header style="background:#fff;border-bottom:1px solid #e1e5ea">
+  <sc-if value="{{ desktop }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;align-items:stretch;gap:36px;padding:0 40px;height:60px">
+      <a href="/" style="display:flex;align-items:baseline;align-self:center;gap:10px;text-decoration:none;color:#1b2230"><strong style="font-size:19px;letter-spacing:-0.01em">Equinox</strong><span style="font-size:13px;color:#5d6675">cross-venue contract matcher and router</span></a>
+      <nav aria-label="Main" style="display:flex;gap:2px;margin-left:auto">
+        <sc-for list="{{ nav }}" as="n" hint-placeholder-count="4">
+          <sc-if value="{{ n.current }}">
+            <a href="{{ n.href }}" aria-current="page" style="display:flex;align-items:center;padding:0 12px;font-size:15px;font-weight:600;color:#1b2230;text-decoration:none;box-shadow:inset 0 -3px 0 #0172ad">{{ n.label }}</a>
+          </sc-if>
+          <sc-if value="{{ n.other }}" hint-placeholder-val="{{ true }}">
+            <a href="{{ n.href }}" style="display:flex;align-items:center;padding:0 12px;font-size:15px;font-weight:500;color:#0172ad;text-decoration:none">{{ n.label }}</a>
+          </sc-if>
+        </sc-for>
+      </nav>
+    </div>
+    <sc-if value="{{ hasRound }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;align-items:center;gap:16px;padding:0 40px;height:40px;background:#f5f7f9;border-top:1px solid #eceff2">
+      <p style="margin:0;display:flex;align-items:center;gap:8px;font-size:13px;color:#3a4350"><span aria-hidden="true" style="flex:none;width:8px;height:8px;border-radius:50%;background:{{ dot }}"></span><span>Data as of <strong style="font-weight:600;font-variant-numeric:tabular-nums">{{ asof }}</strong> (round {{ round }}{{ pinnedText }})</span></p>
+      <form method="post" action="/timezone" style="margin:0 0 0 auto;display:flex;align-items:center;gap:6px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#5d6675">Timezone
+          <select name="tz" style="height:28px;padding:0 8px;border:1px solid #c9cfd6;border-radius:5px;background:#fff;font-size:13px;color:#1b2230"><option>ET</option><option>CT</option><option>UTC</option></select>
+        </label>
+        <button type="submit" style="height:28px;padding:0 12px;border:1px solid #c9cfd6;border-radius:5px;background:#fff;font-size:13px;font-weight:600;color:#1b2230">Change</button>
+      </form>
+    </div>
+    </sc-if>
+  </sc-if>
+  <sc-if value="{{ mobile }}">
+    <div style="padding:14px 16px 0"><a href="/" style="display:flex;flex-direction:column;gap:2px;text-decoration:none;color:#1b2230"><strong style="font-size:19px">Equinox</strong><span style="font-size:13px;color:#5d6675">cross-venue contract matcher and router</span></a></div>
+    <nav aria-label="Main" style="display:flex;gap:2px;padding:0 6px;overflow-x:auto;white-space:nowrap">
+      <sc-for list="{{ nav }}" as="n" hint-placeholder-count="4">
+        <sc-if value="{{ n.current }}">
+          <a href="{{ n.href }}" aria-current="page" style="display:flex;align-items:center;min-height:44px;padding:0 10px;font-size:15px;font-weight:600;color:#1b2230;text-decoration:none;box-shadow:inset 0 -3px 0 #0172ad">{{ n.label }}</a>
+        </sc-if>
+        <sc-if value="{{ n.other }}" hint-placeholder-val="{{ true }}">
+          <a href="{{ n.href }}" style="display:flex;align-items:center;min-height:44px;padding:0 10px;font-size:15px;font-weight:500;color:#0172ad;text-decoration:none">{{ n.label }}</a>
+        </sc-if>
+      </sc-for>
+    </nav>
+    <sc-if value="{{ hasRound }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;flex-direction:column;gap:8px;padding:10px 16px 12px;background:#f5f7f9;border-top:1px solid #eceff2">
+      <p style="margin:0;display:flex;align-items:baseline;gap:8px;font-size:13px;line-height:1.45;color:#3a4350"><span aria-hidden="true" style="flex:none;width:8px;height:8px;border-radius:50%;background:{{ dot }}"></span><span>Data as of <strong style="font-weight:600">{{ asof }}</strong> (round {{ round }}{{ pinnedText }})</span></p>
+      <form method="post" action="/timezone" style="margin:0;display:flex;align-items:center;gap:6px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#5d6675">Timezone
+          <select name="tz" style="height:36px;padding:0 8px;border:1px solid #c9cfd6;border-radius:5px;background:#fff;font-size:14px;color:#1b2230"><option>ET</option><option>CT</option><option>UTC</option></select>
+        </label>
+        <button type="submit" style="height:36px;padding:0 14px;border:1px solid #c9cfd6;border-radius:5px;background:#fff;font-size:14px;font-weight:600;color:#1b2230">Change</button>
+      </form>
+    </div>
+    </sc-if>
+  </sc-if>
+</header>
+<sc-if value="{{ isStale }}">
+<div role="alert" style="background:#fff3d6;color:#8a5a00;border-bottom:1px solid #8a5a00;font-size:14px;font-weight:600;line-height:1.4;padding:10px {{ padX }}">Data is 42 minutes old.</div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:160},&quot;mobile&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;active&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;matches&quot;,&quot;near&quot;,&quot;log&quot;,&quot;eval&quot;,&quot;&quot;],&quot;default&quot;:&quot;matches&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;banner&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;demo&quot;,&quot;stale&quot;,&quot;nodata&quot;,&quot;none&quot;],&quot;default&quot;:&quot;demo&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const a = this.props.active ?? '';
+    const mobile = !!this.props.mobile;
+    const b = this.props.banner ?? 'demo';
+    const nav = [['matches','Matches','/'],['near','Near misses','/near-misses'],['log','Decision log','/log'],['eval','Eval','/eval']]
+      .map(([k,label,href]) => ({ label, href, current: k === a, other: k !== a }));
+    return {
+      nav, mobile, desktop: !mobile, padX: mobile ? '16px' : '40px',
+      isDemo: b === 'demo', isStale: b === 'stale', isNoData: b === 'nodata', hasRound: b !== 'nodata',
+      asof: b === 'stale' ? '2026-10-08 10:21:04 EDT' : '2026-10-06 21:15:56 EDT',
+      round: b === 'stale' ? '41' : '3',
+      pinnedText: b === 'demo' ? ', pinned' : '',
+      dot: b === 'demo' ? '#1a56a8' : b === 'stale' ? '#8a5a00' : '#1b6e3a'
+    };
+  }
+}
+</script>
+</body>
+</html>

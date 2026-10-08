@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<sc-if value="{{ isDemo }}" hint-placeholder-val="{{ true }}">
+<div role="status" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;background:#e8f0fb;color:#1a56a8;border-bottom:1px solid #1a56a8;font-size:14px;font-weight:600;line-height:1.4;padding:10px {{ padX }}"><span aria-hidden="true" style="font-family:ui-monospace,Menlo,monospace">◆</span><span>Demo mode: data as of {{ asof }} (round {{ round }}). <a href="/admin" style="color:#1a56a8;text-decoration:underline">Unpin</a></span></div>
+</sc-if>
+<sc-if value="{{ isNoData }}">
+<div role="alert" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;background:#fff3d6;color:#8a5a00;border-bottom:1px solid #8a5a00;font-size:14px;font-weight:600;line-height:1.4;padding:10px {{ padX }}"><span aria-hidden="true" style="font-family:ui-monospace,Menlo,monospace">?</span><span>No data available yet. Run ingest from <a href="/admin" style="color:#8a5a00;text-decoration:underline">/admin</a>.</span></div>
+</sc-if>
+<header style="background:#fff;border-bottom:1px solid #e1e5ea">
+  <div style="display:flex;flex-wrap:wrap;align-items:stretch;column-gap:32px;padding:0 {{ padX }}">
+    <a href="/" style="display:flex;flex-wrap:wrap;align-items:baseline;align-self:center;column-gap:10px;padding:14px 0;text-decoration:none;color:#1b2230"><strong style="font-size:19px;letter-spacing:-0.01em">Equinox</strong><span style="font-size:13px;color:#5d6675">cross-venue contract matcher and router</span></a>
+    <nav aria-label="Main" style="display:flex;gap:2px;margin-left:{{ navMl }};overflow-x:auto;white-space:nowrap;min-width:0">
+      <sc-for list="{{ nav }}" as="n" hint-placeholder-count="4">
+        <sc-if value="{{ n.current }}">
+          <a href="{{ n.href }}" aria-current="page" style="display:flex;align-items:center;min-height:{{ navH }};padding:0 12px;font-size:15px;font-weight:600;color:#1b2230;text-decoration:none;box-shadow:inset 0 -3px 0 #0172ad">{{ n.label }}</a>
+        </sc-if>
+        <sc-if value="{{ n.other }}" hint-placeholder-val="{{ true }}">
+          <a href="{{ n.href }}" style="display:flex;align-items:center;min-height:{{ navH }};padding:0 12px;font-size:15px;font-weight:500;color:#0172ad;text-decoration:none">{{ n.label }}</a>
+        </sc-if>
+      </sc-for>
+    </nav>
+  </div>
+  <sc-if value="{{ hasRound }}" hint-placeholder-val="{{ true }}">
+  <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:9px {{ padX }};background:#f5f7f9;border-top:1px solid #eceff2">
+    <p style="margin:0;display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;font-size:13px;line-height:1.4;color:#3a4350">
+      <sc-if value="{{ pinned }}"><dc-import name="Eq Badge" tone="info" glyph="◆" text="Pinned" hint-size="72px,22px"></dc-import></sc-if>
+      <sc-if value="{{ live }}" hint-placeholder-val="{{ true }}"><dc-import name="Eq Badge" k="{{ fk }}" hint-size="70px,22px"></dc-import></sc-if>
+      <span>Data as of <time datetime="2026-10-06T21:15:56-04:00" style="font-weight:600;color:#1b2230;font-variant-numeric:tabular-nums">{{ asof }}</time> · round {{ round }}{{ pinnedText }}{{ ageText }}</span>
+      <sc-if value="{{ isWarn }}"><dc-import name="Eq Badge" k="newdata" text="needs new data: warn window" hint-size="190px,18px"></dc-import></sc-if>
+    </p>
+    <form method="post" action="/timezone" style="margin:0 0 0 auto;display:flex;align-items:center;gap:6px">
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#4f5866">Timezone
+        <select name="tz" style="height:{{ ctlH }};padding:0 8px;border:1px solid #c9cfd6;border-radius:5px;background:#fff;font-size:13px;color:#1b2230"><option>ET</option><option>CT</option><option>UTC</option></select>
+      </label>
+      <button type="submit" style="height:{{ ctlH }};padding:0 12px;border:1px solid #c9cfd6;border-radius:5px;background:#fff;font-size:13px;font-weight:600;color:#1b2230">Change</button>
+    </form>
+  </div>
+  </sc-if>
+</header>
+<sc-if value="{{ isStale }}">
+<div role="alert" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;background:#fbe9e7;color:#b3261e;border-bottom:1px solid #b3261e;font-size:14px;font-weight:600;line-height:1.4;padding:10px {{ padX }}"><span aria-hidden="true" style="font-family:ui-monospace,Menlo,monospace">✕</span><span>Data is 42 minutes old.</span></div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:150},&quot;mobile&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;active&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;matches&quot;,&quot;near&quot;,&quot;log&quot;,&quot;eval&quot;,&quot;&quot;],&quot;default&quot;:&quot;matches&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;banner&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;demo&quot;,&quot;none&quot;,&quot;warn&quot;,&quot;stale&quot;,&quot;nodata&quot;],&quot;default&quot;:&quot;demo&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const a = this.props.active ?? '';
+    const mobile = !!this.props.mobile;
+    const b = this.props.banner ?? 'demo';
+    const nav = [['matches','Matches','/'],['near','Near misses','/near-misses'],['log','Decision log','/log'],['eval','Eval','/eval']]
+      .map(([k,label,href]) => ({ label, href, current: k === a, other: k !== a }));
+    const stale = b === 'stale';
+    return {
+      nav, padX: mobile ? '16px' : '40px', navMl: mobile ? '-12px' : 'auto', navH: mobile ? '44px' : '58px', ctlH: mobile ? '36px' : '28px',
+      isDemo: b === 'demo', isStale: stale, isNoData: b === 'nodata', hasRound: b !== 'nodata', isWarn: b === 'warn',
+      pinned: b === 'demo', live: b !== 'demo',
+      fk: stale ? 'stale' : b === 'warn' ? 'warnage' : 'fresh',
+      asof: stale ? '2026-10-08 10:21:04 EDT' : b === 'demo' ? '2026-10-06 21:15:56 EDT' : '2026-10-08 11:03:20 EDT',
+      round: stale ? '41' : b === 'demo' ? '3' : '49',
+      pinnedText: b === 'demo' ? ', pinned' : '',
+      ageText: stale ? ' · 42 min ago' : b === 'warn' ? ' · 7 min ago' : b === 'demo' ? '' : ' · 14 s ago'
+    };
+  }
+}
+</script>
+</body>
+</html>
