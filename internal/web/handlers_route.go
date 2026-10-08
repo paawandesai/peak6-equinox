@@ -163,7 +163,6 @@ type decisionView struct {
 	TotalFilled      decimal.Decimal
 	TotalRequested   decimal.Decimal
 	AverageAllIn     decimal.Decimal
-	BasisPenaltyNote string
 	BasisMultiplier  decimal.Decimal   // For display in template
 	InstrumentTitles map[string]string // instrument ID -> short title
 }
@@ -189,7 +188,8 @@ func newDecisionView(d canonical.Decision, partners int, snapshot time.Time, ins
 	phrase, chipClass := OutcomePhrase(chosen, partial, isComplement, venueCount)
 
 	// For complement routes, include venue and outcome per design.md § 4
-	if isComplement && len(d.Chosen) > 0 {
+	// Only override when fill is complete AND every leg is a complement (not mixed, not partial)
+	if isComplement && !partial && len(d.Chosen) > 0 && allComplements(d.Chosen) {
 		for _, leg := range d.Chosen {
 			if leg.Route == "complement" {
 				phrase = fmt.Sprintf("Routed as %s on %s (complement)", strings.ToUpper(string(leg.Outcome)), leg.Venue)
@@ -222,12 +222,6 @@ func newDecisionView(d canonical.Decision, partners int, snapshot time.Time, ins
 		excls[i] = exclusionView{Exclusion: excl, ReasonPhrase: exclusionReasonPhrase(excl.Reason)}
 	}
 
-	basisNote := ""
-	if len(d.Chosen) > 0 {
-		// Note from M3-02's config
-		basisNote = "basis penalty = score × multiplier per contract"
-	}
-
 	return &decisionView{
 		RoundID: d.RoundID, TargetID: d.TargetID, DecidedAt: d.DecidedAt,
 		Snapshot: snapshot, OrderLine: orderLine(d.Order),
@@ -235,7 +229,7 @@ func newDecisionView(d canonical.Decision, partners int, snapshot time.Time, ins
 		Explanation: d.Explanation, Partners: partners,
 		OutcomePhrase: phrase, OutcomeChipClass: chipClass, OutcomeSummary: summary,
 		TotalFilled: totalFill, TotalRequested: totalReq, AverageAllIn: avgAllIn,
-		BasisPenaltyNote: basisNote, BasisMultiplier: basisMult,
+		BasisMultiplier:  basisMult,
 		InstrumentTitles: instrumentTitles,
 	}
 }
@@ -333,6 +327,19 @@ func hasComplement(legs []canonical.Leg) bool {
 		}
 	}
 	return false
+}
+
+// allComplements reports whether every chosen leg is a complement route.
+func allComplements(legs []canonical.Leg) bool {
+	if len(legs) == 0 {
+		return false
+	}
+	for _, leg := range legs {
+		if leg.Route != "complement" {
+			return false
+		}
+	}
+	return true
 }
 
 // countVenues returns the number of distinct venues in the chosen legs.

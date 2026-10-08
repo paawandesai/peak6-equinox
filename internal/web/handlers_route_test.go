@@ -52,7 +52,7 @@ func TestRouteHappyPathHTMX(t *testing.T) {
 		"0.5150",                            // VWAP
 		"0.5335",                            // All-in
 		`<tr class="totals">`, "100 of 100", // Totals row
-		"Ranked alternatives", "0.5375", "+0.0040", // Gap to chosen
+		"Ranked alternatives", "0.5375", "0.0040", // Gap to chosen (no + sign)
 		"Excluded candidates", seedKalshiC,
 		"<strong>not routable</strong>", // Reason phrase in bold
 		"Explanation", "Simulated buy of 100 YES contracts on "+seedKalshiA,
@@ -347,24 +347,45 @@ func TestRouteExclusionReasonPhrases(t *testing.T) {
 }
 
 // TestRouteResultRendering tests that route_result renders correctly for sweeps and complements (Cursor review round 1).
+// TestRouteResultRendering tests that route_result renders correctly for sweeps and complements (Cursor review round 2).
 func TestRouteResultRendering(t *testing.T) {
 	s, st := newTestServer(t)
 	sd := seedPublic(t, st)
+	ctx := context.Background()
 
-	// Two-leg sweep
-	sweepForm := validRouteForm(sd.eqID, seedKalshiA)
-	sweepRec := postForm(s.Handler(), "/route", sweepForm, true)
+	// Two-leg sweep: create a fixture decision with two chosen legs
+	qty100 := dec("100")
+	sweepDec := canonical.Decision{
+		RoundID:  sd.round.ID,
+		TargetID: seedKalshiA,
+		Order:    canonical.Order{Side: canonical.SideBuy, Outcome: canonical.OutcomeYes, Quantity: &qty100, Type: canonical.OrderMarket, TIF: canonical.TIFIOC},
+		Chosen: []canonical.Leg{
+			{InstrumentID: seedPolyB, Venue: canonical.VenuePolymarket, Side: canonical.SideBuy, Outcome: canonical.OutcomeYes,
+				Quantity: dec("60"), VWAP: dec("0.50"), FeePerContract: dec("0.015"), BasisPenaltyPerContract: dec("0.001"), AllInPerContract: dec("0.516"), Route: "direct"},
+			{InstrumentID: seedKalshiA, Venue: canonical.VenueKalshi, Side: canonical.SideBuy, Outcome: canonical.OutcomeYes,
+				Quantity: dec("40"), VWAP: dec("0.52"), FeePerContract: dec("0.012"), BasisPenaltyPerContract: dec("0.000"), AllInPerContract: dec("0.532"), Route: "direct"},
+		},
+		Alternatives: []canonical.Alternative{{Rank: 1, Legs: []canonical.Leg{{InstrumentID: seedKalshiA, Venue: canonical.VenueKalshi}}, AllInPerContract: dec("0.54"), Note: "single venue"}},
+		Exclusions:   []canonical.Exclusion{{InstrumentID: seedKalshiC, Venue: canonical.VenueKalshi, Reason: "not_routable", Detail: "related only"}},
+		Explanation:  "Sweep across 2 venues was cheaper.",
+		DecidedAt:    sd.round.FinishedAt,
+	}
+	sweepID, err := st.InsertRoutingDecision(ctx, sweepDec)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sweepRec := get(s.Handler(), "/decisions/"+strconv.FormatInt(sweepID, 10))
 	wantHTML(t, sweepRec, http.StatusOK)
 	sweepBody := sweepRec.Body.String()
 	wantContains(t, sweepBody,
-		`class="chip chip-ok"`, "Chosen legs", `<tr class="totals">`,
-		"100 of 100", // Totals row with filled
-		`<strong>Total</strong>`,
+		`class="chip chip-ok"`, "Routed across 2 venues", "Chosen legs",
+		"polymarket", "60", "0.5160", // First leg
+		"kalshi", "40", "0.5320", // Second leg
+		`<tr class="totals">`, "100 of 100", `<strong>Total</strong>`, // Totals row
 	)
 
 	// Complement leg: create a decision with a complement route
-	ctx := context.Background()
-	qty100 := dec("100")
 	compDec := canonical.Decision{
 		RoundID:  sd.round.ID,
 		TargetID: seedKalshiA,
@@ -393,8 +414,69 @@ func TestRouteResultRendering(t *testing.T) {
 	compBody := compRec.Body.String()
 	wantContains(t, compBody,
 		"Routed as NO on polymarket (complement)", `class="chip chip-ok"`,
-		"complement",                    // Route cell shows complement
-		"+0.0050",                       // Gap column
+		"complement: NO on",             // Exact Route cell with uppercase
+		"0.0050",                        // Gap column (without hardcoded +)
 		"<strong>not routable</strong>", // Exclusion phrase in bold
 	)
+
+	// Partial complement: should say "Partially routed", not override with complement phrase
+	qty80 := dec("80")
+	partialCompDec := canonical.Decision{
+		RoundID:  sd.round.ID,
+		TargetID: seedKalshiA,
+		Order:    canonical.Order{Side: canonical.SideBuy, Outcome: canonical.OutcomeYes, Quantity: &qty100, Type: canonical.OrderMarket, TIF: canonical.TIFIOC},
+		Chosen: []canonical.Leg{{
+			InstrumentID: seedPolyB, Venue: canonical.VenuePolymarket, Side: canonical.SideBuy,
+			Outcome: canonical.OutcomeNo, Quantity: qty80, VWAP: dec("0.50"),
+			FeePerContract: dec("0.01"), BasisPenaltyPerContract: dec("0.005"), AllInPerContract: dec("0.515"),
+			Route: "complement",
+		}},
+		Exclusions:  []canonical.Exclusion{{InstrumentID: seedKalshiA, Venue: canonical.VenueKalshi, Reason: "insufficient_depth", Detail: "only 80 available"}},
+		Explanation: "Partial fill: complement venue had only 80 contracts.",
+		DecidedAt:   sd.round.FinishedAt,
+	}
+	partialCompID, err := st.InsertRoutingDecision(ctx, partialCompDec)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	partialCompRec := get(s.Handler(), "/decisions/"+strconv.FormatInt(partialCompID, 10))
+	wantHTML(t, partialCompRec, http.StatusOK)
+	partialCompBody := partialCompRec.Body.String()
+	wantContains(t, partialCompBody,
+		"Partially routed", `class="chip chip-warn"`, // Should NOT say "Routed as NO on"
+		"complement: NO on", // Route cell still shows complement
+		"80 of 100",         // Partial fill in totals
+	)
+
+	// Notional order: totals row should not show "of 0"
+	notional50 := dec("50")
+	notionalDec := canonical.Decision{
+		RoundID:  sd.round.ID,
+		TargetID: seedKalshiA,
+		Order:    canonical.Order{Side: canonical.SideBuy, Outcome: canonical.OutcomeYes, Notional: &notional50, Type: canonical.OrderMarket, TIF: canonical.TIFIOC},
+		Chosen: []canonical.Leg{{
+			InstrumentID: seedPolyB, Venue: canonical.VenuePolymarket, Side: canonical.SideBuy,
+			Outcome: canonical.OutcomeYes, Quantity: dec("100"), VWAP: dec("0.50"),
+			FeePerContract: dec("0.01"), BasisPenaltyPerContract: dec("0.000"), AllInPerContract: dec("0.51"),
+			Route: "direct",
+		}},
+		Explanation: "Notional order filled with 100 contracts.",
+		DecidedAt:   sd.round.FinishedAt,
+	}
+	notionalID, err := st.InsertRoutingDecision(ctx, notionalDec)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	notionalRec := get(s.Handler(), "/decisions/"+strconv.FormatInt(notionalID, 10))
+	wantHTML(t, notionalRec, http.StatusOK)
+	notionalBody := notionalRec.Body.String()
+	wantContains(t, notionalBody,
+		"Routed", `class="chip chip-ok"`,
+		"<strong>100</strong>", // Totals should show just "100", not "100 of 0"
+	)
+	if strings.Contains(notionalBody, " of 0") {
+		t.Error("notional order totals row shows 'of 0'")
+	}
 }

@@ -27,7 +27,7 @@
           {{if $title}}<span class="clamp-2" title="{{$title}}">{{$title}}</span>{{end}}
           <code>{{.InstrumentID}}</code>
         </td>
-        <td data-label="Route">{{if eq .Route "complement"}}complement: {{.Outcome}} on {{.InstrumentID}}{{else}}direct{{end}}</td>
+        <td data-label="Route">{{if eq .Route "complement"}}complement: {{upper (printf "%s" .Outcome)}} on {{.InstrumentID}}{{else}}direct{{end}}</td>
         <td class="num" data-label="Filled">{{.Quantity}}</td>
         <td class="num" data-label="VWAP">{{money .VWAP}}</td>
         <td class="num" data-label="Fee">{{money .FeePerContract}}</td>
@@ -37,13 +37,13 @@
       {{end}}
       <tr class="totals">
         <td colspan="3"><strong>Total</strong></td>
-        <td class="num" data-label="Filled"><strong>{{.TotalFilled}} of {{.TotalRequested}}</strong></td>
+        <td class="num" data-label="Filled"><strong>{{.TotalFilled}}{{if not .TotalRequested.IsZero}} of {{.TotalRequested}}{{end}}</strong></td>
         <td colspan="3" data-label="Average"></td>
         <td class="num" data-label="All-in"><strong>{{money .AverageAllIn}}</strong></td>
       </tr>
     </tbody>
   </table>
-  {{if .BasisPenaltyNote}}<p class="note">basis penalty = score × {{money .BasisMultiplier}} per contract</p>{{end}}
+  {{if not .BasisMultiplier.IsZero}}<p class="note">basis penalty = score × {{money .BasisMultiplier}} per contract</p>{{end}}
   {{else}}
   <h3>Chosen route</h3>
   <p><mark>No venue can fill this order.</mark> Every candidate was excluded; see below.</p>
@@ -71,7 +71,7 @@
         <td class="num" data-label="Basis">{{money $leg.BasisPenaltyPerContract}}</td>
         {{if eq $i 0}}
         <td class="num" rowspan="{{len $alt.Legs}}" data-label="All-in">{{money $alt.AllInPerContract}}</td>
-        <td class="num" rowspan="{{len $alt.Legs}}" data-label="Gap">+{{money $alt.GapToChosen}}</td>
+        <td class="num" rowspan="{{len $alt.Legs}}" data-label="Gap">{{money $alt.GapToChosen}}</td>
         <td rowspan="{{len $alt.Legs}}" data-label="Note">{{$alt.Note}}</td>
         {{end}}
       </tr>
