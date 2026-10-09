@@ -510,7 +510,7 @@ td s.excluded { color: var(--eq-muted); }
 /* --- eval ---------------------------------------------------------------- */
 table.confusion { border-collapse: separate; border-spacing: 2px; font-variant-numeric: tabular-nums; }
 table.confusion a { display: flex; align-items: center; justify-content: center; width: 46px; height: 34px; border-radius: 3px; text-decoration: none; font-weight: 600; color: var(--eq-ink); background: var(--eq-surface); }
-table.confusion a.zero { color: var(--eq-unknown); }
+table.confusion a.zero { color: var(--eq-muted); }
 table.confusion a.d1 { background: color-mix(in srgb, var(--eq-ok) 35%, transparent); }
 table.confusion a.d2 { background: color-mix(in srgb, var(--eq-ok) 60%, transparent); }
 table.confusion a.d3 { background: var(--eq-ok); color: var(--eq-on-solid); font-weight: 700; }
