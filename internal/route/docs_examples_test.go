@@ -237,7 +237,8 @@ func TestDocsExample3ComplementRoute(t *testing.T) {
 		t.Errorf("target input = %+v", targetInput)
 	}
 	partnerInput := findInput(t, dec.Inputs, "polymarket:B")
-	if partnerInput.OutcomeSide != canonical.OutcomeNo || !partnerInput.BestAsk.Equal(d("0.52")) {
+	// For complement route with NO outcome, BestAsk is re-priced: 1 - 0.52 = 0.48 (Issue #73)
+	if partnerInput.OutcomeSide != canonical.OutcomeNo || !partnerInput.BestAsk.Equal(d("0.48")) {
 		t.Errorf("partner input = %+v", partnerInput)
 	}
 

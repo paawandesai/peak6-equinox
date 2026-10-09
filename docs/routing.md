@@ -108,9 +108,13 @@ For each partner whose relationship type is `complement`, the router creates a c
 
 The chosen leg's `Outcome` reflects the actual trade (e.g., NO on the complement instrument), and `Route` is set to `"complement"` (vs `"direct"` for non-complement). The explanation says: "Chose NO on [B] (complement of [A]) at venue X because the all-in cost (VWAP + fee + basis) was $Y per contract, vs $Z for YES on [A] at venue W."
 
+### Guaranteed-loss guard (Issue #73)
+
+The router rejects any leg whose all-in cost is >= $1 per $1 payout for a buy (or <= $0 for a sell) with exclusion reason `sure_loss`. This prevents the router from choosing a complement leg that, due to extreme prices or accumulated fees and basis penalties, results in a guaranteed loss. The exclusion detail shows the exact all-in cost. Decision inputs (UI-25) store re-priced book levels (1 − p for NO outcomes) so slippage calculations compare like to like.
+
 ## Tie-breaking
 
-The router ranks candidates using `better(side, a, b)` (internal/route/route.go:538–565):
+The router ranks candidates using `better(side, a, b)` (internal/route/route.go:560–587):
 
 1. **Full fills before partial ones**: a candidate that can fill the entire order beats one that cannot, regardless of cost.
 2. **Quantized all-in cost**: costs are quantized to 4 decimal places (`Round(4)`) for transitive comparison (M3-02, D-080). For buys, lower quantized cost wins; for sells, higher quantized net proceeds wins. Two candidates with the same `Round(4)` value are considered equal cost.
@@ -140,7 +144,7 @@ Every `Decision` includes:
 | `Warnings` | Non-fatal issues: skew warnings, approximate fees, notional conversions, partial fills. |
 | `Explanation` | A prose summary of the decision: what was chosen, why, cost breakdown per leg, ranked alternatives with their gap to the chosen cost, exclusions, and fee verification status. |
 | `DecidedAt` | The UTC instant the decision was made. |
-| `Inputs` | (UI-25, D-099) The input snapshot recorded at decision time: one entry per candidate considered (target + partners, eligible and excluded), with venue, instrument id, relationship type (`"self"` for the target, otherwise the partner's relationship type), confidence, outcome side checked, best ask, ask depth (top 10 levels), quote times and round id. Uses the correct book side based on order side + outcome. Empty for decisions stored before UI-25. |
+| `Inputs` | (UI-25, D-099) The input snapshot recorded at decision time: one entry per candidate considered (target + partners, eligible and excluded), with venue, instrument id, relationship type (`"self"` for the target, otherwise the partner's relationship type), confidence, outcome side checked, best ask, ask depth (top 10 levels), quote times and round id. Uses the correct book side based on order side + outcome. For NO outcomes, book levels are re-priced as 1 − p (Issue #73). Empty for decisions stored before UI-25. |
 
 ### Exclusion reasons
 
@@ -157,6 +161,7 @@ Every `Decision` includes:
 | `basis_risk_unknown` | "partner relationship has no basis-risk score" | BasisRisk is nil on a partner. |
 | `not_open` | "instrument is closed" | Instrument status is `closed` or `settled`. |
 | `no_quantity` | "notional 10 buys less than one contract at the 0.02 touch" | Notional converts to zero or fractional contracts (no $ prefix). |
+| `sure_loss` | "all-in cost 1.0019 per $1 payout is a guaranteed loss" | For a buy, all-in cost >= $1; for a sell, net proceeds <= $0 (Issue #73). |
 
 ## Worked examples
 
@@ -398,8 +403,8 @@ This is the `Decision` structure. The JSON below is from Example 3's fixture tes
       "relationship_type": "complement",
       "confidence": "0.95",
       "outcome_side": "no",
-      "best_ask": "0.52",
-      "ask_depth": [{"price": "0.52", "size": "100"}],
+      "best_ask": "0.48",
+      "ask_depth": [{"price": "0.48", "size": "100"}],
       "fetched_at": "2026-10-06T12:00:00Z",
       "round_id": 7
     }
