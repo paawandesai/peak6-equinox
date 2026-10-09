@@ -276,17 +276,17 @@ func firstEquivalentPair(t *testing.T, body string) int64 {
 	if end := strings.Index(section[1:], `</section>`); end >= 0 {
 		section = section[:end+1]
 	}
-	// Look for the first row with type chip "equivalent" (not equivalent_given_facts).
-	// The chip is: <span class="chip chip-ok">equivalent</span>
-	chipStart := strings.Index(section, `<span class="chip chip-ok">equivalent</span>`)
-	if chipStart < 0 {
+	// Look for the first row with type badge "equivalent" (not equivalent_given_facts).
+	// UI-11 Cursor round 2: badge template, not chip.
+	badgeStart := strings.Index(section, `<span class="badge b-equivalent">`)
+	if badgeStart < 0 {
 		t.Fatalf("GET /: no equivalent pairs listed in routable section\n%s", excerpt(body))
 	}
-	// Find the <tr> containing this chip and extract its pair link.
-	// Walk backwards from chipStart to find the opening <tr>.
-	rowStart := strings.LastIndex(section[:chipStart], `<tr>`)
+	// Find the <tr> containing this badge and extract its pair link.
+	// Walk backwards from badgeStart to find the opening <tr>.
+	rowStart := strings.LastIndex(section[:badgeStart], `<tr>`)
 	if rowStart < 0 {
-		t.Fatal("GET /: found equivalent chip but no <tr> before it")
+		t.Fatal("GET /: found equivalent badge but no <tr> before it")
 	}
 	rowSection := section[rowStart:]
 	m := pairLinkRe.FindStringSubmatch(rowSection)
