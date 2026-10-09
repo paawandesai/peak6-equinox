@@ -70,12 +70,12 @@ func TestEvalF1Calculation(t *testing.T) {
 			wantF1:  "96.00%",
 		},
 		{
-			name: "undefined F1 when precision is null",
+			name:    "undefined F1 when precision is null",
 			fixture: strings.Replace(sampleEval, `"precision": "1"`, `"precision": null`, 1),
 			wantF1:  "n/a",
 		},
 		{
-			name: "undefined F1 when recall is null",
+			name:    "undefined F1 when recall is null",
 			fixture: strings.Replace(sampleEval, `"recall": 0.9231`, `"recall": null`, 1),
 			wantF1:  "n/a",
 		},
