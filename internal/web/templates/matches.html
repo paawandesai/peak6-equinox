@@ -21,12 +21,16 @@
 {{/* UI-11: toolbar with sort and filter chips */}}
 <form method="get" action="/" class="toolbar-chips">
   <label>Sort
-    <select name="sort">
+    <select name="sort" onchange="this.form.submit()">
       <option value="priority"{{if eq .Sort "priority"}} selected{{end}}>Review priority</option>
       <option value="confidence"{{if eq .Sort "confidence"}} selected{{end}}>Confidence</option>
       <option value="id"{{if eq .Sort "id"}} selected{{end}}>Pair id</option>
     </select>
   </label>
+  <noscript><button type="submit">Go</button></noscript>
+  {{/* UI-11 Cursor round 1: preserve filters when sorting via hidden fields */}}
+  {{if .MinConf}}<input type="hidden" name="min" value="{{.MinConf}}">{{end}}
+  {{if .Q}}<input type="hidden" name="q" value="{{.Q}}">{{end}}
   {{if .HasFilters}}
   <span>Filters</span>
   {{if .MinConfText}}
@@ -73,10 +77,10 @@
           <span class="venue">{{.B.Venue}}</span> <span class="clamp-2" title="{{.B.Title}}">{{.B.Title}}</span>
         </td>
         <td data-label="Relationship">
-          <span class="chip {{.ChipClass}}">{{.Type}}</span>
+          {{template "badge" .TypeBadge}}
           <div><small>method {{.Method}}{{if .BasisRisk}} · basis <strong>{{.BasisRisk}}</strong> {{.BasisWord}}{{end}}</small></div>
         </td>
-        <td data-label="Confidence">{{.Confidence}} {{.ConfidenceWord}}</td>
+        <td data-label="Confidence">{{template "conf" .ConfValue}}</td>
         <td data-label="Checks">
           <ul class="checks" aria-label="Term checks">
             {{range .Checks}}
@@ -85,8 +89,8 @@
           </ul>
           {{if .VetoPhrase}}<a href="/pairs/{{.ID}}#diff">{{.VetoPhrase}}</a>{{end}}
         </td>
-        <td data-label="Market">—</td>
-        <td data-label="Route"><a href="/pairs/{{.ID}}#route" class="button-route">Route →</a></td>
+        <td data-label="Market">{{template "badge" .FreshBadge}}</td>
+        <td data-label="Route" class="full"><a href="/pairs/{{.ID}}#route" class="btn-block">Route →</a></td>
       </tr>
       {{end}}
     {{end}}
@@ -123,10 +127,10 @@
           <span class="venue">{{.B.Venue}}</span> <span class="clamp-2" title="{{.B.Title}}">{{.B.Title}}</span>
         </td>
         <td data-label="Relationship">
-          <span class="chip {{.ChipClass}}">{{.Type}}</span>
+          {{template "badge" .TypeBadge}}
           <div><small>method {{.Method}}{{if .BasisRisk}} · basis <strong>{{.BasisRisk}}</strong> {{.BasisWord}}{{end}}</small></div>
         </td>
-        <td data-label="Confidence">{{.Confidence}} {{.ConfidenceWord}}</td>
+        <td data-label="Confidence">{{template "conf" .ConfValue}}</td>
         <td data-label="Checks">
           <ul class="checks" aria-label="Term checks">
             {{range .Checks}}
@@ -135,7 +139,7 @@
           </ul>
           {{if .VetoPhrase}}<a href="/pairs/{{.ID}}#diff">{{.VetoPhrase}}</a>{{end}}
         </td>
-        <td data-label="Market">—</td>
+        <td data-label="Market">{{template "badge" .FreshBadge}}</td>
       </tr>
     {{end}}
     </tbody>
@@ -170,10 +174,10 @@
           <span class="venue">{{.B.Venue}}</span> <span class="clamp-2" title="{{.B.Title}}">{{.B.Title}}</span>
         </td>
         <td data-label="Relationship">
-          <span class="chip {{.ChipClass}}">{{.Type}}</span>
+          {{template "badge" .TypeBadge}}
           <div><small>method {{.Method}}{{if .BasisRisk}} · basis <strong>{{.BasisRisk}}</strong> {{.BasisWord}}{{end}}</small></div>
         </td>
-        <td data-label="Confidence">{{.Confidence}} {{.ConfidenceWord}}</td>
+        <td data-label="Confidence">{{template "conf" .ConfValue}}</td>
         <td data-label="Checks">
           <ul class="checks" aria-label="Term checks">
             {{range .Checks}}
@@ -182,7 +186,7 @@
           </ul>
           {{if .VetoPhrase}}<a href="/pairs/{{.ID}}#diff">{{.VetoPhrase}}</a>{{end}}
         </td>
-        <td data-label="Market">—</td>
+        <td data-label="Market">{{template "badge" .FreshBadge}}</td>
       </tr>
     {{end}}
     </tbody>

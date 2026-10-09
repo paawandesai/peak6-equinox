@@ -34,8 +34,10 @@ type matchesPage struct {
 	Truncated     bool
 	// UI-11: filter and sort state
 	Sort        string // "priority", "confidence", "id"
+	MinConf     string // raw min param value for hidden field
 	MinConfText string // "≥ 0.70" etc., empty when no filter
 	MinConfHref string // URL to remove the min filter
+	Q           string // raw q param value for hidden field
 	QText       string // "Title contains "fed"", empty when no filter
 	QHref       string // URL to remove the q filter
 	HasFilters  bool   // true if any filter is active
@@ -74,6 +76,13 @@ type pairRow struct {
 	Checks         []checkItem // date, strike, direction, source check glyphs
 	MaxQuoteAge    int         // seconds since oldest quote in this pair
 	ReviewPriority float64     // sort key: for routable, (conf - 0.90) asc, then veto count desc
+	TypeBadge      Badge // UI-11 Cursor round 1: use {{template "badge"}} not span.chip
+	FreshBadge     Badge // UI-11 Cursor round 1: freshness badge from MaxQuoteAge
+	ConfValue      struct {
+		Value float64
+		Word  string
+		Class string
+	} // UI-11 Cursor round 1: {{template "conf"}} expects Value/Word/Class
 }
 
 // typeLabels say what each relationship type means (domain.md), in one line.
@@ -141,16 +150,23 @@ func removeQueryParam(u *url.URL, key string) string {
 	return newURL.String()
 }
 
-// filterRelationships applies the min confidence filter (UI-11).
-// The q (title search) filter is applied later in groupPairs after instrument views are loaded.
-func filterRelationships(rels []canonical.Relationship, minConf decimal.Decimal, hasMin bool, _ string, hasQ bool) []canonical.Relationship {
+// filterRelationships applies the min confidence and q (title search) filters (UI-11 Cursor round 1).
+func filterRelationships(rels []canonical.Relationship, views map[string]instrumentView, minConf decimal.Decimal, hasMin bool, q string, hasQ bool) []canonical.Relationship {
 	if !hasMin && !hasQ {
 		return rels
 	}
 	filtered := make([]canonical.Relationship, 0, len(rels))
+	qLower := strings.ToLower(q)
 	for _, r := range rels {
 		if hasMin && r.Confidence.LessThan(minConf) {
 			continue
+		}
+		if hasQ {
+			aTitle := strings.ToLower(views[r.AID].Title)
+			bTitle := strings.ToLower(views[r.BID].Title)
+			if !strings.Contains(aTitle, qLower) && !strings.Contains(bTitle, qLower) {
+				continue
+			}
 		}
 		filtered = append(filtered, r)
 	}
@@ -173,9 +189,12 @@ func sortPairRows(pairs []pairRow, order string) {
 		})
 	default: // "priority"
 		sort.SliceStable(pairs, func(i, j int) bool {
-			// ReviewPriority: lower is higher priority (closer to 0.90, more vetoes).
+			// UI-11 Cursor round 1: ReviewPriority first, then veto count desc, then ID.
 			if pairs[i].ReviewPriority != pairs[j].ReviewPriority {
 				return pairs[i].ReviewPriority < pairs[j].ReviewPriority
+			}
+			if pairs[i].Vetoes != pairs[j].Vetoes {
+				return pairs[i].Vetoes > pairs[j].Vetoes // more vetoes = higher priority
 			}
 			return pairs[i].ID < pairs[j].ID
 		})
@@ -222,6 +241,7 @@ func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
 		if parsed, err := decimal.NewFromString(minParam); err == nil && parsed.GreaterThanOrEqual(decimal.Zero) && parsed.LessThanOrEqual(decimal.NewFromInt(1)) {
 			minConf = parsed
 			hasMinFilter = true
+			data.MinConf = minParam
 			data.MinConfText = "≥ " + minParam
 			data.MinConfHref = removeQueryParam(r.URL, "min")
 		}
@@ -230,6 +250,7 @@ func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
 	// q filter: title contains (case-insensitive substring).
 	hasQFilter := qParam != ""
 	if hasQFilter {
+		data.Q = qParam
 		data.QText = `Title contains "` + qParam + `"`
 		data.QHref = removeQueryParam(r.URL, "q")
 	}
@@ -244,22 +265,35 @@ func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
 		rels, data.Truncated = rels[:maxMatchRows], true
 	}
 
-	// UI-11: apply filters before grouping.
-	rels = filterRelationships(rels, minConf, hasMinFilter, qParam, hasQFilter)
-	data.Total = len(rels)
-
+	// UI-11: load views before filtering so q filter can check titles.
 	views, err := loadInstrumentViews(ctx, st, relationshipInstrumentIDs(rels))
 	if err != nil {
 		s.dbError(w, "loading instruments for matches", err)
 		return
 	}
+
+	// UI-11 Cursor round 1: apply filters (including q on titles) before setting Total.
+	rels = filterRelationships(rels, views, minConf, hasMinFilter, qParam, hasQFilter)
+	data.Total = len(rels)
+
+	// UI-11: load quotes for MaxQuoteAge calculation (freshness badge).
+	quotes, err := st.ListQuotes(ctx, round.ID)
+	if err != nil {
+		s.dbError(w, "loading quotes for matches", err)
+		return
+	}
+	quoteTimes := make(map[string]time.Time, len(quotes))
+	for _, q := range quotes {
+		quoteTimes[q.InstrumentID] = q.FetchedAt
+	}
+
 	// groupPairs needs the raw time for pairRow.AsOf (M3-08 Cursor round 2: UI-02 contract keeps Round.AsOf formatted)
 	asOf := round.FinishedAt
 	if asOf.IsZero() {
 		asOf = round.StartedAt
 	}
-	// UI-11: groupPairs now accepts sortOrder and qParam for title filtering.
-	data.Groups = groupPairs(rels, views, asOf, sortOrder, qParam, round.ID)
+	// UI-11: groupPairs now accepts sortOrder, qParam, and quoteTimes.
+	data.Groups = groupPairs(rels, views, asOf, sortOrder, qParam, quoteTimes, round.ID)
 
 	// UI-03: split groups into Routable (combined, sorted by the chosen order), Implies, Related.
 	// Routable pairs are shown as one combined group, not separated by type.
@@ -309,22 +343,12 @@ func relationshipInstrumentIDs(rels []canonical.Relationship) []string {
 	return ids
 }
 
-// groupPairs buckets rels by type, strongest type first, populates UI-11 fields,
-// and applies title filtering if qParam is set. Sorting by sortOrder happens in handleMatches.
-func groupPairs(rels []canonical.Relationship, views map[string]instrumentView, asOf time.Time, _ string, qParam string, _ int64) []pairGroup {
+// groupPairs buckets rels by type, strongest type first, populates UI-11 fields.
+// Sorting by sortOrder happens in handleMatches; filtering is done before calling this.
+func groupPairs(rels []canonical.Relationship, views map[string]instrumentView, asOf time.Time, _ string, _ string, quoteTimes map[string]time.Time, _ int64) []pairGroup {
 	byType := make(map[canonical.RelationshipType][]pairRow)
-	qLower := strings.ToLower(qParam)
-	hasQFilter := qParam != ""
 
 	for _, r := range rels {
-		// UI-11: apply title filter (case-insensitive substring match on either title).
-		if hasQFilter {
-			aTitle := strings.ToLower(views[r.AID].Title)
-			bTitle := strings.ToLower(views[r.BID].Title)
-			if !strings.Contains(aTitle, qLower) && !strings.Contains(bTitle, qLower) {
-				continue
-			}
-		}
 
 		// UI-03: compute veto phrase per design.md § 6.
 		vetoPhrase := ""
@@ -350,31 +374,52 @@ func groupPairs(rels []canonical.Relationship, views map[string]instrumentView, 
 		isEGF := r.Type == canonical.RelEquivalentGivenFacts
 		checks := buildChecks(r.Diff, isEGF)
 
-		// UI-11: compute ReviewPriority for sorting.
-		// For routable: (confidence - 0.90) ascending, then veto count descending.
-		// For non-routable: just use confidence descending.
+		// UI-11 Cursor round 1: ReviewPriority is just (confidence - 0.90) for routable.
+		// Veto count is a secondary sort key in sortPairRows, not packed here.
 		reviewPriority := 0.0
+		confFloat, _ := r.Confidence.Float64()
 		if r.Type.Routable() {
-			confFloat, _ := r.Confidence.Float64()
 			reviewPriority = confFloat - 0.90
-			// Negate veto count so more vetoes = lower priority value (higher priority).
-			reviewPriority -= float64(len(r.Vetoes)) * 0.001
 		} else {
-			confFloat, _ := r.Confidence.Float64()
 			reviewPriority = -confFloat // negate so higher confidence = lower priority value
 		}
 
-		// UI-11: MaxQuoteAge will need quote FetchedAt times, which aren't in Relationship.
-		// For now, set to 0 (will be populated later when quote data is available).
+		// UI-11: MaxQuoteAge from stored quote FetchedAt (for freshness badge).
 		maxQuoteAge := 0
+		now := time.Now()
+		if tA, ok := quoteTimes[r.AID]; ok {
+			ageA := int(now.Sub(tA).Seconds())
+			if ageA > maxQuoteAge {
+				maxQuoteAge = ageA
+			}
+		}
+		if tB, ok := quoteTimes[r.BID]; ok {
+			ageB := int(now.Sub(tB).Seconds())
+			if ageB > maxQuoteAge {
+				maxQuoteAge = ageB
+			}
+		}
 
-		byType[r.Type] = append(byType[r.Type], pairRow{
+		// UI-11 Cursor round 1: calculate FreshState from MaxQuoteAge.
+		var freshState FreshState
+		if maxQuoteAge == 0 {
+			freshState = FreshStateUnknown
+		} else if maxQuoteAge < 120 {
+			freshState = FreshStateFresh
+		} else {
+			freshState = FreshStateStale
+		}
+
+		// UI-11 Cursor round 1: build ConfValue for {{template "conf"}}.
+		confWord := ConfidenceWord(r.Confidence)
+		confClass := "w-" + confWord // w-high, w-medium, w-low
+		row := pairRow{
 			ID:             r.ID,
 			A:              views[r.AID],
 			B:              views[r.BID],
 			Type:           string(r.Type),
 			Confidence:     r.Confidence.StringFixed(2),
-			ConfidenceWord: ConfidenceWord(r.Confidence),
+			ConfidenceWord: confWord,
 			ChipClass:      TypeChipClass(r.Type),
 			Method:         string(r.Method),
 			Vetoes:         len(r.Vetoes),
@@ -385,7 +430,13 @@ func groupPairs(rels []canonical.Relationship, views map[string]instrumentView, 
 			Checks:         checks,
 			MaxQuoteAge:    maxQuoteAge,
 			ReviewPriority: reviewPriority,
-		})
+			TypeBadge:      TypeBadge(r.Type),
+			FreshBadge:     FreshBadge(freshState),
+		}
+		row.ConfValue.Value = ConfidenceValue(r.Confidence)
+		row.ConfValue.Word = confWord
+		row.ConfValue.Class = confClass
+		byType[r.Type] = append(byType[r.Type], row)
 	}
 	var groups []pairGroup
 	for _, t := range canonical.RelationshipTypes() {
