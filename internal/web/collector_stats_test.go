@@ -138,8 +138,9 @@ func TestAdminCollectorSuccessFromStore(t *testing.T) {
 	}
 	body := rec.Body.String()
 	// 19 successes of 288 expected ticks = 6.59%; 268 ticks missing.
+	// UI-17: verbatim sentences kept, count chips separate
 	for _, want := range []string{"Collector success, trailing 24h0m0s (NFR-05)", "<strong>6.59%</strong> of 288 expected 5m0s ticks succeeded (target 95.00%)",
-		"<strong>BELOW TARGET</strong>", "ok 18, partial 1, failed 1, running 0, missing ticks 268 (20 rounds observed of 288 scheduled)",
+		"<strong>BELOW TARGET</strong>", "ok 18", "partial 1", "failed 1", "missing ticks 268", "20 rounds observed of 288 scheduled",
 		"alert threshold 5.0 GB", ", below the threshold"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("body lacks %q", want)
