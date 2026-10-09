@@ -143,7 +143,7 @@ type Exclusion struct {
 type DecisionInput struct {
 	InstrumentID string `json:"instrument_id"`
 	Venue        Venue  `json:"venue"`
-	// RelationshipType is the partner's relationship type to the target (empty for the target itself).
+	// RelationshipType is the partner's relationship type to the target ("self" for the target itself).
 	RelationshipType RelationshipType `json:"relationship_type"`
 	Confidence       decimal.Decimal  `json:"confidence"` // 1.0 for the target
 	// OutcomeSide is the outcome the router checked on this candidate.

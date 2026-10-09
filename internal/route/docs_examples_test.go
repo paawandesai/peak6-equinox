@@ -66,6 +66,11 @@ func TestDocsExample1SingleVenueFill(t *testing.T) {
 			t.Errorf("warnings[%d] = %q, want %q", i, dec.Warnings[i], want)
 		}
 	}
+
+	// UI-25: assert inputs are recorded for all examples
+	if len(dec.Inputs) != 2 {
+		t.Errorf("inputs count = %d, want 2 (target + 1 partner)", len(dec.Inputs))
+	}
 }
 
 // TestDocsExample2TwoVenueSweep is the fixture test for docs/routing.md Example 2.
@@ -144,6 +149,11 @@ func TestDocsExample2TwoVenueSweep(t *testing.T) {
 		if i >= len(dec.Warnings) || dec.Warnings[i] != want {
 			t.Errorf("warnings[%d] = %q, want %q", i, dec.Warnings[i], want)
 		}
+	}
+
+	// UI-25: assert inputs are recorded for all examples
+	if len(dec.Inputs) != 2 {
+		t.Errorf("inputs count = %d, want 2 (target + 1 partner)", len(dec.Inputs))
 	}
 }
 

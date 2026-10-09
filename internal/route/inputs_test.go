@@ -257,6 +257,41 @@ func TestRouteInputsRoundTrip(t *testing.T) {
 	}
 }
 
+// TestRouteInputsSellSide verifies that sell-side and NO-outcome inputs store
+// raw book prices, not the 1-p levels that bookSide walks (UI-25 nit: document the choice).
+// Rationale: stored inputs are a faithful record of what the router read, not the transformed
+// levels after bookSide logic. The trace or log can apply the transformation at display time.
+func TestRouteInputsSellSide(t *testing.T) {
+	// Sell NO on target: bookSide walks YesAsks and transforms prices as 1-p.
+	// We verify that inputs store the raw YesAsks without transformation.
+	target := cand(kalshiID, []canonical.Level{lv("0.48", "100")}, []canonical.Level{lv("0.52", "100")}, nil)
+	partner := cand(polymarketID, []canonical.Level{lv("0.49", "100")}, []canonical.Level{lv("0.50", "50"), lv("0.53", "50")},
+		rel(kalshiID, polymarketID, canonical.RelEquivalent, "0.97"))
+
+	dec := mustRoute(t, sell("50", "NO"), target, []canonical.Candidate{partner})
+
+	// Target input should have raw YesAsks (0.52), not the walked 1-p price (0.48).
+	targetInput := findInput(t, dec.Inputs, kalshiID)
+	if targetInput.OutcomeSide != canonical.OutcomeNo {
+		t.Errorf("target input outcome side = %s, want NO", targetInput.OutcomeSide)
+	}
+	if !targetInput.BestAsk.Equal(d("0.52")) {
+		t.Errorf("target input best ask = %s, want 0.52 (raw YesAsks, not walked 1-p)", targetInput.BestAsk)
+	}
+	if len(targetInput.AskDepth) != 1 || !targetInput.AskDepth[0].Price.Equal(d("0.52")) {
+		t.Errorf("target input ask depth = %+v, want raw YesAsks [0.52:100]", targetInput.AskDepth)
+	}
+
+	// Partner input should also have raw YesAsks (0.50, 0.53), not walked 1-p levels.
+	partnerInput := findInput(t, dec.Inputs, polymarketID)
+	if !partnerInput.BestAsk.Equal(d("0.50")) {
+		t.Errorf("partner input best ask = %s, want 0.50 (raw YesAsks)", partnerInput.BestAsk)
+	}
+	if len(partnerInput.AskDepth) != 2 || !partnerInput.AskDepth[0].Price.Equal(d("0.50")) || !partnerInput.AskDepth[1].Price.Equal(d("0.53")) {
+		t.Errorf("partner input ask depth = %+v, want raw YesAsks [0.50:50, 0.53:50]", partnerInput.AskDepth)
+	}
+}
+
 // findInput returns the input for the given instrument ID, or fails the test.
 func findInput(t *testing.T, inputs []canonical.DecisionInput, id string) canonical.DecisionInput {
 	t.Helper()

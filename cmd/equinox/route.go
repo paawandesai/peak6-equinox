@@ -225,6 +225,7 @@ func loadRouteInputs(ctx context.Context, st *store.Store, logger *slog.Logger, 
 		}
 	}
 	// If no partners, default to "equivalent" for targetType.
+	// Web uses the pair's rel.Type; CLI has no pair context, so defaults to equivalent.
 	if in.targetType == "" {
 		in.targetType = canonical.RelEquivalent
 	}

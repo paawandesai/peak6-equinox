@@ -68,6 +68,14 @@ func order(side canonical.Side, outcome canonical.Outcome, qty string) canonical
 
 func buy(qty string) canonical.Order { return order(canonical.SideBuy, canonical.OutcomeYes, qty) }
 
+func sell(qty, outcome string) canonical.Order {
+	out := canonical.OutcomeYes
+	if outcome == "NO" {
+		out = canonical.OutcomeNo
+	}
+	return order(canonical.SideSell, out, qty)
+}
+
 func limit(o canonical.Order, price string) canonical.Order {
 	o.Type, o.LimitPrice = canonical.OrderLimit, ptr(price)
 	return o

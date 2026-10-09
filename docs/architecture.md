@@ -5,7 +5,7 @@
 
 | Layer | Choice | Version | Why (decision) |
 |---|---|---|---|
-| Language | Go | **1.27.1**: `go 1.27.0` + `toolchain go1.27.1` in go.mod; CI image `golang:1.27.1` | PEAK6's internal stack (D-001, D-050) |
+| Language | Go | **1.27.1** (latest stable on go.dev/dl at M1-01, 2026-10-06): `go 1.27.0` + `toolchain go1.27.1` in go.mod; CI image `golang:1.27.1` | PEAK6's internal stack (D-001, D-050) |
 | HTTP / UI | `net/http`, `html/template`, htmx, Pico.css (classless) | htmx 2.x, Pico 2.x, pinned with SRI in M1-08 | No JS build; UI polish is not graded but clarity matters (D-004, D-031) |
 | Database | PostgreSQL | 16 (Cloud SQL `POSTGRES_16`, `postgres:16` locally) | Persistent history across fetch rounds; relational joins; JSONB for raw payloads (D-016) |
 | DB driver / migrations | `jackc/pgx/v5`, `pressly/goose/v3` | latest v5 / v3 | Boring, standard |
@@ -122,7 +122,7 @@ Postgres. Migrations live in `migrations/NNNN_name.sql`, run with goose.
 | `llm_verdicts` | `cache_key text pk` (sha256), `model`, `prompt_version`, `verdict jsonb`, `created_at` |
 | `llm_usage` | `day date pk`, `calls`, `input_tokens`, `output_tokens` |
 | `llm_verify_last_run` | `id boolean pk default true check (id = true)` (singleton), `verified integer`, `downgraded integer`, `cache_hits integer`, `ran_at timestamptz` (UI-08 follow-up, issue #40) |
-| `routing_decisions` | `id`, `round_id`, `order jsonb`, `decision jsonb` (includes `inputs` since UI-25, D-099), `created_at` |
+| `routing_decisions` | `id`, `round_id`, `order jsonb`, `decision jsonb` (includes `inputs` and `target_type` since UI-25, D-099), `created_at` |
 | `decision_log` | `id`, `kind` (`relationship`/`routing`/`llm`/`ingest`), `ref`, `summary`, `payload jsonb`, `created_at` |
 
 Golden labels are files in the repo (`testdata/golden/labels.yaml`), not DB rows, so they are reviewable.
