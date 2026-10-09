@@ -138,10 +138,11 @@ func parseRouteForm(get func(string) string) (routeInput, []string) {
 // routePage is the data for route.html and the route_result fragment.
 type routePage struct {
 	page
-	PairID     int64
-	Errors     []string
-	DecisionID int64
-	Decision   *decisionView
+	PairID         int64
+	Errors         []string
+	DecisionID     int64
+	Decision       *decisionView
+	RenderContext  string // "route" or "decision" to control trace step open/closed state
 }
 
 // decisionView is a Decision prepared for the template.
@@ -151,7 +152,7 @@ type decisionView struct {
 	DecidedAt        time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
 	Snapshot         time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
 	OrderLine        string
-	Chosen           []canonical.Leg
+	Chosen           []legView
 	Alternatives     []alternativeView
 	Exclusions       []exclusionView
 	Warnings         []string
@@ -165,18 +166,54 @@ type decisionView struct {
 	AverageAllIn     decimal.Decimal
 	BasisMultiplier  decimal.Decimal   // For display in template
 	InstrumentTitles map[string]string // instrument ID -> short title
+	// UI-13 additions for v2 trace
+	TotalCost          decimal.Decimal
+	TotalFees          decimal.Decimal
+	TotalBasis         decimal.Decimal
+	SlippageTotalBps   decimal.Decimal     // Weighted average slippage vs quoted in bps
+	MaxQuoteAge        time.Duration       // Oldest input quote age
+	MaxQuoteAgeBadge   Badge               // Freshness badge for the oldest input
+	Inputs             []inputSnapshotView // Input snapshot from stored decision
+	KeptCount          int                 // How many candidates were kept (eligible)
+	CandidateCount     int                 // Total candidates considered
+	InputsRecorded     bool                // True if inputs exist (UI-25), false for old decisions
+	UI25CutoffDate     string              // The date before which inputs were not stored
+}
+
+// legView extends Leg with fields for the v2 cost report (UI-13).
+type legView struct {
+	canonical.Leg
+	Quoted       decimal.Decimal // Best price at snapshot (for slippage calculation)
+	SlippageBps  decimal.Decimal // (VWAP - Quoted) * 10000 in bps
+	SharePct     decimal.Decimal // This leg's share of total filled (0-100)
+	X            decimal.Decimal // Split bar x position (0-100)
+	BasisScore   decimal.Decimal // Basis risk score for this leg
+	Levels       int             // Book levels used for VWAP
 }
 
 // alternativeView extends Alternative with the gap to the chosen all-in.
 type alternativeView struct {
 	canonical.Alternative
 	GapToChosen decimal.Decimal
+	GapBps      decimal.Decimal // Gap in basis points
 }
 
 // exclusionView extends Exclusion with a human-readable reason phrase.
 type exclusionView struct {
 	canonical.Exclusion
 	ReasonPhrase string
+}
+
+// inputSnapshotView represents one candidate's input snapshot at decision time (UI-13, step 1).
+type inputSnapshotView struct {
+	Venue            canonical.Venue
+	InstrumentID     string
+	TypeBadge        Badge
+	BestAsk          decimal.Decimal
+	Depth            int // Sum of ask levels (contracts available)
+	Age              time.Duration
+	FreshState       FreshState
+	FetchedAt        time.Time // Raw UTC time for formatTime
 }
 
 func newDecisionView(d canonical.Decision, partners int, snapshot time.Time, instrumentTitles map[string]string, basisMult decimal.Decimal) *decisionView {
@@ -208,12 +245,68 @@ func newDecisionView(d canonical.Decision, partners int, snapshot time.Time, ins
 	// Build outcome summary for the strip
 	summary := buildOutcomeSummary(d, totalFill, totalReq, avgAllIn)
 
-	// Map alternatives with gap
+	// Build input snapshot map for quoted prices (UI-13)
+	inputMap := buildInputMap(d.Inputs)
+
+	// Map chosen legs with v2 fields (UI-13)
+	chosenViews := make([]legView, len(d.Chosen))
+	var totalCost, totalFees, totalBasis decimal.Decimal
+	var weightedSlippageBps decimal.Decimal
+	for i, leg := range d.Chosen {
+		lv := legView{Leg: leg}
+
+		// Find quoted price from inputs
+		if input, ok := inputMap[leg.InstrumentID]; ok {
+			lv.Quoted = input.BestAsk
+			// Slippage = (VWAP - Quoted) * 10000 in bps
+			slippage := leg.VWAP.Sub(lv.Quoted).Mul(decimal.NewFromInt(10000))
+			lv.SlippageBps = slippage
+			// Weight by this leg's quantity
+			weightedSlippageBps = weightedSlippageBps.Add(slippage.Mul(leg.Quantity))
+			lv.Levels = len(input.AskDepth)
+		}
+
+		// Share percentage for split bar
+		if !totalFill.IsZero() {
+			lv.SharePct = leg.Quantity.Div(totalFill).Mul(decimal.NewFromInt(100))
+		}
+
+		// Basis score (from the leg's basis penalty divided by the multiplier)
+		if !basisMult.IsZero() {
+			lv.BasisScore = leg.BasisPenaltyPerContract.Div(basisMult)
+		}
+
+		// Accumulate totals
+		totalCost = totalCost.Add(leg.VWAP.Mul(leg.Quantity))
+		totalFees = totalFees.Add(leg.FeePerContract.Mul(leg.Quantity))
+		totalBasis = totalBasis.Add(leg.BasisPenaltyPerContract.Mul(leg.Quantity))
+
+		chosenViews[i] = lv
+	}
+
+	// Compute split bar X positions (cumulative)
+	var cumulative decimal.Decimal
+	for i := range chosenViews {
+		chosenViews[i].X = cumulative
+		cumulative = cumulative.Add(chosenViews[i].SharePct)
+	}
+
+	// Weighted average slippage
+	slippageTotalBps := decimal.Zero
+	if !totalFill.IsZero() {
+		slippageTotalBps = weightedSlippageBps.Div(totalFill)
+	}
+
+	// Map alternatives with gap and gap in bps (UI-13)
 	chosenAllIn := avgAllIn
 	alts := make([]alternativeView, len(d.Alternatives))
 	for i, alt := range d.Alternatives {
 		gap := alt.AllInPerContract.Sub(chosenAllIn)
-		alts[i] = alternativeView{Alternative: alt, GapToChosen: gap}
+		gapBps := decimal.Zero
+		if !chosenAllIn.IsZero() {
+			gapBps = gap.Div(chosenAllIn).Mul(decimal.NewFromInt(10000))
+		}
+		alts[i] = alternativeView{Alternative: alt, GapToChosen: gap, GapBps: gapBps}
 	}
 
 	// Map exclusions with reason phrases
@@ -222,15 +315,35 @@ func newDecisionView(d canonical.Decision, partners int, snapshot time.Time, ins
 		excls[i] = exclusionView{Exclusion: excl, ReasonPhrase: exclusionReasonPhrase(excl.Reason)}
 	}
 
+	// Build input snapshots (UI-13, step 1)
+	inputViews, maxAge, maxAgeBadge := buildInputSnapshots(d, snapshot)
+	inputsRecorded := len(d.Inputs) > 0
+
+	// Kept vs total candidates (UI-13, step 2)
+	keptCount := len(d.Chosen) + len(d.Alternatives)
+	candidateCount := keptCount + len(d.Exclusions)
+
 	return &decisionView{
 		RoundID: d.RoundID, TargetID: d.TargetID, DecidedAt: d.DecidedAt,
 		Snapshot: snapshot, OrderLine: orderLine(d.Order),
-		Chosen: d.Chosen, Alternatives: alts, Exclusions: excls, Warnings: d.Warnings,
+		Chosen: chosenViews, Alternatives: alts, Exclusions: excls, Warnings: d.Warnings,
 		Explanation: d.Explanation, Partners: partners,
 		OutcomePhrase: phrase, OutcomeChipClass: chipClass, OutcomeSummary: summary,
 		TotalFilled: totalFill, TotalRequested: totalReq, AverageAllIn: avgAllIn,
 		BasisMultiplier:  basisMult,
 		InstrumentTitles: instrumentTitles,
+		// UI-13 fields
+		TotalCost:        totalCost,
+		TotalFees:        totalFees,
+		TotalBasis:       totalBasis,
+		SlippageTotalBps: slippageTotalBps,
+		MaxQuoteAge:      maxAge,
+		MaxQuoteAgeBadge: maxAgeBadge,
+		Inputs:           inputViews,
+		KeptCount:        keptCount,
+		CandidateCount:   candidateCount,
+		InputsRecorded:   inputsRecorded,
+		UI25CutoffDate:   "2026-10-08", // UI-25 was merged on this date
 	}
 }
 
@@ -516,10 +629,11 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := routePage{
-		page:       p,
-		PairID:     in.PairID,
-		DecisionID: id,
-		Decision:   newDecisionView(dec, len(partners), round.SnapshotAt(), titles, s.cfg.BasisPenaltyMult),
+		page:          p,
+		PairID:        in.PairID,
+		DecisionID:    id,
+		Decision:      newDecisionView(dec, len(partners), round.SnapshotAt(), titles, s.cfg.BasisPenaltyMult),
+		RenderContext: "route",
 	}
 	s.renderRoute(w, r, http.StatusOK, data)
 }
@@ -649,4 +763,68 @@ func collectInstrumentIDs(d canonical.Decision) map[string]bool {
 		ids[ex.InstrumentID] = true
 	}
 	return ids
+}
+
+// buildInputMap creates a map from instrument ID to DecisionInput for quick lookup (UI-13).
+func buildInputMap(inputs []canonical.DecisionInput) map[string]canonical.DecisionInput {
+	m := make(map[string]canonical.DecisionInput, len(inputs))
+	for _, input := range inputs {
+		m[input.InstrumentID] = input
+	}
+	return m
+}
+
+// buildInputSnapshots creates the input snapshot views for the trace step 1 (UI-13).
+// Returns the snapshot views, the oldest quote age, and its freshness badge.
+func buildInputSnapshots(d canonical.Decision, snapshot time.Time) ([]inputSnapshotView, time.Duration, Badge) {
+	if len(d.Inputs) == 0 {
+		return nil, 0, Badge{}
+	}
+
+	views := make([]inputSnapshotView, len(d.Inputs))
+	var maxAge time.Duration
+
+	for i, input := range d.Inputs {
+		age := snapshot.Sub(input.FetchedAt)
+		if age < 0 {
+			age = 0
+		}
+		if age > maxAge {
+			maxAge = age
+		}
+
+		// Compute depth (sum of ask levels)
+		depth := 0
+		for _, level := range input.AskDepth {
+			depth += int(level.Size.IntPart())
+		}
+
+		// Determine fresh state using existing staleAfter threshold
+		// UI-19 will add warn state; for now only Fresh/Stale/Unknown
+		freshState := FreshStateFresh
+		staleThreshold := 120 * time.Second // D-077 default
+		if age >= staleThreshold {
+			freshState = FreshStateStale
+		}
+
+		views[i] = inputSnapshotView{
+			Venue:        input.Venue,
+			InstrumentID: input.InstrumentID,
+			TypeBadge:    TypeBadge(input.RelationshipType),
+			BestAsk:      input.BestAsk,
+			Depth:        depth,
+			Age:          age,
+			FreshState:   freshState,
+			FetchedAt:    input.FetchedAt,
+		}
+	}
+
+	// Badge for the oldest input
+	oldestState := FreshStateFresh
+	if maxAge >= 120*time.Second {
+		oldestState = FreshStateStale
+	}
+	maxAgeBadge := FreshBadge(oldestState)
+
+	return views, maxAge, maxAgeBadge
 }

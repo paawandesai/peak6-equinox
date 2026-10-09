@@ -60,6 +60,8 @@ var templateFuncs = template.FuncMap{
 	"httpURL": httpURL,
 	// formatTime formats a time.Time in the user's chosen timezone (M3-08).
 	"formatTime": formatTime,
+	// Age formats a duration as a human-readable age (UI-13).
+	"Age": Age,
 	// UI-12: partOrder returns the ordered list of rule parts for diff grouping.
 	"partOrder": func() []string {
 		return []string{

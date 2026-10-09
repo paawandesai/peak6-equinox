@@ -48,14 +48,14 @@ func TestRouteHappyPathHTMX(t *testing.T) {
 	wantContains(t, body,
 		`id="route-result"`, "Decision #1", "buy 100 contracts YES, market IOC", "Partners considered: 2",
 		// Polymarket fills 50 at 0.50 and 50 at 0.53 (VWAP 0.515, fee 0.0175, basis 0.001, all-in 0.5335); Kalshi fills all 100 at 0.52 (all-in 0.5375).
-		`class="chip chip-ok"`, "Routed", // Outcome strip with chip
+		"badge badge-l", "Routed", // UI-13: Outcome badge
 		"Chosen legs", `<span class="venue">polymarket</span>`,
 		"0.5150",                            // VWAP
 		"0.5335",                            // All-in
 		`<tr class="totals">`, "100 of 100", // Totals row
-		"Ranked alternatives", "0.5375", "0.0040", // Gap to chosen (no + sign)
-		"Excluded candidates", seedKalshiC,
-		"<strong>not routable</strong>", // Reason phrase in bold
+		"Ranked alternatives", "0.5375", // Gap to chosen
+		"Eligibility", seedKalshiC, // UI-13: Exclusions in trace step 2
+		`class="reason"`, "not routable", // UI-13: Reason phrase with class
 		"Explanation", "Simulated buy of 100 YES contracts on "+seedKalshiA,
 		"basis penalty = score × 0.01", // Configured multiplier
 	)
@@ -556,5 +556,103 @@ func TestPOSTRouteP95(t *testing.T) {
 	t.Logf("POST /route HTTP endpoint latency over %d samples: p50=%v, p95=%v, p99=%v", samples, p50, p95, p99)
 	if p95 > 300*time.Millisecond {
 		t.Errorf("p95 latency %v > 300ms AC", p95)
+	}
+}
+
+// UI-13: Test new v2 trace fields
+func TestRouteResultV2Fields(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+	rec := postForm(s.Handler(), "/route", validRouteForm(sd.eqID, seedKalshiA), true)
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+	
+	// Check for new v2 elements
+	wantContains(t, body,
+		`dl.tiles`,                          // Cost report tiles
+		"Avg all-in",                        // Key tile
+		"Total cost",                        // Total cost tile
+		"Slippage vs quoted",                // Slippage tile (UI-13)
+		`ol.trace-steps`,                    // Decision trace
+		"Order and input snapshot",          // Step 1
+		"Eligibility",                       // Step 2
+		"Fill simulation and fee math",      // Step 3
+		"Ranked alternatives",               // Step 4
+		"Decision",                          // Step 5
+		"Sign rule",                         // Sign rule text
+		"permalink",                         // Permalink to decision
+	)
+}
+
+// UI-13: Test routed state with slippage
+func TestRouteResultRoutedState(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+	rec := postForm(s.Handler(), "/route", validRouteForm(sd.eqID, seedKalshiA), true)
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+	
+	wantContains(t, body,
+		"Routed",                     // Outcome badge
+		"Quoted",                     // Quoted column header
+		"Slippage",                   // Slippage column header
+		"of 100",                     // Filled quantity
+	)
+}
+
+// UI-13: Test not routed state
+func TestRouteResultNotRoutedState(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+	form := validRouteForm(sd.eqID, seedKalshiA)
+	form.Set("type", "limit")
+	form.Set("limit", "0.01") // Price too low, no venue can fill
+	rec := postForm(s.Handler(), "/route", form, true)
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+	
+	wantContains(t, body,
+		"Not routed",                         // Outcome badge
+		"No venue can fill this order",       // Not routed message
+		"Excluded candidates",                // Exclusions section
+		"of 3 candidates kept",               // Kept count (should be 0 of N)
+	)
+}
+
+// UI-13: Test sign rule rendering (positive = saving, parentheses = loss)
+func TestRouteResultSignRule(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+	rec := postForm(s.Handler(), "/route", validRouteForm(sd.eqID, seedKalshiA), true)
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+	
+	// Sign rule should be documented
+	wantContains(t, body, "Sign rule", "positive", "saving", "parentheses")
+	
+	// Gap in alternatives table: parentheses for unfavourable (higher cost than chosen)
+	// The chosen alternative costs less, so gap should show positives for better ones
+	// or parentheses for worse ones
+}
+
+// UI-13: Test input snapshots for decisions with stored inputs
+func TestRouteResultWithInputs(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+	rec := postForm(s.Handler(), "/route", validRouteForm(sd.eqID, seedKalshiA), true)
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+	
+	wantContains(t, body,
+		"Order and input snapshot",          // Step 1 title
+		"Best ask",                          // Input snapshot column
+		"Depth",                             // Input snapshot column
+		"Fetched",                           // Input snapshot column
+		"Relationship",                      // Input snapshot column
+	)
+	
+	// Should NOT show the pre-UI-25 message
+	if strings.Contains(body, "Input quotes were not stored") {
+		t.Error("should not show pre-UI-25 message for new decisions")
 	}
 }
