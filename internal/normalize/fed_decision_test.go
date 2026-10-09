@@ -165,3 +165,41 @@ func TestExtractPolymarketFedDecision(t *testing.T) {
 		t.Errorf("Expected threshold -0.50, got %v", terms.Threshold)
 	}
 }
+
+// TestExtractSettledFedDecisionIgnoresHypothetical uses the recorded settled
+// September 2026 KXFEDDECISION text. Its rules_secondary says "Therefore, if
+// the Federal Reserve hikes by 50bps, the 50bps market will resolve to Yes":
+// an illustration, not the bucket's condition (CI #45765 read every bucket as
+// eq +0.50). The bucket comes from the title.
+func TestExtractSettledFedDecisionIgnoresHypothetical(t *testing.T) {
+	secondary := "This market is mutually exclusive. Therefore, if the Federal Reserve hikes by 50bps, the 50bps market will " +
+		"resolve to Yes and the 25bps market will resolve to No. Only one bucket, at maximum, can resolve to Yes."
+	cases := []struct {
+		ticker, title, primary string
+		comp                   canonical.Comparator
+		threshold              string
+	}{
+		{"KXFEDDECISION-26SEP-C26", "Will the Federal Reserve Cut rates by >25bps at their September 2026 meeting? — Cut >25bps",
+			"If the Federal Reserve does a Cut of   25bps on September 16, 2026, then the market resolves to Yes.", canonical.ComparatorLT, "-0.25"},
+		{"KXFEDDECISION-26SEP-C25", "Will the Federal Reserve Cut rates by 25bps at their September 2026 meeting? — Cut 25bps",
+			"If the Federal Reserve does a Cut of 25bps on September 16, 2026, then the market resolves to Yes.", canonical.ComparatorEQ, "-0.25"},
+		{"KXFEDDECISION-26SEP-H0", "Will the Federal Reserve Hike rates by 0bps at their September 2026 meeting? — Fed maintains rate",
+			"If the Federal Reserve does a Hike of 0bps on September 16, 2026, then the market resolves to Yes.", canonical.ComparatorEQ, "0"},
+		{"KXFEDDECISION-26SEP-H25", "Will the Federal Reserve Hike rates by 25bps at their September 2026 meeting? — Hike 25bps",
+			"If the Federal Reserve does a Hike of 25bps on September 16, 2026, then the market resolves to Yes.", canonical.ComparatorEQ, "0.25"},
+		{"KXFEDDECISION-26SEP-H26", "Will the Federal Reserve Hike rates by >25bps at their September 2026 meeting? — Hike >25bps",
+			"If the Federal Reserve does a Hike of   25bps on September 16, 2026, then the market resolves to Yes.", canonical.ComparatorGT, "0.25"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.ticker, func(t *testing.T) {
+			terms, _ := extractFed(canonical.Instrument{
+				ID: "kalshi:" + tc.ticker, VenueMarketID: tc.ticker, Category: canonical.CategoryFed,
+				Title: tc.title, RulesText: tc.primary + "\n\n" + secondary, CloseTime: mustParse("2026-09-16T17:59:00Z"),
+			})
+			if terms.Metric != MetricRateChange || terms.Comparator != tc.comp || terms.Threshold == nil ||
+				!terms.Threshold.Equal(decimal.RequireFromString(tc.threshold)) {
+				t.Errorf("terms = %s %s %v, want %s %s %s", terms.Metric, terms.Comparator, terms.Threshold, MetricRateChange, tc.comp, tc.threshold)
+			}
+		})
+	}
+}

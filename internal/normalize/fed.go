@@ -109,8 +109,10 @@ var (
 	upWordRe     = regexp.MustCompile(`(?i)^(?:` + upWords + `|increase|hike|raise|rise)$`)
 
 	// exampleRe: a condition inside an illustration ("for example, if the Fed
-	// cuts rates by 50 bps ...") is not the market's condition.
-	exampleRe = regexp.MustCompile(`(?i)\b(?:for\s+example|e\.g\.|such\s+as|for\s+instance)\b[^.]*$`)
+	// cuts rates by 50 bps ...", Kalshi's "This market is mutually exclusive.
+	// Therefore, if the Federal Reserve hikes by 50bps, the 50bps market will
+	// resolve to Yes", D-109) is not the market's condition.
+	exampleRe = regexp.MustCompile(`(?i)\b(?:for\s+example|e\.g\.|such\s+as|for\s+instance|therefore,?\s+if)\b[^.]*$`)
 
 	// Meeting dates: "October 27-28, 2026", "Jan 26 to 27, 2027" resolve on the last day.
 	meetingRangeRe = regexp.MustCompile(`(?i)\b` + fedMonthPattern + `\.?\s+(\d{1,2})(?:st|nd|rd|th)?\s*(?:-|–|—|to|through)\s*(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?\b`)
