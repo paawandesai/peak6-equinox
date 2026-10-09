@@ -181,6 +181,18 @@ func extractPolitics(in canonical.Instrument) (canonical.Terms, canonical.Qualit
 	}
 	politicsDeadline(&t, &q, in.CloseTime, srcs)
 	t.ResolutionSource = politicsSource(rules)
+	// For Kalshi PRESNOM series, infer the resolution source from the metric's
+	// party when the rules state no explicit source (settlement_sources are at
+	// the event level, not in the market's rules text; D-108).
+	if t.ResolutionSource == canonical.Unknown && t.Metric != canonical.Unknown && in.Venue == canonical.VenueKalshi {
+		if strings.Contains(in.VenueMarketID, "KXPRESNOMD") || strings.Contains(in.VenueMarketID, "KXPRESNOMR") {
+			if strings.Contains(t.Metric, ":"+PartyDemocratic+":") {
+				t.ResolutionSource = "democratic_party_official"
+			} else if strings.Contains(t.Metric, ":"+PartyRepublican+":") {
+				t.ResolutionSource = "republican_party_official"
+			}
+		}
+	}
 	return t, q
 }
 

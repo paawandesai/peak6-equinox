@@ -106,6 +106,7 @@ None.
 | D-099 | Router stores input quotes with each decision (UI-25, D-098 call 3). `canonical.Decision` gains `Inputs []DecisionInput` (venue, instrument id, relationship type `"self"` for target, confidence at decision time, outcome side, best ask, ask depth capped at 10 levels, quote times, round id) and `TargetType` (relationship type label for UI grouping). Stored as optional jsonb fields; no SQL migration. Old decisions decode with empty Inputs and TargetType. | 2026-10-08 |
 | D-101 | M4-04: Cloud Run `min-instances=1` for the review window Sun 2026-10-11 09:00–12:00 CT (3 h) and revert (`make review-window-on|off`); estimated cost $0.27 within $50 headroom; `scripts/review-window.sh` with status verification. Tier 2 (prod config, cost). | 2026-10-08 |
 | D-102 | M4-07: final production deploy of `main` for submission; sha, revision and smoke output filled in by the M4-07 MR. Tier 2 (prod deploy). Number reserved by the M4 tickets MR. | 2026-10-08 |
+| D-108 | M4-70: Infer resolution source for Kalshi KXPRESNOMD/R nomination markets from metric's party. Tier 2 (touches equivalence rules); achieves 9/9 equivalent for 2028 nominee pairs (eval 55/90, up from 46/90). KXFEDDECISION and KXRATECUTCOUNT formats remain unimplemented (18/27 labels, blocked on matcher logic). | 2026-10-09 |
 
 ## Kept decisions (veto closed)
 
