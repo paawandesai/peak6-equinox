@@ -617,7 +617,7 @@ func (s *Server) computeOutliers(entries []logEntryView, _ string) *logOutliers 
 			oldestInput = &outlierEntry{
 				Link:  e.Link,
 				About: e.About,
-				Value: formatDurationCompact(e.Routing.MaxQuoteAge.Age),
+				Value: formatDuration(e.Routing.MaxQuoteAge.Age),
 			}
 		}
 	}
@@ -629,7 +629,7 @@ func (s *Server) computeOutliers(entries []logEntryView, _ string) *logOutliers 
 	return &logOutliers{
 		WorstSaving:      worstSaving,
 		OldestInputAge:   oldestInput,
-		OldestInputStamp: formatDurationCompact(oldestInputAge),
+		OldestInputStamp: formatDuration(oldestInputAge),
 	}
 }
 
@@ -707,7 +707,7 @@ func (s *Server) handleDecision(w http.ResponseWriter, r *http.Request) {
 }
 
 // formatDuration returns a human-readable duration string (UI-15).
-func formatDurationCompact(d time.Duration) string {
+func formatDuration(d time.Duration) string {
 	if d < 0 {
 		d = 0
 	}
