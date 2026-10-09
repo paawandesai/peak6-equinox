@@ -6,6 +6,9 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/shopspring/decimal"
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/store"
@@ -466,5 +469,102 @@ func TestPairVerdictPanelSectionOrder(t *testing.T) {
 	if verdictPos >= typesPos || typesPos >= contractsPos || contractsPos >= diffPos {
 		t.Errorf("section order wrong: verdict=%d types=%d contracts=%d diff=%d",
 			verdictPos, typesPos, contractsPos, diffPos)
+	}
+}
+
+// TestPairRuleLayers verifies the .layers details group renders all 4 layers
+// (Title, Summary, Full rules, Clarifications) with correct content, empty
+// states, and the "clarified <date>" annotation.
+func TestPairRuleLayers(t *testing.T) {
+	s, st := newTestServer(t)
+	now := time.Date(2026, 10, 9, 12, 0, 0, 0, time.UTC)
+	clarDate := time.Date(2026, 10, 8, 15, 30, 0, 0, time.UTC)
+
+	r, err := st.CreateRound(context.Background(), now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.FinishRound(context.Background(), r.ID, "ok", nil, now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+
+	// Kalshi instrument with summary and clarifications
+	kalshi := canonical.Instrument{
+		ID:                      "kalshi:KXTEST-01",
+		Venue:                   canonical.VenueKalshi,
+		VenueMarketID:           "KXTEST-01",
+		VenueEventID:            "KXTEST",
+		Category:                canonical.CategoryCrypto,
+		Title:                   "BTC above $120k?",
+		RulesText:               "Primary rules here.\n\nAdditional details here.",
+		RulesSummary:            "Primary rules here.",
+		Clarifications:          "Additional details here.",
+		ClarificationsUpdatedAt: clarDate,
+		Terms:                   canonical.UnknownTerms(),
+		Status:                  canonical.StatusOpen,
+		CloseTime:               now.Add(24 * time.Hour),
+		FeeSchedule:             canonical.FeeSchedule{ID: canonical.FeeScheduleKalshiTakerV1, Params: map[string]decimal.Decimal{"multiplier": decimal.RequireFromString("0.07")}},
+	}
+
+	// Polymarket instrument with no separate layers
+	poly := canonical.Instrument{
+		ID:             "polymarket:0x123",
+		Venue:          canonical.VenuePolymarket,
+		VenueMarketID:  "0x123",
+		VenueEventID:   "test-event",
+		Category:       canonical.CategoryCrypto,
+		Title:          "BTC above $120k?",
+		RulesText:      "Combined rules text.",
+		RulesSummary:   "", // Polymarket doesn't publish separate summary
+		Clarifications: "", // Polymarket doesn't publish separate clarifications
+		Terms:          canonical.UnknownTerms(),
+		Status:         canonical.StatusOpen,
+		CloseTime:      now.Add(24 * time.Hour),
+		FeeSchedule:    canonical.FeeSchedule{ID: canonical.FeeSchedulePolymarketV1, Params: map[string]decimal.Decimal{"rate": decimal.RequireFromString("0.02")}},
+	}
+
+	for _, in := range []canonical.Instrument{kalshi, poly} {
+		if err := st.UpsertInstrument(context.Background(), r.ID, in); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Create relationship
+	relID, err := st.UpsertRelationship(context.Background(), canonical.Relationship{
+		RoundID:     r.ID,
+		AID:         kalshi.ID,
+		BID:         poly.ID,
+		Type:        canonical.RelEquivalent,
+		Confidence:  decimal.RequireFromString("0.95"),
+		Method:      canonical.MethodRules,
+		Explanation: "Test pair",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rec := get(s.Handler(), "/pairs/"+strconv.FormatInt(relID, 10))
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+
+	// Verify .layers div exists for each contract
+	if !strings.Contains(body, `<div class="layers">`) {
+		t.Error("missing .layers div")
+	}
+
+	// Kalshi contract: verify all 4 layers
+	// Title is always present in contract card
+	wantContains(t, body, "BTC above $120k?")
+
+	// Summary: should show for Kalshi
+	wantContains(t, body, "Primary rules here.")
+
+	// Clarifications: should show for Kalshi with date
+	wantContains(t, body, "Additional details here.")
+	wantContains(t, body, "clarified 2026-10-08")
+
+	// Verify "venue publishes none" appears for empty layers
+	if !strings.Contains(body, "venue publishes none") {
+		t.Error("missing 'venue publishes none' for empty layers")
 	}
 }

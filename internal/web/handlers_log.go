@@ -697,9 +697,10 @@ func (s *Server) handleDecision(w http.ResponseWriter, r *http.Request) {
 	tz := timezoneFromRequest(r)
 	data := decisionPage{
 		routePage: routePage{
-			page:       s.pageBase(currentRound, "Decision "+r.PathValue("id"), "What did this simulated order do, and why did the router choose that venue?", tz, "decision"),
-			DecisionID: rd.ID,
-			Decision:   newDecisionView(rd.Decision, countPartners(rd.Decision), snapshot, s.loadDecisionInstrumentTitles(ctx, st, rd.Decision), s.cfg.BasisPenaltyMult),
+			page:          s.pageBase(currentRound, "Decision "+r.PathValue("id"), "What did this simulated order do, and why did the router choose that venue?", tz, "decision"),
+			DecisionID:    rd.ID,
+			Decision:      newDecisionView(rd.Decision, countPartners(rd.Decision), snapshot, s.loadDecisionInstrumentTitles(ctx, st, rd.Decision), s.cfg.BasisPenaltyMult),
+			RenderContext: "decision",
 		},
 		CreatedAt: rd.CreatedAt,
 	}

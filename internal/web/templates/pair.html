@@ -206,7 +206,6 @@
 </section>
 {{end}}
 
-{{/* UI-12: instrument card with .layers for rules (Title and Full rules only; Summary and Clarifications come in UI-21) */}}
 {{define "instrument"}}
 <article>
   <header><span class="venue">{{.Venue}}</span> <strong>{{.Title}}</strong></header>
@@ -220,14 +219,36 @@
   </dl>
   <p><small>{{.Category}} · {{.Status}} · closes {{formatTime .Close .Tz}}</small></p>
   <div class="layers">
-    <details name="layers-{{.Venue}}" open>
+    <details name="layers-{{.Venue}}">
       <summary>Title</summary>
       <p class="rules">{{.Title}}</p>
     </details>
+    {{if .Summary}}
+    <details name="layers-{{.Venue}}">
+      <summary>Summary</summary>
+      <p class="rules">{{.Summary}}</p>
+    </details>
+    {{else}}
+    <details name="layers-{{.Venue}}">
+      <summary>Summary</summary>
+      <p class="rules">venue publishes none</p>
+    </details>
+    {{end}}
     <details name="layers-{{.Venue}}" open>
       <summary>Full rules</summary>
       <p class="rules">{{.Rules}}</p>
     </details>
+    {{if .Clarifications}}
+    <details name="layers-{{.Venue}}">
+      <summary>Clarifications{{if .ClarificationsDate}} (clarified {{.ClarificationsDate}}){{end}}</summary>
+      <p class="rules">{{.Clarifications}}</p>
+    </details>
+    {{else}}
+    <details name="layers-{{.Venue}}">
+      <summary>Clarifications</summary>
+      <p class="rules">venue publishes none</p>
+    </details>
+    {{end}}
   </div>
   {{if .Quality}}<p><small>Quality flags: {{range .Quality}}<code>{{.Flag}}</code> {{end}}</small></p>{{end}}
   {{end}}

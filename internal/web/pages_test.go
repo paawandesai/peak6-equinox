@@ -231,8 +231,10 @@ func TestDecisionPage(t *testing.T) {
 	wantContains(t, body,
 		"Routing decision #"+strconv.FormatInt(decisionID, 10),
 		"What did this simulated order do", "Decision #"+strconv.FormatInt(decisionID, 10),
-		"buy 100 contracts YES, market IOC", "Partners considered: 2", "round "+strconv.FormatInt(sd.round.ID, 10),
+		"buy 100 contracts YES, market IOC", "Partners considered:</strong> 2", "round "+strconv.FormatInt(sd.round.ID, 10), // UI-13: v2 HTML (v1: "Partners considered: 2")
 		`href="/log?kind=routing"`, "Chosen legs", "Explanation",
+		// UI-13 v2 elements
+		"permalink", "Order and input snapshot", "Eligibility", "Fill simulation and fee math",
 	)
 	for _, raw := range []string{"999999", "abc", "0"} {
 		rec := get(s.Handler(), "/decisions/"+raw)
