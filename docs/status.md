@@ -177,7 +177,7 @@ Paawan kept these four in the operator chat on 2026-10-07 at 8:38 PM CT, after t
 | FR-15 | done (M3-01 eligibility) | | NFR-15 | partial (pending M4-08 final spend) |
 | FR-16 | done (Q-8; both venues verified) | | NFR-16 | done (UI-v2 merged) |
 | FR-17 | done (M2 persisted + UI) | | NFR-17 | done (M1, coverage: see CI) |
-| FR-18 | done (M2 machinery; 95 labels from Q-7; eval 55/90 with #70 !91) | | | |
+| FR-18 | done (M2 machinery; 95 labels from Q-7; eval 55/90 with #70 !86) | | | |
 | FR-19 | done (M2-06 fixture back-test) | | | |
 | FR-20 | done (M3-06 LLM verifier) | | | |
 | FR-21 | done (M1-M2 v1, UI-10..18 v2) | | | |
