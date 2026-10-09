@@ -127,6 +127,8 @@ Postgres. Migrations live in `migrations/NNNN_name.sql`, run with goose.
 
 Golden labels are files in the repo (`testdata/golden/labels.yaml`), not DB rows, so they are reviewable.
 
+**Rule layers** (D-103, UI-21): `instruments.rules_text` stays combined for matching compatibility. New columns `rules_summary`, `clarifications`, `clarifications_updated_at` store separate layers for display. Kalshi: `rules_summary` = `rules_primary` (per-strike summary), `clarifications` = `rules_secondary` (Additional Details), timestamp not published. Polymarket: both empty (no separate layers beyond main rules). Not fed to matcher or LLM in UI-21.
+
 ## External services
 
 | Service | Access | On failure |
