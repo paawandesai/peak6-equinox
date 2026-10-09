@@ -101,6 +101,13 @@ main section { margin-bottom: 2.5rem; }
 .page-head .crumbs { font-size: 0.875rem; color: var(--eq-muted); margin: 0 0 0.375rem; display: flex; gap: 1rem; }
 .question { font-size: var(--eq-text-lede); line-height: 1.45; margin: 0; color: var(--eq-muted); }
 .page-head .intro { margin: 0.5rem 0 0; max-width: 90ch; font-size: var(--eq-text-m); color: var(--eq-ink-2); }
+.intro-details { margin: 0.5rem 0 0; }
+.intro-details p { max-width: 90ch; font-size: var(--eq-text-m); color: var(--eq-ink-2); margin: 0; }
+.intro-details summary { font-size: var(--eq-text-m); color: var(--eq-muted); cursor: pointer; }
+@media (min-width: 576px) {
+  .intro-details summary { display: none; }
+  .intro-details { margin-top: 0.5rem; }
+}
 
 footer.container { border-top: 1px solid var(--eq-border); padding-block: 1.25rem; color: var(--eq-muted); }
 

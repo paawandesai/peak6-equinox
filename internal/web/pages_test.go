@@ -141,6 +141,9 @@ func TestDecisionLogPage(t *testing.T) {
 	body := rec.Body.String()
 	wantContains(t, body,
 		"What did Equinox decide recently, and why?",
+		// UI-15: intro in details element (collapses at small viewports)
+		`<details class="intro-details" open>`,
+		`<summary>About the log</summary>`,
 		`href="/pairs/`+strconv.FormatInt(sd.eqID, 10)+`">pair #`+strconv.FormatInt(sd.eqID, 10)+`: kalshi / polymarket</a>`,
 		// UI-15: chip-filter links instead of select
 		`<a href="/log" class="chip-filter" aria-current="page">everything</a>`,
