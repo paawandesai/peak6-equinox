@@ -323,3 +323,138 @@ func TestCompareEmptyFactsUsedIsNotNil(t *testing.T) {
 		t.Errorf("basis risk = %+v", rel.BasisRisk)
 	}
 }
+
+// TestMatcherEvidence tests that the matcher evidence is computed and attached (UI-20, D-110).
+func TestMatcherEvidence(t *testing.T) {
+	a, b := pair()
+	rel := Compare(a, b, facts.Set{})
+	if rel.Evidence == nil {
+		t.Fatal("evidence is nil")
+	}
+	ev := rel.Evidence
+	// Prior should be 0.99 for equivalent
+	if !ev.Prior.Equal(decimal.RequireFromString("0.99")) {
+		t.Errorf("prior = %s, want 0.99", ev.Prior)
+	}
+	// Total should equal stored confidence (0.95: 0.99 - 0.02 - 0.02 for unknown edge rules)
+	if !ev.Total.Equal(rel.Confidence) {
+		t.Errorf("total %s != confidence %s", ev.Total, rel.Confidence)
+	}
+	// Should have contributions: prior + 2 unknown edge rules deductions
+	if len(ev.Contributions) != 3 {
+		t.Errorf("contributions count = %d, want 3", len(ev.Contributions))
+	}
+	// Verify sum: prior + contributions == total
+	sum := ev.Prior
+	for _, c := range ev.Contributions {
+		if c.Term != "prior" {
+			sum = sum.Add(c.Value)
+		}
+	}
+	if !sum.Equal(ev.Total) {
+		t.Errorf("sum of contributions %s != total %s", sum, ev.Total)
+	}
+	// No pre-veto score for equivalent pairs (no vetoes)
+	if ev.PreVetoScore != nil {
+		t.Errorf("equivalent pair has pre-veto score: %v", ev.PreVetoScore)
+	}
+}
+
+// TestMatcherEvidenceContributions tests per-term contributions for various deductions.
+func TestMatcherEvidenceContributions(t *testing.T) {
+	a, b := pair()
+	a.Terms.EdgeRules, b.Terms.EdgeRules = "none", "none"
+	// Clean pair: 0.99 prior, no deductions
+	rel := Compare(a, b, facts.Set{})
+	if rel.Evidence == nil || len(rel.Evidence.Contributions) != 1 {
+		t.Fatalf("clean pair evidence: %+v", rel.Evidence)
+	}
+	if rel.Evidence.Contributions[0].Term != "prior" || !rel.Evidence.Contributions[0].Value.Equal(decimal.RequireFromString("0.99")) {
+		t.Errorf("clean pair prior: %+v", rel.Evidence.Contributions[0])
+	}
+
+	// Unknown unit A: prior + unknown_unit_a deduction
+	a.Terms.Unit = canonical.Unknown
+	rel = Compare(a, b, facts.Set{})
+	hasContribution := func(term string, value string) bool {
+		for _, c := range rel.Evidence.Contributions {
+			if c.Term == term && c.Value.Equal(decimal.RequireFromString(value)) {
+				return true
+			}
+		}
+		return false
+	}
+	if !hasContribution("unknown_unit_a", "-0.02") {
+		t.Errorf("missing unknown_unit_a contribution: %+v", rel.Evidence.Contributions)
+	}
+
+	// Deadline gap: 5 hours → -0.05
+	a.Category, b.Category = canonical.CategoryFed, canonical.CategoryFed
+	later := t0.Add(5 * time.Hour)
+	b.Terms.Deadline = &later
+	a.Terms.Unit = "percent" // reset unknown
+	rel = Compare(a, b, facts.Set{})
+	if !hasContribution("deadline_gap_hours", "-0.05") {
+		t.Errorf("missing deadline_gap_hours contribution: %+v", rel.Evidence.Contributions)
+	}
+
+	// Defaulted deadline: -0.05 per side
+	a.Quality.Add(canonical.QualityDeadlineDefaulted, "deadline", "x")
+	rel = Compare(a, b, facts.Set{})
+	if !hasContribution("deadline_defaulted_a", "-0.05") {
+		t.Errorf("missing deadline_defaulted_a contribution: %+v", rel.Evidence.Contributions)
+	}
+}
+
+// TestMatcherEvidencePreVetoScore tests pre-veto score for near misses (UI-20, D-110).
+func TestMatcherEvidencePreVetoScore(t *testing.T) {
+	a, b := pair()
+	// Make them differ on comparator to create a near miss (related, not implies)
+	b.Terms.Comparator = canonical.ComparatorLTE
+	rel := Compare(a, b, facts.Set{})
+	// Should be related or a derived type (has vetoes, not unrelated)
+	if rel.Type == canonical.RelUnrelated || rel.Type == canonical.RelEquivalent {
+		t.Fatalf("type = %s, expected a vetoed pair", rel.Type)
+	}
+	if len(rel.Vetoes) == 0 {
+		t.Fatal("no vetoes on near miss")
+	}
+	if rel.Evidence == nil {
+		t.Fatal("evidence is nil")
+	}
+	ev := rel.Evidence
+	// Should have pre-veto score
+	if ev.PreVetoScore == nil {
+		t.Fatal("pre-veto score is nil for near miss")
+	}
+	// Pre-veto score should be what equivalentConfidence would return
+	expectedPreVeto := equivalentConfidence(a, b)
+	if !ev.PreVetoScore.Equal(expectedPreVeto) {
+		t.Errorf("pre-veto score %s != expected %s", ev.PreVetoScore, expectedPreVeto)
+	}
+	// Should have required score (0.90)
+	if ev.RequiredScore == nil {
+		t.Fatal("required score is nil")
+	}
+	if !ev.RequiredScore.Equal(decimal.RequireFromString("0.9")) {
+		t.Errorf("required score %s != 0.9", ev.RequiredScore)
+	}
+}
+
+// TestMatcherEvidenceUnrelated tests that unrelated pairs have evidence but no pre-veto score.
+func TestMatcherEvidenceUnrelated(t *testing.T) {
+	a, b := pair()
+	// Make them unrelated by different subjects
+	b.Terms.Subject = "ETH"
+	rel := Compare(a, b, facts.Set{})
+	if rel.Type != canonical.RelUnrelated {
+		t.Fatalf("type = %s, want unrelated", rel.Type)
+	}
+	if rel.Evidence == nil {
+		t.Fatal("evidence is nil")
+	}
+	// Unrelated pairs should NOT have pre-veto score (they're blocked, not vetoed)
+	if rel.Evidence.PreVetoScore != nil {
+		t.Errorf("unrelated pair has pre-veto score: %v", rel.Evidence.PreVetoScore)
+	}
+}

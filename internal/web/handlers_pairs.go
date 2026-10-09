@@ -43,9 +43,11 @@ type pairPage struct {
 	BasisComponents []basisComponentView // UI-12: with Row field
 	NearMiss        bool                 // a stored related pair: shown with the veto that fired
 	Types           []typeView
-	History         historyChart
-	LogEntries      []logEntryView
-	Form            routeFormView
+	History              historyChart
+	LogEntries           []logEntryView
+	Form                 routeFormView
+	EvidenceFooter       string // UI-20: "prior + Σ = total → confidence X.XX" or "not recorded"
+	HasEvidence          bool   // UI-20: whether evidence was recorded
 }
 
 // confView is the confidence for the {{template "conf"}} define (UI-12).
@@ -423,6 +425,21 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 		}
 		q.dest.Venue = string(canonical.VenueOf(q.id))
 		q.dest.Tz = tz
+	}
+	// UI-20: Build evidence footer
+	if rel.Evidence != nil {
+		data.HasEvidence = true
+		// Format: "prior + Σ = total → confidence X.XX"
+		// Count non-prior contributions
+		contribCount := len(rel.Evidence.Contributions) - 1 // excluding prior
+		data.EvidenceFooter = fmt.Sprintf("%s + Σ(%d) = %s → confidence %s",
+			rel.Evidence.Prior.StringFixed(2),
+			contribCount,
+			rel.Evidence.Total.StringFixed(2),
+			rel.Confidence.StringFixed(2))
+	} else {
+		data.HasEvidence = false
+		data.EvidenceFooter = "not recorded"
 	}
 	s.render(w, http.StatusOK, "pair", data)
 }

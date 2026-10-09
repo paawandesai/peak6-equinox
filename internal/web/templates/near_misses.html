@@ -24,7 +24,7 @@
   <p>{{.Description}}</p>
   <table class="data stack">
     <thead>
-      <tr><th>Veto that fired</th><th>How close</th><th>Contracts</th><th>Explanation</th></tr>
+      <tr><th>Veto that fired</th><th>How close</th><th>Score</th><th>Contracts</th><th>Explanation</th></tr>
     </thead>
     <tbody>
     {{range .Rows}}
@@ -37,6 +37,7 @@
           {{end}}
         </td>
         <td data-label="How close"><code>{{.TermGap}}</code></td>
+        <td data-label="Score"><small>{{.Score}}</small></td>
         <td data-label="Contracts">
           <a href="/pairs/{{.ID}}">#{{.ID}}</a><br>
           <span class="venue">{{.A.Venue}}</span> {{.A.Title}}<br>

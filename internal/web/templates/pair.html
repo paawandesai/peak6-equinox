@@ -81,6 +81,10 @@
       {{end}}
     {{end}}
     {{if not .DiffRows}}<tbody><tr><td colspan="4">No diff was stored for this pair.</td></tr></tbody>{{end}}
+    {{/* UI-20: Evidence footer */}}
+    {{if .HasEvidence}}
+    <tfoot><tr><td colspan="4"><small>Matcher evidence: {{.EvidenceFooter}}</small></td></tr></tfoot>
+    {{end}}
   </table>
   <p class="diff-counts">{{.DiffCounts}}</p>
 </section>
