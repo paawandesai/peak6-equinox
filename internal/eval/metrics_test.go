@@ -94,7 +94,9 @@ func TestEvaluateTargetMetAndUnmeasured(t *testing.T) {
 		{AID: "kalshi:B", BID: "polymarket:2", Label: canonical.RelRelated, ConfirmedBy: "h", ConfirmedOn: "2026-10-07"},
 	}}
 	all := func(typ canonical.RelationshipType) Predictor {
-		return func(string, string) (canonical.RelationshipType, decimal.Decimal, bool) { return typ, decimal.NewFromInt(1), true }
+		return func(string, string) (canonical.RelationshipType, decimal.Decimal, bool) {
+			return typ, decimal.NewFromInt(1), true
+		}
 	}
 	r := Evaluate(l, func(a, _ string) (canonical.RelationshipType, decimal.Decimal, bool) {
 		if a == "kalshi:A" {

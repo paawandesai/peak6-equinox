@@ -337,7 +337,8 @@ func RotatePreviousSummary(currentPath string) string {
 	prevPath := filepath.Join(filepath.Dir(currentPath), filepath.Base(currentPath[:len(currentPath)-len(filepath.Ext(currentPath))])+".prev.json")
 	// Try to copy current to .prev
 	if current, err := os.ReadFile(filepath.Clean(currentPath)); err == nil {
-		if err := os.WriteFile(prevPath, current, 0o640); err == nil {
+		//nolint:gosec // prevPath derived from operator config currentPath, not user input
+		if err := os.WriteFile(filepath.Clean(prevPath), current, 0o600); err == nil {
 			return prevPath
 		}
 	}

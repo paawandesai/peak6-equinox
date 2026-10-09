@@ -32,6 +32,28 @@
   <div>
     <p>Precision and recall per relationship type, computed by <code>equinox eval</code> over the human-confirmed labels in <code>testdata/golden/labels.yaml</code>. This page only reads the stored summary.</p>
     <p>Produced <strong>{{formatTime $.Produced $.Timezone}}</strong>{{if .Command}} by <code>{{.Command}}</code>{{end}}{{if .RoundID}} on round <strong>{{.RoundID}}</strong>{{end}}: <strong>{{.Labels}}</strong> labelled pair{{if ne .Labels 1}}s{{end}}{{if .LabelsFile}} from <code>{{.LabelsFile}}</code>{{end}}{{if .Method}}, method <code>{{.Method}}</code>{{end}}.</p>
+    {{if .LabelsSHA256}}<p><strong>Golden-set version:</strong> <code>{{.LabelsSHA256}}</code></p>{{end}}
+    {{if .Previous}}
+    <p><strong>Δ vs previous run</strong> ({{formatTime .Previous.GeneratedAt $.Timezone}}):
+    {{if ne .LabelsSHA256 .Previous.LabelsSHA256}}
+      labels changed, Δ not comparable
+    {{else}}
+      {{range $.Rows}}
+        {{if index $.Previous.Types .Type}}
+          {{with index $.Previous.Types .Type}}
+            {{$.TypeLabel .Type}}:
+            {{if and .Precision $.HasPrec}}
+              P {{$.FormatDelta .Precision $.PrevPrecision}}
+            {{end}}
+            {{if and .Recall $.HasRec}}
+              R {{$.FormatDelta .Recall $.PrevRecall}}
+            {{end}}
+          {{end}}
+        {{end}}
+      {{end}}
+    {{end}}
+    </p>
+    {{end}}
   </div>
 </div>
 {{end}}
@@ -125,6 +147,65 @@
 
 {{else}}
 <p>The summary has no per-type metrics.</p>
+{{end}}
+
+{{if $.ConfusionMatrix}}
+<h2>Confusion matrix</h2>
+<table class="data confusion">
+  <thead>
+    <tr>
+      <th>Label \ Predicted</th>
+      {{range $.AllTypes}}<th>{{.}}</th>{{end}}
+    </tr>
+  </thead>
+  <tbody>
+  {{range $label := $.AllTypes}}
+    <tr>
+      <th>{{$label}}</th>
+      {{range $pred := $.AllTypes}}
+        {{with index $.ConfusionMatrix (printf "%s:%s" $label $pred)}}
+          <td class="{{$.ConfusionClass $label $pred}}">
+            {{if gt .Count 0}}
+              <a href="/eval/cell?label={{$label}}&predicted={{$pred}}">{{.Count}}</a>
+            {{else}}
+              0
+            {{end}}
+          </td>
+        {{else}}
+          <td class="{{$.ConfusionClass $label $pred}}">0</td>
+        {{end}}
+      {{end}}
+    </tr>
+  {{end}}
+  </tbody>
+</table>
+{{end}}
+
+{{if $.Thresholds}}
+<h2>P/R at confidence thresholds</h2>
+<p class="note">Precision and recall for <code>equivalent</code> predictions at various confidence cut-offs.</p>
+<table class="data">
+  <thead>
+    <tr>
+      <th>Threshold</th>
+      <th>True positives</th>
+      <th>False positives</th>
+      <th>Precision</th>
+      <th>Recall</th>
+    </tr>
+  </thead>
+  <tbody>
+  {{range $.Thresholds}}
+    <tr{{if eq .Threshold "0.90"}} class="highlight"{{end}}>
+      <td>≥ {{.Threshold}}</td>
+      <td class="num">{{.TP}}</td>
+      <td class="num">{{.FP}}</td>
+      <td class="num">{{if .Precision}}{{.Precision}}{{else}}n/a{{end}}</td>
+      <td class="num">{{if .Recall}}{{.Recall}}{{else}}n/a{{end}}</td>
+    </tr>
+  {{end}}
+  </tbody>
+</table>
 {{end}}
 
 {{if .Notes}}

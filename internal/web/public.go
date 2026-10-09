@@ -87,6 +87,31 @@ var templateFuncs = template.FuncMap{
 	// Template arithmetic helpers (UI-17).
 	"mul": func(a, b int) int { return a * b },
 	"add": func(a, b int64) int64 { return a + b },
+	// UI-23: confusion matrix and delta helpers
+	"ConfusionClass": func(label, predicted string) string {
+		if label == predicted {
+			return "d1" // diagonal
+		}
+		return "e1" // off-diagonal
+	},
+	"FormatDelta": func(current, previous string) string {
+		if current == "n/a" || previous == "n/a" {
+			return "n/a"
+		}
+		// Parse as percentages
+		curr, errC := decimal.NewFromString(current)
+		prev, errP := decimal.NewFromString(previous)
+		if errC != nil || errP != nil {
+			return "n/a"
+		}
+		delta := curr.Sub(prev)
+		if delta.IsPositive() {
+			return "+" + delta.StringFixed(2) + "%"
+		} else if delta.IsNegative() {
+			return "(" + delta.Abs().StringFixed(2) + "%)"
+		}
+		return "0.00%"
+	},
 }
 
 // pages are the parsed template sets, one per page, each with the layout.

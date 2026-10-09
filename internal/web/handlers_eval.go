@@ -38,15 +38,39 @@ import (
 // precision and recall are decimal strings or numbers in [0,1], or null when
 // undefined (no predictions, or no labelled positives).
 type evalSummary struct {
-	GeneratedAt time.Time            `json:"generated_at"`
-	Command     string               `json:"command"`
-	RoundID     int64                `json:"round_id"`
-	LabelsFile  string               `json:"labels_file"`
-	Labels      int                  `json:"labels"`
-	Method      string               `json:"method"`
-	Types       []evalTypeMetrics    `json:"types"`
-	Notes       []string             `json:"notes"`
-	Confusion   *evalConfusionMatrix `json:"confusion,omitempty"` // UI-23
+	GeneratedAt  time.Time            `json:"generated_at"`
+	Command      string               `json:"command"`
+	RoundID      int64                `json:"round_id"`
+	LabelsFile   string               `json:"labels_file"`
+	Labels       int                  `json:"labels"`
+	Method       string               `json:"method"`
+	Types        []evalTypeMetrics    `json:"types"`
+	Notes        []string             `json:"notes"`
+	Confusion    *evalConfusionMatrix `json:"confusion,omitempty"`     // UI-23
+	Thresholds   []evalThresholdJSON  `json:"thresholds,omitempty"`    // UI-23
+	LabelsSHA256 string               `json:"labels_sha256,omitempty"` // UI-23
+	Previous     *evalPreviousJSON    `json:"previous,omitempty"`      // UI-23
+}
+
+// evalThresholdJSON mirrors the JSON structure. UI-23.
+type evalThresholdJSON struct {
+	Threshold *decimal.Decimal `json:"threshold"`
+	Precision *decimal.Decimal `json:"precision"`
+	Recall    *decimal.Decimal `json:"recall"`
+	TP        int              `json:"tp"`
+	FP        int              `json:"fp"`
+}
+
+// evalPreviousJSON mirrors the JSON structure. UI-23.
+type evalPreviousJSON struct {
+	GeneratedAt  time.Time                       `json:"generated_at"`
+	LabelsSHA256 string                          `json:"labels_sha256"`
+	Types        map[string]evalPreviousTypeJSON `json:"types"`
+}
+
+type evalPreviousTypeJSON struct {
+	Precision *decimal.Decimal `json:"precision"`
+	Recall    *decimal.Decimal `json:"recall"`
 }
 
 type evalTypeMetrics struct {
@@ -67,6 +91,27 @@ type evalConfusionMatrix struct {
 type evalConfusionCell struct {
 	Count   int      `json:"count"`
 	PairIDs []string `json:"pair_ids,omitempty"`
+}
+
+// evalThresholdRow is one row in the threshold sweep table. UI-23.
+type evalThresholdRow struct {
+	Threshold string
+	TP        int
+	FP        int
+	Precision string
+	Recall    string
+}
+
+// evalPreviousRun holds previous summary data for deltas. UI-23.
+type evalPreviousRun struct {
+	GeneratedAt  time.Time
+	LabelsSHA256 string
+	Types        map[string]evalPreviousType
+}
+
+type evalPreviousType struct {
+	Precision string
+	Recall    string
 }
 
 // maxEvalArtifactBytes bounds the artifact read; a real summary is a few KB.
@@ -90,6 +135,12 @@ type evalPage struct {
 	Produced        time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
 	MacroAverage    *evalRow  // UI-16: macro average row
 	WeightedAverage *evalRow  // UI-16: weighted by support row
+	// UI-23: confusion matrix, thresholds, versioning
+	ConfusionMatrix map[string]evalConfusionCell // key: "label:predicted"
+	AllTypes        []string                     // all relationship types for matrix axes
+	Thresholds      []evalThresholdRow
+	LabelsSHA256    string
+	Previous        *evalPreviousRun
 }
 
 // evalRow is one relationship type's metrics, formatted.
@@ -144,6 +195,44 @@ func (s *Server) handleEval(w http.ResponseWriter, r *http.Request) {
 		// UI-16: compute macro and weighted averages
 		data.MacroAverage = computeMacroAverage(sum.Types)
 		data.WeightedAverage = computeWeightedAverage(sum.Types)
+		// UI-23: populate confusion matrix, thresholds, versioning
+		if sum.Confusion != nil {
+			data.ConfusionMatrix = sum.Confusion.Cells
+			data.AllTypes = []string{
+				string(canonical.RelEquivalent),
+				string(canonical.RelEquivalentGivenFacts),
+				string(canonical.RelComplement),
+				string(canonical.RelImplies),
+				string(canonical.RelRelated),
+				string(canonical.RelUnrelated),
+			}
+		}
+		if len(sum.Thresholds) > 0 {
+			for _, t := range sum.Thresholds {
+				data.Thresholds = append(data.Thresholds, evalThresholdRow{
+					Threshold: t.Threshold.StringFixed(2),
+					TP:        t.TP,
+					FP:        t.FP,
+					Precision: formatPercent(t.Precision),
+					Recall:    formatPercent(t.Recall),
+				})
+			}
+		}
+		data.LabelsSHA256 = sum.LabelsSHA256
+		if sum.Previous != nil {
+			prev := &evalPreviousRun{
+				GeneratedAt:  sum.Previous.GeneratedAt,
+				LabelsSHA256: sum.Previous.LabelsSHA256,
+				Types:        make(map[string]evalPreviousType),
+			}
+			for typ, m := range sum.Previous.Types {
+				prev.Types[typ] = evalPreviousType{
+					Precision: formatPercent(m.Precision),
+					Recall:    formatPercent(m.Recall),
+				}
+			}
+			data.Previous = prev
+		}
 	}
 	s.render(w, http.StatusOK, "eval", data)
 }

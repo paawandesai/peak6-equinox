@@ -19,9 +19,9 @@ var summaryNow = time.Date(2026, 10, 7, 12, 0, 0, 999, time.UTC)
 // contractKeys are the required keys the web page accepts (internal/web/handlers_eval.go).
 // D-070 defined these; UI-23 (D-104) adds optional fields.
 var (
-	contractTopKeys  = []string{"command", "generated_at", "labels", "labels_file", "method", "notes", "round_id", "types"}
+	contractTopKeys      = []string{"command", "generated_at", "labels", "labels_file", "method", "notes", "round_id", "types"}
 	contractOptionalKeys = []string{"confusion", "labels_sha256", "previous", "thresholds"} // UI-23
-	contractTypeKeys = []string{"fn", "fp", "precision", "recall", "support", "tp", "type"}
+	contractTypeKeys     = []string{"fn", "fp", "precision", "recall", "support", "tp", "type"}
 )
 
 func TestSummaryRoundTripsAgainstTheContract(t *testing.T) {
@@ -130,7 +130,9 @@ func TestSummaryEmptyLabelsAndTargetMet(t *testing.T) {
 		t.Error(err)
 	}
 	l := Labels{Version: 1, Labels: []Label{{AID: "kalshi:A", BID: "polymarket:1", Label: canonical.RelEquivalent, ConfirmedBy: "h", ConfirmedOn: "2026-10-07"}}}
-	met := Evaluate(l, func(string, string) (canonical.RelationshipType, decimal.Decimal, bool) { return canonical.RelEquivalent, decimal.NewFromInt(1), true }, canonical.MethodRules).
+	met := Evaluate(l, func(string, string) (canonical.RelationshipType, decimal.Decimal, bool) {
+		return canonical.RelEquivalent, decimal.NewFromInt(1), true
+	}, canonical.MethodRules).
 		Summary(summaryNow, "equinox eval", 3, "labels.yaml", 1, "", "")
 	if !strings.Contains(met.Notes[0], "meets the 0.95 target") || met.Types[0].Recall == nil || !met.Types[0].Recall.Equal(decimal.NewFromInt(1)) {
 		t.Errorf("met = %+v", met)
@@ -192,4 +194,78 @@ func sortedKeys(m map[string]json.RawMessage) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+// UI-23 tests
+
+func TestBuildConfusionMatrix(t *testing.T) {
+	outcomes := []Outcome{
+		{Label: Label{Label: canonical.RelEquivalent, AID: "a1", BID: "b1"}, Predicted: canonical.RelEquivalent, Confidence: decimal.NewFromInt(1)},
+		{Label: Label{Label: canonical.RelEquivalent, AID: "a2", BID: "b2"}, Predicted: canonical.RelRelated, Confidence: decimal.NewFromInt(1)},
+		{Label: Label{Label: canonical.RelRelated, AID: "a3", BID: "b3"}, Predicted: canonical.RelRelated, Confidence: decimal.NewFromInt(1)},
+	}
+	cm := buildConfusionMatrix(outcomes)
+	if cm == nil || len(cm.Cells) == 0 {
+		t.Fatal("expected non-nil confusion matrix")
+	}
+	key := "equivalent:equivalent"
+	if cell, ok := cm.Cells[key]; !ok || cell.Count != 1 || len(cell.PairIDs) != 1 {
+		t.Errorf("cell %s = %+v, want count=1 with 1 pair", key, cell)
+	}
+	key = "equivalent:related"
+	if cell, ok := cm.Cells[key]; !ok || cell.Count != 1 {
+		t.Errorf("cell %s = %+v, want count=1", key, cell)
+	}
+}
+
+func TestBuildThresholds(t *testing.T) {
+	outcomes := []Outcome{
+		{Label: Label{Label: canonical.RelEquivalent}, Predicted: canonical.RelEquivalent, Confidence: decimal.RequireFromString("0.95")},
+		{Label: Label{Label: canonical.RelEquivalent}, Predicted: canonical.RelEquivalent, Confidence: decimal.RequireFromString("0.85")},
+		{Label: Label{Label: canonical.RelEquivalent}, Predicted: canonical.RelRelated, Confidence: decimal.RequireFromString("0.75")},
+	}
+	thresholds := buildThresholds(outcomes)
+	if len(thresholds) != 7 {
+		t.Fatalf("got %d thresholds, want 7", len(thresholds))
+	}
+	for _, th := range thresholds {
+		if th.Threshold.Equal(decimal.RequireFromString("0.90")) {
+			if th.TP != 1 || th.FP != 0 {
+				t.Errorf("at 0.90: TP=%d FP=%d, want TP=1 FP=0", th.TP, th.FP)
+			}
+		}
+	}
+}
+
+func TestHashLabelsFile(t *testing.T) {
+	hash1, err := HashLabelsFile(fixtureLabels)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hash1) != 64 {
+		t.Errorf("hash length = %d, want 64", len(hash1))
+	}
+	hash2, err := HashLabelsFile(fixtureLabels)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hash1 != hash2 {
+		t.Errorf("hash not stable: %s vs %s", hash1, hash2)
+	}
+}
+
+func TestRotatePreviousSummary(t *testing.T) {
+	dir := t.TempDir()
+	summaryPath := filepath.Join(dir, "eval_summary.json")
+	s := Summary{GeneratedAt: time.Now().UTC(), Method: "rules", Labels: 1}
+	if err := WriteSummary(summaryPath, s); err != nil {
+		t.Fatal(err)
+	}
+	prevPath := RotatePreviousSummary(summaryPath)
+	if prevPath == "" {
+		t.Fatal("rotation failed")
+	}
+	if _, err := os.Stat(prevPath); err != nil {
+		t.Errorf("prev file not created: %v", err)
+	}
 }

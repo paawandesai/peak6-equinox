@@ -151,3 +151,56 @@ func TestEvalCalibrationNote(t *testing.T) {
 	// UI-16: calibration note
 	wantContains(t, body, "There is no calibration plot because confidence is a rules score, not a probability")
 }
+
+// UI-23 tests
+
+func TestEvalCellValidParams(t *testing.T) {
+	summary := `{
+		"generated_at": "2026-10-09T12:00:00Z",
+		"method": "rules",
+		"labels": 2,
+		"round_id": 1,
+		"labels_file": "labels.yaml",
+		"command": "equinox eval",
+		"types": [],
+		"notes": [],
+		"confusion": {
+			"cells": {
+				"equivalent:equivalent": {"count": 1, "pair_ids": ["kalshi:A / polymarket:1"]},
+				"equivalent:related": {"count": 1, "pair_ids": ["kalshi:B / polymarket:2"]}
+			}
+		}
+	}`
+	s := New(Config{EvalSummaryFile: writeEval(t, summary)}, Deps{})
+	rec := get(s.Handler(), "/eval/cell?label=equivalent&predicted=equivalent")
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+	wantContains(t, body, "kalshi:A / polymarket:1", "Confusion Matrix Cell")
+}
+
+func TestEvalCellInvalidParams(t *testing.T) {
+	summary := `{
+		"generated_at": "2026-10-09T12:00:00Z",
+		"method": "rules",
+		"labels": 0,
+		"round_id": 1,
+		"labels_file": "labels.yaml",
+		"command": "equinox eval",
+		"types": [],
+		"notes": [],
+		"confusion": {"cells": {}}
+	}`
+	s := New(Config{EvalSummaryFile: writeEval(t, summary)}, Deps{})
+
+	// Invalid label (AB-08)
+	rec := get(s.Handler(), "/eval/cell?label=invalid&predicted=equivalent")
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("invalid label: got %d, want 400", rec.Code)
+	}
+
+	// Invalid predicted (AB-08)
+	rec = get(s.Handler(), "/eval/cell?label=equivalent&predicted=<script>")
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("invalid predicted: got %d, want 400", rec.Code)
+	}
+}
