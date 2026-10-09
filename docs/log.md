@@ -151,3 +151,4 @@ Add one line per action, newest at the bottom: `YYYY-MM-DD HH:MM UTC · actor ·
 2026-10-08 23:00 UTC · peak6-equinox-67 worker · M4-01 branch: merged origin/main (brought Go 1.27.2 from !73, clears vuln job). go version go1.27.2, go.mod toolchain go1.27.2, go vet ./... clean, go build ./... clean. Docs-only MR (README.md + docs/). · 4fa5681, docs/log.md
 
 2026-10-09 00:xx UTC · peak6-equinox-58 · UI-10 (!63): merged origin/main (MR !66 README update, !73 Go 1.27.2; auto-merge clean). Tests: go build clean, go vet clean, go test ./internal/web/... ./tests/security/... PASS (cached web, 0.463s security). · README.md, docs/log.md
+2026-10-09 00:xx UTC · peak6-equinox-58 · UI-10 (!63): merged origin/main (MR !74 Dockerfile golang:1.27.2-bookworm; auto-merge clean). Tests: go build clean, go vet clean, go test ./internal/web/... ./tests/security/... PASS (cached web, 0.148s security). · Dockerfile, docs/ai-usage.md, docs/log.md
