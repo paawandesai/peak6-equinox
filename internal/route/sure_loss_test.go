@@ -1,7 +1,6 @@
 package route
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -117,23 +116,26 @@ func TestRejectComplementCostlierThanDirect(t *testing.T) {
 // TestRegressionRound735Decision71: regression test for issue #73, decision #71.
 //
 // Pins the corrected behavior: complement at 0.999 is excluded for sure-loss,
-// and if it were viable, inputs would show BestAsk=0.999 (re-priced), slippage ≈ 0 bps.
+// explanation contains the exclusion, and inputs show BestAsk=0.999 (re-priced),
+// enabling correct slippage calculation (≈ 0 bps, not old bug's 9980 bps).
 func TestRegressionRound735Decision71(t *testing.T) {
-	// Recreate the scenario from decision #71:
-	// - Buy YES on target
-	// - Complement offers NO at a price that costs >= $1 all-in
-	// - After fix: BestAsk for NO should be re-priced (1 - YES bid), slippage correct
+	// Scenario matching issue #73: buy YES on target, complement offers NO
+	// at a price that costs >= $1 all-in. Live decision #71 had all-in 1.0019,
+	// quoted 0.0010 (YES ask on complement), slippage showed '(9980) bps'.
+	//
+	// After fix: inputs store re-priced NO levels, slippage compares like to like.
 
 	// Target: direct YES @ 0.98
 	target := cand(kalshiID, []canonical.Level{lv("0.97", "100")}, []canonical.Level{lv("0.98", "100")}, nil)
 
 	// Complement: YES bid @ 0.001 → NO ask @ 1 - 0.001 = 0.999
-	// With high basis penalty (0.5 × 0.01 = 0.005), all-in ≈ 0.999 + 0.00007 + 0.005 = 1.00407
+	// With basis penalty (0.213 × 0.01 = 0.00213), all-in ≈ 0.999 + 0.00007 + 0.00213 = 1.0012
+	// (closer to live 1.0019; Polymarket fee: 100 × 0.07 × 0.999 × 0.001 ≈ 0.007 → 0.00007/contract)
 	compPartner := cand(otherID,
 		[]canonical.Level{lv("0.001", "100")}, // YES bids (used for buying NO)
-		[]canonical.Level{lv("0.999", "100")}, // YES asks
+		[]canonical.Level{lv("0.999", "100")}, // YES asks (quoted ref for old slippage bug)
 		rel(kalshiID, otherID, canonical.RelComplement, "0.95"))
-	compPartner.Relationship.BasisRisk = &canonical.BasisRisk{Score: d("0.5"), Components: []canonical.BasisComponent{}}
+	compPartner.Relationship.BasisRisk = &canonical.BasisRisk{Score: d("0.213"), Components: []canonical.BasisComponent{}}
 
 	dec := mustRoute(t, buy("100"), target, []canonical.Candidate{compPartner})
 
@@ -151,9 +153,11 @@ func TestRegressionRound735Decision71(t *testing.T) {
 
 	// The complement must be excluded with reason "sure_loss"
 	foundExclusion := false
+	var exDetail string
 	for _, ex := range dec.Exclusions {
 		if ex.InstrumentID == otherID {
 			foundExclusion = true
+			exDetail = ex.Detail
 			if ex.Reason != ReasonSureLoss {
 				t.Errorf("exclusion reason = %s, want %s", ex.Reason, ReasonSureLoss)
 			}
@@ -163,7 +167,7 @@ func TestRegressionRound735Decision71(t *testing.T) {
 		t.Errorf("complement should be excluded, but exclusions = %+v", dec.Exclusions)
 	}
 
-	// Pin the corrected input snapshot (Cursor round 2 #1): BestAsk for NO should be re-priced
+	// Pin the corrected input snapshot: BestAsk for NO should be re-priced (Cursor round 2 #1)
 	// YES bid 0.001 → NO ask 1 - 0.001 = 0.999
 	compInput := findInput(t, dec.Inputs, otherID)
 	if compInput.OutcomeSide != canonical.OutcomeNo {
@@ -172,12 +176,71 @@ func TestRegressionRound735Decision71(t *testing.T) {
 	if !compInput.BestAsk.Equal(d("0.999")) {
 		t.Errorf("complement input BestAsk = %s, want 0.999 (1 - 0.001, re-priced)", compInput.BestAsk)
 	}
-	// If the complement were viable (not excluded), slippage would be VWAP - BestAsk ≈ 0
-	// (both ≈ 0.999 after re-pricing), not the old bug's 9980 bps from comparing 0.999 vs 0.001
 
-	// Explanation should NOT mention choosing a complement route
-	if strings.Contains(dec.Explanation, fmt.Sprintf("Chose NO on %s", otherID)) {
-		t.Errorf("explanation should not claim the complement was chosen: %s", dec.Explanation)
+	// Pin slippage calculation fix (Cursor round 3 #1): if complement were viable,
+	// handlers_route.go would compute slippage = (VWAP - BestAsk) × 10000
+	// = (0.999 - 0.999) × 10000 = 0 bps (not old bug's 9980 bps from 0.999 vs 0.001)
+	// Since complement is excluded, verify via a separate viable complement scenario below.
+
+	// Pin explanation (Cursor round 3 #1): must contain exclusion with sure_loss detail
+	if !strings.Contains(dec.Explanation, "Excluded:") {
+		t.Errorf("explanation should contain 'Excluded:', got: %s", dec.Explanation)
+	}
+	if !strings.Contains(dec.Explanation, otherID) {
+		t.Errorf("explanation should mention excluded instrument %s, got: %s", otherID, dec.Explanation)
+	}
+	if !strings.Contains(dec.Explanation, "sure_loss") {
+		t.Errorf("explanation should mention sure_loss reason, got: %s", dec.Explanation)
+	}
+	// Detail should mention the all-in cost
+	if !strings.Contains(exDetail, "$1 payout") && !strings.Contains(exDetail, "guaranteed loss") {
+		t.Errorf("exclusion detail should mention $1 payout or guaranteed loss: %s", exDetail)
+	}
+}
+
+// TestComplementSlippageCalculation: verify that after the buildInput fix,
+// slippage for complement routes is calculated correctly (VWAP vs re-priced BestAsk).
+// This shows handlers_route.go's formula (VWAP - BestAsk) × 10000 now gets correct inputs.
+func TestComplementSlippageCalculation(t *testing.T) {
+	// Scenario: buy YES on target, complement offers cheaper NO route
+	// Target: Kalshi YES @ 0.54 (all-in 0.5574)
+	target := cand("kalshi:A", []canonical.Level{lv("0.46", "100")}, []canonical.Level{lv("0.54", "100")}, nil)
+
+	// Complement: Polymarket YES bid @ 0.52 → NO ask @ 1 - 0.52 = 0.48
+	// All-in: 0.48 + fee 0.017472 + basis 0.003 = 0.500472 (cheaper than target)
+	compPartner := cand("polymarket:B",
+		[]canonical.Level{lv("0.52", "100")}, // YES bids (for buying NO)
+		[]canonical.Level{lv("0.48", "100")}, // YES asks
+		rel("kalshi:A", "polymarket:B", canonical.RelComplement, "0.95"))
+	compPartner.Relationship.BasisRisk = &canonical.BasisRisk{Score: d("0.3"), Components: []canonical.BasisComponent{}}
+
+	dec := mustRoute(t, buy("100"), target, []canonical.Candidate{compPartner})
+
+	// Complement should be chosen (cheaper)
+	if len(dec.Chosen) != 1 || dec.Chosen[0].InstrumentID != "polymarket:B" {
+		t.Fatalf("chosen = %+v, want complement polymarket:B", dec.Chosen)
+	}
+
+	// Verify input snapshot has re-priced NO levels
+	compInput := findInput(t, dec.Inputs, "polymarket:B")
+	if compInput.OutcomeSide != canonical.OutcomeNo {
+		t.Errorf("complement input outcome = %s, want NO", compInput.OutcomeSide)
+	}
+	// YES bid 0.52 → NO ask 1 - 0.52 = 0.48
+	if !compInput.BestAsk.Equal(d("0.48")) {
+		t.Errorf("complement input BestAsk = %s, want 0.48 (1 - 0.52, re-priced)", compInput.BestAsk)
+	}
+
+	// Slippage calculation (if handlers_route.go were invoked with this decision):
+	// VWAP 0.48 - BestAsk 0.48 = 0, so slippage = 0 × 10000 = 0 bps ✓
+	// Old bug would have: VWAP 0.48 - raw YES bid 0.52 = -0.04, slippage = -400 bps ✗
+	//
+	// Since we're in the route package (no web handlers), verify the inputs are correct:
+	chosen := dec.Chosen[0]
+	slippageBps := chosen.VWAP.Sub(compInput.BestAsk).Mul(decimal.NewFromInt(10000))
+	if slippageBps.Abs().GreaterThan(d("1")) { // Allow ±1 bps rounding
+		t.Errorf("slippage = %s bps (VWAP %s - BestAsk %s), want ≈ 0 bps",
+			slippageBps, chosen.VWAP, compInput.BestAsk)
 	}
 }
 

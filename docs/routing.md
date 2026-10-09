@@ -144,7 +144,7 @@ Every `Decision` includes:
 | `Warnings` | Non-fatal issues: skew warnings, approximate fees, notional conversions, partial fills. |
 | `Explanation` | A prose summary of the decision: what was chosen, why, cost breakdown per leg, ranked alternatives with their gap to the chosen cost, exclusions, and fee verification status. |
 | `DecidedAt` | The UTC instant the decision was made. |
-| `Inputs` | (UI-25, D-099) The input snapshot recorded at decision time: one entry per candidate considered (target + partners, eligible and excluded), with venue, instrument id, relationship type (`"self"` for the target, otherwise the partner's relationship type), confidence, outcome side checked, best ask, ask depth (top 10 levels), quote times and round id. Uses the correct book side based on order side + outcome. Empty for decisions stored before UI-25. |
+| `Inputs` | (UI-25, D-099) The input snapshot recorded at decision time: one entry per candidate considered (target + partners, eligible and excluded), with venue, instrument id, relationship type (`"self"` for the target, otherwise the partner's relationship type), confidence, outcome side checked, best ask, ask depth (top 10 levels), quote times and round id. Uses the correct book side based on order side + outcome. For NO outcomes, book levels are re-priced as 1 − p (Issue #73). Empty for decisions stored before UI-25. |
 
 ### Exclusion reasons
 
