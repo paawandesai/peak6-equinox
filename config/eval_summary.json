@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-09T16:22:42Z",
+  "generated_at": "2026-10-09T20:36:17Z",
   "command": "equinox eval",
   "round_id": 2,
   "labels_file": "testdata/golden/labels.yaml",
@@ -9,11 +9,11 @@
     {
       "type": "equivalent",
       "support": 9,
-      "tp": 0,
+      "tp": 9,
       "fp": 0,
-      "fn": 9,
-      "precision": null,
-      "recall": "0"
+      "fn": 0,
+      "precision": "1",
+      "recall": "1"
     },
     {
       "type": "equivalent_given_facts",
@@ -46,9 +46,9 @@
       "type": "related",
       "support": 36,
       "tp": 25,
-      "fp": 31,
+      "fp": 22,
       "fn": 11,
-      "precision": "0.4464",
+      "precision": "0.5319",
       "recall": "0.6944"
     },
     {
@@ -62,7 +62,7 @@
     }
   ],
   "notes": [
-    "equivalent precision not measurable: no equivalent prediction among the labelled pairs (target \u003e= 0.95, NFR-06)",
+    "equivalent precision 1.0000 on 9 predictions meets the 0.95 target (NFR-06)",
     "rules+llm: not evaluated (M3)",
     "not evaluated: kalshi:KXBTCD-26OCT0812-T77999.99 / polymarket:77443519844770925744859368185756294247896766669594679461676958360391934252270 (instrument not found)",
     "not evaluated: kalshi:KXBTCD-26OCT0812-T79999.99 / polymarket:40485584554428668469241611958393793104417692929486209319873780168120657704330 (instrument not found)",
