@@ -68,30 +68,37 @@ var equivalentPrecisionTarget = decimal.RequireFromString("0.95")
 // evalPage is the data for eval.html.
 type evalPage struct {
 	page
-	File     string
-	Missing  bool   // no artifact yet
-	Broken   string // the artifact could not be read; fixed wording, no file content
-	Summary  *evalSummary
-	Rows     []evalRow
-	Target   string
-	Equiv    *evalRow // the equivalent tier, if present
-	Notes    []string
-	Produced time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
+	File            string
+	Missing         bool   // no artifact yet
+	Broken          string // the artifact could not be read; fixed wording, no file content
+	Summary         *evalSummary
+	Rows            []evalRow
+	Target          string
+	Equiv           *evalRow // the equivalent tier, if present
+	Notes           []string
+	Produced        time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
+	MacroAverage    *evalRow  // UI-16: macro average row
+	WeightedAverage *evalRow  // UI-16: weighted by support row
 }
 
 // evalRow is one relationship type's metrics, formatted.
 type evalRow struct {
-	Type          string
-	TypeChipClass string
-	Label         string
-	Support       int
-	TP, FP, FN    int
-	Precision     string
-	Recall        string
-	MeetsTarget   bool   // precision >= target (equivalent tier only)
-	HasPrec       bool   // precision is not null
-	VerdictText   string // for the headline: "meets the 0.95 target", "below the 0.95 target", "undefined: no equivalent predictions"
-	VerdictChip   string // chip class for the verdict
+	Type           string
+	TypeBadge      Badge
+	TypeChipClass  string
+	Label          string
+	Support        int
+	TP, FP, FN     int
+	Precision      string
+	Recall         string
+	F1             string  // UI-16: F1 score, "n/a" when undefined
+	PrecisionFloat float64 // UI-16: for meter bars
+	RecallFloat    float64 // UI-16: for meter bars
+	MeetsTarget    bool    // precision >= target (equivalent tier only)
+	HasPrec        bool    // precision is not null
+	VerdictText    string  // for the headline: "meets the 0.95 target", "below the 0.95 target", "undefined: no equivalent predictions"
+	VerdictBadge   Badge   // UI-16: verdict badge for headline panel
+	VerdictChip    string  // chip class for the verdict (kept for compatibility)
 }
 
 // handleEval answers GET /eval: the latest `equinox eval` summary from the
@@ -123,6 +130,9 @@ func (s *Server) handleEval(w http.ResponseWriter, r *http.Request) {
 				data.Equiv = &r
 			}
 		}
+		// UI-16: compute macro and weighted averages
+		data.MacroAverage = computeMacroAverage(sum.Types)
+		data.WeightedAverage = computeWeightedAverage(sum.Types)
 	}
 	s.render(w, http.StatusOK, "eval", data)
 }
@@ -133,24 +143,141 @@ func newEvalRow(m evalTypeMetrics, target string) evalRow {
 		Type: m.Type, Label: typeLabels[relType], Support: m.Support, TP: m.TP, FP: m.FP, FN: m.FN,
 		Precision: formatPercent(m.Precision), Recall: formatPercent(m.Recall), HasPrec: m.Precision != nil,
 		TypeChipClass: TypeChipClass(relType),
+		TypeBadge:     TypeBadge(relType), // UI-16
 	}
+	// UI-16: compute F1 score (harmonic mean of precision and recall)
+	if m.Precision != nil && m.Recall != nil && !m.Precision.IsZero() && !m.Recall.IsZero() {
+		two := decimal.NewFromInt(2)
+		sum := m.Precision.Add(*m.Recall)
+		product := m.Precision.Mul(*m.Recall)
+		f1 := two.Mul(product).Div(sum)
+		row.F1 = formatPercent(&f1)
+	} else {
+		row.F1 = "n/a"
+	}
+	// UI-16: float values for meter bars
 	if m.Precision != nil {
+		row.PrecisionFloat, _ = m.Precision.Float64()
 		row.MeetsTarget = m.Precision.GreaterThanOrEqual(equivalentPrecisionTarget)
+	}
+	if m.Recall != nil {
+		row.RecallFloat, _ = m.Recall.Float64()
 	}
 	// For the equivalent tier, build the verdict text and chip for the headline.
 	if relType == canonical.RelEquivalent {
 		if !row.HasPrec {
 			row.VerdictText = "undefined: no equivalent predictions"
 			row.VerdictChip = "chip-muted"
+			row.VerdictBadge = Badge{Class: "v-unknown", Glyph: "?", Text: row.VerdictText} // UI-16
 		} else if row.MeetsTarget {
 			row.VerdictText = fmt.Sprintf("meets the %s target", target)
 			row.VerdictChip = "chip-ok"
+			row.VerdictBadge = Badge{Class: "v-match", Glyph: "✓", Text: row.VerdictText} // UI-16
 		} else {
 			row.VerdictText = fmt.Sprintf("below the %s target", target)
 			row.VerdictChip = "chip-danger"
+			row.VerdictBadge = Badge{Class: "v-differs", Glyph: "✕", Text: row.VerdictText} // UI-16
 		}
 	}
 	return row
+}
+
+// computeMacroAverage computes the macro average (unweighted mean) of precision, recall and F1
+// across all types. UI-16 AC.
+func computeMacroAverage(types []evalTypeMetrics) *evalRow {
+	if len(types) == 0 {
+		return nil
+	}
+	var precSum, recSum, f1Sum decimal.Decimal
+	precCount, recCount, f1Count := 0, 0, 0
+	for _, m := range types {
+		if m.Precision != nil {
+			precSum = precSum.Add(*m.Precision)
+			precCount++
+		}
+		if m.Recall != nil {
+			recSum = recSum.Add(*m.Recall)
+			recCount++
+		}
+		// Compute F1 for this type
+		if m.Precision != nil && m.Recall != nil && !m.Precision.IsZero() && !m.Recall.IsZero() {
+			two := decimal.NewFromInt(2)
+			sum := m.Precision.Add(*m.Recall)
+			product := m.Precision.Mul(*m.Recall)
+			f1 := two.Mul(product).Div(sum)
+			f1Sum = f1Sum.Add(f1)
+			f1Count++
+		}
+	}
+	row := evalRow{Type: "macro_average", Label: "Macro average"}
+	if precCount > 0 {
+		avgPrec := precSum.Div(decimal.NewFromInt(int64(precCount)))
+		row.Precision = formatPercent(&avgPrec)
+		row.PrecisionFloat, _ = avgPrec.Float64()
+	} else {
+		row.Precision = "n/a"
+	}
+	if recCount > 0 {
+		avgRec := recSum.Div(decimal.NewFromInt(int64(recCount)))
+		row.Recall = formatPercent(&avgRec)
+		row.RecallFloat, _ = avgRec.Float64()
+	} else {
+		row.Recall = "n/a"
+	}
+	if f1Count > 0 {
+		avgF1 := f1Sum.Div(decimal.NewFromInt(int64(f1Count)))
+		row.F1 = formatPercent(&avgF1)
+	} else {
+		row.F1 = "n/a"
+	}
+	return &row
+}
+
+// computeWeightedAverage computes the weighted average (by support) of precision, recall and F1
+// across all types. UI-16 AC.
+func computeWeightedAverage(types []evalTypeMetrics) *evalRow {
+	if len(types) == 0 {
+		return nil
+	}
+	var precSum, recSum, f1Sum, totalSupport decimal.Decimal
+	for _, m := range types {
+		support := decimal.NewFromInt(int64(m.Support))
+		if m.Precision != nil {
+			precSum = precSum.Add(m.Precision.Mul(support))
+		}
+		if m.Recall != nil {
+			recSum = recSum.Add(m.Recall.Mul(support))
+		}
+		// Compute F1 for this type
+		if m.Precision != nil && m.Recall != nil && !m.Precision.IsZero() && !m.Recall.IsZero() {
+			two := decimal.NewFromInt(2)
+			sum := m.Precision.Add(*m.Recall)
+			product := m.Precision.Mul(*m.Recall)
+			f1 := two.Mul(product).Div(sum)
+			f1Sum = f1Sum.Add(f1.Mul(support))
+		}
+		totalSupport = totalSupport.Add(support)
+	}
+	row := evalRow{Type: "weighted_average", Label: "Weighted by support"}
+	if totalSupport.IsPositive() {
+		avgPrec := precSum.Div(totalSupport)
+		row.Precision = formatPercent(&avgPrec)
+		row.PrecisionFloat, _ = avgPrec.Float64()
+		avgRec := recSum.Div(totalSupport)
+		row.Recall = formatPercent(&avgRec)
+		row.RecallFloat, _ = avgRec.Float64()
+		if !f1Sum.IsZero() {
+			avgF1 := f1Sum.Div(totalSupport)
+			row.F1 = formatPercent(&avgF1)
+		} else {
+			row.F1 = "n/a"
+		}
+	} else {
+		row.Precision = "n/a"
+		row.Recall = "n/a"
+		row.F1 = "n/a"
+	}
+	return &row
 }
 
 // readEvalSummary loads and validates the artifact. An empty path or a

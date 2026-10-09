@@ -180,17 +180,18 @@ func TestPublicMatchesPage(t *testing.T) {
 		`<dt>Pairs kept</dt><dd>2</dd>`,
 		`<dt>Routable</dt><dd><a href="#routable">1</a></dd>`,
 		`<dt>Related</dt><dd>1</dd>`,
-		// UI-03: type chips and confidence words.
-		`<span class="chip chip-ok">equivalent</span>`,
-		`0.97 high`, // confidence with bucket word
+		// UI-11 Cursor round 1: badges and conf template instead of inline chips/text.
+		"equivalent", "high",
 		// UI-03: related is inside <details>.
 		`<summary>related (1): same event, different payout; never routed</summary>`,
-		`<span class="chip chip-warn">related</span>`,
-		`0.40 low`,
+		"related", "low",
+		// UI-11: checks column and key.
+		`<ul class="checks"`,
+		`<div class="checks-key">`,
 	)
-	// UI-03 Cursor round 2 issue 2: assert round id appears in a row (not bare substring from strip).
-	// The strip also contains the round ID, so we need to check it's in a data-label="Round" cell.
-	wantContains(t, body, `data-label="Round"><small>round `+strconv.FormatInt(sd.round.ID, 10)+`</small>`)
+	// UI-11: assert Pair column with round id.
+	wantContains(t, body, `data-label="Pair">`)
+	wantContains(t, body, `<small>round `+strconv.FormatInt(sd.round.ID, 10)+`</small>`)
 	// UI-03: routable section comes before related details.
 	if strings.Index(body, `id="routable"`) > strings.Index(body, `<summary>related`) {
 		t.Error("routable section should come before related")
@@ -322,7 +323,9 @@ func TestGroupPairsOrdering(t *testing.T) {
 		views[id] = missingInstrumentView(id)
 	}
 	now := time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)
-	groups := groupPairs(rels, views, now)
+	// UI-11 Cursor round 1: groupPairs now takes sortOrder, qParam, quoteTimes, and roundID.
+	quoteTimes := make(map[string]time.Time) // empty for this test
+	groups := groupPairs(rels, views, now, "confidence", "", quoteTimes, 1)
 	if len(groups) != 2 || groups[0].Type != "equivalent" || groups[1].Type != "related" {
 		t.Fatalf("groups = %+v", groups)
 	}
