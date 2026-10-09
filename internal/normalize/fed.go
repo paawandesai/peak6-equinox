@@ -81,6 +81,9 @@ var (
 	// fedCountRe: the proposition counts cuts or hikes.
 	fedCountRe = regexp.MustCompile(`(?i)\b(?:how\s+many|(?:\d+|no|zero|one|two|three|four)\s+(?:fed\s+)?rate\s+(?:cuts?|hikes?)\s+(?:happen|occur|in|by)|` +
 		`(?:number|amount)\s+of\s+(?:rate\s+)?(?:cuts|hikes))\b`)
+	// fedDecisionSubtitleRe: KXFEDDECISION subtitle after " — " (venue-published data, D-108).
+	// Matches "Cut 25bps", "Hike >25bps", "Fed maintains rate".
+	fedDecisionSubtitleRe = regexp.MustCompile(`(?i)—\s*(?:(cut|hike)\s+(25|>25)\s?bps|fed\s+maintains\s+rate)\s*$`)
 	// fedSequenceRe: the proposition is a sequence of decisions.
 	fedSequenceRe = regexp.MustCompile(`(?i)\b(?:next\s+(?:two|three|four|\d)\s+decisions|pause)\b`)
 	// upperBoundRe / lowerBoundRe: which bound of the target range the text resolves on.
@@ -123,6 +126,38 @@ var fedSourceNames = []sourceName{
 	{regexp.MustCompile(`(?i)\bu\.?s\.?\s+government\b`), "us_government"},
 }
 
+// fedDecisionFromSubtitle parses KXFEDDECISION subtitle (venue-published, D-108).
+// Returns (condition, true) if matched, else (zero, false).
+func fedDecisionFromSubtitle(title string) (condition, bool) {
+	m := fedDecisionSubtitleRe.FindStringSubmatch(title)
+	if m == nil {
+		return condition{}, false
+	}
+	// m[1] = direction ("cut"/"hike"), empty for "Fed maintains rate"
+	// m[2] = bps ("25"/">25"), empty for "Fed maintains rate"
+	if m[1] == "" {
+		// "Fed maintains rate" = no change
+		zero := decimal.Zero
+		return condition{comparator: canonical.ComparatorEQ, threshold: &zero, percent: true}, true
+	}
+	direction := strings.ToLower(m[1])
+	bpsStr := m[2]
+	var magnitude decimal.Decimal
+	var comp canonical.Comparator
+	switch bpsStr {
+	case "25":
+		magnitude = decimal.RequireFromString("0.25")
+		comp = canonical.ComparatorEQ
+	case ">25":
+		// On 25bp grid, ">25bps" means ">=50bps" (D-108)
+		magnitude = decimal.RequireFromString("0.50")
+		comp = canonical.ComparatorGTE
+	default:
+		return condition{}, false
+	}
+	return signedChange(direction, comp, magnitude, false), true
+}
+
 func extractFed(in canonical.Instrument) (canonical.Terms, canonical.Quality) {
 	var q canonical.Quality
 	t := canonical.UnknownTerms()
@@ -131,6 +166,20 @@ func extractFed(in canonical.Instrument) (canonical.Terms, canonical.Quality) {
 	all := rules + "\n" + title
 
 	t.Subject = fedSubject(title, all)
+
+	// KXFEDDECISION: parse decision bucket from subtitle (venue-published, D-108).
+	if in.Venue == canonical.VenueKalshi && strings.Contains(in.VenueMarketID, "KXFEDDECISION") {
+		if cond, ok := fedDecisionFromSubtitle(title); ok {
+			fedSetCondition(&t, cond)
+			t.Metric = MetricRateChange
+			textDeadline(&t, &q, in.CloseTime, srcs, meetingDatesIn)
+			t.ResolutionSource = namedSource(all, fedSourceNames, nil)
+			if t.ResolutionSource == canonical.Unknown {
+				t.ResolutionSource = SourceFederalReserve
+			}
+			return t, q
+		}
+	}
 	level, levelOK, levelAmbiguous := firstStated(srcs, levelConditionsIn, condition.key)
 	change, changeOK, changeAmbiguous := firstStated(srcs, changeConditionsIn, condition.key)
 	switch {
