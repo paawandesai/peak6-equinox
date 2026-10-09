@@ -1113,8 +1113,9 @@ func TestDailyHistoryBars(t *testing.T) {
 	st := store.New(tdb.Pool(t))
 	tdb.Reset(t)
 
-	// Use a fixed "now" time
-	now := time.Date(2026, 10, 9, 12, 0, 0, 0, time.UTC)
+	// Use the current date at noon UTC (so test works on any date and timezone)
+	// Noon UTC ensures the date is the same in all US timezones (UTC-5 to UTC-8)
+	now := time.Now().UTC().Truncate(24 * time.Hour).Add(12 * time.Hour)
 
 	// Create rounds across 90 days with gaps and mixed outcomes
 	days := []struct {
