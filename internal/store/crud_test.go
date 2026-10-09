@@ -491,6 +491,94 @@ func TestRoutingDecisions(t *testing.T) {
 	if _, err := s.GetRoutingDecision(ctx, 999); !errors.Is(err, store.ErrNotFound) {
 		t.Errorf("GetRoutingDecision missing = %v", err)
 	}
+
+	// UI-25: verify Inputs and TargetType fields round-trip through store
+	order := canonical.Order{Side: canonical.SideBuy, Outcome: canonical.OutcomeYes, Quantity: &qty, Type: canonical.OrderMarket, TIF: canonical.TIFIOC}
+	decWithInputs := canonical.Decision{
+		RoundID:     r.ID,
+		TargetID:    a.ID,
+		TargetType:  canonical.RelEquivalent,
+		Order:       order,
+		Chosen:      []canonical.Leg{},
+		DecidedAt:   t0,
+		Explanation: "test with inputs",
+		Inputs: []canonical.DecisionInput{
+			{
+				InstrumentID:     a.ID,
+				Venue:            canonical.VenueKalshi,
+				RelationshipType: "self",
+				Confidence:       d("1.0"),
+				OutcomeSide:      canonical.OutcomeYes,
+				BestAsk:          d("0.52"),
+				AskDepth: []canonical.Level{
+					{Price: d("0.52"), Size: d("100")},
+				},
+				FetchedAt: t0,
+				RoundID:   r.ID,
+			},
+			{
+				InstrumentID:     "polymarket:456",
+				Venue:            canonical.VenuePolymarket,
+				RelationshipType: canonical.RelEquivalent,
+				Confidence:       d("0.95"),
+				OutcomeSide:      canonical.OutcomeYes,
+				BestAsk:          d("0.50"),
+				AskDepth: []canonical.Level{
+					{Price: d("0.50"), Size: d("50")},
+					{Price: d("0.53"), Size: d("100")},
+				},
+				FetchedAt: t0,
+				RoundID:   r.ID,
+			},
+		},
+	}
+	idWithInputs, err := s.InsertRoutingDecision(ctx, decWithInputs)
+	if err != nil {
+		t.Fatalf("InsertRoutingDecision with inputs: %v", err)
+	}
+	gotWithInputs, err := s.GetRoutingDecision(ctx, idWithInputs)
+	if err != nil {
+		t.Fatalf("GetRoutingDecision with inputs: %v", err)
+	}
+	if gotWithInputs.Decision.TargetType != canonical.RelEquivalent {
+		t.Errorf("TargetType = %q, want equivalent", gotWithInputs.Decision.TargetType)
+	}
+	if len(gotWithInputs.Decision.Inputs) != 2 {
+		t.Errorf("inputs count = %d, want 2", len(gotWithInputs.Decision.Inputs))
+	}
+	if len(gotWithInputs.Decision.Inputs) > 0 {
+		inp := gotWithInputs.Decision.Inputs[0]
+		if inp.InstrumentID != a.ID || inp.RelationshipType != "self" || !inp.Confidence.Equal(d("1.0")) || len(inp.AskDepth) != 1 {
+			t.Errorf("input[0] = %+v", inp)
+		}
+	}
+	if len(gotWithInputs.Decision.Inputs) > 1 {
+		inp := gotWithInputs.Decision.Inputs[1]
+		if inp.InstrumentID != "polymarket:456" || inp.RelationshipType != canonical.RelEquivalent || len(inp.AskDepth) != 2 {
+			t.Errorf("input[1] = %+v", inp)
+		}
+	}
+	// Verify ListRoutingDecisions also round-trips Inputs
+	listWithInputs, err := s.ListRoutingDecisions(ctx, 10)
+	if err != nil {
+		t.Fatalf("ListRoutingDecisions: %v", err)
+	}
+	var foundWithInputs bool
+	for _, rd := range listWithInputs {
+		if rd.ID == idWithInputs {
+			foundWithInputs = true
+			if len(rd.Decision.Inputs) != 2 {
+				t.Errorf("ListRoutingDecisions inputs count = %d, want 2", len(rd.Decision.Inputs))
+			}
+			if rd.Decision.TargetType != canonical.RelEquivalent {
+				t.Errorf("ListRoutingDecisions TargetType = %q, want equivalent", rd.Decision.TargetType)
+			}
+			break
+		}
+	}
+	if !foundWithInputs {
+		t.Error("decision with inputs not found in ListRoutingDecisions")
+	}
 }
 
 func TestDecisionLog(t *testing.T) {

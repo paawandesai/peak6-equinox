@@ -82,6 +82,11 @@ var templateFuncs = template.FuncMap{
 		}
 		return filtered
 	},
+	// RoundStatusBadge returns a Badge for a round status (UI-17).
+	"RoundStatusBadge": RoundStatusBadge,
+	// Template arithmetic helpers (UI-17).
+	"mul": func(a, b int) int { return a * b },
+	"add": func(a, b int64) int64 { return a + b },
 }
 
 // pages are the parsed template sets, one per page, each with the layout.

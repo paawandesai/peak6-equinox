@@ -186,11 +186,11 @@ func TestAdminIndexRendersRounds(t *testing.T) {
 		t.Fatalf("status %d: %s", rec.Code, rec.Body.String())
 	}
 	body := rec.Body.String()
-	// UI-08: table uses data-label attributes, health strip has DB size
+	// UI-17: table uses data-label attributes, status is badge, health table
 	for _, want := range []string{
-		"Last 2 rounds", `rowspan="2">partial`, "running", "2026-10-06 22:00:00", "41.2s", "955", "400",
+		"Last 2 rounds", `rowspan="2"`, "partial", "running", "2026-10-06 22:00:00", "41.2s", "955", "400",
 		"instruments: HTTP status 500 &lt;b&gt;", "kalshi", "polymarket", "Database size",
-		"Run one fetch round now",
+		"Run one fetch round now", `class="badge b-partial"`, `class="health"`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("body lacks %q", want)
@@ -210,8 +210,15 @@ func TestAdminIndexDatabaseUnavailable(t *testing.T) {
 	t.Cleanup(pool.Close)
 	s, _ := newAdminServer(t, Deps{Store: store.New(pool)}, "ci")
 	rec := do(s.Handler(), request(http.MethodGet, "/admin", withAuth(testUser, testPass)))
-	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "database unavailable") {
-		t.Errorf("status %d body %s", rec.Code, rec.Body.String())
+	body := rec.Body.String()
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d", rec.Code)
+	}
+	// UI-17: Database row should show Unknown (gray) when unavailable
+	for _, want := range []string{"database unavailable", "signal-unknown", "h-unknown"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("body lacks %q", want)
+		}
 	}
 }
 
@@ -724,6 +731,146 @@ func TestAdminAB15Banner(t *testing.T) {
 	}
 	if strings.Contains(body, `class="banner banner-danger"`) {
 		t.Error("below threshold: banner present")
+	}
+}
+
+// TestWorstHealth: worstHealth returns the correct worst signal (UI-17).
+func TestWorstHealth(t *testing.T) {
+	tests := []struct {
+		name    string
+		signals []Signal
+		want    HealthState
+	}{
+		{
+			name:    "degraded wins",
+			signals: []Signal{{Class: "signal-healthy"}, {Class: "signal-degraded"}, {Class: "signal-warning"}},
+			want:    HealthDegraded,
+		},
+		{
+			name:    "warning beats healthy",
+			signals: []Signal{{Class: "signal-healthy"}, {Class: "signal-warning"}},
+			want:    HealthWarning,
+		},
+		{
+			name:    "healthy alone",
+			signals: []Signal{{Class: "signal-healthy"}},
+			want:    HealthHealthy,
+		},
+		{
+			name:    "unknown with nothing worse stays unknown",
+			signals: []Signal{{Class: "signal-unknown"}},
+			want:    HealthUnknown,
+		},
+		{
+			name:    "unknown with healthy becomes healthy",
+			signals: []Signal{{Class: "signal-unknown"}, {Class: "signal-healthy"}},
+			want:    HealthHealthy,
+		},
+		{
+			name:    "empty signals is unknown",
+			signals: []Signal{},
+			want:    HealthUnknown,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := worstHealth(tt.signals)
+			if got != tt.want {
+				t.Errorf("worstHealth() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestBuildBars: buildBars generates correct bar classes and heights (UI-17).
+func TestBuildBars(t *testing.T) {
+	rounds := []store.Round{
+		{ID: 1, Status: store.RoundOK},
+		{ID: 2, Status: store.RoundPartial},
+		{ID: 3, Status: store.RoundFailed},
+		{ID: 4, Status: store.RoundRunning},
+	}
+
+	bars := buildBars(rounds)
+
+	if len(bars) != 4 {
+		t.Fatalf("expected 4 bars, got %d", len(bars))
+	}
+
+	tests := []struct {
+		idx    int
+		class  string
+		height string
+		title  string
+	}{
+		{0, "ok", "100%", "Round 1: ok"},
+		{1, "partial", "75%", "Round 2: partial"},
+		{2, "failed", "50%", "Round 3: failed"},
+		{3, "missing", "0", "Round 4: missing"},
+	}
+
+	for _, tt := range tests {
+		bar := bars[tt.idx]
+		if bar.Class != tt.class {
+			t.Errorf("bar[%d].Class = %q, want %q", tt.idx, bar.Class, tt.class)
+		}
+		if bar.Height != tt.height {
+			t.Errorf("bar[%d].Height = %q, want %q", tt.idx, bar.Height, tt.height)
+		}
+		if bar.Title != tt.title {
+			t.Errorf("bar[%d].Title = %q, want %q", tt.idx, bar.Title, tt.title)
+		}
+	}
+}
+
+// TestBuildBarsLimit: buildBars limits to 24 rounds (UI-17).
+func TestBuildBarsLimit(t *testing.T) {
+	var rounds []store.Round
+	for i := 1; i <= 30; i++ {
+		rounds = append(rounds, store.Round{ID: int64(i), Status: store.RoundOK})
+	}
+
+	bars := buildBars(rounds)
+
+	if len(bars) != 24 {
+		t.Errorf("expected 24 bars from 30 rounds, got %d", len(bars))
+	}
+	// Should take the last 24
+	if bars[0].Title != "Round 7: ok" {
+		t.Errorf("first bar title = %q, want Round 7: ok", bars[0].Title)
+	}
+	if bars[23].Title != "Round 30: ok" {
+		t.Errorf("last bar title = %q, want Round 30: ok", bars[23].Title)
+	}
+}
+
+// TestAdminHealthTable: admin page renders health table with signals (UI-17).
+func TestAdminHealthTable(t *testing.T) {
+	s, _ := newAdminServer(t, Deps{Ingester: &fakeIngester{}}, "ci")
+	rec := do(s.Handler(), request(http.MethodGet, "/admin", withAuth(testUser, testPass)))
+	body := rec.Body.String()
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d", rec.Code)
+	}
+
+	// Check health table elements
+	for _, want := range []string{
+		"<table class=\"health\"",
+		"<th>Component</th>",
+		"<th>Status</th>",
+		"<th>Signals</th>",
+		">Collectors<",
+		">Database<",
+		">Matcher<",
+		">Pinned round<",
+		">LLM verifier<",
+		"Stale thresholds:",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("body lacks %q", want)
+		}
 	}
 }
 
