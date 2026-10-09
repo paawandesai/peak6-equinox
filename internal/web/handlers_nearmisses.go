@@ -188,7 +188,7 @@ func computeTermGap(diff []canonical.FieldDiff) string {
 	return "—"
 }
 
-// formatDurationDistance formats a duration as a readable distance (days/hours/minutes).
+// formatDurationDistance formats a duration as a readable distance.
 func formatDurationDistance(d time.Duration) string {
 	absDays := math.Abs(d.Hours() / 24)
 	if absDays >= 1 {
