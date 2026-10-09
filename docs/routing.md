@@ -108,6 +108,10 @@ For each partner whose relationship type is `complement`, the router creates a c
 
 The chosen leg's `Outcome` reflects the actual trade (e.g., NO on the complement instrument), and `Route` is set to `"complement"` (vs `"direct"` for non-complement). The explanation says: "Chose NO on [B] (complement of [A]) at venue X because the all-in cost (VWAP + fee + basis) was $Y per contract, vs $Z for YES on [A] at venue W."
 
+### Guaranteed-loss guard (Issue #73)
+
+The router rejects any leg whose all-in cost is >= $1 per $1 payout for a buy (or <= $0 for a sell) with exclusion reason `sure_loss`. This prevents the router from choosing a complement leg that, due to extreme prices or accumulated fees and basis penalties, results in a guaranteed loss. The exclusion detail shows the exact all-in cost. Decision inputs (UI-25) store re-priced book levels (1 − p for NO outcomes) so slippage calculations compare like to like.
+
 ## Tie-breaking
 
 The router ranks candidates using `better(side, a, b)` (internal/route/route.go:538–565):
@@ -157,6 +161,7 @@ Every `Decision` includes:
 | `basis_risk_unknown` | "partner relationship has no basis-risk score" | BasisRisk is nil on a partner. |
 | `not_open` | "instrument is closed" | Instrument status is `closed` or `settled`. |
 | `no_quantity` | "notional 10 buys less than one contract at the 0.02 touch" | Notional converts to zero or fractional contracts (no $ prefix). |
+| `sure_loss` | "all-in cost 1.0019 per $1 payout is a guaranteed loss" | For a buy, all-in cost >= $1; for a sell, net proceeds <= $0 (Issue #73). |
 
 ## Worked examples
 

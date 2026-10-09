@@ -108,10 +108,10 @@ func TestRouteRecordsInputsForComplement(t *testing.T) {
 	if partnerInput.RelationshipType != canonical.RelComplement {
 		t.Errorf("complement partner relationship type = %s, want complement", partnerInput.RelationshipType)
 	}
-	// For NO outcome, the asks consumed are YesBids.
-	// Partner has YesBids = [0.49:100], so BestAsk should be 0.49.
-	if !partnerInput.BestAsk.Equal(d("0.49")) {
-		t.Errorf("complement partner best ask = %s, want 0.49 (from bids)", partnerInput.BestAsk)
+	// For NO outcome, the asks consumed are YesBids, re-priced as 1 - p (Issue #73).
+	// Partner has YesBids = [0.49:100], so BestAsk should be 1 - 0.49 = 0.51.
+	if !partnerInput.BestAsk.Equal(d("0.51")) {
+		t.Errorf("complement partner best ask = %s, want 0.51 (1 - 0.49)", partnerInput.BestAsk)
 	}
 }
 
@@ -261,37 +261,37 @@ func TestRouteInputsRoundTrip(t *testing.T) {
 }
 
 // TestRouteInputsSellSide verifies that sell-side and NO-outcome inputs store
-// raw book prices, not the 1-p levels that bookSide walks (UI-25 nit: document the choice).
-// Rationale: stored inputs are a faithful record of what the router read, not the transformed
-// levels after bookSide logic. The trace or log can apply the transformation at display time.
+// re-priced (1-p) book levels to match the router's decision view (Issue #73).
+// Changed from UI-25 original design: inputs now store transformed prices (the router's
+// actual view) rather than raw book prices, so slippage calculations are correct.
 func TestRouteInputsSellSide(t *testing.T) {
 	// Sell NO on target: bookSide walks YesAsks and transforms prices as 1-p.
-	// We verify that inputs store the raw YesAsks without transformation.
+	// Inputs should store the transformed prices (the NO bids) for correct slippage.
 	target := cand(kalshiID, []canonical.Level{lv("0.48", "100")}, []canonical.Level{lv("0.52", "100")}, nil)
 	partner := cand(polymarketID, []canonical.Level{lv("0.49", "100")}, []canonical.Level{lv("0.50", "50"), lv("0.53", "50")},
 		rel(kalshiID, polymarketID, canonical.RelEquivalent, "0.97"))
 
 	dec := mustRoute(t, sell("50", "NO"), target, []canonical.Candidate{partner})
 
-	// Target input should have raw YesAsks (0.52), not the walked 1-p price (0.48).
+	// Target input should have re-priced NO bids: YesAsks 0.52 → NO bid 1 - 0.52 = 0.48
 	targetInput := findInput(t, dec.Inputs, kalshiID)
 	if targetInput.OutcomeSide != canonical.OutcomeNo {
 		t.Errorf("target input outcome side = %s, want NO", targetInput.OutcomeSide)
 	}
-	if !targetInput.BestAsk.Equal(d("0.52")) {
-		t.Errorf("target input best ask = %s, want 0.52 (raw YesAsks, not walked 1-p)", targetInput.BestAsk)
+	if !targetInput.BestAsk.Equal(d("0.48")) {
+		t.Errorf("target input best ask = %s, want 0.48 (1 - 0.52)", targetInput.BestAsk)
 	}
-	if len(targetInput.AskDepth) != 1 || !targetInput.AskDepth[0].Price.Equal(d("0.52")) {
-		t.Errorf("target input ask depth = %+v, want raw YesAsks [0.52:100]", targetInput.AskDepth)
+	if len(targetInput.AskDepth) != 1 || !targetInput.AskDepth[0].Price.Equal(d("0.48")) {
+		t.Errorf("target input ask depth = %+v, want re-priced NO bids [0.48:100]", targetInput.AskDepth)
 	}
 
-	// Partner input should also have raw YesAsks (0.50, 0.53), not walked 1-p levels.
+	// Partner input should have re-priced NO bids: YesAsks [0.50, 0.53] → NO bids [0.50, 0.47]
 	partnerInput := findInput(t, dec.Inputs, polymarketID)
 	if !partnerInput.BestAsk.Equal(d("0.50")) {
-		t.Errorf("partner input best ask = %s, want 0.50 (raw YesAsks)", partnerInput.BestAsk)
+		t.Errorf("partner input best ask = %s, want 0.50 (1 - 0.50)", partnerInput.BestAsk)
 	}
-	if len(partnerInput.AskDepth) != 2 || !partnerInput.AskDepth[0].Price.Equal(d("0.50")) || !partnerInput.AskDepth[1].Price.Equal(d("0.53")) {
-		t.Errorf("partner input ask depth = %+v, want raw YesAsks [0.50:50, 0.53:50]", partnerInput.AskDepth)
+	if len(partnerInput.AskDepth) != 2 || !partnerInput.AskDepth[0].Price.Equal(d("0.50")) || !partnerInput.AskDepth[1].Price.Equal(d("0.47")) {
+		t.Errorf("partner input ask depth = %+v, want re-priced NO bids [0.50:50, 0.47:50]", partnerInput.AskDepth)
 	}
 }
 
