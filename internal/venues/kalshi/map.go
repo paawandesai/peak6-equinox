@@ -103,11 +103,18 @@ func parseMarkets(body []byte) (marketsPage, error) {
 	return p, nil
 }
 
+// settlementSource is one decoded settlement source from the event level.
+type settlementSource struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+}
+
 // event is one decoded Kalshi event with its nested markets.
 type event struct {
-	ticker  string
-	markets []market
-	skipped []skip
+	ticker            string
+	settlementSources []settlementSource
+	markets           []market
+	skipped           []skip
 }
 
 // eventsPage is one decoded /events page.
@@ -129,14 +136,15 @@ func parseEvents(body []byte) (eventsPage, error) {
 	p := eventsPage{cursor: doc.Cursor}
 	for _, raw := range doc.Events {
 		var e struct {
-			EventTicker string            `json:"event_ticker"`
-			Markets     []json.RawMessage `json:"markets"`
+			EventTicker       string             `json:"event_ticker"`
+			SettlementSources []settlementSource `json:"settlement_sources"`
+			Markets           []json.RawMessage  `json:"markets"`
 		}
 		if err := json.Unmarshal(raw, &e); err != nil {
 			p.skipped = append(p.skipped, skip{reason: "event: " + err.Error()})
 			continue
 		}
-		ev := event{ticker: e.EventTicker}
+		ev := event{ticker: e.EventTicker, settlementSources: e.SettlementSources}
 		ev.markets, ev.skipped = decodeMarkets(e.Markets)
 		p.events = append(p.events, ev)
 	}
@@ -182,8 +190,9 @@ func feeSchedule() canonical.FeeSchedule {
 
 // toInstrument maps a Kalshi market into a canonical Instrument. It returns an
 // error (and the record must be skipped) when the market has no usable ticker
-// or title; other problems are recorded in Quality.
-func toInstrument(m market, cat canonical.Category) (canonical.Instrument, error) {
+// or title; other problems are recorded in Quality. settlementSources are event-level
+// settlement_sources from the Kalshi API, appended to the rules text for normalizer access.
+func toInstrument(m market, cat canonical.Category, settlementSources []settlementSource) (canonical.Instrument, error) {
 	ticker := strings.TrimSpace(m.Ticker)
 	if ticker == "" {
 		return canonical.Instrument{}, errors.New("missing ticker")
@@ -204,6 +213,21 @@ func toInstrument(m market, cat canonical.Category) (canonical.Instrument, error
 		cleanText(&q, "rules_secondary", m.RulesSecondary, maxRulesBytes))
 	if rules == "" {
 		q.Add(canonical.QualityMissingField, "rules_primary", "no rules text")
+	}
+	// Append event-level settlement_sources to rules for normalizer access (D-108).
+	// Use a specific marker format that won't trigger existing politicsSource patterns.
+	if len(settlementSources) > 0 {
+		var sourcesText string
+		for _, src := range settlementSources {
+			if sourcesText != "" {
+				sourcesText += ", "
+			}
+			sourcesText += src.Name
+		}
+		if rules != "" {
+			rules += "\n\n"
+		}
+		rules += "KALSHI_EVENT_SETTLEMENT_SOURCES: " + sourcesText
 	}
 	eventTicker := cleanText(&q, "event_ticker", m.EventTicker, 128)
 	if eventTicker == "" {

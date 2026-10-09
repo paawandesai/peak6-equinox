@@ -186,7 +186,7 @@ func TestKalshiToInstrument(t *testing.T) {
 		Ticker: "KXFED-26OCT-T3.25", EventTicker: "KXFED-26OCT", Title: "Fed above 3.25%?", YesSubTitle: "Above 3.25%",
 		RulesPrimary: "If above, Yes.", CloseTime: "2026-10-28T12:55:00-05:00", ExpirationTime: "2026-11-04T18:05:00Z", Status: "active",
 	}
-	ins, err := toInstrument(good, canonical.CategoryFed)
+	ins, err := toInstrument(good, canonical.CategoryFed, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -211,7 +211,7 @@ func TestKalshiToInstrument(t *testing.T) {
 	} {
 		m := good
 		mod(&m)
-		if _, err := toInstrument(m, canonical.CategoryFed); err == nil {
+		if _, err := toInstrument(m, canonical.CategoryFed, nil); err == nil {
 			t.Errorf("%s: accepted", name)
 		}
 	}
@@ -219,7 +219,7 @@ func TestKalshiToInstrument(t *testing.T) {
 	m := good
 	m.CloseTime, m.ExpirationTime, m.RulesPrimary, m.EventTicker, m.Status = "", "yesterday", "", "", "weird"
 	m.Title = strings.Repeat("é", maxTitleBytes)
-	ins, err = toInstrument(m, canonical.CategoryCrypto)
+	ins, err = toInstrument(m, canonical.CategoryCrypto, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -317,7 +317,7 @@ func FuzzParseMarkets(f *testing.F) {
 			}
 		}
 		for _, m := range p.markets {
-			if ins, err := toInstrument(m, canonical.CategoryFed); err == nil {
+			if ins, err := toInstrument(m, canonical.CategoryFed, nil); err == nil {
 				if err := ins.Validate(); err != nil {
 					t.Fatalf("invalid instrument: %v", err)
 				}
