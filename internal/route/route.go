@@ -94,8 +94,9 @@ type sizing struct {
 // Route simulates o against target and its partners and returns the
 // Decision. It only errors on invalid input (a bad order, config or target);
 // every other outcome, including "no venue can fill this", is a Decision
-// whose Exclusions and Explanation say why.
-func Route(o canonical.Order, target canonical.Candidate, partners []canonical.Candidate, cfg Config, now time.Time) (canonical.Decision, error) {
+// whose Exclusions and Explanation say why. targetType is the relationship
+// type of the pair being routed (UI-25).
+func Route(o canonical.Order, target canonical.Candidate, partners []canonical.Candidate, cfg Config, targetType canonical.RelationshipType, now time.Time) (canonical.Decision, error) {
 	if err := o.Validate(); err != nil {
 		return canonical.Decision{}, fmt.Errorf("routing: order: %w", err)
 	}
@@ -112,13 +113,20 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 	d := canonical.Decision{
 		RoundID:      cfg.RoundID,
 		TargetID:     target.Instrument.ID,
+		TargetType:   targetType,
 		Order:        o,
 		Chosen:       []canonical.Leg{},
 		Alternatives: []canonical.Alternative{},
 		Exclusions:   []canonical.Exclusion{},
 		Warnings:     []string{},
 		DecidedAt:    now.UTC(),
+		Inputs:       []canonical.DecisionInput{},
 	}
+
+	// Capture the target's input snapshot (UI-25, D-098 call 3).
+	// For the target, relationship type is "self" and confidence is 1.0.
+	selfRel := canonical.Relationship{Type: "self", Confidence: decimal.NewFromInt(1)}
+	d.Inputs = append(d.Inputs, buildInput(target, o.Side, o.Outcome, cfg.RoundID, &selfRel))
 
 	// Collect all candidates (target + partners) that pass pre-routing checks and eligibility.
 	type pendingCandidate struct {
@@ -143,13 +151,8 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 
 	// Check each partner's relationship and eligibility.
 	for _, p := range partners {
-		if ex, ok := partnerExclusion(target, p, cfg); !ok {
-			d.Exclusions = append(d.Exclusions, ex)
-			continue
-		}
-
-		// For complement relationships, create a candidate with the opposite side.
-		// For other relationships (equivalent, equivalent_given_facts), use the same side.
+		// For complement relationships, the outcome checked is opposite.
+		// For other relationships (equivalent, equivalent_given_facts), use the same outcome.
 		isComplement := p.Relationship != nil && p.Relationship.Type == canonical.RelComplement
 		checkSide := o.Side
 		checkOutcome := o.Outcome
@@ -159,6 +162,14 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 			// Complement: buying YES on A ≡ buying NO on B (domain.md rule 5)
 			checkOutcome = complementOutcome(o.Outcome)
 			routeType = RouteComplement
+		}
+
+		// Capture partner input snapshot (UI-25, D-098 call 3), including excluded partners.
+		d.Inputs = append(d.Inputs, buildInput(p, checkSide, checkOutcome, cfg.RoundID, p.Relationship))
+
+		if ex, ok := partnerExclusion(target, p, cfg); !ok {
+			d.Exclusions = append(d.Exclusions, ex)
+			continue
 		}
 
 		if partnerOK, partnerExs := IsEligible(p.Quote, checkSide, checkOutcome, cfg.Eligibility); !partnerOK {
@@ -783,4 +794,55 @@ func sumQuantity(legs []canonical.Leg) decimal.Decimal {
 		total = total.Add(leg.Quantity)
 	}
 	return total
+}
+
+// buildInput captures the router's input snapshot for one candidate (UI-25, D-098 call 3).
+// It records the quote the router read at decision time, so the trace shows the router's
+// actual view instead of a later re-query that might disagree.
+func buildInput(c canonical.Candidate, side canonical.Side, outcomeSide canonical.Outcome, roundID int64, rel *canonical.Relationship) canonical.DecisionInput {
+	// Determine relationship type and confidence.
+	// For the target, rel is not nil but has Type "self" and confidence 1.0.
+	relType := canonical.RelationshipType("")
+	conf := decimal.NewFromInt(1)
+	if rel != nil {
+		relType = rel.Type
+		conf = rel.Confidence
+	}
+
+	// Extract the best ask and ask depth from the quote.
+	// The side consumed depends on both order side and outcome, matching bookSide logic:
+	// buy YES consumes YesAsks, sell YES consumes YesBids, buy NO consumes YesBids, sell NO consumes YesAsks.
+	// Cap depth at 10 levels (UI-25 AC: "top N levels, capped").
+	const maxDepth = 10
+	var src []canonical.Level
+	flip := outcomeSide == canonical.OutcomeNo
+	if (side == canonical.SideBuy) != flip {
+		src = c.Quote.YesAsks
+	} else {
+		src = c.Quote.YesBids
+	}
+
+	// Copy to avoid aliasing the live quote slice (Grok nit).
+	asks := make([]canonical.Level, 0, min(len(src), maxDepth))
+	for i := 0; i < len(src) && i < maxDepth; i++ {
+		asks = append(asks, src[i])
+	}
+
+	bestAsk := decimal.Zero
+	if len(asks) > 0 {
+		bestAsk = asks[0].Price
+	}
+
+	return canonical.DecisionInput{
+		InstrumentID:     c.Instrument.ID,
+		Venue:            c.Instrument.Venue,
+		RelationshipType: relType,
+		Confidence:       conf,
+		OutcomeSide:      outcomeSide,
+		BestAsk:          bestAsk,
+		AskDepth:         asks,
+		FetchedAt:        c.Quote.FetchedAt,
+		VenueTS:          c.Quote.VenueTS,
+		RoundID:          roundID,
+	}
 }

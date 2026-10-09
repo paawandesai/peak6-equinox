@@ -287,7 +287,7 @@ func TestComplementPropertyInverse(t *testing.T) {
 		compPartner.Relationship.BasisRisk = &canonical.BasisRisk{Score: d("0"), Components: []canonical.BasisComponent{}}
 
 		// Route 1: buy YES on target
-		dec1, err := Route(buy("50"), target, []canonical.Candidate{compPartner}, cfg, t0)
+		dec1, err := Route(buy("50"), target, []canonical.Candidate{compPartner}, cfg, canonical.RelComplement, t0)
 		if err != nil {
 			rt.Fatalf("Route 1: %v", err)
 		}
@@ -301,7 +301,7 @@ func TestComplementPropertyInverse(t *testing.T) {
 		compPartnerFlip.Relationship.BasisRisk = &canonical.BasisRisk{Score: d("0"), Components: []canonical.BasisComponent{}}
 
 		o2 := canonical.Order{Side: canonical.SideBuy, Outcome: canonical.OutcomeNo, Quantity: ptr("50"), Type: canonical.OrderMarket, TIF: canonical.TIFIOC}
-		dec2, err := Route(o2, targetFlip, []canonical.Candidate{compPartnerFlip}, cfg, t0)
+		dec2, err := Route(o2, targetFlip, []canonical.Candidate{compPartnerFlip}, cfg, canonical.RelComplement, t0)
 		if err != nil {
 			rt.Fatalf("Route 2: %v", err)
 		}

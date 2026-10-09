@@ -483,7 +483,7 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 			MinBookDepth: s.cfg.MinBookDepth,
 		},
 	}
-	dec, err := route.Route(in.Order, target, partners, cfg, s.now())
+	dec, err := route.Route(in.Order, target, partners, cfg, rel.Type, s.now())
 	if err != nil {
 		// Route only errors on invalid input, which the form checks already
 		// caught; report it as a form problem rather than a server fault.
