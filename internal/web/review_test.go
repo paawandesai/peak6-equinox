@@ -168,3 +168,44 @@ func TestShouldFlagForReview_GapBoundaries(t *testing.T) {
 		}
 	})
 }
+
+// TestSortPairRows_FlaggedFirst tests production sort order: flagged pairs first (UI-18 AC).
+func TestSortPairRows_FlaggedFirst(t *testing.T) {
+	confVal := func(v float64) struct {
+		Value float64
+		Word  string
+		Class string
+	} {
+		return struct {
+			Value float64
+			Word  string
+			Class string
+		}{Value: v}
+	}
+
+	pairs := []pairRow{
+		{ID: 1, IsFlagged: false, ConfValue: confVal(0.95), ReviewPriority: 0.05},
+		{ID: 2, IsFlagged: true, ConfValue: confVal(0.85), ReviewPriority: 0.15},
+		{ID: 3, IsFlagged: false, ConfValue: confVal(0.88), ReviewPriority: 0.12},
+		{ID: 4, IsFlagged: true, ConfValue: confVal(0.87), ReviewPriority: 0.13},
+	}
+
+	// Call production sortPairRows with "priority" order.
+	sortPairRows(pairs, "priority")
+
+	// Flagged pairs (2, 4) should sort before unflagged pairs (1, 3).
+	if !pairs[0].IsFlagged || !pairs[1].IsFlagged {
+		t.Errorf("first two pairs should be flagged, got IsFlagged = [%v, %v, %v, %v]",
+			pairs[0].IsFlagged, pairs[1].IsFlagged, pairs[2].IsFlagged, pairs[3].IsFlagged)
+	}
+	if pairs[2].IsFlagged || pairs[3].IsFlagged {
+		t.Errorf("last two pairs should not be flagged, got IsFlagged = [%v, %v]",
+			pairs[2].IsFlagged, pairs[3].IsFlagged)
+	}
+
+	// Within flagged group, should sort by ReviewPriority (lower = closer to 0.90 = higher priority).
+	// Pair 4 (priority 0.13) should come before pair 2 (priority 0.15) since 0.13 < 0.15.
+	if pairs[0].ID != 4 || pairs[1].ID != 2 {
+		t.Errorf("flagged pairs should sort by ReviewPriority, got IDs [%d, %d], want [4, 2]", pairs[0].ID, pairs[1].ID)
+	}
+}
