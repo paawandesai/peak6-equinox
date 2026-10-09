@@ -38,7 +38,7 @@ func TestBasisPenaltyFlipsDecision(t *testing.T) {
 
 	targetInst := cand("polymarket:target", []canonical.Level{lv("0.52", "50")}, []canonical.Level{lv("0.54", "50")}, nil)
 
-	dec, err := Route(buy("100"), targetInst, []canonical.Candidate{partnerA, partnerB}, testCfg, t0)
+	dec, err := Route(buy("100"), targetInst, []canonical.Candidate{partnerA, partnerB}, testCfg, canonical.RelEquivalent, t0)
 	if err != nil {
 		t.Fatalf("Route: %v", err)
 	}
@@ -270,7 +270,7 @@ func TestBasisPenaltyMonotonicity(t *testing.T) {
 		testCfg := cfg
 		testCfg.BasisPenaltyMultiplier = dMult
 
-		dec, err := Route(buy("50"), target, []canonical.Candidate{partnerA, partnerB}, testCfg, t0)
+		dec, err := Route(buy("50"), target, []canonical.Candidate{partnerA, partnerB}, testCfg, canonical.RelEquivalent, t0)
 		if err != nil {
 			t.Fatalf("Route: %v", err)
 		}

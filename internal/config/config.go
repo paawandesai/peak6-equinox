@@ -35,6 +35,7 @@ const (
 	DefaultMinRouteConfidence    = "0.9"
 	DefaultMinBookDepth          = "1"
 	DefaultBasisPenaltyMult      = "0.01"
+	DefaultReviewEdgeMin         = "0.02"
 	DefaultPublicRateLimitPerMin = 60
 	DefaultStaleRoundWarnMinutes = 10
 	DefaultLLMModel              = "claude-haiku-4-5-20251001"
@@ -80,6 +81,7 @@ type Config struct {
 	MinRouteConfidence    decimal.Decimal
 	MinBookDepth          decimal.Decimal
 	BasisPenaltyMult      decimal.Decimal
+	ReviewEdgeMin         decimal.Decimal
 	PublicRateLimitPerMin int
 	StaleRoundWarnMinutes int
 
@@ -128,6 +130,7 @@ func Load(lookup LookupFunc) (Config, error) {
 		MinRouteConfidence:    l.probability("MIN_ROUTE_CONFIDENCE", DefaultMinRouteConfidence),
 		MinBookDepth:          l.positiveDecimal("MIN_BOOK_DEPTH", DefaultMinBookDepth),
 		BasisPenaltyMult:      l.positiveDecimal("BASIS_PENALTY_MULTIPLIER", DefaultBasisPenaltyMult),
+		ReviewEdgeMin:         l.positiveDecimal("REVIEW_EDGE_MIN", DefaultReviewEdgeMin),
 		PublicRateLimitPerMin: l.integer("PUBLIC_RATE_LIMIT_PER_MIN", DefaultPublicRateLimitPerMin, 1, 1_000_000),
 		StaleRoundWarnMinutes: l.integer("STALE_ROUND_WARN_MINUTES", DefaultStaleRoundWarnMinutes, 1, 10_000),
 
@@ -189,6 +192,7 @@ func (c Config) LogValue() slog.Value {
 		slog.String("min_route_confidence", c.MinRouteConfidence.String()),
 		slog.String("min_book_depth", c.MinBookDepth.String()),
 		slog.String("basis_penalty_mult", c.BasisPenaltyMult.String()),
+		slog.String("review_edge_min", c.ReviewEdgeMin.String()),
 		slog.Int("public_rate_limit_per_min", c.PublicRateLimitPerMin),
 		slog.Bool("llm_enabled", c.LLMEnabled),
 		slog.String("anthropic_api_key", redactIfSet(c.AnthropicAPIKey)),

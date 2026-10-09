@@ -200,11 +200,15 @@ func toInstrument(m market, cat canonical.Category) (canonical.Instrument, error
 	if sub := cleanText(&q, "yes_sub_title", m.YesSubTitle, maxTitleBytes); sub != "" && !strings.Contains(title, sub) {
 		title += " — " + sub
 	}
-	rules := strings.TrimSpace(cleanText(&q, "rules_primary", m.RulesPrimary, maxRulesBytes) + "\n\n" +
-		cleanText(&q, "rules_secondary", m.RulesSecondary, maxRulesBytes))
+	// Capture rules layers (UI-21): keep RulesText as combined for matching compatibility,
+	// but also store clarifications separately for display.
+	rulesPrimary := cleanText(&q, "rules_primary", m.RulesPrimary, maxRulesBytes)
+	rulesSecondary := cleanText(&q, "rules_secondary", m.RulesSecondary, maxRulesBytes)
+	rules := strings.TrimSpace(rulesPrimary + "\n\n" + rulesSecondary)
 	if rules == "" {
 		q.Add(canonical.QualityMissingField, "rules_primary", "no rules text")
 	}
+	clarifications := strings.TrimSpace(rulesSecondary)
 	eventTicker := cleanText(&q, "event_ticker", m.EventTicker, 128)
 	if eventTicker == "" {
 		q.Add(canonical.QualityMissingField, "event_ticker", "no event ticker")
@@ -217,6 +221,9 @@ func toInstrument(m market, cat canonical.Category) (canonical.Instrument, error
 		Category:       cat,
 		Title:          title,
 		RulesText:      rules,
+		RulesSummary:   rulesPrimary, // Kalshi's rules_primary is the per-strike summary
+		Clarifications: clarifications,
+		// ClarificationsUpdatedAt: Kalshi does not provide a specific timestamp for clarifications
 		Terms:          canonical.UnknownTerms(),
 		CloseTime:      parseTime(&q, "close_time", m.CloseTime, true),
 		ExpirationTime: parseTime(&q, "expiration_time", m.ExpirationTime, false),

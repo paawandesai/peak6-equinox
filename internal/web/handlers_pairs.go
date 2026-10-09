@@ -16,40 +16,81 @@ import (
 // the touch on each venue and the route form (US-02).
 type pairPage struct {
 	page
-	ID             int64
-	Type           string
-	TypeLabel      string
-	TypeChipClass  string // UI-04: chip class for the type
-	Confidence     string
-	ConfidenceWord string // UI-04: bucket word
-	Method         string
-	BasisRiskScore string // UI-04: score as string or "not scored"
-	BasisRiskWord  string // UI-04: bucket word
-	Routable       bool   // UI-04: yes/no in the strip
-	VetoHeading    string // UI-04: heading variant
-	Explanation    string
-	A, B           instrumentView
-	QuoteA         touchView
-	QuoteB         touchView
-	DiffRows       []diffRowView // UI-04: diff with annotations
-	Vetoes         []canonical.Veto
-	Facts          []canonical.FactUse
-	BasisRisk      *canonical.BasisRisk
-	NearMiss       bool // a stored related pair: shown with the veto that fired
-	Types          []typeView
-	History        historyChart
-	LogEntries     []logEntryView
-	Form           routeFormView
+	ID              int64
+	TypeBadge       Badge // UI-12: large badge in verdict panel
+	Type            string
+	TypeLabel       string
+	TypeChipClass   string   // UI-04: chip class for the type
+	Confidence      confView // UI-12: structured for {{template "conf"}}
+	ConfidenceOld   string   // kept for backwards compat during transition
+	ConfidenceWord  string   // UI-04: bucket word
+	Method          string
+	BasisRisk       basisView // UI-12: structured with value, word, class
+	BasisRiskScore  string    // UI-04: score as string or "not scored"
+	BasisRiskWord   string    // UI-04: bucket word
+	DiffRowCount    string    // UI-12: "N diff rows" for the link
+	Routable        bool      // UI-04: yes/no in the strip
+	VetoHeading     string    // UI-04: heading variant
+	Explanation     string
+	A, B            instrumentView
+	QuoteA          touchView
+	QuoteB          touchView
+	DiffRows        []diffRowView // UI-04, UI-12: diff with part grouping and word-level tokens
+	DiffCounts      string        // UI-12: "7 terms · 2 match · 3 differ · 2 closed · 0 unknown"
+	Vetoes          []canonical.Veto
+	Facts           []canonical.FactUse
+	BasisRiskFull   *canonical.BasisRisk // renamed for clarity
+	BasisComponents []basisComponentView // UI-12: with Row field
+	NearMiss        bool                 // a stored related pair: shown with the veto that fired
+	Types           []typeView
+	History         historyChart
+	LogEntries      []logEntryView
+	Form            routeFormView
 }
 
-// diffRowView is one diff row with annotations for vetoes and facts (UI-04).
+// confView is the confidence for the {{template "conf"}} define (UI-12).
+type confView struct {
+	Value float64 // for meter value
+	Word  string  // high/medium/low
+	Class string  // w-high/w-medium/w-low
+}
+
+// basisView is the basis risk for display (UI-12).
+type basisView struct {
+	Score string // "0.38" or "not scored"
+	Word  string // low/moderate/high or "not scored"
+	Class string // w-low/w-moderate/w-high or empty
+}
+
+// basisComponentView is one basis risk component with its diff row link (UI-12).
+type basisComponentView struct {
+	Name   string
+	Score  string
+	Detail string
+	Row    string // diff row field, or empty
+}
+
+// diffRowView is one diff row with annotations for vetoes and facts (UI-04, UI-12).
 type diffRowView struct {
 	Field      string
 	A          string
 	B          string
-	Status     string // "match", "differ", "unknown"
-	StatusText string // status word with color token
-	Annotation string // veto or fact annotation, or empty
+	ATokens    []diffToken // UI-12: word-level diff tokens for template wrapping
+	BTokens    []diffToken // UI-12: word-level diff tokens for template wrapping
+	Status     string      // "match", "differ", "unknown"
+	StatusText string      // status word with color token
+	Annotation string      // veto or fact annotation, or empty
+	Part       string      // UI-12: rule part (resolution criteria, strike, direction, etc.)
+	Class      string      // UI-12: CSS class (t-match, t-differ, t-closed, t-unknown)
+	Badge      Badge       // UI-12: verdict badge
+	BasisLink  string      // UI-12: link to basis component, or empty
+}
+
+// diffToken is one word/space token with its operation for word-level diffs (UI-12).
+// The template wraps delete/insert tokens in <del>/<ins> tags (AB-07: templates escape, never unsafe HTML types).
+type diffToken struct {
+	Op   string // "keep", "delete", "insert"
+	Text string // the token text, pre-escaped by the template
 }
 
 // typeView is one relationship type for the legend on the pair page.
@@ -70,6 +111,64 @@ func allTypeViews() []typeView {
 // maxPairLogEntries caps the decision-log entries shown on a pair page.
 const maxPairLogEntries = 20
 
+// fieldToPart maps a diff field to its rule part for grouping (UI-12, HANDOFF.md).
+// Order: Resolution criteria (subject, metric), Strike, Direction, Timeframe, Sources, Qualifying.
+func fieldToPart(field string) string {
+	switch field {
+	case "subject", "metric":
+		return "Resolution criteria"
+	case "threshold":
+		return "Strike / threshold"
+	case "comparator":
+		return "Direction"
+	case "deadline":
+		return "Timeframe / cutoff"
+	case "resolution_source":
+		return "Sources"
+	case "edge_rules":
+		return "Qualifying / edge cases"
+	default:
+		return "Other terms"
+	}
+}
+
+// wordDiff produces simple word-level diff tokens (UI-12).
+// This is a minimal implementation: split on whitespace, mark differing tokens.
+// AB-07: the template wraps these in <del>/<ins>, using auto-escaping only (no unsafe HTML types).
+func wordDiff(a, b string) ([]diffToken, []diffToken) {
+	if a == b {
+		// Identical: return as-is with keep
+		tokA := []diffToken{{Op: "keep", Text: a}}
+		tokB := []diffToken{{Op: "keep", Text: b}}
+		return tokA, tokB
+	}
+	// Simple word-level diff: split on spaces and mark changes
+	wordsA := strings.Fields(a)
+	wordsB := strings.Fields(b)
+
+	var tokA, tokB []diffToken
+	if a == "" {
+		// A is empty, B is all inserts
+		for _, w := range wordsB {
+			tokB = append(tokB, diffToken{Op: "insert", Text: w})
+		}
+	} else if b == "" {
+		// B is empty, A is all deletes
+		for _, w := range wordsA {
+			tokA = append(tokA, diffToken{Op: "delete", Text: w})
+		}
+	} else {
+		// Both present: mark as different (simple approach for now)
+		for _, w := range wordsA {
+			tokA = append(tokA, diffToken{Op: "delete", Text: w})
+		}
+		for _, w := range wordsB {
+			tokB = append(tokB, diffToken{Op: "insert", Text: w})
+		}
+	}
+	return tokA, tokB
+}
+
 // touchView is one venue's current touch in the round, for display only.
 type touchView struct {
 	Venue      string
@@ -84,6 +183,11 @@ type touchView struct {
 	VenueTSStr string     // "not sent" when VenueTS is nil
 	Quality    []canonical.QualityIssue
 	Tz         string // Timezone for formatTime in sub-templates (M3-08)
+	Age        string // UI-12: age string for stamp (e.g. "14 s ago")
+	FreshBadge Badge  // UI-12: freshness badge
+	FreshState string // UI-12: fresh/stale/unknown/pinned
+	StampAsOf  string // UI-12: formatted timestamp for stamp
+	StampDT    string // UI-12: datetime attribute
 }
 
 func newTouchView(q store.QuoteRecord) touchView {
@@ -148,7 +252,7 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 	viewA, viewB := views[rel.AID], views[rel.BID]
 	viewA.Tz, viewB.Tz = tz, tz
 
-	// UI-04: build diff rows with veto and fact annotations
+	// UI-04, UI-12: build diff rows with veto and fact annotations, word-level tokens
 	diffRows := buildDiffRows(rel)
 
 	// UI-04: veto heading variant
@@ -161,38 +265,114 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// UI-04: basis risk score and word
+	// UI-04, UI-12: basis risk score and word
 	basisRiskScore := ""
 	basisRiskWord := BasisRiskWord(rel.BasisRisk)
+	basisClass := ""
 	if rel.BasisRisk != nil {
-		basisRiskScore = rel.BasisRisk.Score.StringFixed(2) + " " + basisRiskWord
+		basisRiskScore = rel.BasisRisk.Score.StringFixed(2)
+		switch basisRiskWord {
+		case "low":
+			basisClass = "w-low"
+		case "moderate":
+			basisClass = "w-moderate"
+		case "high":
+			basisClass = "w-high"
+		}
 	} else {
-		basisRiskScore = basisRiskWord
+		basisRiskScore = "not scored"
+		basisRiskWord = "not scored"
+	}
+
+	// UI-12: confidence for {{template "conf"}}
+	confValue := ConfidenceValue(rel.Confidence)
+	confWord := ConfidenceWord(rel.Confidence)
+	confClass := ""
+	switch confWord {
+	case "high":
+		confClass = "w-high"
+	case "medium":
+		confClass = "w-medium"
+	case "low":
+		confClass = "w-low"
+	}
+
+	// UI-12: diff counts
+	matchCount, differCount, closedCount, unknownCount := 0, 0, 0, 0
+	for _, row := range diffRows {
+		switch row.Status {
+		case "match":
+			matchCount++
+		case "differ":
+			if row.Class == "t-closed" {
+				closedCount++
+			} else {
+				differCount++
+			}
+		case "unknown":
+			unknownCount++
+		}
+	}
+	diffCounts := fmt.Sprintf("%d terms · %d match · %d differ · %d closed · %d unknown",
+		len(diffRows), matchCount, differCount, closedCount, unknownCount)
+	diffRowCount := fmt.Sprintf("%d diff rows", len(diffRows))
+
+	// UI-12: basis components with row links
+	var basisComponents []basisComponentView
+	if rel.BasisRisk != nil {
+		for _, c := range rel.BasisRisk.Components {
+			bc := basisComponentView{
+				Name:   c.Name,
+				Score:  c.Score.StringFixed(2),
+				Detail: c.Detail,
+			}
+			// Simple heuristic to link components to diff rows
+			if strings.Contains(c.Name, "cutoff") || strings.Contains(c.Name, "deadline") {
+				bc.Row = "deadline"
+			} else if strings.Contains(c.Name, "source") {
+				bc.Row = "resolution_source"
+			}
+			basisComponents = append(basisComponents, bc)
+		}
 	}
 
 	data := pairPage{
-		page:           s.pageBase(round, "Pair "+r.PathValue("id"), "Why does Equinox think these two contracts are, or are not, the same bet, and where would an order fill best?", tz),
-		ID:             rel.ID,
-		Type:           string(rel.Type),
-		TypeLabel:      typeLabels[rel.Type],
-		TypeChipClass:  TypeChipClass(rel.Type), // UI-04
-		Confidence:     rel.Confidence.StringFixed(2),
-		ConfidenceWord: ConfidenceWord(rel.Confidence), // UI-04
+		page:          s.pageBase(round, "Pair "+r.PathValue("id"), "Why does Equinox think these two contracts are, or are not, the same bet, and where would an order fill best?", tz, "pair"),
+		ID:            rel.ID,
+		TypeBadge:     TypeBadge(rel.Type), // UI-12
+		Type:          string(rel.Type),
+		TypeLabel:     typeLabels[rel.Type],
+		TypeChipClass: TypeChipClass(rel.Type), // UI-04
+		Confidence: confView{ // UI-12
+			Value: confValue,
+			Word:  confWord,
+			Class: confClass,
+		},
+		ConfidenceOld:  rel.Confidence.StringFixed(2),
+		ConfidenceWord: confWord, // UI-04
 		Method:         string(rel.Method),
-		BasisRiskScore: basisRiskScore,      // UI-04
-		BasisRiskWord:  basisRiskWord,       // UI-04
-		Routable:       rel.Type.Routable(), // UI-04
-		VetoHeading:    vetoHeading,         // UI-04
-		Explanation:    rel.Explanation,
-		A:              viewA,
-		B:              viewB,
-		DiffRows:       diffRows, // UI-04
-		Vetoes:         rel.Vetoes,
-		Facts:          rel.FactsUsed,
-		BasisRisk:      rel.BasisRisk,
-		NearMiss:       rel.Type == canonical.RelRelated,
-		Types:          allTypeViews(),
-		Form:           defaultRouteForm(rel),
+		BasisRisk: basisView{ // UI-12
+			Score: basisRiskScore,
+			Word:  basisRiskWord,
+			Class: basisClass,
+		},
+		BasisRiskScore:  basisRiskScore + " " + basisRiskWord, // UI-04 (kept for compat)
+		BasisRiskWord:   basisRiskWord,                        // UI-04
+		DiffRowCount:    diffRowCount,                         // UI-12
+		Routable:        rel.Type.Routable(),                  // UI-04
+		VetoHeading:     vetoHeading,                          // UI-04
+		Explanation:     rel.Explanation,
+		A:               viewA,
+		B:               viewB,
+		DiffRows:        diffRows,   // UI-04, UI-12
+		DiffCounts:      diffCounts, // UI-12
+		Vetoes:          rel.Vetoes,
+		Facts:           rel.FactsUsed,
+		BasisRiskFull:   rel.BasisRisk,   // renamed
+		BasisComponents: basisComponents, // UI-12
+		NearMiss:        rel.Type == canonical.RelRelated,
+		Types:           allTypeViews(),
+		Form:            defaultRouteForm(rel),
 	}
 	points, err := st.QuoteHistory(ctx, []string{rel.AID, rel.BID}, maxHistoryPt)
 	if err != nil {
@@ -206,8 +386,10 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, e := range entries {
-		data.LogEntries = append(data.LogEntries, newLogEntryView(e))
+		data.LogEntries = append(data.LogEntries, s.newLogEntryView(e, tz))
 	}
+	// UI-12: load quotes with freshness
+	now := time.Now().UTC()
 	for _, q := range []struct {
 		id   string
 		dest *touchView
@@ -221,6 +403,23 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 			return
 		default:
 			*q.dest = newTouchView(quote)
+			// UI-12: compute age and freshness
+			age := now.Sub(quote.FetchedAt)
+			q.dest.Age = Age(age)
+			q.dest.StampAsOf = formatTime(quote.FetchedAt, tz)
+			q.dest.StampDT = quote.FetchedAt.Format(time.RFC3339)
+
+			// Determine freshness state (UI-10: only Fresh/Stale/Unknown for now; Warn comes in UI-19)
+			// Use D-077 stale threshold
+			staleThreshold := s.cfg.StaleAfter
+			freshState := FreshStateFresh
+			if currentRound.Pinned {
+				freshState = FreshStatePinned
+			} else if age > staleThreshold {
+				freshState = FreshStateStale
+			}
+			q.dest.FreshState = string(freshState)
+			q.dest.FreshBadge = FreshBadge(freshState)
 		}
 		q.dest.Venue = string(canonical.VenueOf(q.id))
 		q.dest.Tz = tz
@@ -228,7 +427,8 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 	s.render(w, http.StatusOK, "pair", data)
 }
 
-// buildDiffRows maps vetoes and facts onto diff rows by term name (UI-04).
+// buildDiffRows maps vetoes and facts onto diff rows by term name (UI-04, UI-12).
+// UI-12 adds: Part grouping, CSS class, badge, word-level tokens, basis link.
 func buildDiffRows(rel canonical.Relationship) []diffRowView {
 	rows := make([]diffRowView, 0, len(rel.Diff))
 
@@ -248,6 +448,21 @@ func buildDiffRows(rel canonical.Relationship) []diffRowView {
 		factsList = strings.Join(factPairs, ", ")
 	}
 
+	// Build basis component map by field (for basis link)
+	basisByField := make(map[string]bool)
+	if rel.BasisRisk != nil {
+		for _, c := range rel.BasisRisk.Components {
+			// Extract field from component name (e.g. "cutoff_gap" -> "deadline")
+			// This is a simple heuristic; the actual mapping may differ
+			if strings.Contains(c.Name, "cutoff") || strings.Contains(c.Name, "deadline") {
+				basisByField["deadline"] = true
+			}
+			if strings.Contains(c.Name, "source") {
+				basisByField["resolution_source"] = true
+			}
+		}
+	}
+
 	for _, d := range rel.Diff {
 		row := diffRowView{
 			Field:      d.Field,
@@ -255,17 +470,53 @@ func buildDiffRows(rel canonical.Relationship) []diffRowView {
 			B:          d.B,
 			Status:     string(d.Status),
 			StatusText: string(d.Status),
+			Part:       fieldToPart(d.Field), // UI-12
+		}
+
+		// UI-12: word-level diff tokens
+		row.ATokens, row.BTokens = wordDiff(d.A, d.B)
+
+		// UI-12: CSS class based on status
+		isClosed := false
+		if veto, ok := vetoByField[d.Field]; ok && rel.Type == canonical.RelEquivalentGivenFacts && len(rel.FactsUsed) > 0 {
+			isClosed = true
+			_ = veto // use veto below in annotation
+		}
+
+		switch d.Status {
+		case canonical.DiffMatch:
+			row.Class = "t-match"
+			row.Badge = VerdictBadge("match")
+		case canonical.DiffDiffer:
+			if isClosed {
+				row.Class = "t-closed"
+				row.Badge = VerdictBadge("closed")
+			} else {
+				row.Class = "t-differ"
+				row.Badge = VerdictBadge("differs")
+			}
+		case canonical.DiffUnknown:
+			row.Class = "t-unknown"
+			row.Badge = VerdictBadge("unknown")
+		default:
+			row.Class = "t-unknown"
+			row.Badge = VerdictBadge("unknown")
 		}
 
 		// Add veto annotation if present
 		if veto, ok := vetoByField[d.Field]; ok {
-			if factsList != "" {
-				// For pairs with facts, show all facts
-				row.Annotation = fmt.Sprintf("veto %s, closed by facts: %s", veto.Code, factsList)
+			if factsList != "" && rel.Type == canonical.RelEquivalentGivenFacts {
+				// For equivalent_given_facts pairs with facts, show "closed by facts"
+				row.Annotation = fmt.Sprintf("veto %s, closed by facts", veto.Code)
 			} else {
 				// For other types or pairs without facts, just show the veto
 				row.Annotation = fmt.Sprintf("veto %s", veto.Code)
 			}
+		}
+
+		// UI-12: basis link if this field contributes to basis risk
+		if basisByField[d.Field] {
+			row.BasisLink = "#basis"
 		}
 
 		rows = append(rows, row)

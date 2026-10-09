@@ -17,6 +17,19 @@ Next operator action (Tier 2): human verification of Fed demo rendering (criteri
 
 **Previous:** M1 verification HIT WITH CAVEATS (2026-10-06 ~21:55 CT).
 
+**M4-03 pinned demo round (2026-10-09 14:28 UTC):**
+- **Round ID:** 735
+- **Finished at:** 2026-10-09 14:15:12 UTC
+- **Relationship counts:**
+  - equivalent: 0
+  - equivalent_given_facts: 1 (Fed demo pair: kalshi:KXFED-26OCT-T4.25 ↔ polymarket Will the Fed increase interest rates by 50+ bps after October 2026 meeting)
+  - complement: 1
+  - implies: 25
+  - related: 11,223 (613 near misses stored)
+  - unrelated: 42,090
+- **Total stored:** 613 relationships
+- **Verification:** pinned round serves on / with demo banner; Scheduler continues collecting (rounds 736-738+ after pin); NFR-04 test passes in CI (zero venue calls for pinned pages)
+
 
 ## Done
 
@@ -98,13 +111,17 @@ None.
 | D-072 | M2-06: settlement back-test (`internal/eval/backtest*.go`, `equinox backtest --fixtures | --live`); allowlist + Markdown report; fixture test PASS (1031 instruments, 207544 pairs, 24/24 agreed); equivalence.md §7–§8 filled. Tier 1. | 2026-10-07 |
 | D-075 | M3-06: LLM verifier uses stdlib `net/http` to call Anthropic Messages API directly, not `anthropic-sdk-go` (60-line implementation vs 10+ dependencies). Tier 2. | 2026-10-07 |
 | D-077 | M3-01: snapshot-relative quote staleness (NFR-09). Quote age measured against round.SnapshotAt() not wall clock. Stale-round warning when latest round snapshot older than STALE_ROUND_WARN_MINUTES (default 10 min). DecidedAt stays wall clock. Tier 2, approved by Paawan 2026-10-07 23:03 UTC. | 2026-10-07 |
+| D-106 | UI-18: `REVIEW_EDGE_MIN` config key (default 0.02 $/contract) to flag pairs for review when net gap ≥ threshold and confidence < 0.90. Tier 2 (new config key, shared docs/environment.md). | 2026-10-09 |
 | D-078 | CI hotfix: `gitleaks` job scans only the MR's own commits (`--log-opts=$CI_MERGE_REQUEST_DIFF_BASE_SHA..HEAD`) on MR pipelines; main keeps the full-history scan; `.gitleaks.toml` unchanged. Tier 2 CI-gate config. | 2026-10-08 |
 | D-080 | M3-02: basis penalty applied in routing cost (FR-11/FR-12). New config BASIS_PENALTY_MULTIPLIER (default 0.01 = 1 cent per 1.0 risk point). allInCost = VWAP + fee + basisPenalty. Partners with nil BasisRisk excluded. Quantize to 4dp for transitive tie-breaking: deeper book, then lower basis score, then venue name. Tier 2, new config default. | 2026-10-07 |
 | D-081 | Human (Paawan, 2026-10-07 8:29 PM CT): UI clarity and usability pass designed by the orchestrator with /design; refines D-031; same stack (html/template + htmx + Pico.css, no JS build, no SPA). **Already approved by Paawan**; listed for the record. | 2026-10-08 |
 | D-084 | Q-7: labels.yaml added to guard-human-files.sh. The test that required an empty labels.yaml now checks the schema, provenance and that each label has a note. Tier 2. | 2026-10-07 |
 | D-097 | UI-08 follow-up (issue #40): llm_verify_last_run singleton table persists last LLM verify run summary (verified, downgraded, cache_hits, ran_at). Admin page shows "last run" state (chip-info); /admin/llm-verify redirects for browser posts. State precedence: disabled > cap_reached > last_run > ready. Migration 0002. Tier 2 schema change. | 2026-10-08 |
-| D-101 | M4-04: Cloud Run `min-instances=1` for the review window and the revert (`scripts/review-window.sh`); window, cost estimate and dry-run filled in by the M4-04 MR. Tier 2 (prod config, cost). Number reserved by the M4 tickets MR. | 2026-10-08 |
+| D-099 | Router stores input quotes with each decision (UI-25, D-098 call 3). `canonical.Decision` gains `Inputs []DecisionInput` (venue, instrument id, relationship type `"self"` for target, confidence at decision time, outcome side, best ask, ask depth capped at 10 levels, quote times, round id) and `TargetType` (relationship type label for UI grouping). Stored as optional jsonb fields; no SQL migration. Old decisions decode with empty Inputs and TargetType. | 2026-10-08 |
+| D-101 | M4-04: Cloud Run `min-instances=1` for the review window Sun 2026-10-11 09:00–12:00 CT (3 h) and revert (`make review-window-on|off`); estimated cost $0.27 within $50 headroom; `scripts/review-window.sh` with status verification. Tier 2 (prod config, cost). | 2026-10-08 |
 | D-102 | M4-07: final production deploy of `main` for submission; sha, revision and smoke output filled in by the M4-07 MR. Tier 2 (prod deploy). Number reserved by the M4 tickets MR. | 2026-10-08 |
+
+| D-103 | UI-21: Rule layers columns (rules_summary, clarifications, clarifications_updated_at) added to instruments table. Kalshi rules_secondary captured as clarifications; Polymarket has no separate layers. Not fed to matcher/LLM in this ticket. Migration 0004. Tier 2 schema change. | 2026-10-09 |
 
 ## Kept decisions (veto closed)
 

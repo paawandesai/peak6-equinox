@@ -6,6 +6,9 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/shopspring/decimal"
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/store"
@@ -44,17 +47,25 @@ func TestPairStripFieldsEquivalentGivenFacts(t *testing.T) {
 	wantHTML(t, rec, http.StatusOK)
 	body := rec.Body.String()
 
-	// Strip fields - assert specific dt/dd pairs
+	// UI-12: verdict panel fields (check key elements, not exact HTML structure)
 	wantContains(t, body,
-		`<dt>Type</dt><dd><span class="chip chip-ok">equivalent_given_facts</span></dd>`,
-		`<dt>Confidence</dt><dd>0.93 high</dd>`,
-		`<dt>Method</dt><dd>rules</dd>`,
-		`<dt>Basis risk</dt><dd>0.38 moderate</dd>`,
-		`<dt>Routable</dt><dd>yes</dd>`,
-		`<dt>Round</dt><dd>`, // contains round ID and as-of with timezone
-		"2026-10-06",         // as-of date in strip
-		"EDT",                // timezone in strip
-		`<a href="#route">Route an order`,
+		`<div class="verdict-panel">`,                           // verdict panel
+		`<span class="badge badge-l b-equivalent_given_facts">`, // large badge
+		`equivalent_given_facts`,                                // type text
+		`<dt>Confidence</dt>`,                                   // confidence
+		`0.93`,                                                  // confidence value
+		`high`,                                                  // confidence word
+		`<dt>Method</dt>`,                                       // method label
+		`rules`,                                                 // method value
+		`<dt>Basis risk</dt>`,                                   // basis risk label
+		`0.38`,                                                  // basis score
+		`moderate`,                                              // basis word
+		`<dt>Routable</dt>`,                                     // routable label
+		`yes`,                                                   // routable value
+		`<dt>Round</dt>`,                                        // round label
+		"2026-10-06",                                            // as-of date
+		"EDT",                                                   // timezone
+		`<a href="#route">Route an order`,                       // route link
 	)
 }
 
@@ -66,11 +77,13 @@ func TestPairStripFieldsRelatedNearMiss(t *testing.T) {
 	wantHTML(t, rec, http.StatusOK)
 	body := rec.Body.String()
 
-	// Strip fields for a related (near miss)
+	// UI-12: verdict panel for a related (near miss)
 	wantContains(t, body,
-		`<span class="chip chip-warn">related</span>`, // type chip
-		"Routable</dt><dd>no</dd>",                    // routable: no
-		"not scored",                                  // basis risk: not scored
+		`<span class="badge badge-l b-related">`, // large badge
+		`related`,                                // type text
+		`<dt>Routable</dt>`,                      // routable label
+		`no`,                                     // routable value
+		"not scored",                             // basis risk: not scored
 	)
 }
 
@@ -104,7 +117,7 @@ func TestPairDiffRowAnnotationsEquivalentGivenFacts(t *testing.T) {
 	sd := seedPublic(t, st)
 	ctx := context.Background()
 
-	// Test 1: Multiple facts, listed veto code
+	// Test 1: Multiple facts, veto annotation (UI-12: simplified annotation without facts list)
 	rel, err := st.GetRelationship(ctx, sd.eqID)
 	if err != nil {
 		t.Fatal(err)
@@ -126,10 +139,10 @@ func TestPairDiffRowAnnotationsEquivalentGivenFacts(t *testing.T) {
 	wantHTML(t, rec, http.StatusOK)
 	body := rec.Body.String()
 
-	// All facts listed in annotation
+	// UI-12: annotation format changed to "veto X, closed by facts" (without listing all facts)
 	wantContains(t, body,
-		"veto threshold_mismatch, closed by facts: fed_upper_bound=4.00, fed_rate_step=0.25",
-		"veto metric_mismatch, closed by facts: fed_upper_bound=4.00, fed_rate_step=0.25",
+		"veto threshold_mismatch, closed by facts",
+		"veto metric_mismatch, closed by facts",
 	)
 
 	// Test 2: Non-listed veto code (still shows veto)
@@ -140,11 +153,12 @@ func TestPairDiffRowAnnotationsEquivalentGivenFacts(t *testing.T) {
 		t.Fatal(err)
 	}
 	body = get(s.Handler(), "/pairs/"+strconv.FormatInt(sd.eqID, 10)).Body.String()
-	wantContains(t, body, "veto source_mismatch, closed by facts:")
+	wantContains(t, body, "veto source_mismatch, closed by facts")
 
-	// Test 3: Facts-closed pair with no facts (should show just veto, not "closed by facts")
+	// Test 3: EGF pair with veto but no facts (UI-12: should show just veto in diff annotation)
+	// Change type back to equivalent (not EGF) to avoid heading saying "closed by facts"
+	rel.Type = canonical.RelEquivalent
 	rel.FactsUsed = nil
-	// Reset to just one veto so the heading doesn't say "closed by facts" either
 	rel.Vetoes = []canonical.Veto{
 		{Code: "threshold_mismatch", Field: "threshold", Detail: "4.25 vs 0.5"},
 	}
@@ -153,9 +167,9 @@ func TestPairDiffRowAnnotationsEquivalentGivenFacts(t *testing.T) {
 	}
 	body = get(s.Handler(), "/pairs/"+strconv.FormatInt(sd.eqID, 10)).Body.String()
 	wantContains(t, body, "veto threshold_mismatch")
-	// Check diff row annotation doesn't say "closed by facts"
-	if strings.Contains(body, "closed by facts:") {
-		t.Error("diff row should not say 'closed by facts:' when no facts present")
+	// Check diff row annotation doesn't say "closed by facts" (should be plain veto for equivalent type)
+	if strings.Contains(body, "veto threshold_mismatch, closed by facts") {
+		t.Error("diff row should not say 'closed by facts' for equivalent (non-EGF) type")
 	}
 }
 
@@ -269,4 +283,288 @@ func TestPairRouteAnchor(t *testing.T) {
 		`<a href="#route">Route an order`,
 		`<section id="route">`,
 	)
+}
+
+// UI-12 tests
+
+func TestPairDiffPartGroupingAndOrder(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+	ctx := context.Background()
+
+	// Create a pair with diff rows across multiple rule parts
+	rel, err := st.GetRelationship(ctx, sd.eqID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rel.Diff = []canonical.FieldDiff{
+		{Field: "subject", A: "fed_funds_rate", B: "fed_funds_rate", Status: canonical.DiffMatch},
+		{Field: "threshold", A: "4.25", B: "0.5", Status: canonical.DiffDiffer},
+		{Field: "comparator", A: "gt", B: "gte", Status: canonical.DiffDiffer},
+		{Field: "deadline", A: "2026-10-28", B: "2026-10-29", Status: canonical.DiffMatch},
+		{Field: "resolution_source", A: "federalreserve.gov", B: "federalreserve.gov", Status: canonical.DiffMatch},
+		{Field: "metric", A: "rate_upper_bound", B: "rate_change", Status: canonical.DiffDiffer},
+	}
+	if _, err := st.UpsertRelationship(ctx, rel); err != nil {
+		t.Fatal(err)
+	}
+
+	rec := get(s.Handler(), "/pairs/"+strconv.FormatInt(sd.eqID, 10))
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+
+	// Verify part headers appear in order (HANDOFF.md order)
+	resolutionPos := strings.Index(body, `>Resolution criteria<`)
+	strikePos := strings.Index(body, `>Strike / threshold<`)
+	directionPos := strings.Index(body, `>Direction<`)
+	timeframePos := strings.Index(body, `>Timeframe / cutoff<`)
+	sourcesPos := strings.Index(body, `>Sources<`)
+
+	if resolutionPos == -1 || strikePos == -1 || directionPos == -1 || timeframePos == -1 || sourcesPos == -1 {
+		t.Fatalf("missing part headers: res=%d strike=%d dir=%d time=%d src=%d",
+			resolutionPos, strikePos, directionPos, timeframePos, sourcesPos)
+	}
+
+	// Verify order
+	if resolutionPos >= strikePos || strikePos >= directionPos ||
+		directionPos >= timeframePos || timeframePos >= sourcesPos {
+		t.Errorf("part order wrong: res=%d strike=%d dir=%d time=%d src=%d",
+			resolutionPos, strikePos, directionPos, timeframePos, sourcesPos)
+	}
+}
+
+func TestPairDiffRowClasses(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+	ctx := context.Background()
+
+	// Test 1: match/differ classes
+	rel, err := st.GetRelationship(ctx, sd.eqID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rel.Diff = []canonical.FieldDiff{
+		{Field: "subject", A: "fed_funds_rate", B: "fed_funds_rate", Status: canonical.DiffMatch},
+		{Field: "threshold", A: "4.25", B: "0.5", Status: canonical.DiffDiffer},
+		{Field: "edge_rules", A: "unknown", B: "unknown", Status: canonical.DiffUnknown},
+	}
+	if _, err := st.UpsertRelationship(ctx, rel); err != nil {
+		t.Fatal(err)
+	}
+
+	rec := get(s.Handler(), "/pairs/"+strconv.FormatInt(sd.eqID, 10))
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+
+	wantContains(t, body,
+		`class="t-match"`,   // match row
+		`class="t-differ"`,  // differ row
+		`class="t-unknown"`, // unknown row
+	)
+
+	// Test 2: closed class for equivalent_given_facts
+	rel.Type = canonical.RelEquivalentGivenFacts
+	rel.Vetoes = []canonical.Veto{
+		{Code: "threshold_mismatch", Field: "threshold", Detail: "4.25 vs 0.5"},
+	}
+	rel.FactsUsed = []canonical.FactUse{
+		{Key: "fed_upper_bound", Value: "4.00", Source: "federalreserve.gov", AsOf: seedNow},
+	}
+	if _, err := st.UpsertRelationship(ctx, rel); err != nil {
+		t.Fatal(err)
+	}
+
+	body = get(s.Handler(), "/pairs/"+strconv.FormatInt(sd.eqID, 10)).Body.String()
+	wantContains(t, body, `class="t-closed"`) // closed by fact
+}
+
+func TestPairDiffWordLevelXSSEscaping(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+	ctx := context.Background()
+
+	// Create a diff row with <script> tag in the value (AB-07)
+	rel, err := st.GetRelationship(ctx, sd.eqID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rel.Diff = []canonical.FieldDiff{
+		{Field: "subject", A: "fed<script>alert('xss')</script>rate", B: "fed_rate", Status: canonical.DiffDiffer},
+	}
+	if _, err := st.UpsertRelationship(ctx, rel); err != nil {
+		t.Fatal(err)
+	}
+
+	rec := get(s.Handler(), "/pairs/"+strconv.FormatInt(sd.eqID, 10))
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+
+	// Verify <script> is escaped
+	if strings.Contains(body, `<script>alert`) {
+		t.Error("word diff did not escape <script> tag (AB-07 violation)")
+	}
+	wantContains(t, body, `&lt;script&gt;`) // should be escaped
+}
+
+func TestPairDiffRowCountLink(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+	ctx := context.Background()
+
+	// Create a pair with 5 diff rows
+	rel, err := st.GetRelationship(ctx, sd.eqID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rel.Diff = []canonical.FieldDiff{
+		{Field: "subject", A: "a", B: "a", Status: canonical.DiffMatch},
+		{Field: "metric", A: "b", B: "b", Status: canonical.DiffMatch},
+		{Field: "threshold", A: "c", B: "d", Status: canonical.DiffDiffer},
+		{Field: "comparator", A: "e", B: "f", Status: canonical.DiffDiffer},
+		{Field: "deadline", A: "g", B: "g", Status: canonical.DiffMatch},
+	}
+	if _, err := st.UpsertRelationship(ctx, rel); err != nil {
+		t.Fatal(err)
+	}
+
+	rec := get(s.Handler(), "/pairs/"+strconv.FormatInt(sd.eqID, 10))
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+
+	// Verify "N diff rows" link to #basis in verdict panel
+	wantContains(t, body,
+		`<a href="#basis">5 diff rows</a>`,
+	)
+}
+
+func TestPairVerdictPanelSectionOrder(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+
+	rec := get(s.Handler(), "/pairs/"+strconv.FormatInt(sd.eqID, 10))
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+
+	// UI-12: verdict panel comes before contracts
+	verdictPos := strings.Index(body, `<div class="verdict-panel">`)
+	contractsPos := strings.Index(body, `<h2>The two contracts</h2>`)
+
+	if verdictPos == -1 || contractsPos == -1 {
+		t.Fatalf("missing verdict panel or contracts section: verdict=%d contracts=%d", verdictPos, contractsPos)
+	}
+
+	if verdictPos >= contractsPos {
+		t.Errorf("verdict panel should come before contracts: verdict=%d contracts=%d", verdictPos, contractsPos)
+	}
+
+	// Verify section order: verdict panel, types legend, contracts, diff, vetoes, facts+basis, why, touch, history, log, route
+	// (This extends the existing TestPairSectionOrder)
+	typesPos := strings.Index(body, `<details class="types">`)
+	diffPos := strings.Index(body, `<section id="diff">`)
+
+	if typesPos == -1 || diffPos == -1 {
+		t.Fatalf("missing types or diff: types=%d diff=%d", typesPos, diffPos)
+	}
+
+	if verdictPos >= typesPos || typesPos >= contractsPos || contractsPos >= diffPos {
+		t.Errorf("section order wrong: verdict=%d types=%d contracts=%d diff=%d",
+			verdictPos, typesPos, contractsPos, diffPos)
+	}
+}
+
+// TestPairRuleLayers verifies the .layers details group renders all 4 layers
+// (Title, Summary, Full rules, Clarifications) with correct content, empty
+// states, and the "clarified <date>" annotation.
+func TestPairRuleLayers(t *testing.T) {
+	s, st := newTestServer(t)
+	now := time.Date(2026, 10, 9, 12, 0, 0, 0, time.UTC)
+	clarDate := time.Date(2026, 10, 8, 15, 30, 0, 0, time.UTC)
+
+	r, err := st.CreateRound(context.Background(), now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.FinishRound(context.Background(), r.ID, "ok", nil, now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+
+	// Kalshi instrument with summary and clarifications
+	kalshi := canonical.Instrument{
+		ID:                      "kalshi:KXTEST-01",
+		Venue:                   canonical.VenueKalshi,
+		VenueMarketID:           "KXTEST-01",
+		VenueEventID:            "KXTEST",
+		Category:                canonical.CategoryCrypto,
+		Title:                   "BTC above $120k?",
+		RulesText:               "Primary rules here.\n\nAdditional details here.",
+		RulesSummary:            "Primary rules here.",
+		Clarifications:          "Additional details here.",
+		ClarificationsUpdatedAt: clarDate,
+		Terms:                   canonical.UnknownTerms(),
+		Status:                  canonical.StatusOpen,
+		CloseTime:               now.Add(24 * time.Hour),
+		FeeSchedule:             canonical.FeeSchedule{ID: canonical.FeeScheduleKalshiTakerV1, Params: map[string]decimal.Decimal{"multiplier": decimal.RequireFromString("0.07")}},
+	}
+
+	// Polymarket instrument with no separate layers
+	poly := canonical.Instrument{
+		ID:             "polymarket:0x123",
+		Venue:          canonical.VenuePolymarket,
+		VenueMarketID:  "0x123",
+		VenueEventID:   "test-event",
+		Category:       canonical.CategoryCrypto,
+		Title:          "BTC above $120k?",
+		RulesText:      "Combined rules text.",
+		RulesSummary:   "", // Polymarket doesn't publish separate summary
+		Clarifications: "", // Polymarket doesn't publish separate clarifications
+		Terms:          canonical.UnknownTerms(),
+		Status:         canonical.StatusOpen,
+		CloseTime:      now.Add(24 * time.Hour),
+		FeeSchedule:    canonical.FeeSchedule{ID: canonical.FeeSchedulePolymarketV1, Params: map[string]decimal.Decimal{"rate": decimal.RequireFromString("0.02")}},
+	}
+
+	for _, in := range []canonical.Instrument{kalshi, poly} {
+		if err := st.UpsertInstrument(context.Background(), r.ID, in); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Create relationship
+	relID, err := st.UpsertRelationship(context.Background(), canonical.Relationship{
+		RoundID:     r.ID,
+		AID:         kalshi.ID,
+		BID:         poly.ID,
+		Type:        canonical.RelEquivalent,
+		Confidence:  decimal.RequireFromString("0.95"),
+		Method:      canonical.MethodRules,
+		Explanation: "Test pair",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rec := get(s.Handler(), "/pairs/"+strconv.FormatInt(relID, 10))
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+
+	// Verify .layers div exists for each contract
+	if !strings.Contains(body, `<div class="layers">`) {
+		t.Error("missing .layers div")
+	}
+
+	// Kalshi contract: verify all 4 layers
+	// Title is always present in contract card
+	wantContains(t, body, "BTC above $120k?")
+
+	// Summary: should show for Kalshi
+	wantContains(t, body, "Primary rules here.")
+
+	// Clarifications: should show for Kalshi with date
+	wantContains(t, body, "Additional details here.")
+	wantContains(t, body, "clarified 2026-10-08")
+
+	// Verify "venue publishes none" appears for empty layers
+	if !strings.Contains(body, "venue publishes none") {
+		t.Error("missing 'venue publishes none' for empty layers")
+	}
 }

@@ -25,6 +25,7 @@
 | `MIN_ROUTE_CONFIDENCE` | Minimum relationship confidence for routing | no | `0.9` |
 | `MIN_BOOK_DEPTH` | Minimum total book depth (contracts) for eligibility | no | `1` |
 | `BASIS_PENALTY_MULTIPLIER` | Basis-risk penalty multiplier (cents per contract per risk point) | no | `0.01` |
+| `REVIEW_EDGE_MIN` | Minimum fee-adjusted net gap (dollars per contract) to flag a pair for review when confidence < 0.90 (UI-18) | no | `0.02` |
 | `PUBLIC_RATE_LIMIT_PER_MIN` | Per-IP limit on public routes | no | `60` |
 | `STALE_ROUND_WARN_MINUTES` | Stale-round warning threshold (minutes); when latest round snapshot is older, public pages show a banner | no | `10` |
 | `LLM_ENABLED` | Enables the verifier | no (default `false`) | `false` |
@@ -71,3 +72,7 @@ go run ./cmd/equinox ingest   # one live fetch round
 ## Staging
 
 Staging is a Cloud Run revision tagged `staging` with no traffic (`make deploy-staging`). It uses the same project, a separate database `equinox_staging` on the same Cloud SQL instance, and `LLM_ENABLED=false`. Red-team and performance checks run only here or locally (see [threat-model.md](threat-model.md#red-team-rules-of-engagement)).
+
+## Review window (M4-04, D-101, Tier 2)
+
+`make review-window-on`, `make review-window-off`, `make review-window-status`: set Cloud Run `min-instances=1` for the review window (to avoid cold starts during the live walkthrough) and revert it afterwards. The production change is run by the operator or Paawan at the review window, not automatically.

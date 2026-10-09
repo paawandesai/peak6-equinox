@@ -184,7 +184,7 @@ func TestKalshiParseOrderbookMalformed(t *testing.T) {
 func TestKalshiToInstrument(t *testing.T) {
 	good := market{
 		Ticker: "KXFED-26OCT-T3.25", EventTicker: "KXFED-26OCT", Title: "Fed above 3.25%?", YesSubTitle: "Above 3.25%",
-		RulesPrimary: "If above, Yes.", CloseTime: "2026-10-28T12:55:00-05:00", ExpirationTime: "2026-11-04T18:05:00Z", Status: "active",
+		RulesPrimary: "If above, Yes.", RulesSecondary: "Additional details here.", CloseTime: "2026-10-28T12:55:00-05:00", ExpirationTime: "2026-11-04T18:05:00Z", Status: "active",
 	}
 	ins, err := toInstrument(good, canonical.CategoryFed)
 	if err != nil {
@@ -193,8 +193,18 @@ func TestKalshiToInstrument(t *testing.T) {
 	if ins.CloseTime.Location().String() != "UTC" || ins.CloseTime.Hour() != 17 {
 		t.Errorf("close time %v not converted to UTC", ins.CloseTime)
 	}
-	if ins.RulesText != "If above, Yes." || ins.Title != "Fed above 3.25%? — Above 3.25%" {
+	if ins.RulesText != "If above, Yes.\n\nAdditional details here." || ins.Title != "Fed above 3.25%? — Above 3.25%" {
 		t.Errorf("rules %q title %q", ins.RulesText, ins.Title)
+	}
+	// UI-21: rule layers (summary, clarifications)
+	if ins.RulesSummary != "If above, Yes." {
+		t.Errorf("RulesSummary = %q, want rules_primary", ins.RulesSummary)
+	}
+	if ins.Clarifications != "Additional details here." {
+		t.Errorf("Clarifications = %q, want rules_secondary", ins.Clarifications)
+	}
+	if !ins.ClarificationsUpdatedAt.IsZero() {
+		t.Errorf("ClarificationsUpdatedAt = %v, want zero (Kalshi doesn't publish timestamp)", ins.ClarificationsUpdatedAt)
 	}
 	// M3-05: pin FeeSchedule.Verified and Source (Q-8 answered 2026-10-07)
 	if ins.FeeSchedule.Verified != true {
@@ -230,6 +240,50 @@ func TestKalshiToInstrument(t *testing.T) {
 	}
 	if !ins.CloseTime.IsZero() || !ins.ExpirationTime.IsZero() || ins.Status != canonical.StatusUnknown || len(ins.Title) > maxTitleBytes+len(" — Above 3.25%") {
 		t.Errorf("degraded instrument = %+v", ins)
+	}
+
+	// UI-21: test empty and oversized summary and clarifications (AB-02)
+	m2 := good
+	m2.RulesPrimary = ""
+	ins2, err := toInstrument(m2, canonical.CategoryFed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ins2.RulesSummary != "" {
+		t.Errorf("empty rules_primary: RulesSummary = %q, want empty", ins2.RulesSummary)
+	}
+
+	m3 := good
+	m3.RulesSecondary = ""
+	ins3, err := toInstrument(m3, canonical.CategoryFed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ins3.Clarifications != "" {
+		t.Errorf("empty rules_secondary: Clarifications = %q, want empty", ins3.Clarifications)
+	}
+
+	m4 := good
+	m4.RulesPrimary = strings.Repeat("x", maxRulesBytes+1000)
+	ins4, err := toInstrument(m4, canonical.CategoryFed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ins4.RulesSummary) > maxRulesBytes {
+		t.Errorf("oversized summary: len = %d, want ≤ %d", len(ins4.RulesSummary), maxRulesBytes)
+	}
+
+	m5 := good
+	m5.RulesSecondary = strings.Repeat("x", maxRulesBytes+1000)
+	ins5, err := toInstrument(m5, canonical.CategoryFed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ins5.Clarifications) > maxRulesBytes {
+		t.Errorf("oversized clarifications: len = %d, want ≤ %d", len(ins5.Clarifications), maxRulesBytes)
+	}
+	if !ins5.Quality.Has("text_truncated") {
+		t.Errorf("oversized clarifications not flagged: %+v", ins5.Quality)
 	}
 }
 
