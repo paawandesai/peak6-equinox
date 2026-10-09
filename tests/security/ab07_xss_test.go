@@ -23,6 +23,7 @@ import (
 const (
 	xssTitle   = `<script>alert('title')</script>Bitcoin above $120k?`
 	xssRules   = `Resolves YES <img src=x onerror=alert('rules')> if "BTC" > 120k`
+	xssClarify = `<script>alert('clarifications')</script>Additional details` // UI-21
 	xssMarket  = `"><svg/onload=alert(1)>`
 	xssSource  = `javascript:alert('source')`
 	xssVeto    = `<script>alert('veto')</script> deadline differs`
@@ -53,7 +54,8 @@ func seedAB07(t *testing.T, s *store.Store) int64 {
 	mk := func(id string, v canonical.Venue, fee canonical.FeeSchedule) canonical.Instrument {
 		return canonical.Instrument{
 			ID: id, Venue: v, VenueMarketID: xssMarket, VenueEventID: xssMarket, Category: canonical.CategoryCrypto,
-			Title: xssTitle, RulesText: xssRules, Status: canonical.StatusOpen, FeeSchedule: fee, CloseTime: now.Add(time.Hour),
+			Title: xssTitle, RulesText: xssRules, Clarifications: xssClarify, // UI-21: test XSS in clarifications
+			Status: canonical.StatusOpen, FeeSchedule: fee, CloseTime: now.Add(time.Hour),
 			Terms: canonical.Terms{Subject: "BTC", Metric: "price", Comparator: canonical.ComparatorGTE, Threshold: &threshold,
 				Unit: "USD", DeadlineTZ: "UTC", ResolutionSource: xssSource, EdgeRules: xssRules, Polarity: canonical.PolarityPositive},
 		}
@@ -153,11 +155,12 @@ func TestAB07_HostileTextRendersEscaped(t *testing.T) {
 
 	pairPath := "/pairs/" + strconv.FormatInt(relID, 10)
 	// The matches page shows titles; the pair page also shows rules, market
-	// IDs, term values, vetoes, facts, basis components and the explanation.
+	// IDs, term values, vetoes, facts, basis components, clarifications and the explanation.
 	expect := map[string][]string{
 		"/": {"&lt;script&gt;alert(&#39;title&#39;)&lt;/script&gt;"},
 		pairPath: {"&lt;script&gt;alert(&#39;title&#39;)&lt;/script&gt;", "&lt;img src=x onerror=alert(&#39;rules&#39;)&gt;", "&lt;svg/onload=alert(1)&gt;",
-			"&lt;script&gt;alert(&#39;veto&#39;)&lt;/script&gt;", "&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;script&gt;alert(&#39;explain&#39;)"},
+			"&lt;script&gt;alert(&#39;veto&#39;)&lt;/script&gt;", "&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;script&gt;alert(&#39;explain&#39;)",
+			"&lt;script&gt;alert(&#39;clarifications&#39;)&lt;/script&gt;"}, // UI-21: clarifications must be escaped
 	}
 	for _, path := range []string{"/", pairPath} {
 		rec := webGet(h, path)

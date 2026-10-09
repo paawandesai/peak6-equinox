@@ -170,6 +170,16 @@ func TestFetchInstrumentsQueryAndMapping(t *testing.T) {
 	if in.FeeSchedule.Source != "https://docs.polymarket.com/trading/fees" {
 		t.Errorf("FeeSchedule.Source = %q, want docs URL", in.FeeSchedule.Source)
 	}
+	// UI-21: rule layers (Polymarket doesn't publish separate summary/clarifications)
+	if in.RulesSummary != "" {
+		t.Errorf("RulesSummary = %q, want empty (Polymarket doesn't publish)", in.RulesSummary)
+	}
+	if in.Clarifications != "" {
+		t.Errorf("Clarifications = %q, want empty (Polymarket doesn't publish)", in.Clarifications)
+	}
+	if !in.ClarificationsUpdatedAt.IsZero() {
+		t.Errorf("ClarificationsUpdatedAt = %v, want zero (Polymarket doesn't publish)", in.ClarificationsUpdatedAt)
+	}
 	if ins[1].VenueEventID != in.VenueEventID {
 		t.Error("markets of one negRisk event must share venue_event_id")
 	}

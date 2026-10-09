@@ -22,6 +22,9 @@
 | **MVE** (Kalshi) | Auto-generated multivariate parlay markets. **Always excluded** (`mve_collection_ticker` non-empty). |
 | **Terms** | Structured fields extracted from an instrument: subject, metric, comparator, threshold, unit, deadline + timezone, resolution source, edge rules, polarity |
 | **Resolution source** | The authority that decides the outcome (e.g. "federalreserve.gov", "CoinDesk BTC price index") |
+| **Rules summary** | A short summary of the contract's resolution rule. Kalshi publishes this as `rules_primary`; Polymarket does not publish a separate summary. |
+| **Clarifications** | Additional details or clarifications about the rules, often posted after the market opens. Kalshi publishes these as `rules_secondary` (Additional Details); Polymarket can publish "Additional context". |
+| **Clarifications timestamp** | When clarifications were last updated, if the venue publishes one. Kalshi does not provide this; Polymarket may. |
 | **Fetch round** | One concurrent fetch of both venues, stored under one round ID; this is the unit of "snapshot" |
 | **Pinned round** | The round used for the demo. While a round is pinned, nothing calls the venues to serve pages. |
 | **Skew** | The absolute difference between two quotes' `fetched_at` (or venue timestamps) |

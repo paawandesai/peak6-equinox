@@ -122,6 +122,8 @@ None.
 | D-102 | M4-07: final production deploy of `main` for submission; sha, revision and smoke output filled in by the M4-07 MR. Tier 2 (prod deploy). Number reserved by the M4 tickets MR. | 2026-10-08 |
 | D-104 | UI-23: Eval contract extension (D-070) with optional confusion matrix, threshold sweep, golden-set versioning, previous-run deltas. New `/eval/cell` public route. Tier 2, eval artifact contract change. | 2026-10-09 |
 
+| D-103 | UI-21: Rule layers columns (rules_summary, clarifications, clarifications_updated_at) added to instruments table. Kalshi rules_secondary captured as clarifications; Polymarket has no separate layers. Not fed to matcher/LLM in this ticket. Migration 0004. Tier 2 schema change. | 2026-10-09 |
+
 ## Kept decisions (veto closed)
 
 Paawan kept these four in the operator chat on 2026-10-07 at 8:38 PM CT, after the operator checked them against the PRD. Recorded as D-087 (By: human) (numbered D-085 on this branch before !46 took D-085; renumbered at merge).

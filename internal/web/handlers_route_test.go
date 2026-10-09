@@ -46,16 +46,17 @@ func TestRouteHappyPathHTMX(t *testing.T) {
 		t.Error("htmx request got a full page, want a fragment")
 	}
 	wantContains(t, body,
-		`id="route-result"`, "Decision #1", "buy 100 contracts YES, market IOC", "Partners considered: 2",
+		`id="route-result"`, "Decision #1", "buy 100 contracts YES, market IOC",
+		"Partners considered:</strong> 2", // UI-13: Partners in verdict section (v1: "Partners considered: 2")
 		// Polymarket fills 50 at 0.50 and 50 at 0.53 (VWAP 0.515, fee 0.0175, basis 0.001, all-in 0.5335); Kalshi fills all 100 at 0.52 (all-in 0.5375).
-		`class="chip chip-ok"`, "Routed", // Outcome strip with chip
+		"badge badge-l", "Routed", // UI-13: Outcome badge (v1: class="chip chip-ok")
 		"Chosen legs", `<span class="venue">polymarket</span>`,
 		"0.5150",                            // VWAP
 		"0.5335",                            // All-in
 		`<tr class="totals">`, "100 of 100", // Totals row
-		"Ranked alternatives", "0.5375", "0.0040", // Gap to chosen (no + sign)
-		"Excluded candidates", seedKalshiC,
-		"<strong>not routable</strong>", // Reason phrase in bold
+		"Ranked alternatives", "0.5375", // Gap to chosen
+		"Eligibility", seedKalshiC, // UI-13: Exclusions in trace step 2 (v1: separate "Excluded candidates" section)
+		`class="reason"`, "not routable", // UI-13: Reason with class (v1: <strong>not routable</strong>)
 		"Explanation", "Simulated buy of 100 YES contracts on "+seedKalshiA,
 		"basis penalty = score × 0.01", // Configured multiplier
 	)
@@ -414,7 +415,7 @@ func TestRouteResultRendering(t *testing.T) {
 	wantHTML(t, sweepRec, http.StatusOK)
 	sweepBody := sweepRec.Body.String()
 	wantContains(t, sweepBody,
-		`class="chip chip-ok"`, "Routed across 2 venues", "Chosen legs",
+		"badge badge-l", "Routed across 2 venues", "Chosen legs", // UI-13: v2 badge (v1: class="chip chip-ok")
 		"polymarket", "60", "0.5160", // First leg
 		"kalshi", "40", "0.5320", // Second leg
 		`<tr class="totals">`, "100 of 100", `<strong>Total</strong>`, // Totals row
@@ -448,10 +449,10 @@ func TestRouteResultRendering(t *testing.T) {
 	wantHTML(t, compRec, http.StatusOK)
 	compBody := compRec.Body.String()
 	wantContains(t, compBody,
-		"Routed as NO on polymarket (complement)", `class="chip chip-ok"`,
-		"complement: NO on",             // Exact Route cell with uppercase
-		"0.0050",                        // Gap column (without hardcoded +)
-		"<strong>not routable</strong>", // Exclusion phrase in bold
+		"Routed as NO on polymarket (complement)", "badge badge-l", // UI-13: v2 badge (v1: class="chip chip-ok")
+		"complement: NO on",              // Exact Route cell with uppercase
+		"0.0050",                         // Gap column (without hardcoded +)
+		`class="reason"`, "not routable", // UI-13: reason with class (v1: <strong>not routable</strong>)
 	)
 
 	// Partial complement: should say "Partially routed", not override with complement phrase
@@ -479,7 +480,7 @@ func TestRouteResultRendering(t *testing.T) {
 	wantHTML(t, partialCompRec, http.StatusOK)
 	partialCompBody := partialCompRec.Body.String()
 	wantContains(t, partialCompBody,
-		"Partially routed", `class="chip chip-warn"`, // Should NOT say "Routed as NO on"
+		"Partially routed", "badge badge-l", // UI-13: v2 badge (v1: class="chip chip-warn")
 		"complement: NO on", // Route cell still shows complement
 		"80 of 100",         // Partial fill in totals
 	)
@@ -496,8 +497,9 @@ func TestRouteResultRendering(t *testing.T) {
 			FeePerContract: dec("0.01"), BasisPenaltyPerContract: dec("0.000"), AllInPerContract: dec("0.51"),
 			Route: "direct",
 		}},
-		Explanation: "Notional order filled with 100 contracts.",
-		DecidedAt:   sd.round.FinishedAt,
+		Alternatives: []canonical.Alternative{{Rank: 1, AllInPerContract: dec("0.51"), Note: "chosen", Legs: []canonical.Leg{{InstrumentID: seedPolyB, Venue: canonical.VenuePolymarket, Outcome: canonical.OutcomeYes, Side: canonical.SideBuy, Quantity: dec("100"), VWAP: dec("0.50"), FeePerContract: dec("0.01"), BasisPenaltyPerContract: dec("0.000"), AllInPerContract: dec("0.51")}}}},
+		Explanation:  "Notional order filled with 100 contracts.",
+		DecidedAt:    sd.round.FinishedAt,
 	}
 	notionalID, err := st.InsertRoutingDecision(ctx, notionalDec)
 	if err != nil {
@@ -508,7 +510,7 @@ func TestRouteResultRendering(t *testing.T) {
 	wantHTML(t, notionalRec, http.StatusOK)
 	notionalBody := notionalRec.Body.String()
 	wantContains(t, notionalBody,
-		"Routed", `class="chip chip-ok"`,
+		"Routed", "badge badge-l", // UI-13: v2 badge (v1: class="chip chip-ok")
 		"<strong>100</strong>", // Totals should show just "100", not "100 of 0"
 	)
 	if strings.Contains(notionalBody, " of 0") {
@@ -557,4 +559,239 @@ func TestPOSTRouteP95(t *testing.T) {
 	if p95 > 300*time.Millisecond {
 		t.Errorf("p95 latency %v > 300ms AC", p95)
 	}
+}
+
+// UI-13: Test new v2 trace fields
+func TestRouteResultV2Fields(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+	rec := postForm(s.Handler(), "/route", validRouteForm(sd.eqID, seedKalshiA), true)
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+
+	// Check for new v2 elements
+	wantContains(t, body,
+		`<dl class="tiles">`,           // Cost report tiles
+		"Avg all-in",                   // Key tile
+		"Total cost",                   // Total cost tile
+		"Slippage vs quoted",           // Slippage tile (UI-13)
+		`<ol class="trace-steps">`,     // Decision trace
+		"Order and input snapshot",     // Step 1
+		"Eligibility",                  // Step 2
+		"Fill simulation and fee math", // Step 3
+		"Ranked alternatives",          // Step 4
+		"Decision",                     // Step 5
+		"Sign rule",                    // Sign rule text
+		"permalink",                    // Permalink to decision
+	)
+}
+
+// UI-13: Test routed state with slippage
+func TestRouteResultRoutedState(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+	rec := postForm(s.Handler(), "/route", validRouteForm(sd.eqID, seedKalshiA), true)
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+
+	wantContains(t, body,
+		"Routed",   // Outcome badge
+		"Quoted",   // Quoted column header
+		"Slippage", // Slippage column header
+		"of 100",   // Filled quantity
+	)
+}
+
+// UI-13: Test not routed state
+func TestRouteResultNotRoutedState(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+	form := validRouteForm(sd.eqID, seedKalshiA)
+	form.Set("type", "limit")
+	form.Set("limit", "0.01") // Price too low, no venue can fill
+	rec := postForm(s.Handler(), "/route", form, true)
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+
+	wantContains(t, body,
+		"Not routed",                   // Outcome badge
+		"No venue can fill this order", // Not routed message
+		"Eligibility",                  // UI-13: Exclusions in trace step 2 (v1: "Excluded candidates")
+		"candidates kept",              // Kept count
+	)
+}
+
+// UI-13: Test sign rule rendering (positive = saving, parentheses = loss)
+func TestRouteResultSignRule(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+	ctx := context.Background()
+
+	// Create decision with alternatives that have both savings (negative gap) and losses (positive gap)
+	// Chosen route: 0.51 all-in
+	// Alt rank 2: 0.50 all-in (BETTER = saving = negative gap = -0.01 = should render as 1.00¢ without parens)
+	// Alt rank 3: 0.52 all-in (WORSE = loss = positive gap = +0.01 = should render as (1.00¢) with parens)
+	qty := dec("100")
+	d := canonical.Decision{
+		RoundID:  sd.round.ID,
+		TargetID: seedKalshiA,
+		Order:    canonical.Order{Side: canonical.SideBuy, Outcome: canonical.OutcomeYes, Quantity: &qty, Type: canonical.OrderMarket, TIF: canonical.TIFIOC},
+		Inputs: []canonical.DecisionInput{
+			{InstrumentID: seedKalshiA, Venue: canonical.VenueKalshi, RelationshipType: "self", Confidence: dec("1.0"), OutcomeSide: canonical.OutcomeYes, BestAsk: dec("0.52"), AskDepth: []canonical.Level{{Price: dec("0.52"), Size: dec("300")}}, FetchedAt: sd.round.FinishedAt},
+			{InstrumentID: seedPolyB, Venue: canonical.VenuePolymarket, RelationshipType: canonical.RelEquivalent, Confidence: dec("0.97"), OutcomeSide: canonical.OutcomeYes, BestAsk: dec("0.50"), AskDepth: []canonical.Level{{Price: dec("0.50"), Size: dec("50")}}, FetchedAt: sd.round.FinishedAt},
+		},
+		Chosen: []canonical.Leg{{
+			InstrumentID: seedKalshiA, Venue: canonical.VenueKalshi, Side: canonical.SideBuy,
+			Outcome: canonical.OutcomeYes, Quantity: dec("100"), VWAP: dec("0.50"),
+			FeePerContract: dec("0.01"), BasisPenaltyPerContract: dec("0.000"), AllInPerContract: dec("0.51"),
+			Route: "direct",
+		}},
+		Alternatives: []canonical.Alternative{
+			{Rank: 1, AllInPerContract: dec("0.51"), Note: "chosen", Legs: []canonical.Leg{{InstrumentID: seedKalshiA, Venue: canonical.VenueKalshi, Outcome: canonical.OutcomeYes, Side: canonical.SideBuy, Quantity: dec("100"), VWAP: dec("0.50"), FeePerContract: dec("0.01"), BasisPenaltyPerContract: dec("0.000"), AllInPerContract: dec("0.51")}}},
+			{Rank: 2, AllInPerContract: dec("0.50"), Note: "better than chosen", Legs: []canonical.Leg{{InstrumentID: seedPolyB, Venue: canonical.VenuePolymarket, Outcome: canonical.OutcomeYes, Side: canonical.SideBuy, Quantity: dec("100"), VWAP: dec("0.49"), FeePerContract: dec("0.01"), BasisPenaltyPerContract: dec("0.000"), AllInPerContract: dec("0.50")}}},
+			{Rank: 3, AllInPerContract: dec("0.52"), Note: "worse than chosen", Legs: []canonical.Leg{{InstrumentID: seedKalshiC, Venue: canonical.VenueKalshi, Outcome: canonical.OutcomeYes, Side: canonical.SideBuy, Quantity: dec("100"), VWAP: dec("0.51"), FeePerContract: dec("0.01"), BasisPenaltyPerContract: dec("0.000"), AllInPerContract: dec("0.52")}}},
+		},
+		Explanation: "Test decision with savings and losses.",
+		DecidedAt:   sd.round.FinishedAt,
+	}
+	decID, err := st.InsertRoutingDecision(ctx, d)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rec := get(s.Handler(), "/decisions/"+strconv.FormatInt(decID, 10))
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+
+	// Sign rule text should be documented
+	wantContains(t, body, "Sign rule", "positive", "saving", "parentheses", "loss", "unfavourable")
+
+	// Check for cents format
+	if !strings.Contains(body, "¢") {
+		t.Error("should show gap in cents (¢)")
+	}
+
+	// Check for proper sign rule application per ticket AC:
+	// Losses (unfavourable): in parentheses (X.XX¢)
+	// Savings (favourable): positive, no parentheses X.XX¢
+
+	// Check for loss format: (X.XX¢) - ¢ followed by )
+	if !strings.Contains(body, "¢)") {
+		t.Error("should show losses in parentheses as (X.XX¢) per sign rule")
+	}
+
+	// Check for saving format: X.XX¢ NOT in parentheses - ¢ followed by space or · but NOT )
+	// Pattern: ¢ followed by space or · (the · separator before bps)
+	hasSaving := strings.Contains(body, "¢ ·") || strings.Contains(body, "¢ bps")
+	if !hasSaving {
+		// Also check for ¢ at end of cell (before </td> or </text>)
+		hasSaving = strings.Contains(body, "¢<")
+	}
+	if !hasSaving {
+		t.Error("should show at least one saving as positive (X.XX¢ not in parentheses) per sign rule")
+	}
+
+	// Gap/slippage values in bps
+	if !strings.Contains(body, "bps") {
+		t.Error("should show gap/slippage in bps")
+	}
+
+	// Verify ¢ is INSIDE parentheses, not outside: (X.XX¢) not (X.XX)¢
+	if strings.Contains(body, ")¢") && !strings.Contains(body, "¢)") {
+		t.Error("found )¢ pattern - ¢ should be inside parentheses: (X.XX¢) not (X.XX)¢")
+	}
+}
+
+// UI-13: Test input snapshots for decisions with stored inputs
+func TestRouteResultWithInputs(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+	rec := postForm(s.Handler(), "/route", validRouteForm(sd.eqID, seedKalshiA), true)
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+
+	wantContains(t, body,
+		"Order and input snapshot", // Step 1 title
+		"Best ask",                 // Input snapshot column
+		"Depth",                    // Input snapshot column
+		"Fetched",                  // Input snapshot column
+		"Relationship",             // Input snapshot column
+	)
+
+	// Should NOT show the pre-UI-25 message
+	if strings.Contains(body, "Input quotes were not stored") {
+		t.Error("should not show pre-UI-25 message for new decisions")
+	}
+}
+
+// TestRouteResultPreUI25Message tests that decisions without stored inputs show the pre-UI-25 message.
+func TestRouteResultPreUI25Message(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+
+	// Create a decision with no Inputs (simulating pre-UI-25)
+	qty := dec("100")
+	decision := canonical.Decision{
+		RoundID:      sd.round.ID,
+		TargetID:     seedKalshiA,
+		DecidedAt:    seedNow,
+		Order:        canonical.Order{Side: "buy", Outcome: "yes", Quantity: &qty, Type: "market", TIF: "IOC"},
+		Chosen:       []canonical.Leg{{Venue: "kalshi", InstrumentID: seedKalshiA, Outcome: "yes", Quantity: qty, VWAP: dec("0.50"), FeePerContract: dec("0.007"), BasisPenaltyPerContract: dec("0.01"), AllInPerContract: dec("0.517")}},
+		Alternatives: nil,
+		Exclusions:   nil,
+		Inputs:       nil, // No inputs stored
+		Explanation:  "Direct fill.",
+	}
+	id, err := st.InsertRoutingDecision(context.Background(), decision)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rec := get(s.Handler(), "/"+"decisions/"+strconv.FormatInt(id, 10))
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+
+	wantContains(t, body,
+		"Order and input snapshot",                   // Step 1 title
+		"Input quotes were not stored for decisions", // Pre-UI-25 message
+		"2026-10-08", // Cutoff date
+	)
+
+	// Should NOT show input snapshot table
+	if strings.Contains(body, "Best ask") || strings.Contains(body, "Depth") {
+		t.Error("should not show input snapshot table for pre-UI-25 decisions")
+	}
+}
+
+// TestRouteResultPartialFillBar tests that partial fills show the .seg-unfilled segment.
+func TestRouteResultPartialFillBar(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+
+	// Create a decision with a partial fill (requested 100, filled 60)
+	qty := dec("100")
+	filled := dec("60")
+	decision := canonical.Decision{
+		RoundID:     sd.round.ID,
+		TargetID:    seedKalshiA,
+		DecidedAt:   seedNow,
+		Order:       canonical.Order{Side: "buy", Outcome: "yes", Quantity: &qty, Type: "market", TIF: "IOC"},
+		Chosen:      []canonical.Leg{{Venue: "kalshi", InstrumentID: seedKalshiA, Outcome: "yes", Quantity: filled, VWAP: dec("0.50"), FeePerContract: dec("0.007"), BasisPenaltyPerContract: dec("0.01"), AllInPerContract: dec("0.517")}},
+		Explanation: "Partial fill due to insufficient depth.",
+	}
+	id, err := st.InsertRoutingDecision(context.Background(), decision)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rec := get(s.Handler(), "/decisions/"+strconv.FormatInt(id, 10))
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+
+	// Partial fill should show unfilled segment in split bar
+	wantContains(t, body,
+		"svg",             // SVG element exists
+		"class=\"split\"", // Split bar class
+		"seg-unfilled",    // Unfilled segment for partial (40% of 100)
+	)
 }

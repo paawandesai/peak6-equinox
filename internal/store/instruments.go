@@ -38,17 +38,21 @@ func (s *Store) UpsertInstrument(ctx context.Context, roundID int64, in canonica
 	}
 	_, err = s.pool.Exec(ctx, `
 		INSERT INTO instruments (id, venue, venue_market_id, venue_event_id, category, title, rules_text,
+		                         rules_summary, clarifications, clarifications_updated_at,
 		                         terms, polarity, close_time, expiration_time, status, fee_schedule, quality,
 		                         first_seen_round, last_seen_round)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $15)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $18)
 		ON CONFLICT (id) DO UPDATE SET
 		    venue_market_id = EXCLUDED.venue_market_id, venue_event_id = EXCLUDED.venue_event_id,
 		    category = EXCLUDED.category, title = EXCLUDED.title, rules_text = EXCLUDED.rules_text,
+		    rules_summary = EXCLUDED.rules_summary, clarifications = EXCLUDED.clarifications,
+		    clarifications_updated_at = EXCLUDED.clarifications_updated_at,
 		    terms = EXCLUDED.terms, polarity = EXCLUDED.polarity, close_time = EXCLUDED.close_time,
 		    expiration_time = EXCLUDED.expiration_time, status = EXCLUDED.status,
 		    fee_schedule = EXCLUDED.fee_schedule, quality = EXCLUDED.quality,
 		    last_seen_round = GREATEST(instruments.last_seen_round, EXCLUDED.last_seen_round)`,
 		in.ID, in.Venue, in.VenueMarketID, in.VenueEventID, in.Category, in.Title, in.RulesText,
+		in.RulesSummary, in.Clarifications, utcPtr(in.ClarificationsUpdatedAt),
 		terms, in.Terms.Polarity, utcPtr(in.CloseTime), utcPtr(in.ExpirationTime), in.Status, fee, quality,
 		roundID)
 	if err != nil {
@@ -57,21 +61,23 @@ func (s *Store) UpsertInstrument(ctx context.Context, roundID int64, in canonica
 	return nil
 }
 
-const instrumentCols = `id, venue, venue_market_id, venue_event_id, category, title, rules_text, terms,
+const instrumentCols = `id, venue, venue_market_id, venue_event_id, category, title, rules_text,
+	rules_summary, clarifications, clarifications_updated_at, terms,
 	close_time, expiration_time, status, fee_schedule, quality, first_seen_round, last_seen_round`
 
 func scanInstrument(row pgx.Row) (InstrumentRecord, error) {
 	var (
-		r               InstrumentRecord
-		closeT, expiryT *time.Time
-		quality         canonical.Quality
+		r                      InstrumentRecord
+		closeT, expiryT, clarT *time.Time
+		quality                canonical.Quality
 	)
 	err := row.Scan(&r.ID, &r.Venue, &r.VenueMarketID, &r.VenueEventID, &r.Category, &r.Title, &r.RulesText,
+		&r.RulesSummary, &r.Clarifications, &clarT,
 		&r.Terms, &closeT, &expiryT, &r.Status, &r.FeeSchedule, &quality, &r.FirstSeenRound, &r.LastSeenRound)
 	if err != nil {
 		return InstrumentRecord{}, err
 	}
-	r.CloseTime, r.ExpirationTime = fromPtr(closeT), fromPtr(expiryT)
+	r.CloseTime, r.ExpirationTime, r.ClarificationsUpdatedAt = fromPtr(closeT), fromPtr(expiryT), fromPtr(clarT)
 	if r.Terms.Deadline != nil {
 		u := r.Terms.Deadline.UTC()
 		r.Terms.Deadline = &u

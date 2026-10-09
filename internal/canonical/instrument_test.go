@@ -45,6 +45,7 @@ func TestInstrumentValidate(t *testing.T) {
 		{"no title", func(i *Instrument) { i.Title = "" }, "title is required"},
 		{"non-utc close", func(i *Instrument) { i.CloseTime = t0.In(cdt) }, "close_time must be UTC"},
 		{"non-utc expiration", func(i *Instrument) { i.ExpirationTime = t0.In(cdt) }, "expiration_time must be UTC"},
+		{"non-utc clarifications", func(i *Instrument) { i.ClarificationsUpdatedAt = t0.In(cdt) }, "clarifications_updated_at must be UTC"},
 		{"empty term", func(i *Instrument) { i.Terms.Subject = "" }, "terms.subject is empty"},
 		{"bad fee id", func(i *Instrument) { i.FeeSchedule.ID = "Bad ID" }, "fee schedule id"},
 	}
