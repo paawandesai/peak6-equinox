@@ -313,6 +313,7 @@ This is the `Decision` structure. The JSON below is from Example 3's fixture tes
 {
   "round_id": 7,
   "target_id": "kalshi:A",
+  "target_type": "complement",
   "order": {
     "side": "buy",
     "outcome": "yes",
@@ -379,7 +380,6 @@ This is the `Decision` structure. The JSON below is from Example 3's fixture tes
   ],
   "explanation": "Simulated buy of 100 YES contracts on kalshi:A as a market IOC order. Chose NO on polymarket:B (complement of kalshi:A) at polymarket because the all-in cost (VWAP + fee + basis) was 0.5005 per contract, vs 0.5574 for YES on kalshi:A at kalshi fills all 100 contracts at a VWAP of 0.4800 plus a fee of 0.0175 and basis penalty of 0.0030 per contract, an all-in cost of 0.5005 per $1 payout Total cost: 50.0472. kalshi (kalshi:A) ranks #2 at 0.5574 per contract (VWAP 0.5400, fee 0.0174; 0.0569 worse). Fees are verified for polymarket but approximate for kalshi (schedule not yet verified against official documentation). Basis-risk penalty is applied as score × 0.01 per contract, and partners below a relationship confidence of 0.9 are excluded.",
   "decided_at": "2026-10-06T12:00:00Z",
-  "target_type": "complement",
   "inputs": [
     {
       "instrument_id": "kalshi:A",
@@ -396,10 +396,10 @@ This is the `Decision` structure. The JSON below is from Example 3's fixture tes
       "instrument_id": "polymarket:B",
       "venue": "polymarket",
       "relationship_type": "complement",
-      "confidence": "0.97",
+      "confidence": "0.95",
       "outcome_side": "no",
-      "best_ask": "0.48",
-      "ask_depth": [{"price": "0.48", "size": "150"}],
+      "best_ask": "0.52",
+      "ask_depth": [{"price": "0.52", "size": "100"}],
       "fetched_at": "2026-10-06T12:00:00Z",
       "round_id": 7
     }
