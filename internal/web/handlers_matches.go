@@ -195,7 +195,7 @@ func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
 	round := roundFromContext(r.Context())
 	tz := timezoneFromRequest(r)
 	data := matchesPage{
-		page: s.pageBase(round, "Matches", "Which Kalshi and Polymarket contracts are the same bet, and how sure is Equinox?", tz),
+		page: s.pageBase(round, "Matches", "Which Kalshi and Polymarket contracts are the same bet, and how sure is Equinox?", tz, "matches"),
 	}
 	if round.ID == 0 {
 		data.NoRound = true
