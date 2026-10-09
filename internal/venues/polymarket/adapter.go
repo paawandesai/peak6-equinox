@@ -417,15 +417,18 @@ func (a *Adapter) instrument(ev gammaEvent, m binaryMarket, cat canonical.Catego
 		Venue:         canonical.VenuePolymarket,
 		VenueMarketID: m.ConditionID,
 		// Every market of an event, including a negRisk group, shares the event slug.
-		VenueEventID: ev.Slug,
-		Category:     cat,
-		Title:        strings.TrimSpace(m.Question),
-		RulesText:    rules,
-		Terms:        canonical.UnknownTerms(),
-		CloseTime:    closeTime,
-		Status:       status,
-		FeeSchedule:  fees,
-		Quality:      q,
+		VenueEventID:   ev.Slug,
+		Category:       cat,
+		Title:          strings.TrimSpace(m.Question),
+		RulesText:      rules,
+		RulesSummary:   "", // Polymarket does not publish a separate summary
+		Clarifications: "", // Polymarket does not publish separate clarifications
+		// ClarificationsUpdatedAt: Polymarket does not provide a clarifications timestamp
+		Terms:       canonical.UnknownTerms(),
+		CloseTime:   closeTime,
+		Status:      status,
+		FeeSchedule: fees,
+		Quality:     q,
 	}
 	if err := ins.Validate(); err != nil {
 		return canonical.Instrument{}, err

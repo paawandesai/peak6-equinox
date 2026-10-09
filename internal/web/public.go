@@ -313,25 +313,33 @@ func parseID(raw string) (int64, bool) {
 // instrumentView is an instrument as the pages show it. Missing is set when
 // the relationship refers to an instrument the store no longer has.
 type instrumentView struct {
-	ID       string
-	Venue    string
-	MarketID string
-	EventID  string
-	Category string
-	Title    string
-	Rules    string
-	Status   string
-	Close    time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
-	Quality  []canonical.QualityIssue
-	Missing  bool
-	Tz       string // Timezone for formatTime in sub-templates (M3-08)
+	ID                 string
+	Venue              string
+	MarketID           string
+	EventID            string
+	Category           string
+	Title              string
+	Summary            string // UI-21: rules summary (empty if venue doesn't publish)
+	Rules              string // Full rules text
+	Clarifications     string // UI-21: additional clarifications (empty if venue doesn't publish)
+	ClarificationsDate string // UI-21: "clarified YYYY-MM-DD" if available, else empty
+	Status             string
+	Close              time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
+	Quality            []canonical.QualityIssue
+	Missing            bool
+	Tz                 string // Timezone for formatTime in sub-templates (M3-08)
 }
 
 func newInstrumentView(in canonical.Instrument) instrumentView {
+	clarDate := ""
+	if !in.ClarificationsUpdatedAt.IsZero() {
+		clarDate = in.ClarificationsUpdatedAt.Format("2006-01-02")
+	}
 	return instrumentView{
 		ID: in.ID, Venue: string(in.Venue), MarketID: in.VenueMarketID, EventID: in.VenueEventID,
-		Category: string(in.Category), Title: in.Title, Rules: in.RulesText, Status: string(in.Status),
-		Close: in.CloseTime, Quality: in.Quality,
+		Category: string(in.Category), Title: in.Title, Summary: in.RulesSummary,
+		Rules: in.RulesText, Clarifications: in.Clarifications, ClarificationsDate: clarDate,
+		Status: string(in.Status), Close: in.CloseTime, Quality: in.Quality,
 	}
 }
 
