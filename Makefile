@@ -60,7 +60,7 @@ $(STAMPS)/gitleaks-$(GITLEAKS_VERSION):
 	$(call go-install,github.com/zricethezav/gitleaks/v8@$(GITLEAKS_VERSION),gitleaks)
 
 .PHONY: help setup db-up db-down migrate seed dev dev-fixtures test test-security e2e \
-        cover lint typecheck scan secrets vuln check eval llm-eval-live deploy deploy-staging
+        cover lint typecheck scan secrets vuln check eval llm-eval-live smoke-live deploy deploy-staging
 
 help: ## List targets
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-15s %s\n", $$1, $$2}'
@@ -121,6 +121,9 @@ eval: ## Golden-set precision and recall per type, rules only (reads testdata/go
 llm-eval-live: ## Live LLM eval (manual, admin only, never CI)
 	@if [ -d internal/llm ]; then go test -tags llmlive ./internal/llm/...; \
 	else echo "llm-eval-live: not implemented yet (ticket M1-11)"; fi
+
+smoke-live: ## Live smoke test against the live URL (M4-05)
+	bash scripts/smoke-live.sh
 
 # Cloud Run deploys (M1-02, D-033). Resources come from scripts/gcp-bootstrap.sh.
 GCP_PROJECT ?= peak6-equinox-510816
