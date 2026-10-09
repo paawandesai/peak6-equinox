@@ -187,10 +187,13 @@ func TestPublicMatchesPage(t *testing.T) {
 		`<summary>related (1): same event, different payout; never routed</summary>`,
 		`<span class="chip chip-warn">related</span>`,
 		`0.40 low`,
+		// UI-11: checks column and key.
+		`<ul class="checks"`,
+		`<div class="checks-key">`,
 	)
-	// UI-03 Cursor round 2 issue 2: assert round id appears in a row (not bare substring from strip).
-	// The strip also contains the round ID, so we need to check it's in a data-label="Round" cell.
-	wantContains(t, body, `data-label="Round"><small>round `+strconv.FormatInt(sd.round.ID, 10)+`</small>`)
+	// UI-11: assert Pair column with round id.
+	wantContains(t, body, `data-label="Pair">`)
+	wantContains(t, body, `<small>round `+strconv.FormatInt(sd.round.ID, 10)+`</small>`)
 	// UI-03: routable section comes before related details.
 	if strings.Index(body, `id="routable"`) > strings.Index(body, `<summary>related`) {
 		t.Error("routable section should come before related")
@@ -321,7 +324,8 @@ func TestGroupPairsOrdering(t *testing.T) {
 		views[id] = missingInstrumentView(id)
 	}
 	now := time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)
-	groups := groupPairs(rels, views, now)
+	// UI-11: groupPairs now takes sortOrder, qParam, and roundID.
+	groups := groupPairs(rels, views, now, "confidence", "", 1)
 	if len(groups) != 2 || groups[0].Type != "equivalent" || groups[1].Type != "related" {
 		t.Fatalf("groups = %+v", groups)
 	}
