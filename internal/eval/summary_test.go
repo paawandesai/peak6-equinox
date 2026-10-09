@@ -285,7 +285,7 @@ func TestRotatePreviousSummaryEdgeCases(t *testing.T) {
 	if result != "" {
 		t.Errorf("RotatePreviousSummary(\"\") = %q, want \"\"", result)
 	}
-	
+
 	// Nonexistent source file
 	result = RotatePreviousSummary("/nonexistent/summary.json")
 	if result != "" {
