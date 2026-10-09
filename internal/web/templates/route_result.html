@@ -36,9 +36,12 @@
     </dl>
 
     {{if gt (len .Chosen) 1}}
-    <svg class="split" role="img" aria-label="Split: {{range $i, $leg := .Chosen}}{{if $i}}, {{end}}{{$leg.Quantity.String}} on {{$leg.Venue}}{{end}}">
+    <svg class="split" role="img" aria-label="Split: {{range $i, $leg := .Chosen}}{{if $i}}, {{end}}{{$leg.Quantity.String}} on {{$leg.Venue}}{{end}}{{if not .UnfilledPct.IsZero}}, {{.UnfilledPct.StringFixed 0}}% unfilled{{end}}">
       {{range $i, $leg := .Chosen}}
       <rect class="seg-{{$i}}" x="{{$leg.X.StringFixed 2}}%" width="{{$leg.SharePct.StringFixed 2}}%" height="34" />
+      {{end}}
+      {{if not .UnfilledPct.IsZero}}
+      <rect class="seg-unfilled" x="{{.UnfilledX.StringFixed 2}}%" width="{{.UnfilledPct.StringFixed 2}}%" height="34" />
       {{end}}
     </svg>
     {{end}}
@@ -196,7 +199,14 @@
             <summary>Ranked alternatives</summary>
             {{if .Alternatives}}
             <p>Alternatives ranked by all-in cost (lower is better):</p>
-            {{/* SVG bars would go here; kept simple for now */}}
+            <svg class="alternatives-bars" role="img" aria-label="Cost comparison of {{len .Alternatives}} alternatives" width="100%" height="{{mul (len .Alternatives) 32}}">
+              {{range $i, $alt := .Alternatives}}
+              <g transform="translate(0, {{mul $i 32}})">
+                <rect class="alt-bar{{if eq $alt.Rank 1}} bar-chosen{{end}}" x="0" y="0" width="{{$alt.BarWidthPct.StringFixed 1}}%" height="24" />
+                <text class="alt-label" x="4" y="16">{{if eq $alt.Rank 1}}✓ {{end}}{{money $alt.AllInPerContract}} · {{if $alt.GapToChosen.IsNegative}}{{money $alt.GapToChosen.Abs}}{{else}}({{money $alt.GapToChosen}}){{end}} · {{if $alt.GapBps.IsNegative}}{{$alt.GapBps.Abs.StringFixed 0}}{{else}}({{$alt.GapBps.StringFixed 0}}){{end}} bps</text>
+              </g>
+              {{end}}
+            </svg>
             <p>See the alternatives table above for the full breakdown.</p>
             {{else}}
             <p>No alternatives were generated.</p>

@@ -658,3 +658,42 @@ func TestRouteResultWithInputs(t *testing.T) {
 	}
 }
 
+
+// TestRouteResultPreUI25Message tests that decisions without stored inputs show the pre-UI-25 message.
+func TestRouteResultPreUI25Message(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+
+	// Create a decision with no Inputs (simulating pre-UI-25)
+	qty := dec("100")
+	decision := canonical.Decision{
+		RoundID:     sd.round.ID,
+		TargetID:    seedKalshiA,
+		DecidedAt:   seedNow,
+		Order:       canonical.Order{Side: "buy", Outcome: "yes", Quantity: &qty, Type: "market", TIF: "IOC"},
+		Chosen:      []canonical.Leg{{Venue: "kalshi", InstrumentID: seedKalshiA, Outcome: "yes", Quantity: qty, VWAP: dec("0.50"), FeePerContract: dec("0.007"), BasisPenaltyPerContract: dec("0.01"), AllInPerContract: dec("0.517")}},
+		Alternatives: nil,
+		Exclusions:  nil,
+		Inputs:      nil, // No inputs stored
+		Explanation: "Direct fill.",
+	}
+	id, err := st.InsertRoutingDecision(context.Background(), decision)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rec := get(s.Handler(), "/" + "decisions/" + strconv.FormatInt(id, 10))
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+	
+	wantContains(t, body,
+		"Order and input snapshot",                   // Step 1 title
+		"Input quotes were not stored for decisions", // Pre-UI-25 message
+		"2026-10-08",                                 // Cutoff date
+	)
+	
+	// Should NOT show input snapshot table
+	if strings.Contains(body, "Best ask") || strings.Contains(body, "Depth") {
+		t.Error("should not show input snapshot table for pre-UI-25 decisions")
+	}
+}

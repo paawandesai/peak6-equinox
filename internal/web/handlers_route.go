@@ -178,6 +178,8 @@ type decisionView struct {
 	CandidateCount     int                 // Total candidates considered
 	InputsRecorded     bool                // True if inputs exist (UI-25), false for old decisions
 	UI25CutoffDate     string              // The date before which inputs were not stored
+	UnfilledPct        decimal.Decimal     // Unfilled percentage for partial fills (split bar)
+	UnfilledX          decimal.Decimal     // X position of unfilled segment (split bar)
 }
 
 // legView extends Leg with fields for the v2 cost report (UI-13).
@@ -196,6 +198,7 @@ type alternativeView struct {
 	canonical.Alternative
 	GapToChosen decimal.Decimal
 	GapBps      decimal.Decimal // Gap in basis points
+	BarWidthPct decimal.Decimal // Width for proportional SVG bar (0-100%)
 }
 
 // exclusionView extends Exclusion with a human-readable reason phrase.
@@ -266,9 +269,13 @@ func newDecisionView(d canonical.Decision, partners int, snapshot time.Time, ins
 			lv.Levels = len(input.AskDepth)
 		}
 
-		// Share percentage for split bar
-		if !totalFill.IsZero() {
-			lv.SharePct = leg.Quantity.Div(totalFill).Mul(decimal.NewFromInt(100))
+		// Share percentage for split bar (as percentage of requested, not filled)
+		divisor := totalReq
+		if divisor.IsZero() {
+			divisor = totalFill
+		}
+		if !divisor.IsZero() {
+			lv.SharePct = leg.Quantity.Div(divisor).Mul(decimal.NewFromInt(100))
 		}
 
 		// Basis score (from the leg's basis penalty divided by the multiplier)
@@ -291,13 +298,20 @@ func newDecisionView(d canonical.Decision, partners int, snapshot time.Time, ins
 		cumulative = cumulative.Add(chosenViews[i].SharePct)
 	}
 
+	// Calculate unfilled segment for partial fills (UI-13 AC item 4)
+	unfilledPct := decimal.Zero
+	unfilledX := cumulative
+	if chosen && !totalReq.IsZero() && totalFill.LessThan(totalReq) {
+		unfilledPct = totalReq.Sub(totalFill).Div(totalReq).Mul(decimal.NewFromInt(100))
+	}
+
 	// Weighted average slippage
 	slippageTotalBps := decimal.Zero
 	if !totalFill.IsZero() {
 		slippageTotalBps = weightedSlippageBps.Div(totalFill)
 	}
 
-	// Map alternatives with gap and gap in bps (UI-13)
+	// Map alternatives with gap, gap in bps, and bar width (UI-13)
 	chosenAllIn := avgAllIn
 	alts := make([]alternativeView, len(d.Alternatives))
 	for i, alt := range d.Alternatives {
@@ -306,7 +320,12 @@ func newDecisionView(d canonical.Decision, partners int, snapshot time.Time, ins
 		if !chosenAllIn.IsZero() {
 			gapBps = gap.Div(chosenAllIn).Mul(decimal.NewFromInt(10000))
 		}
-		alts[i] = alternativeView{Alternative: alt, GapToChosen: gap, GapBps: gapBps}
+		// Bar width: chosen (rank 1) is 100%, others scaled relative to it
+		barWidth := decimal.NewFromInt(100)
+		if alt.Rank != 1 && !chosenAllIn.IsZero() {
+			barWidth = alt.AllInPerContract.Div(chosenAllIn).Mul(decimal.NewFromInt(100))
+		}
+		alts[i] = alternativeView{Alternative: alt, GapToChosen: gap, GapBps: gapBps, BarWidthPct: barWidth}
 	}
 
 	// Map exclusions with reason phrases
@@ -344,6 +363,8 @@ func newDecisionView(d canonical.Decision, partners int, snapshot time.Time, ins
 		CandidateCount:   candidateCount,
 		InputsRecorded:   inputsRecorded,
 		UI25CutoffDate:   "2026-10-08", // UI-25 was merged on this date
+		UnfilledPct:      unfilledPct,
+		UnfilledX:        unfilledX,
 	}
 }
 
