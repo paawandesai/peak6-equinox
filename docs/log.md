@@ -152,3 +152,4 @@ Add one line per action, newest at the bottom: `YYYY-MM-DD HH:MM UTC · actor ·
 **Verification:** `bash scripts/review-window.sh` with no args shows "Usage: review-window.sh on|off|status". `make review-window-status` against live Cloud Run reports "Current min-instances: 0". Script is idempotent and echoes commands (same style as `scripts/gcp-bootstrap.sh`). `shellcheck` will be run in CI.
 
 **Files touched:** `scripts/review-window.sh` (NEW), `Makefile` (deploy block: three new targets), `docs/environment.md` (Review window section), `docs/decisions.md` (D-101 filled), `docs/status.md` (D-101 row updated), `docs/log.md` (this entry).
+2026-10-08 23:59 UTC · peak6-equinox-65 · M4-04 (!67) merged main: go version go1.27.2 confirmed via toolchain line, go vet clean, scripts/review-window.sh bash syntax OK, Makefile targets verified. · 33176d1
