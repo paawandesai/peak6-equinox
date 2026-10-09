@@ -138,11 +138,11 @@ func parseRouteForm(get func(string) string) (routeInput, []string) {
 // routePage is the data for route.html and the route_result fragment.
 type routePage struct {
 	page
-	PairID         int64
-	Errors         []string
-	DecisionID     int64
-	Decision       *decisionView
-	RenderContext  string // "route" or "decision" to control trace step open/closed state
+	PairID        int64
+	Errors        []string
+	DecisionID    int64
+	Decision      *decisionView
+	RenderContext string // "route" or "decision" to control trace step open/closed state
 }
 
 // decisionView is a Decision prepared for the template.
@@ -167,30 +167,30 @@ type decisionView struct {
 	BasisMultiplier  decimal.Decimal   // For display in template
 	InstrumentTitles map[string]string // instrument ID -> short title
 	// UI-13 additions for v2 trace
-	TotalCost          decimal.Decimal
-	TotalFees          decimal.Decimal
-	TotalBasis         decimal.Decimal
-	SlippageTotalBps   decimal.Decimal     // Weighted average slippage vs quoted in bps
-	MaxQuoteAge        time.Duration       // Oldest input quote age
-	MaxQuoteAgeBadge   Badge               // Freshness badge for the oldest input
-	Inputs             []inputSnapshotView // Input snapshot from stored decision
-	KeptCount          int                 // How many candidates were kept (eligible)
-	CandidateCount     int                 // Total candidates considered
-	InputsRecorded     bool                // True if inputs exist (UI-25), false for old decisions
-	UI25CutoffDate     string              // The date before which inputs were not stored
-	UnfilledPct        decimal.Decimal     // Unfilled percentage for partial fills (split bar)
-	UnfilledX          decimal.Decimal     // X position of unfilled segment (split bar)
+	TotalCost        decimal.Decimal
+	TotalFees        decimal.Decimal
+	TotalBasis       decimal.Decimal
+	SlippageTotalBps decimal.Decimal     // Weighted average slippage vs quoted in bps
+	MaxQuoteAge      time.Duration       // Oldest input quote age
+	MaxQuoteAgeBadge Badge               // Freshness badge for the oldest input
+	Inputs           []inputSnapshotView // Input snapshot from stored decision
+	KeptCount        int                 // How many candidates were kept (eligible)
+	CandidateCount   int                 // Total candidates considered
+	InputsRecorded   bool                // True if inputs exist (UI-25), false for old decisions
+	UI25CutoffDate   string              // The date before which inputs were not stored
+	UnfilledPct      decimal.Decimal     // Unfilled percentage for partial fills (split bar)
+	UnfilledX        decimal.Decimal     // X position of unfilled segment (split bar)
 }
 
 // legView extends Leg with fields for the v2 cost report (UI-13).
 type legView struct {
 	canonical.Leg
-	Quoted       decimal.Decimal // Best price at snapshot (for slippage calculation)
-	SlippageBps  decimal.Decimal // (VWAP - Quoted) * 10000 in bps
-	SharePct     decimal.Decimal // This leg's share of total filled (0-100)
-	X            decimal.Decimal // Split bar x position (0-100)
-	BasisScore   decimal.Decimal // Basis risk score for this leg
-	Levels       int             // Book levels used for VWAP
+	Quoted      decimal.Decimal // Best price at snapshot (for slippage calculation)
+	SlippageBps decimal.Decimal // (VWAP - Quoted) * 10000 in bps
+	SharePct    decimal.Decimal // This leg's share of total filled (0-100)
+	X           decimal.Decimal // Split bar x position (0-100)
+	BasisScore  decimal.Decimal // Basis risk score for this leg
+	Levels      int             // Book levels used for VWAP
 }
 
 // alternativeView extends Alternative with the gap to the chosen all-in.
@@ -209,14 +209,14 @@ type exclusionView struct {
 
 // inputSnapshotView represents one candidate's input snapshot at decision time (UI-13, step 1).
 type inputSnapshotView struct {
-	Venue            canonical.Venue
-	InstrumentID     string
-	TypeBadge        Badge
-	BestAsk          decimal.Decimal
-	Depth            int // Sum of ask levels (contracts available)
-	Age              time.Duration
-	FreshState       FreshState
-	FetchedAt        time.Time // Raw UTC time for formatTime
+	Venue        canonical.Venue
+	InstrumentID string
+	TypeBadge    Badge
+	BestAsk      decimal.Decimal
+	Depth        int // Sum of ask levels (contracts available)
+	Age          time.Duration
+	FreshState   FreshState
+	FetchedAt    time.Time // Raw UTC time for formatTime
 }
 
 func newDecisionView(d canonical.Decision, partners int, snapshot time.Time, instrumentTitles map[string]string, basisMult decimal.Decimal) *decisionView {

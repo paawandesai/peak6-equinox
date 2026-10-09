@@ -450,8 +450,8 @@ func TestRouteResultRendering(t *testing.T) {
 	compBody := compRec.Body.String()
 	wantContains(t, compBody,
 		"Routed as NO on polymarket (complement)", "badge badge-l", // UI-13: v2 badge (v1: class="chip chip-ok")
-		"complement: NO on",             // Exact Route cell with uppercase
-		"0.0050",                        // Gap column (without hardcoded +)
+		"complement: NO on",              // Exact Route cell with uppercase
+		"0.0050",                         // Gap column (without hardcoded +)
 		`class="reason"`, "not routable", // UI-13: reason with class (v1: <strong>not routable</strong>)
 	)
 
@@ -567,21 +567,21 @@ func TestRouteResultV2Fields(t *testing.T) {
 	rec := postForm(s.Handler(), "/route", validRouteForm(sd.eqID, seedKalshiA), true)
 	wantHTML(t, rec, http.StatusOK)
 	body := rec.Body.String()
-	
+
 	// Check for new v2 elements
 	wantContains(t, body,
-		`<dl class="tiles">`,                // Cost report tiles
-		"Avg all-in",                        // Key tile
-		"Total cost",                        // Total cost tile
-		"Slippage vs quoted",                // Slippage tile (UI-13)
-		`<ol class="trace-steps">`,          // Decision trace
-		"Order and input snapshot",          // Step 1
-		"Eligibility",                       // Step 2
-		"Fill simulation and fee math",      // Step 3
-		"Ranked alternatives",               // Step 4
-		"Decision",                          // Step 5
-		"Sign rule",                         // Sign rule text
-		"permalink",                         // Permalink to decision
+		`<dl class="tiles">`,           // Cost report tiles
+		"Avg all-in",                   // Key tile
+		"Total cost",                   // Total cost tile
+		"Slippage vs quoted",           // Slippage tile (UI-13)
+		`<ol class="trace-steps">`,     // Decision trace
+		"Order and input snapshot",     // Step 1
+		"Eligibility",                  // Step 2
+		"Fill simulation and fee math", // Step 3
+		"Ranked alternatives",          // Step 4
+		"Decision",                     // Step 5
+		"Sign rule",                    // Sign rule text
+		"permalink",                    // Permalink to decision
 	)
 }
 
@@ -592,12 +592,12 @@ func TestRouteResultRoutedState(t *testing.T) {
 	rec := postForm(s.Handler(), "/route", validRouteForm(sd.eqID, seedKalshiA), true)
 	wantHTML(t, rec, http.StatusOK)
 	body := rec.Body.String()
-	
+
 	wantContains(t, body,
-		"Routed",                     // Outcome badge
-		"Quoted",                     // Quoted column header
-		"Slippage",                   // Slippage column header
-		"of 100",                     // Filled quantity
+		"Routed",   // Outcome badge
+		"Quoted",   // Quoted column header
+		"Slippage", // Slippage column header
+		"of 100",   // Filled quantity
 	)
 }
 
@@ -611,12 +611,12 @@ func TestRouteResultNotRoutedState(t *testing.T) {
 	rec := postForm(s.Handler(), "/route", form, true)
 	wantHTML(t, rec, http.StatusOK)
 	body := rec.Body.String()
-	
+
 	wantContains(t, body,
-		"Not routed",                         // Outcome badge
-		"No venue can fill this order",       // Not routed message
-		"Eligibility",                        // UI-13: Exclusions in trace step 2 (v1: "Excluded candidates")
-		"candidates kept",                    // Kept count
+		"Not routed",                   // Outcome badge
+		"No venue can fill this order", // Not routed message
+		"Eligibility",                  // UI-13: Exclusions in trace step 2 (v1: "Excluded candidates")
+		"candidates kept",              // Kept count
 	)
 }
 
@@ -655,21 +655,20 @@ func TestRouteResultWithInputs(t *testing.T) {
 	rec := postForm(s.Handler(), "/route", validRouteForm(sd.eqID, seedKalshiA), true)
 	wantHTML(t, rec, http.StatusOK)
 	body := rec.Body.String()
-	
+
 	wantContains(t, body,
-		"Order and input snapshot",          // Step 1 title
-		"Best ask",                          // Input snapshot column
-		"Depth",                             // Input snapshot column
-		"Fetched",                           // Input snapshot column
-		"Relationship",                      // Input snapshot column
+		"Order and input snapshot", // Step 1 title
+		"Best ask",                 // Input snapshot column
+		"Depth",                    // Input snapshot column
+		"Fetched",                  // Input snapshot column
+		"Relationship",             // Input snapshot column
 	)
-	
+
 	// Should NOT show the pre-UI-25 message
 	if strings.Contains(body, "Input quotes were not stored") {
 		t.Error("should not show pre-UI-25 message for new decisions")
 	}
 }
-
 
 // TestRouteResultPreUI25Message tests that decisions without stored inputs show the pre-UI-25 message.
 func TestRouteResultPreUI25Message(t *testing.T) {
@@ -679,31 +678,31 @@ func TestRouteResultPreUI25Message(t *testing.T) {
 	// Create a decision with no Inputs (simulating pre-UI-25)
 	qty := dec("100")
 	decision := canonical.Decision{
-		RoundID:     sd.round.ID,
-		TargetID:    seedKalshiA,
-		DecidedAt:   seedNow,
-		Order:       canonical.Order{Side: "buy", Outcome: "yes", Quantity: &qty, Type: "market", TIF: "IOC"},
-		Chosen:      []canonical.Leg{{Venue: "kalshi", InstrumentID: seedKalshiA, Outcome: "yes", Quantity: qty, VWAP: dec("0.50"), FeePerContract: dec("0.007"), BasisPenaltyPerContract: dec("0.01"), AllInPerContract: dec("0.517")}},
+		RoundID:      sd.round.ID,
+		TargetID:     seedKalshiA,
+		DecidedAt:    seedNow,
+		Order:        canonical.Order{Side: "buy", Outcome: "yes", Quantity: &qty, Type: "market", TIF: "IOC"},
+		Chosen:       []canonical.Leg{{Venue: "kalshi", InstrumentID: seedKalshiA, Outcome: "yes", Quantity: qty, VWAP: dec("0.50"), FeePerContract: dec("0.007"), BasisPenaltyPerContract: dec("0.01"), AllInPerContract: dec("0.517")}},
 		Alternatives: nil,
-		Exclusions:  nil,
-		Inputs:      nil, // No inputs stored
-		Explanation: "Direct fill.",
+		Exclusions:   nil,
+		Inputs:       nil, // No inputs stored
+		Explanation:  "Direct fill.",
 	}
 	id, err := st.InsertRoutingDecision(context.Background(), decision)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	rec := get(s.Handler(), "/" + "decisions/" + strconv.FormatInt(id, 10))
+	rec := get(s.Handler(), "/"+"decisions/"+strconv.FormatInt(id, 10))
 	wantHTML(t, rec, http.StatusOK)
 	body := rec.Body.String()
-	
+
 	wantContains(t, body,
 		"Order and input snapshot",                   // Step 1 title
 		"Input quotes were not stored for decisions", // Pre-UI-25 message
-		"2026-10-08",                                 // Cutoff date
+		"2026-10-08", // Cutoff date
 	)
-	
+
 	// Should NOT show input snapshot table
 	if strings.Contains(body, "Best ask") || strings.Contains(body, "Depth") {
 		t.Error("should not show input snapshot table for pre-UI-25 decisions")
@@ -719,11 +718,11 @@ func TestRouteResultPartialFillBar(t *testing.T) {
 	qty := dec("100")
 	filled := dec("60")
 	decision := canonical.Decision{
-		RoundID:   sd.round.ID,
-		TargetID:  seedKalshiA,
-		DecidedAt: seedNow,
-		Order:     canonical.Order{Side: "buy", Outcome: "yes", Quantity: &qty, Type: "market", TIF: "IOC"},
-		Chosen:    []canonical.Leg{{Venue: "kalshi", InstrumentID: seedKalshiA, Outcome: "yes", Quantity: filled, VWAP: dec("0.50"), FeePerContract: dec("0.007"), BasisPenaltyPerContract: dec("0.01"), AllInPerContract: dec("0.517")}},
+		RoundID:     sd.round.ID,
+		TargetID:    seedKalshiA,
+		DecidedAt:   seedNow,
+		Order:       canonical.Order{Side: "buy", Outcome: "yes", Quantity: &qty, Type: "market", TIF: "IOC"},
+		Chosen:      []canonical.Leg{{Venue: "kalshi", InstrumentID: seedKalshiA, Outcome: "yes", Quantity: filled, VWAP: dec("0.50"), FeePerContract: dec("0.007"), BasisPenaltyPerContract: dec("0.01"), AllInPerContract: dec("0.517")}},
 		Explanation: "Partial fill due to insufficient depth.",
 	}
 	id, err := st.InsertRoutingDecision(context.Background(), decision)
