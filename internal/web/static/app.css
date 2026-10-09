@@ -466,6 +466,8 @@ a.chip-filter[aria-current] { background: var(--eq-ink); color: var(--pico-backg
 a.chip-filter.removable { background: var(--eq-info-bg); color: var(--eq-info); box-shadow: inset 0 0 0 1px var(--eq-info); }
 a.chip-filter:focus-visible { outline: 2px solid var(--pico-primary); outline-offset: 2px; }
 .toolbar-chips { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .875rem; padding: .75rem 0; border-block: 1px solid var(--eq-rule); }
+.toolbar-label { font-size: 0.875rem; color: var(--eq-muted); }
+.toolbar-noscript-form { display: inline; margin-left: 1rem; }
 
 /* --- pair: terms diff ---------------------------------------------------- */
 table.terms tbody th.part { padding: .875rem .625rem .375rem; font-size: var(--eq-text-xs); letter-spacing: .06em; text-transform: uppercase; color: var(--eq-muted); text-align: left; }

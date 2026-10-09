@@ -13,11 +13,11 @@
 </div>
 
 <div class="toolbar-chips">
-  <strong style="font-size: 0.875rem; color: var(--eq-muted);">Show</strong>
+  <strong class="toolbar-label">Show</strong>
   <a href="/log" class="chip-filter"{{if not .Kind}} aria-current="page"{{end}}>everything</a>
   {{range .Kinds}}<a href="/log?kind={{.Value}}" class="chip-filter"{{if .Selected}} aria-current="page"{{end}}>{{.Label}}</a>{{end}}
   <noscript>
-    <form method="get" action="/log" style="display:inline; margin-left: 1rem;">
+    <form method="get" action="/log" class="toolbar-noscript-form">
       <label>
         <select name="kind">
           <option value=""{{if not $.Kind}} selected{{end}}>everything</option>
@@ -31,7 +31,7 @@
 
 {{if eq .Kind "routing"}}
 <div class="toolbar-chips">
-  <strong style="font-size: 0.875rem; color: var(--eq-muted);">Group by</strong>
+  <strong class="toolbar-label">Group by</strong>
   {{range .Groups}}<a href="/log?kind=routing&group={{.Value}}" class="chip-filter"{{if .Selected}} aria-current="page"{{end}}>{{.Label}}</a>{{end}}
 </div>
 {{end}}
