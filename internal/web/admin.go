@@ -98,7 +98,8 @@ type adminPage struct {
 	AppEnv      string
 	DBSize      string
 	DBThreshold string
-	DBAlert     bool // AB-15: size above dbSizeAlertBytes
+	DBAlert     bool    // AB-15: size above dbSizeAlertBytes
+	DBSizeRatio float64 // UI-17: DB size / threshold for meter (0.0-1.0+)
 	DBError     string
 	Collector   collectorStats // NFR-05
 	RunningID   int64
@@ -280,7 +281,7 @@ func (s *Server) handleAdminIndex(w http.ResponseWriter, r *http.Request) {
 
 	tz := timezoneFromRequest(r)
 	p := adminPage{
-		page:        s.pageBase(currentRound, "Admin", "", tz, "Is data flowing, which round is pinned, and what can the LLM verifier spend?"),
+		page:        s.pageBase(currentRound, "Admin", "Is data flowing, which round is pinned, and what can the LLM verifier spend?", tz, ""),
 		Now:         s.now().Format(time.RFC3339),
 		AppEnv:      s.cfg.AppEnv,
 		IngestReady: s.deps.Ingester != nil,
@@ -302,6 +303,10 @@ func (s *Server) handleAdminIndex(w http.ResponseWriter, r *http.Request) {
 		p.DBError = "database unavailable"
 	default:
 		p.DBSize, p.DBThreshold, p.DBAlert = growth.Size, growth.Threshold, growth.Breached
+		// UI-17: compute DB size ratio for meter
+		if growth.Bytes > 0 {
+			p.DBSizeRatio = float64(growth.Bytes) / float64(dbSizeAlertBytes)
+		}
 	}
 	p.Collector = collectorSuccess(nil, s.now())
 	if s.deps.Store != nil {
@@ -399,8 +404,8 @@ func (s *Server) handleAdminIndex(w http.ResponseWriter, r *http.Request) {
 
 	// UI-17: build health rows with worst-signal rollup
 	p.Health = buildHealthRows(p.Collector, growth, hasDB, p.PinnedRound, p.LLMVerifierState, recentForBars)
-	// UI-17: freshness windows (D-077 threshold, UI-19 will add warn windows)
-	p.FreshnessWindows = "Stale thresholds: Kalshi quotes 180 s, Polymarket quotes 180 s, rounds 10 min."
+	// UI-17: freshness windows (D-077 threshold 120s, UI-19 will add warn windows)
+	p.FreshnessWindows = "Stale thresholds: Kalshi quotes 120 s, Polymarket quotes 120 s, rounds 10 min."
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("X-Robots-Tag", "noindex") // UI-08: noindex via header, not meta tag

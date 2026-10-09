@@ -2,7 +2,7 @@
 <h1>Admin</h1>
 
 {{/* AB-15 banner comes first (UI-17, HANDOFF.md) */}}
-{{if .DBAlert}}<div class="banner banner-danger" role="alert">ALERT: database size is above the {{.DBThreshold}} growth threshold (AB-15).</div>{{end}}
+{{if .DBAlert}}<div class="banner banner-danger" role="alert"><span class="g" aria-hidden="true">✕</span>ALERT: database size is above the {{.DBThreshold}} growth threshold (AB-15).</div>{{end}}
 
 {{/* Message flash (UI-17, HANDOFF.md) */}}
 {{if .Message}}<p role="status"><em>{{.Message}}</em></p>{{end}}
@@ -24,6 +24,11 @@
       <td>{{template "badge" .Status}}</td>
       <td>
         {{if .Bars}}
+          <ul class="signals">
+            {{range .Signals}}
+              <li class="{{.Class}}" aria-label="{{.Text}}"><span class="g" aria-hidden="true">{{.Glyph}}</span></li>
+            {{end}}
+          </ul>
           <svg class="bars" width="240" height="24" aria-label="Recent rounds: {{len .Bars}} rounds shown" role="img">
             {{range $i, $bar := .Bars}}
               {{if eq $bar.Height "0"}}
@@ -69,7 +74,7 @@
       <p><strong>{{.DBError}}</strong>.</p>
     {{else}}
       <p>Database size: <strong>{{.DBSize}}</strong> (alert threshold {{.DBThreshold}}){{if .DBAlert}} <strong>ALERT: database size is above the {{.DBThreshold}} growth threshold (AB-15); an error-level log entry was written. Trim raw responses or raise the disk before the collector fills it.</strong>{{else}}, below the threshold{{end}}.</p>
-      <meter class="eq-meter" min="0" max="1" value="{{if .DBAlert}}1{{else}}0.8{{end}}"></meter>
+      <meter class="eq-meter" min="0" max="1" value="{{printf "%.3f" .DBSizeRatio}}"></meter>
     {{end}}
   </section>
 </div>
