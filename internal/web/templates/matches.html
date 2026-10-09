@@ -95,7 +95,7 @@
           {{if .NetGap.HasValue}}
           <div><small>net gap {{.NetGapText}}</small></div>
           {{else if .NetGap.Reason}}
-          <div><small>{{.NetGap.Reason}}</small></div>
+          <div><small>no gap: {{.NetGap.Reason}}</small></div>
           {{end}}
           {{if .IsFlagged}}
           <div><small class="b-review">⚠ review: large edge, low confidence</small></div>

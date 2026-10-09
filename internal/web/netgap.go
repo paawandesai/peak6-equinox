@@ -129,13 +129,7 @@ func BuildFeeEstimates(instruments []canonical.Instrument) []FeeEstimate {
 			Venue:       string(inst.Venue),
 			Description: DescribeFeeSchedule(inst.FeeSchedule),
 			Approximate: !inst.FeeSchedule.Verified,
-		}
-		// Source URLs from domain.md § Fees.
-		switch inst.Venue {
-		case canonical.VenueKalshi:
-			est.Source = "https://kalshi.com/docs/kalshi-fee-schedule.pdf"
-		case canonical.VenuePolymarket:
-			est.Source = "https://docs.polymarket.com/trading/fees"
+			Source:      inst.FeeSchedule.Source,
 		}
 		estimates = append(estimates, est)
 	}

@@ -225,6 +225,7 @@ func TestBuildFeeEstimates(t *testing.T) {
 		FeeSchedule: canonical.FeeSchedule{
 			ID:       canonical.FeeSchedulePolymarketV1,
 			Verified: false,
+			Source:   "https://docs.polymarket.com/trading/fees",
 			Params: map[string]decimal.Decimal{
 				"rate": decimal.RequireFromString("0.05"),
 			},
@@ -236,6 +237,7 @@ func TestBuildFeeEstimates(t *testing.T) {
 		FeeSchedule: canonical.FeeSchedule{
 			ID:       canonical.FeeSchedulePolymarketV1,
 			Verified: false,
+			Source:   "https://docs.polymarket.com/trading/fees",
 			Params: map[string]decimal.Decimal{
 				"rate": decimal.RequireFromString("0.04"),
 			},

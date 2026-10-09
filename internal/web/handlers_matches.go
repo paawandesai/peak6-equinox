@@ -297,9 +297,15 @@ func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
 	}
 	quoteTimes := make(map[string]time.Time, len(quotes))
 	quoteMap := make(map[string]*canonical.Quote, len(quotes))
+	now := s.now()
 	for i := range quotes {
 		quoteTimes[quotes[i].InstrumentID] = quotes[i].FetchedAt
-		quoteMap[quotes[i].InstrumentID] = &quotes[i].Quote
+		// UI-18: exclude stale quotes from gap computation (AC: "missing/stale quote → no gap").
+		age := now.Sub(quotes[i].FetchedAt)
+		if age <= s.cfg.StaleAfter {
+			quoteMap[quotes[i].InstrumentID] = &quotes[i].Quote
+		}
+		// Stale quotes stay out of quoteMap, so ComputeNetGap receives nil and returns "no quote: <venue>".
 	}
 
 	// UI-18: load instruments for fee schedules (net gap computation).
