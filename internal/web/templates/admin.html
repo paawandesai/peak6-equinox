@@ -1,75 +1,135 @@
 {{define "content"}}
 <h1>Admin</h1>
 
-{{/* Health strip (UI-08, design.md § 3): collector success rate, DB size, pinned round */}}
-<dl class="strip">
-  <div>
-    <dt>Collector success</dt>
-    <dd>{{.Collector.Rate}} of {{.Collector.Attempts}} (target {{.Collector.Target}}):
-      {{if .Collector.Meets}}<span class="chip chip-ok">meets target</span>{{else}}<span class="chip chip-danger">below target</span>{{end}}
-    </dd>
-  </div>
-  <div>
-    <dt>Database size</dt>
-    <dd>{{if .DBError}}{{.DBError}}{{else}}{{.DBSize}} of {{.DBThreshold}}{{end}}</dd>
-  </div>
-  <div>
-    <dt>Pinned round</dt>
-    <dd>{{if .HasPinned}}round {{.PinnedRound.ID}}, as of {{.PinnedRound.Started}}{{else}}no round pinned{{end}}</dd>
-  </div>
-</dl>
+{{/* AB-15 banner comes first (UI-17, HANDOFF.md) */}}
+{{if .DBAlert}}<div class="banner banner-danger" role="alert"><span class="g" aria-hidden="true">✕</span>ALERT: database size is above the {{.DBThreshold}} growth threshold (AB-15).</div>{{end}}
 
-{{/* AB-15 alert banner when DB size exceeds threshold */}}
-{{if .DBAlert}}<div class="banner banner-danger" role="alert">ALERT: database size is above the {{.DBThreshold}} growth threshold (AB-15).</div>{{end}}
+{{/* Message flash (UI-17, HANDOFF.md) */}}
+{{if .Message}}<p role="status"><em>{{.Message}}</em></p>{{end}}
 
-{{/* Detail lines for test compatibility */}}
-<h2>Collector success, trailing {{.Collector.Window}} (NFR-05)</h2>
-<p>Since {{.Collector.Since}}: <strong>{{.Collector.Rate}}</strong> of {{.Collector.Attempts}} expected {{.Collector.Cadence}} ticks succeeded (target {{.Collector.Target}}): <strong>{{if .Collector.Meets}}MEETS TARGET{{else}}BELOW TARGET{{end}}</strong>.
-ok {{.Collector.OK}}, partial {{.Collector.Partial}}, failed {{.Collector.Failed}}, running {{.Collector.Running}}, missing ticks {{.Collector.Missing}} ({{.Collector.Observed}} rounds observed of {{.Collector.Expected}} scheduled). A partial round (one venue failed) counts as a success; a missing tick counts as a failure.</p>
+{{/* Health table with worst-signal rollup (UI-17, HANDOFF.md) */}}
+<h2>Health</h2>
+<table class="health">
+  <thead>
+    <tr>
+      <th>Component</th>
+      <th>Status</th>
+      <th>Signals</th>
+    </tr>
+  </thead>
+  <tbody>
+  {{range .Health}}
+    <tr>
+      <td>{{.Name}}</td>
+      <td>{{template "badge" .Status}}</td>
+      <td>
+        {{if .Bars}}
+          <ul class="signals">
+            {{range .Signals}}
+              <li class="{{.Class}}"><span class="g" aria-hidden="true">{{.Glyph}}</span> {{.Text}}</li>
+            {{end}}
+          </ul>
+          <svg class="bars" width="240" height="24" aria-label="Recent rounds: {{len .Bars}} rounds shown" role="img">
+            {{range $i, $bar := .Bars}}
+              {{if eq $bar.Height "0"}}
+                <rect x="{{mul $i 10}}" y="0" width="8" height="24" class="{{$bar.Class}}" fill="none" stroke="currentColor" stroke-width="1"><title>{{$bar.Title}}</title></rect>
+              {{else}}
+                <rect x="{{mul $i 10}}" y="{{if eq $bar.Height "100%"}}0{{else if eq $bar.Height "75%"}}6{{else}}12{{end}}" width="8" height="{{if eq $bar.Height "100%"}}24{{else if eq $bar.Height "75%"}}18{{else}}12{{end}}" class="{{$bar.Class}}"><title>{{$bar.Title}}</title></rect>
+              {{end}}
+            {{end}}
+          </svg>
+        {{else}}
+          <ul class="signals">
+            {{range .Signals}}
+              <li class="{{.Class}}"><span class="g" aria-hidden="true">{{.Glyph}}</span> {{.Text}}</li>
+            {{end}}
+          </ul>
+        {{end}}
+      </td>
+    </tr>
+  {{end}}
+  </tbody>
+</table>
 
-<p>{{if .DBError}}Database: <strong>{{.DBError}}</strong>.{{else}}Database size: <strong>{{.DBSize}}</strong> (alert threshold {{.DBThreshold}}){{if .DBAlert}} <strong>ALERT: database size is above the {{.DBThreshold}} growth threshold (AB-15); an error-level log entry was written. Trim raw responses or raise the disk before the collector fills it.</strong>{{else}}, below the threshold{{end}}.{{end}}</p>
+<p class="freshness-windows"><small>{{.FreshnessWindows}}</small></p>
 
-{{if .Message}}<p><em>{{.Message}}</em></p>{{end}}
+{{/* Two columns: Collector success and Database (UI-17, HANDOFF.md) */}}
+<div class="admin-cols">
+  <section>
+    <h3>Collector success, trailing {{.Collector.Window}} (NFR-05)</h3>
+    <p>Since {{.Collector.Since}}: <strong>{{.Collector.Rate}}</strong> of {{.Collector.Attempts}} expected {{.Collector.Cadence}} ticks succeeded (target {{.Collector.Target}}): <strong>{{if .Collector.Meets}}MEETS TARGET{{else}}BELOW TARGET{{end}}</strong>.</p>
+    <p class="count-chips">
+      <span class="chip chip-ok">ok {{.Collector.OK}}</span>
+      <span class="chip chip-warn">partial {{.Collector.Partial}}</span>
+      <span class="chip chip-danger">failed {{.Collector.Failed}}</span>
+      {{if .Collector.Running}}<span class="chip chip-info">running {{.Collector.Running}}</span>{{end}}
+      {{if .Collector.Missing}}<span class="chip chip-muted">missing ticks {{.Collector.Missing}}</span>{{end}}
+    </p>
+    <p><small>{{.Collector.Observed}} rounds observed of {{.Collector.Expected}} scheduled. A partial round (one venue failed) counts as a success; a missing tick counts as a failure.</small></p>
+  </section>
 
+  <section>
+    <h3>Database</h3>
+    {{if .DBError}}
+      <p><strong>{{.DBError}}</strong>.</p>
+    {{else}}
+      <p>Database size: <strong>{{.DBSize}}</strong> (alert threshold {{.DBThreshold}}){{if .DBAlert}} <strong>ALERT: database size is above the {{.DBThreshold}} growth threshold (AB-15); an error-level log entry was written. Trim raw responses or raise the disk before the collector fills it.</strong>{{else}}, below the threshold{{end}}.</p>
+      <meter class="eq-meter" min="0" max="1" value="{{printf "%.3f" .DBSizeRatio}}"></meter>
+    {{end}}
+  </section>
+</div>
+
+{{/* Actions (UI-17, HANDOFF.md): Ingest, Unpin, LLM Verification with state badges in header */}}
 <h2>Actions</h2>
 
-{{/* Ingest action with state */}}
 <section>
-  <h3>Ingest</h3>
-  {{if .IngestReady}}
-    {{if .RunningID}}
-    <p><span class="chip chip-info">round {{.RunningID}} running</span></p>
+  <header>
+    <h3>Ingest</h3>
+    {{if .IngestReady}}
+      {{if .RunningID}}
+        {{template "badge" (index (index .Health 0).Signals 0)}} <span class="chip chip-info">round {{.RunningID}} running</span>
+      {{else}}
+        {{template "badge" (index (index .Health 0).Signals 0)}}
+      {{end}}
+    {{else}}
+      <span class="chip chip-muted">not configured</span>
     {{end}}
+  </header>
+  {{if .IngestReady}}
     <form method="post" action="/admin/ingest">
       <button type="submit"{{if .RunningID}} disabled{{end}}>Run one fetch round now</button>
       <small>Fetches both venues and stores a new round. Cloud Scheduler does the same every 5 minutes.</small>
     </form>
   {{else}}
-    <p><span class="chip chip-muted">not configured</span></p>
     <p>Ingest is not configured on this server.</p>
   {{end}}
 </section>
 
-{{/* Unpin action (M3-07) */}}
 <section>
-  <h3>Unpin round (demo mode)</h3>
+  <header>
+    <h3>Unpin round (demo mode)</h3>
+    {{if .HasPinned}}
+      <span class="chip chip-info">round {{.PinnedRound.ID}} pinned</span>
+    {{else}}
+      <span class="chip chip-muted">no round pinned</span>
+    {{end}}
+  </header>
   {{if .HasPinned}}
-    <p><span class="chip chip-info">round {{.PinnedRound.ID}} pinned</span></p>
     <p>Demo mode active: all pages use this round's stored data. No live venue calls.</p>
     <form method="post" action="/admin/unpin">
       <button type="submit">Unpin round</button>
       <small>Unpins the current round. Next page request will use the latest round.</small>
     </form>
   {{else}}
-    <p><span class="chip chip-muted">no round pinned</span></p>
     <p>No round is currently pinned. Pages use the latest round.</p>
   {{end}}
 </section>
 
-{{/* LLM verification action with state (M3-06, UI-08) */}}
 <section>
-  <h3>LLM Verification</h3>
-  <p><span class="chip {{.LLMVerifierStateChip}}">{{.LLMVerifierStateText}}</span></p>
+  <header>
+    <h3>LLM Verification</h3>
+    <span class="chip {{.LLMVerifierStateChip}}">{{.LLMVerifierStateText}}</span>
+  </header>
   {{if ne .LLMVerifierState "disabled"}}
   <form method="post" action="/admin/llm-verify">
     <button type="submit"{{if eq .LLMVerifierState "cap_reached"}} disabled{{end}}>{{.LLMVerifierButtonLabel}}</button>
@@ -78,6 +138,17 @@ ok {{.Collector.OK}}, partial {{.Collector.Partial}}, failed {{.Collector.Failed
   {{end}}
 </section>
 
+{{/* Data notes (UI-17, HANDOFF.md) */}}
+<aside class="data-notes">
+  <h3>Data notes</h3>
+  <ul>
+    <li>Polymarket does not publish venue timestamps; quote times use the fetch time.</li>
+    <li>Pinned rounds are not judged for freshness.</li>
+    <li>Venue fees are approximate; the router uses verified schedules where available.</li>
+  </ul>
+</aside>
+
+{{/* Last N rounds (UI-17, HANDOFF.md): status is a badge, pinned marker kept */}}
 <h2>Last {{len .Rounds}} rounds</h2>
 {{if not .Rounds}}
   <p>No rounds yet. Run <code>equinox seed</code> or <code>equinox ingest</code>, or press the button above.</p>
@@ -105,7 +176,7 @@ ok {{.Collector.OK}}, partial {{.Collector.Partial}}, failed {{.Collector.Failed
       <td data-label="Round">{{$r.ID}}{{if $r.Pinned}} (pinned){{end}}</td>
       <td data-label="Started (UTC)">{{$r.Started}}</td>
       <td data-label="Duration">{{$r.Duration}}</td>
-      <td data-label="Status">{{$r.Status}}</td>
+      <td data-label="Status">{{template "badge" (RoundStatusBadge $r.Status)}}</td>
       <td colspan="6"></td>
     </tr>
     {{end}}
@@ -115,7 +186,7 @@ ok {{.Collector.OK}}, partial {{.Collector.Partial}}, failed {{.Collector.Failed
       <td data-label="Round" rowspan="{{len $r.Venues}}">{{$r.ID}}{{if $r.Pinned}} (pinned){{end}}</td>
       <td data-label="Started (UTC)" rowspan="{{len $r.Venues}}">{{$r.Started}}</td>
       <td data-label="Duration" rowspan="{{len $r.Venues}}">{{$r.Duration}}</td>
-      <td data-label="Status" rowspan="{{len $r.Venues}}">{{$r.Status}}</td>
+      <td data-label="Status" rowspan="{{len $r.Venues}}">{{template "badge" (RoundStatusBadge $r.Status)}}</td>
       {{end}}
       <td data-label="Venue">{{$v.Venue}}</td>
       <td data-label="OK">{{if $v.OK}}yes{{else}}no{{end}}</td>
