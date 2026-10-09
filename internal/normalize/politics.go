@@ -181,7 +181,52 @@ func extractPolitics(in canonical.Instrument) (canonical.Terms, canonical.Qualit
 	}
 	politicsDeadline(&t, &q, in.CloseTime, srcs)
 	t.ResolutionSource = politicsSource(rules)
+	// For Kalshi PRESNOM series, extract resolution source from event-level
+	// settlement_sources appended to rules by the adapter (D-108).
+	if t.ResolutionSource == canonical.Unknown && t.Metric != canonical.Unknown && in.Venue == canonical.VenueKalshi {
+		if strings.Contains(in.VenueMarketID, "KXPRESNOMD") || strings.Contains(in.VenueMarketID, "KXPRESNOMR") {
+			src := extractSettlementSource(rules, t.Metric)
+			if src != "" {
+				t.ResolutionSource = src
+			}
+		}
+	}
 	return t, q
+}
+
+// extractSettlementSource parses the event-level settlement_sources from
+// rules text for KXPRESNOMD/R markets (appended by the Kalshi adapter, D-108).
+// Returns the canonical source ID based on the metric's party.
+func extractSettlementSource(rules, metric string) string {
+	// Kalshi adapter appends: "KALSHI_EVENT_SETTLEMENT_SOURCES: Party Name"
+	marker := "KALSHI_EVENT_SETTLEMENT_SOURCES:"
+	if !strings.Contains(rules, marker) {
+		return ""
+	}
+	// Extract party from metric (format: "primary:<office>:<party>:<year>")
+	var party string
+	if strings.Contains(metric, ":"+PartyDemocratic+":") {
+		party = PartyDemocratic
+	} else if strings.Contains(metric, ":"+PartyRepublican+":") {
+		party = PartyRepublican
+	} else {
+		return ""
+	}
+
+	// Parse settlement sources line
+	sourceLine := rules[strings.Index(rules, marker):]
+	if idx := strings.Index(sourceLine, "\n"); idx >= 0 {
+		sourceLine = sourceLine[:idx]
+	}
+
+	// Match party name in settlement sources
+	lowerLine := strings.ToLower(sourceLine)
+	if party == PartyDemocratic && strings.Contains(lowerLine, "democratic") {
+		return "democratic_party_official"
+	} else if party == PartyRepublican && strings.Contains(lowerLine, "republican") {
+		return "republican_party_official"
+	}
+	return ""
 }
 
 // politicsSubject returns the person or party the condition names, rules

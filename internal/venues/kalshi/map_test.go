@@ -186,7 +186,7 @@ func TestKalshiToInstrument(t *testing.T) {
 		Ticker: "KXFED-26OCT-T3.25", EventTicker: "KXFED-26OCT", Title: "Fed above 3.25%?", YesSubTitle: "Above 3.25%",
 		RulesPrimary: "If above, Yes.", RulesSecondary: "Additional details here.", CloseTime: "2026-10-28T12:55:00-05:00", ExpirationTime: "2026-11-04T18:05:00Z", Status: "active",
 	}
-	ins, err := toInstrument(good, canonical.CategoryFed)
+	ins, err := toInstrument(good, canonical.CategoryFed, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -221,7 +221,7 @@ func TestKalshiToInstrument(t *testing.T) {
 	} {
 		m := good
 		mod(&m)
-		if _, err := toInstrument(m, canonical.CategoryFed); err == nil {
+		if _, err := toInstrument(m, canonical.CategoryFed, nil); err == nil {
 			t.Errorf("%s: accepted", name)
 		}
 	}
@@ -229,7 +229,7 @@ func TestKalshiToInstrument(t *testing.T) {
 	m := good
 	m.CloseTime, m.ExpirationTime, m.RulesPrimary, m.EventTicker, m.Status = "", "yesterday", "", "", "weird"
 	m.Title = strings.Repeat("é", maxTitleBytes)
-	ins, err = toInstrument(m, canonical.CategoryCrypto)
+	ins, err = toInstrument(m, canonical.CategoryCrypto, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -242,10 +242,24 @@ func TestKalshiToInstrument(t *testing.T) {
 		t.Errorf("degraded instrument = %+v", ins)
 	}
 
+	// D-108: settlement_sources appended to rules
+	sources := []settlementSource{
+		{Name: "Democratic National Committee", URL: "https://democrats.org"},
+		{Name: "Associated Press", URL: "https://apnews.com"},
+	}
+	ins, err = toInstrument(good, canonical.CategoryPolitics, sources)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "If above, Yes.\n\nAdditional details here.\n\nKALSHI_EVENT_SETTLEMENT_SOURCES: Democratic National Committee, Associated Press"
+	if ins.RulesText != want {
+		t.Errorf("rules with settlement_sources = %q, want %q", ins.RulesText, want)
+	}
+
 	// UI-21: test empty and oversized summary and clarifications (AB-02)
 	m2 := good
 	m2.RulesPrimary = ""
-	ins2, err := toInstrument(m2, canonical.CategoryFed)
+	ins2, err := toInstrument(m2, canonical.CategoryFed, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -255,7 +269,7 @@ func TestKalshiToInstrument(t *testing.T) {
 
 	m3 := good
 	m3.RulesSecondary = ""
-	ins3, err := toInstrument(m3, canonical.CategoryFed)
+	ins3, err := toInstrument(m3, canonical.CategoryFed, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -265,7 +279,7 @@ func TestKalshiToInstrument(t *testing.T) {
 
 	m4 := good
 	m4.RulesPrimary = strings.Repeat("x", maxRulesBytes+1000)
-	ins4, err := toInstrument(m4, canonical.CategoryFed)
+	ins4, err := toInstrument(m4, canonical.CategoryFed, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -275,7 +289,7 @@ func TestKalshiToInstrument(t *testing.T) {
 
 	m5 := good
 	m5.RulesSecondary = strings.Repeat("x", maxRulesBytes+1000)
-	ins5, err := toInstrument(m5, canonical.CategoryFed)
+	ins5, err := toInstrument(m5, canonical.CategoryFed, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -371,7 +385,7 @@ func FuzzParseMarkets(f *testing.F) {
 			}
 		}
 		for _, m := range p.markets {
-			if ins, err := toInstrument(m, canonical.CategoryFed); err == nil {
+			if ins, err := toInstrument(m, canonical.CategoryFed, nil); err == nil {
 				if err := ins.Validate(); err != nil {
 					t.Fatalf("invalid instrument: %v", err)
 				}
