@@ -379,7 +379,7 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 		s.dbError(w, "loading the pair's price history", err)
 		return
 	}
-	data.History = buildHistoryChart(rel.AID, rel.BID, points, tz)
+	data.History = buildHistoryChart(rel.AID, rel.BID, rel.Type, points, tz)
 	entries, err := st.ListLog(ctx, store.LogFilter{Kind: store.LogRelationship, Ref: strconv.FormatInt(rel.ID, 10), Limit: maxPairLogEntries})
 	if err != nil {
 		s.dbError(w, "loading the pair's decision-log entries", err)
