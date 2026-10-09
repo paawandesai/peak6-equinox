@@ -114,7 +114,7 @@ The router rejects any leg whose all-in cost is >= $1 per $1 payout for a buy (o
 
 ## Tie-breaking
 
-The router ranks candidates using `better(side, a, b)` (internal/route/route.go:538–565):
+The router ranks candidates using `better(side, a, b)` (internal/route/route.go:560–587):
 
 1. **Full fills before partial ones**: a candidate that can fill the entire order beats one that cannot, regardless of cost.
 2. **Quantized all-in cost**: costs are quantized to 4 decimal places (`Round(4)`) for transitive comparison (M3-02, D-080). For buys, lower quantized cost wins; for sells, higher quantized net proceeds wins. Two candidates with the same `Round(4)` value are considered equal cost.
@@ -403,8 +403,8 @@ This is the `Decision` structure. The JSON below is from Example 3's fixture tes
       "relationship_type": "complement",
       "confidence": "0.95",
       "outcome_side": "no",
-      "best_ask": "0.52",
-      "ask_depth": [{"price": "0.52", "size": "100"}],
+      "best_ask": "0.48",
+      "ask_depth": [{"price": "0.48", "size": "100"}],
       "fetched_at": "2026-10-06T12:00:00Z",
       "round_id": 7
     }

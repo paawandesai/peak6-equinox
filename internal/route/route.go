@@ -514,10 +514,10 @@ func evaluate(c candidate, o canonical.Order, sz sizing, cfg Config) (option, ca
 	// Never pick a leg with guaranteed loss (Issue #73): for a buy, all-in cost must be < $1
 	// per $1 payout; for a sell, net proceeds must be > $0. Reject with a dedicated reason.
 	if o.Side == canonical.SideBuy && leg.AllInPerContract.GreaterThanOrEqual(decimal.NewFromInt(1)) {
-		return fail("sure_loss", fmt.Sprintf("all-in cost %s per $1 payout is a guaranteed loss", money(leg.AllInPerContract)))
+		return fail(ReasonSureLoss, fmt.Sprintf("all-in cost %s per $1 payout is a guaranteed loss", money(leg.AllInPerContract)))
 	}
 	if o.Side == canonical.SideSell && leg.AllInPerContract.LessThanOrEqual(decimal.Zero) {
-		return fail("sure_loss", fmt.Sprintf("net proceeds %s per contract is a guaranteed loss", money(leg.AllInPerContract)))
+		return fail(ReasonSureLoss, fmt.Sprintf("net proceeds %s per contract is a guaranteed loss", money(leg.AllInPerContract)))
 	}
 
 	return option{leg: leg, fill: f, full: f.Quantity.Equal(sz.qty), verified: c.Instrument.FeeSchedule.Verified, basisScore: basisScore}, canonical.Exclusion{}, true

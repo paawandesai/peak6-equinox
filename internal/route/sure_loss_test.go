@@ -116,19 +116,19 @@ func TestRejectComplementCostlierThanDirect(t *testing.T) {
 
 // TestRegressionRound735Decision71: regression test for issue #73, decision #71.
 //
-// This test pins the specific scenario from round 735 where a complement route
-// picked a sure-loss leg (all-in 1.0019) and showed incorrect slippage.
+// Pins the corrected behavior: complement at 0.999 is excluded for sure-loss,
+// and if it were viable, inputs would show BestAsk=0.999 (re-priced), slippage ≈ 0 bps.
 func TestRegressionRound735Decision71(t *testing.T) {
 	// Recreate the scenario from decision #71:
 	// - Buy YES on target
 	// - Complement offers NO at a price that costs >= $1 all-in
-	// - Quoted reference should be for the NO side, not YES
+	// - After fix: BestAsk for NO should be re-priced (1 - YES bid), slippage correct
 
-	// Target: direct YES @ 0.98 (reasonable)
+	// Target: direct YES @ 0.98
 	target := cand(kalshiID, []canonical.Level{lv("0.97", "100")}, []canonical.Level{lv("0.98", "100")}, nil)
 
 	// Complement: YES bid @ 0.001 → NO ask @ 1 - 0.001 = 0.999
-	// With high basis penalty (0.5 × 0.01 = 0.005), all-in ≈ 0.999 + 0.0001 + 0.005 = 1.0041
+	// With high basis penalty (0.5 × 0.01 = 0.005), all-in ≈ 0.999 + 0.00007 + 0.005 = 1.00407
 	compPartner := cand(otherID,
 		[]canonical.Level{lv("0.001", "100")}, // YES bids (used for buying NO)
 		[]canonical.Level{lv("0.999", "100")}, // YES asks
@@ -163,8 +163,58 @@ func TestRegressionRound735Decision71(t *testing.T) {
 		t.Errorf("complement should be excluded, but exclusions = %+v", dec.Exclusions)
 	}
 
+	// Pin the corrected input snapshot (Cursor round 2 #1): BestAsk for NO should be re-priced
+	// YES bid 0.001 → NO ask 1 - 0.001 = 0.999
+	compInput := findInput(t, dec.Inputs, otherID)
+	if compInput.OutcomeSide != canonical.OutcomeNo {
+		t.Errorf("complement input outcome = %s, want NO", compInput.OutcomeSide)
+	}
+	if !compInput.BestAsk.Equal(d("0.999")) {
+		t.Errorf("complement input BestAsk = %s, want 0.999 (1 - 0.001, re-priced)", compInput.BestAsk)
+	}
+	// If the complement were viable (not excluded), slippage would be VWAP - BestAsk ≈ 0
+	// (both ≈ 0.999 after re-pricing), not the old bug's 9980 bps from comparing 0.999 vs 0.001
+
 	// Explanation should NOT mention choosing a complement route
 	if strings.Contains(dec.Explanation, fmt.Sprintf("Chose NO on %s", otherID)) {
 		t.Errorf("explanation should not claim the complement was chosen: %s", dec.Explanation)
+	}
+}
+
+// TestSellSideSureLoss: sell-side sure-loss guard (net proceeds <= $0).
+func TestSellSideSureLoss(t *testing.T) {
+	// Sell YES on target at VWAP 0.01
+	// Fee: ceil(0.07 × 100 × 0.01 × 0.99) = ceil(0.0693) = 0.07 → 0.0007/contract
+	// Basis: 0.01 (score 1.0)
+	// Net proceeds: 0.01 - 0.0007 - 0.01 = -0.0007 <= 0 (sure loss)
+	target := cand(kalshiID, []canonical.Level{lv("0.01", "100")}, []canonical.Level{lv("0.02", "100")}, nil)
+	target.Relationship = &canonical.Relationship{
+		AID:        kalshiID,
+		BID:        kalshiID,
+		Type:       "self",
+		Confidence: decimal.NewFromInt(1),
+		BasisRisk:  &canonical.BasisRisk{Score: decimal.NewFromInt(1), Components: []canonical.BasisComponent{}},
+	}
+
+	dec := mustRoute(t, sell("100", "YES"), target, []canonical.Candidate{})
+
+	// Target should be excluded for sure_loss (net proceeds <= 0)
+	if len(dec.Chosen) != 0 {
+		t.Errorf("chosen = %+v, want 0 legs (sure-loss)", dec.Chosen)
+	}
+	foundExclusion := false
+	for _, ex := range dec.Exclusions {
+		if ex.InstrumentID == kalshiID {
+			foundExclusion = true
+			if ex.Reason != ReasonSureLoss {
+				t.Errorf("exclusion reason = %s, want %s", ex.Reason, ReasonSureLoss)
+			}
+			if !strings.Contains(ex.Detail, "net proceeds") && !strings.Contains(ex.Detail, "guaranteed loss") {
+				t.Errorf("exclusion detail should mention net proceeds or guaranteed loss: %s", ex.Detail)
+			}
+		}
+	}
+	if !foundExclusion {
+		t.Errorf("target should be excluded for sure-loss, but exclusions = %+v", dec.Exclusions)
 	}
 }
