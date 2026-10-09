@@ -25,6 +25,7 @@
 | `MIN_ROUTE_CONFIDENCE` | Minimum relationship confidence for routing | no | `0.9` |
 | `MIN_BOOK_DEPTH` | Minimum total book depth (contracts) for eligibility | no | `1` |
 | `BASIS_PENALTY_MULTIPLIER` | Basis-risk penalty multiplier (cents per contract per risk point) | no | `0.01` |
+| `REVIEW_EDGE_MIN` | Minimum fee-adjusted net gap (dollars per contract) to flag a pair for review when confidence < 0.90 (UI-18) | no | `0.02` |
 | `PUBLIC_RATE_LIMIT_PER_MIN` | Per-IP limit on public routes | no | `60` |
 | `STALE_ROUND_WARN_MINUTES` | Stale-round warning threshold (minutes); when latest round snapshot is older, public pages show a banner | no | `10` |
 | `LLM_ENABLED` | Enables the verifier | no (default `false`) | `false` |

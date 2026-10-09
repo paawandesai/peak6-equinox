@@ -15,6 +15,7 @@
   <div class="strip-key"><dt>Routable</dt><dd><a href="#routable">{{.RoutableCount}}</a></dd></div>
   <div><dt>Implies</dt><dd>{{.ImpliesCount}}</dd></div>
   <div><dt>Related</dt><dd>{{.RelatedCount}}</dd></div>
+  {{if gt .FlaggedCount 0}}<div><dt>Flagged for review</dt><dd>{{.FlaggedCount}}</dd></div>{{end}}
   {{if .Truncated}}<div><dt></dt><dd>showing first {{.Total}}</dd></div>{{end}}
 </dl>
 
@@ -67,7 +68,7 @@
     <tbody>
     {{range .Routable}}
       {{range .Pairs}}
-      <tr>
+      <tr{{if .IsFlagged}} class="flagged"{{end}}>
         <td data-label="Pair">
           <a href="/pairs/{{.ID}}">#{{.ID}}</a>
           <div><small>round {{$.Round.ID}}</small></div>
@@ -89,7 +90,18 @@
           </ul>
           {{if .VetoPhrase}}<a href="/pairs/{{.ID}}#diff">{{.VetoPhrase}}</a>{{end}}
         </td>
-        <td data-label="Market">{{template "badge" .FreshBadge}}</td>
+        <td data-label="Market">
+          {{template "badge" .FreshBadge}}
+          {{if .NetGap.HasValue}}
+          <div><small>net gap {{.NetGapText}}</small></div>
+          {{else if .NetGap.Reason}}
+          <div><small>{{.NetGap.Reason}}</small></div>
+          {{end}}
+          {{if .IsFlagged}}
+          <div><small class="b-review">⚠ review: large edge, low confidence</small></div>
+          <div><small>{{.FlaggedReason}}</small></div>
+          {{end}}
+        </td>
         <td data-label="Route" class="action"><a href="/pairs/{{.ID}}#route" class="btn">Route →</a></td>
       </tr>
       {{end}}
@@ -202,6 +214,19 @@
   <span><b aria-hidden="true" class="check-egf">◇</b> differs, closed by a fact</span>
   <span><b aria-hidden="true" class="check-unknown">?</b> unknown, not compared</span>
 </div>
+
+{{/* UI-18: Fee estimates key */}}
+{{if .FeeEstimates}}
+<div class="checks-key">
+  <strong>Venue fee estimates</strong> (at 100 contracts)
+  {{range .FeeEstimates}}
+  <span><strong>{{.Venue}}:</strong> {{.Description}}{{if .Approximate}} (approximate){{end}} (<a href="{{.Source}}" target="_blank" rel="noopener">source</a>)</span>
+  {{end}}
+</div>
+{{end}}
+
+{{/* UI-18: Sign rule */}}
+<p class="sign-rule"><small>Net gap sign rule: positive values favor routing via the first venue (A), values in parentheses favor the second venue (B).</small></p>
 
 {{end}}
 {{end}}

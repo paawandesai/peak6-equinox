@@ -324,8 +324,12 @@ func TestGroupPairsOrdering(t *testing.T) {
 	}
 	now := time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)
 	// UI-11 Cursor round 1: groupPairs now takes sortOrder, qParam, quoteTimes, and roundID.
+	// UI-18: also takes quoteMap, instMap, and reviewEdgeMin.
 	quoteTimes := make(map[string]time.Time) // empty for this test
-	groups := groupPairs(rels, views, now, "confidence", "", quoteTimes, 1)
+	quoteMap := make(map[string]*canonical.Quote)
+	instMap := make(map[string]canonical.Instrument)
+	reviewEdgeMin := decimal.RequireFromString("0.02")
+	groups := groupPairs(rels, views, now, "confidence", "", quoteTimes, 1, quoteMap, instMap, reviewEdgeMin)
 	if len(groups) != 2 || groups[0].Type != "equivalent" || groups[1].Type != "related" {
 		t.Fatalf("groups = %+v", groups)
 	}
