@@ -285,3 +285,335 @@ labels:
     confirmed_by: paawandesai
     confirmed_on: 2026-10-07
     note: "PM pays if the lower (or upper) bound reaches 3.25% or lower at any point by Dec 31, 2026 12:59 PM ET, emergency moves included; that window contains the Dec 9 decision. Kalshi NO (upper bound at most 3.25% after Dec 9) forces PM YES, and both can be YES, so the payouts are linked: related, not unrelated. Correction of the round-2 proposal (unrelated -> related) accepted by Paawan in operator chat 2026-10-07 9:30 PM CT. Approved by Paawan in operator chat 2026-10-07; rules verified by operator against Kalshi API rules_primary/rules_secondary (KXFED-26DEC-T3.25) and Polymarket Gamma description and resolution source (market 690221), plus federalreserve.gov openmarket.htm, fetched 2026-10-07. Checked against both venues' rules text by the operator and approved by Paawan, who reports he personally spot-checked the labels (operator chat 2026-10-07 8:44 PM CT); not read line by line by him."
+  # Round of 2026-10-09: 55 pairs from Paawan's human-reviewed CSV (rows 1-56
+  # except row 19, which needs complement_given_facts; see labels.proposed.yaml).
+  - a_id: kalshi:KXFEDDECISION-26OCT-C26
+    b_id: polymarket:17010377994663817312158123655937348199252960045746746128731746451645055725586
+    label: equivalent_given_facts
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "Same proposition: the change the FOMC decides at the Oct 27-28, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26OCT-C26 (Cut >25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Fact needed: Fed moves are multiples of 25bp (Polymarket rounds other changes up to the nearest 25bp; Kalshi counts a 50bp hike as 'Hike >25bps'). Rules checked via venue APIs 2026-10-09. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 1)."
+  - a_id: kalshi:KXFEDDECISION-26OCT-C25
+    b_id: polymarket:33268510350568915228897273528353467773422190590579607471427765079749830445947
+    label: equivalent_given_facts
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "Same proposition: the change the FOMC decides at the Oct 27-28, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26OCT-C25 (Cut 25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Fact needed: Fed moves are multiples of 25bp (Polymarket rounds other changes up to the nearest 25bp; Kalshi counts a 50bp hike as 'Hike >25bps'). Rules checked via venue APIs 2026-10-09. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 2)."
+  - a_id: kalshi:KXFEDDECISION-26OCT-H0
+    b_id: polymarket:111061902544814266207267295505639408607400625795891618462682726460921782993748
+    label: equivalent_given_facts
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "Same proposition: the change the FOMC decides at the Oct 27-28, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26OCT-H0 (Fed maintains rate): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Fact needed: Fed moves are multiples of 25bp (Polymarket rounds other changes up to the nearest 25bp; Kalshi counts a 50bp hike as 'Hike >25bps'). Rules checked via venue APIs 2026-10-09. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 3)."
+  - a_id: kalshi:KXFEDDECISION-26OCT-H25
+    b_id: polymarket:55159722761418013044126414276680602270318000841690689684819994448621694923050
+    label: equivalent_given_facts
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "Same proposition: the change the FOMC decides at the Oct 27-28, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26OCT-H25 (Hike 25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Fact needed: Fed moves are multiples of 25bp (Polymarket rounds other changes up to the nearest 25bp; Kalshi counts a 50bp hike as 'Hike >25bps'). Rules checked via venue APIs 2026-10-09. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 4)."
+  - a_id: kalshi:KXFEDDECISION-26OCT-H26
+    b_id: polymarket:18246296022868501258060085368606280205967114341141276439803424448463050819498
+    label: equivalent_given_facts
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "Same proposition: the change the FOMC decides at the Oct 27-28, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26OCT-H26 (Hike >25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Fact needed: Fed moves are multiples of 25bp (Polymarket rounds other changes up to the nearest 25bp; Kalshi counts a 50bp hike as 'Hike >25bps'). Rules checked via venue APIs 2026-10-09. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 5)."
+  - a_id: kalshi:KXFEDDECISION-26DEC-C26
+    b_id: polymarket:17640596861394454242836532536014033416733783473450136742726948856144855149507
+    label: equivalent_given_facts
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "Same proposition: the change the FOMC decides at the Dec 8-9, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26DEC-C26 (Cut >25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Fact needed: Fed moves are multiples of 25bp (Polymarket rounds other changes up to the nearest 25bp; Kalshi counts a 50bp hike as 'Hike >25bps'). Rules checked via venue APIs 2026-10-09. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 6)."
+  - a_id: kalshi:KXFEDDECISION-26DEC-C25
+    b_id: polymarket:77367448845023382525249480243608609306658725883285195065573683809293972009019
+    label: equivalent_given_facts
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "Same proposition: the change the FOMC decides at the Dec 8-9, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26DEC-C25 (Cut 25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Fact needed: Fed moves are multiples of 25bp (Polymarket rounds other changes up to the nearest 25bp; Kalshi counts a 50bp hike as 'Hike >25bps'). Rules checked via venue APIs 2026-10-09. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 7)."
+  - a_id: kalshi:KXFEDDECISION-26DEC-H0
+    b_id: polymarket:42865728742506860386768556888821101266630139112044622335353850919229585308601
+    label: equivalent_given_facts
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "Same proposition: the change the FOMC decides at the Dec 8-9, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26DEC-H0 (Fed maintains rate): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Fact needed: Fed moves are multiples of 25bp (Polymarket rounds other changes up to the nearest 25bp; Kalshi counts a 50bp hike as 'Hike >25bps'). Rules checked via venue APIs 2026-10-09. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 8)."
+  - a_id: kalshi:KXFEDDECISION-26DEC-H25
+    b_id: polymarket:111662129652828266889360374468657435151479595863413519836161861837506140152890
+    label: equivalent_given_facts
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "Same proposition: the change the FOMC decides at the Dec 8-9, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26DEC-H25 (Hike 25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Fact needed: Fed moves are multiples of 25bp (Polymarket rounds other changes up to the nearest 25bp; Kalshi counts a 50bp hike as 'Hike >25bps'). Rules checked via venue APIs 2026-10-09. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 9)."
+  - a_id: kalshi:KXFEDDECISION-26DEC-H26
+    b_id: polymarket:35090254409399344650860070211816464534198960801264823587796928404808383727584
+    label: equivalent_given_facts
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "Same proposition: the change the FOMC decides at the Dec 8-9, 2026 meeting, in the same bucket. Kalshi KXFEDDECISION-26DEC-H26 (Hike >25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Fact needed: Fed moves are multiples of 25bp (Polymarket rounds other changes up to the nearest 25bp; Kalshi counts a 50bp hike as 'Hike >25bps'). Rules checked via venue APIs 2026-10-09. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 10)."
+  - a_id: kalshi:KXFEDDECISION-27JAN-C26
+    b_id: polymarket:45053521911672808043600263178798111402897730682087979734684574823004307023433
+    label: equivalent_given_facts
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "Same proposition: the change the FOMC decides at the Jan 26-27, 2027 meeting, in the same bucket. Kalshi KXFEDDECISION-27JAN-C26 (Cut >25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Fact needed: Fed moves are multiples of 25bp (Polymarket rounds other changes up to the nearest 25bp; Kalshi counts a 50bp hike as 'Hike >25bps'). Rules checked via venue APIs 2026-10-09. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 11)."
+  - a_id: kalshi:KXFEDDECISION-27JAN-C25
+    b_id: polymarket:55531205670373260499988385930313327116586167390725681551489621136380793885916
+    label: equivalent_given_facts
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "Same proposition: the change the FOMC decides at the Jan 26-27, 2027 meeting, in the same bucket. Kalshi KXFEDDECISION-27JAN-C25 (Cut 25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Fact needed: Fed moves are multiples of 25bp (Polymarket rounds other changes up to the nearest 25bp; Kalshi counts a 50bp hike as 'Hike >25bps'). Rules checked via venue APIs 2026-10-09. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 12)."
+  - a_id: kalshi:KXFEDDECISION-27JAN-H0
+    b_id: polymarket:63563009510989471204377539732457086916124654411092982704760023438039220215330
+    label: equivalent_given_facts
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "Same proposition: the change the FOMC decides at the Jan 26-27, 2027 meeting, in the same bucket. Kalshi KXFEDDECISION-27JAN-H0 (Fed maintains rate): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Fact needed: Fed moves are multiples of 25bp (Polymarket rounds other changes up to the nearest 25bp; Kalshi counts a 50bp hike as 'Hike >25bps'). Rules checked via venue APIs 2026-10-09. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 13)."
+  - a_id: kalshi:KXFEDDECISION-27JAN-H25
+    b_id: polymarket:58421987972100586826330616250690474504359298033602990223828098109695719571344
+    label: equivalent_given_facts
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "Same proposition: the change the FOMC decides at the Jan 26-27, 2027 meeting, in the same bucket. Kalshi KXFEDDECISION-27JAN-H25 (Hike 25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Fact needed: Fed moves are multiples of 25bp (Polymarket rounds other changes up to the nearest 25bp; Kalshi counts a 50bp hike as 'Hike >25bps'). Rules checked via venue APIs 2026-10-09. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 14)."
+  - a_id: kalshi:KXFEDDECISION-27JAN-H26
+    b_id: polymarket:42452047366442275682382090045397807109079755041679563479952649068752467853296
+    label: equivalent_given_facts
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "Same proposition: the change the FOMC decides at the Jan 26-27, 2027 meeting, in the same bucket. Kalshi KXFEDDECISION-27JAN-H26 (Hike >25bps): FEDDECISION terms, source federalreserve.gov, expires 2:05 PM ET after the decision. Fact needed: Fed moves are multiples of 25bp (Polymarket rounds other changes up to the nearest 25bp; Kalshi counts a 50bp hike as 'Hike >25bps'). Rules checked via venue APIs 2026-10-09. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 15)."
+  - a_id: kalshi:KXRATECUTCOUNT-26DEC31-T0
+    b_id: polymarket:12403602920039269077597917340921667997547115084613238528792639013246536343316
+    label: equivalent_given_facts
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "Same proposition: the count of 25 bp cuts in calendar 2026, emergency cuts included. Kalshi KXRATECUTCOUNT-26DEC31-T0: 'Fed cuts 0 times starting Jan 1, 2026 and before 2027', 25 bp = one cut (RATECUTS terms, source openmarket.htm). CHECKED 2026-10-09: Polymarket also counts a 50bp cut as two cuts and emergency cuts; 1-24bp counts as one (Kalshi defines only 25bp=one). Equivalent given the fact that every 2026 move is a multiple of 25bp. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 16)."
+  - a_id: kalshi:KXRATECUTCOUNT-26DEC31-T1
+    b_id: polymarket:113379839734351069617987084078322474966003108854908079701423911002443710490196
+    label: equivalent_given_facts
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "Same proposition: the count of 25 bp cuts in calendar 2026, emergency cuts included. Kalshi KXRATECUTCOUNT-26DEC31-T1: 'Fed cuts 1 times starting Jan 1, 2026 and before 2027', 25 bp = one cut (RATECUTS terms, source openmarket.htm). CHECKED 2026-10-09: Polymarket also counts a 50bp cut as two cuts and emergency cuts; 1-24bp counts as one (Kalshi defines only 25bp=one). Equivalent given the fact that every 2026 move is a multiple of 25bp. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 17)."
+  - a_id: kalshi:KXRATECUTCOUNT-26DEC31-T2
+    b_id: polymarket:72535544017897924722695722172278828562733090748474862987195303914909938482758
+    label: equivalent_given_facts
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "Same proposition: the count of 25 bp cuts in calendar 2026, emergency cuts included. Kalshi KXRATECUTCOUNT-26DEC31-T2: 'Fed cuts 2 times starting Jan 1, 2026 and before 2027', 25 bp = one cut (RATECUTS terms, source openmarket.htm). CHECKED 2026-10-09: Polymarket also counts a 50bp cut as two cuts and emergency cuts; 1-24bp counts as one (Kalshi defines only 25bp=one). Equivalent given the fact that every 2026 move is a multiple of 25bp. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 18)."
+  - a_id: kalshi:KXPRESNOMD-28-GN
+    b_id: polymarket:54533043819946592547517511176940999955633860128497669742211153063842200957669
+    label: equivalent
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "Same proposition: Gavin Newsom wins and accepts the 2028 Democratic presidential nomination. Kalshi KXPRESNOMD-28-GN: PRESNOM terms, 'the first person to have been nominated by the party and to have accepted the nomination', source the party. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 20)."
+  - a_id: kalshi:KXPRESNOMD-28-AOC
+    b_id: polymarket:107064985435494333113391038470401719113272800530429703182710416066774068907304
+    label: equivalent
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "Same proposition: Alexandria Ocasio-Cortez wins and accepts the 2028 Democratic presidential nomination. Kalshi KXPRESNOMD-28-AOC: PRESNOM terms, 'the first person to have been nominated by the party and to have accepted the nomination', source the party. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 21)."
+  - a_id: kalshi:KXPRESNOMD-28-JOSS
+    b_id: polymarket:70071592420137476676935286377781779672157004436137616627487590484756055232944
+    label: equivalent
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "Same proposition: Jon Ossoff wins and accepts the 2028 Democratic presidential nomination. Kalshi KXPRESNOMD-28-JOSS: PRESNOM terms, 'the first person to have been nominated by the party and to have accepted the nomination', source the party. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 22)."
+  - a_id: kalshi:KXPRESNOMD-28-KH
+    b_id: polymarket:38171024903091354977195167437673496224420673639143973968032407064172828043588
+    label: equivalent
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "Same proposition: Kamala Harris wins and accepts the 2028 Democratic presidential nomination. Kalshi KXPRESNOMD-28-KH: PRESNOM terms, 'the first person to have been nominated by the party and to have accepted the nomination', source the party. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 23)."
+  - a_id: kalshi:KXPRESNOMD-28-JS
+    b_id: polymarket:71169839497420596285841847514123589847893415750912355173877524195175834054354
+    label: equivalent
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "Same proposition: Josh Shapiro wins and accepts the 2028 Democratic presidential nomination. Kalshi KXPRESNOMD-28-JS: PRESNOM terms, 'the first person to have been nominated by the party and to have accepted the nomination', source the party. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 24)."
+  - a_id: kalshi:KXPRESNOMD-28-PB
+    b_id: polymarket:91031279171981959197361710127213577102576826515163085396576756946418341946256
+    label: equivalent
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "Same proposition: Pete Buttigieg wins and accepts the 2028 Democratic presidential nomination. Kalshi KXPRESNOMD-28-PB: PRESNOM terms, 'the first person to have been nominated by the party and to have accepted the nomination', source the party. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 25)."
+  - a_id: kalshi:KXPRESNOMR-28-JDV
+    b_id: polymarket:40081275558852222228080198821361202017557872256707631666334039001378518619916
+    label: equivalent
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "Same proposition: J.D. Vance wins and accepts the 2028 Republican presidential nomination. Kalshi KXPRESNOMR-28-JDV: PRESNOM terms, 'If J.D. Vance wins and accepts the nomination for the Presidency for the Republican party in 2028' (checked 2026-10-09). Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 26)."
+  - a_id: kalshi:KXPRESNOMR-28-MR
+    b_id: polymarket:13565458761220145250977753098276900790902214604876327357986816739576288755859
+    label: equivalent
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "Same proposition: Marco Rubio wins and accepts the 2028 Republican presidential nomination. Kalshi KXPRESNOMR-28-MR: PRESNOM terms, 'the first person to have been nominated by the party and to have accepted the nomination', source the party. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 27)."
+  - a_id: kalshi:KXPRESNOMR-28-RDS
+    b_id: polymarket:12127975650736113116407758794754973741525044713193258995588171654429754588610
+    label: equivalent
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "Same proposition: Ron DeSantis wins and accepts the 2028 Republican presidential nomination. Kalshi KXPRESNOMR-28-RDS: PRESNOM terms, 'the first person to have been nominated by the party and to have accepted the nomination', source the party. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 28)."
+  - a_id: kalshi:KXPRESPERSON-28-JVAN
+    b_id: polymarket:16040015440196279900485035793550429453516625694844857319147506590755961451627
+    label: related
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "NOT equivalent; hard negative the matcher could wrongly call equivalent. Kalshi KXPRESPERSON-28-JVAN: 'If J.D. Vance is the next person inaugurated as President for the term beginning in 2029' (PRESPERSON terms, checked 2026-10-09); Polymarket asks who wins the 2028 election. Different resolution events (inauguration vs election win), so related. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 29)."
+  - a_id: kalshi:KXPRESPERSON-28-GNEWS
+    b_id: polymarket:98250445447699368679516529207365255018790721464590833209064266254238063117329
+    label: related
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "NOT equivalent; included as a hard negative the matcher could wrongly call equivalent. Kalshi KXPRESPERSON-28-GNEWS: 'Gavin Newsom is the next person inaugurated as President for the term beginning in 2029' (PRESPERSON terms). Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 30)."
+  - a_id: kalshi:KXBTCD-26OCT0812-T77999.99
+    b_id: polymarket:77443519844770925744859368185756294247896766669594679461676958360391934252270
+    label: related
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "HISTORICAL FIXTURE ONLY: Kalshi market finalized (expired Oct 8, 2026) and the Polymarket market no longer returns from its API. Related not equivalent: Kalshi settles on the 60s average of CF Benchmarks BRTI before 12 PM EDT above 77999.99; Polymarket's price source was not verified here (such markets usually use a Binance BTC/USDT candle), so a source mismatch is assumed. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 31)."
+  - a_id: kalshi:KXBTCD-26OCT0812-T79999.99
+    b_id: polymarket:40485584554428668469241611958393793104417692929486209319873780168120657704330
+    label: related
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "HISTORICAL FIXTURE ONLY: Kalshi market finalized (expired Oct 8, 2026) and the Polymarket market no longer returns from its API. Related not equivalent: Kalshi settles on the 60s average of CF Benchmarks BRTI before 12 PM EDT above 79999.99; Polymarket's price source was not verified here (such markets usually use a Binance BTC/USDT candle), so a source mismatch is assumed. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 32)."
+  - a_id: kalshi:KXBTCD-26OCT0812-T83999.99
+    b_id: polymarket:99840292577531731449891596325895669575651759409921193062689463594788231461506
+    label: related
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "HISTORICAL FIXTURE ONLY: Kalshi market finalized (expired Oct 8, 2026) and the Polymarket market no longer returns from its API. Related not equivalent: Kalshi settles on the 60s average of CF Benchmarks BRTI before 12 PM EDT above 83999.99; Polymarket's price source was not verified here (such markets usually use a Binance BTC/USDT candle), so a source mismatch is assumed. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 33)."
+  - a_id: kalshi:KXFEDDECISION-26OCT-C25
+    b_id: polymarket:77367448845023382525249480243608609306658725883285195065573683809293972009019
+    label: related
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "HARD NEGATIVE, must not be called equivalent. Same bucket (cut 25bp) but different meeting: Oct 27-28 vs Dec 8-9, 2026. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 34)."
+  - a_id: kalshi:KXFEDDECISION-26DEC-H0
+    b_id: polymarket:111061902544814266207267295505639408607400625795891618462682726460921782993748
+    label: related
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "HARD NEGATIVE, must not be called equivalent. No change, but Dec meeting vs Oct meeting. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 35)."
+  - a_id: kalshi:KXFEDDECISION-27JAN-C26
+    b_id: polymarket:17010377994663817312158123655937348199252960045746746128731746451645055725586
+    label: related
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "HARD NEGATIVE, must not be called equivalent. Cut >25bp bucket, but Jan 2027 vs Oct 2026 meeting. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 36)."
+  - a_id: kalshi:KXFEDDECISION-26OCT-C25
+    b_id: polymarket:17010377994663817312158123655937348199252960045746746128731746451645055725586
+    label: related
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "HARD NEGATIVE, must not be called equivalent. Same meeting, different bucket: Kalshi cut exactly 25bp vs Polymarket cut 50+bp. Mutually exclusive outcomes. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 37)."
+  - a_id: kalshi:KXFEDDECISION-26OCT-C26
+    b_id: polymarket:33268510350568915228897273528353467773422190590579607471427765079749830445947
+    label: related
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "HARD NEGATIVE, must not be called equivalent. Same meeting, different bucket: Kalshi cut >25bp vs Polymarket cut exactly 25bp. Mutually exclusive. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 38)."
+  - a_id: kalshi:KXFEDDECISION-26OCT-H0
+    b_id: polymarket:55159722761418013044126414276680602270318000841690689684819994448621694923050
+    label: related
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "HARD NEGATIVE, must not be called equivalent. Same meeting: no change vs 25bp hike. Mutually exclusive. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 39)."
+  - a_id: kalshi:KXFEDDECISION-26OCT-C25
+    b_id: polymarket:55159722761418013044126414276680602270318000841690689684819994448621694923050
+    label: related
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "HARD NEGATIVE, must not be called equivalent. Same meeting, opposite direction: cut 25bp vs hike 25bp. Mutually exclusive. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 40)."
+  - a_id: kalshi:KXRATECUTCOUNT-26DEC31-T1
+    b_id: polymarket:72535544017897924722695722172278828562733090748474862987195303914909938482758
+    label: related
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "HARD NEGATIVE, must not be called equivalent. Same count family, different strike: exactly 1 cut vs exactly 2 cuts in 2026. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 41)."
+  - a_id: kalshi:KXRATECUTCOUNT-26DEC31-T0
+    b_id: polymarket:113379839734351069617987084078322474966003108854908079701423911002443710490196
+    label: related
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "HARD NEGATIVE, must not be called equivalent. Same count family, different strike: 0 cuts vs 1 cut in 2026. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 42)."
+  - a_id: kalshi:KXFEDDECISION-26OCT-C25
+    b_id: polymarket:113379839734351069617987084078322474966003108854908079701423911002443710490196
+    label: related
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "HARD NEGATIVE, must not be called equivalent. Single-meeting decision (Oct) vs full-year count of cuts; different event and window. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 43)."
+  - a_id: kalshi:KXPRESNOMD-28-GN
+    b_id: polymarket:40081275558852222228080198821361202017557872256707631666334039001378518619916
+    label: related
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "HARD NEGATIVE, must not be called equivalent. Different person and party: Newsom Dem nomination vs Vance Rep nomination. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 44)."
+  - a_id: kalshi:KXPRESNOMR-28-JDV
+    b_id: polymarket:13565458761220145250977753098276900790902214604876327357986816739576288755859
+    label: related
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "HARD NEGATIVE, must not be called equivalent. Same party nomination, different person: Vance vs Rubio. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 45)."
+  - a_id: kalshi:KXPRESNOMD-28-KH
+    b_id: polymarket:54533043819946592547517511176940999955633860128497669742211153063842200957669
+    label: related
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "HARD NEGATIVE, must not be called equivalent. Same party nomination, different person: Harris vs Newsom. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 46)."
+  - a_id: kalshi:KXPRESNOMD-28-JS
+    b_id: polymarket:91031279171981959197361710127213577102576826515163085396576756946418341946256
+    label: related
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "HARD NEGATIVE, must not be called equivalent. Same party nomination, different person: Shapiro vs Buttigieg. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 47)."
+  - a_id: kalshi:KXPRESNOMD-28-GN
+    b_id: polymarket:12127975650736113116407758794754973741525044713193258995588171654429754588610
+    label: related
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "HARD NEGATIVE, must not be called equivalent. Different party and person: Newsom Dem nomination vs DeSantis Rep nomination. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 48)."
+  - a_id: kalshi:KXBTCD-26OCT0812-T77999.99
+    b_id: polymarket:40485584554428668469241611958393793104417692929486209319873780168120657704330
+    label: related
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "HARD NEGATIVE, must not be called equivalent. Same asset and time, different threshold: $78k vs $80k. Historical fixture, both expired Oct 8, 2026. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 49)."
+  - a_id: kalshi:KXBTCD-26OCT0812-T83999.99
+    b_id: polymarket:77443519844770925744859368185756294247896766669594679461676958360391934252270
+    label: related
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "HARD NEGATIVE, must not be called equivalent. Same asset and time, different threshold: $84k vs $78k. Historical fixture. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 50)."
+  - a_id: polymarket:98250445447699368679516529207365255018790721464590833209064266254238063117329
+    b_id: kalshi:KXPRESNOMD-28-GN
+    label: implies
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "a_id implies b_id (directional). Polymarket implies Kalshi. Winning the 2028 presidency (Polymarket) requires being a nominee; Newsom as president implies Newsom won the Dem nomination. Given fact: no win via an independent or write-in route. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 51)."
+  - a_id: kalshi:KXPRESPERSON-28-JVAN
+    b_id: polymarket:40081275558852222228080198821361202017557872256707631666334039001378518619916
+    label: implies
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "a_id implies b_id (directional). Kalshi implies Polymarket. Vance inaugurated in 2029 (Kalshi) implies Vance won the Rep nomination (Polymarket). Given the same fact as above. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 52)."
+  - a_id: kalshi:KXPRESPERSON-28-GNEWS
+    b_id: polymarket:54533043819946592547517511176940999955633860128497669742211153063842200957669
+    label: implies
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "a_id implies b_id (directional). Kalshi implies Polymarket. Newsom inaugurated in 2029 (Kalshi) implies Newsom won the Dem nomination (Polymarket). Given the same fact as above. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 53)."
+  - a_id: polymarket:16040015440196279900485035793550429453516625694844857319147506590755961451627
+    b_id: kalshi:KXPRESNOMR-28-JDV
+    label: implies
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "a_id implies b_id (directional). Polymarket implies Kalshi. Winning the 2028 election (Polymarket Vance) implies the Rep nomination (Kalshi). Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 54)."
+  - a_id: polymarket:113379839734351069617987084078322474966003108854908079701423911002443710490196
+    b_id: kalshi:KXRATECUT-26DEC31
+    label: implies
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "a_id implies b_id (directional). Polymarket implies Kalshi. Exactly 1 cut in 2026 (Polymarket) implies Kalshi 'at least one cut'. Given fact: that cut falls after Feb 26, 2026. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 55)."
+  - a_id: polymarket:72535544017897924722695722172278828562733090748474862987195303914909938482758
+    b_id: kalshi:KXRATECUT-26DEC31
+    label: implies
+    confirmed_by: Paawan Desai
+    confirmed_on: 2026-10-09
+    note: "a_id implies b_id (directional). Polymarket implies Kalshi. Exactly 2 cuts in 2026 (Polymarket) implies Kalshi 'at least one cut'. Given fact: at least one cut after Feb 26, 2026. Human-reviewed and confirmed by Paawan Desai (operator chat 2026-10-09 9:23 AM CT, 56-row review CSV, row 56)."
