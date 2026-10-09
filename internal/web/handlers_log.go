@@ -184,9 +184,10 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 		data.Outliers = s.computeOutliers(data.Entries, tz)
 	}
 
-	// Group entries if requested (UI-15)
-	// TODO: Implement grouping logic when needed
-	_ = group
+	// TODO UI-15: Grouping logic stubbed for future implementation
+	// Group entries if requested: group by venue (Decision.Chosen venues),
+	// staleness (FreshState from max quote age), or label (Decision.TargetType).
+	// Each group would be a section with its own table.
 
 	s.render(w, http.StatusOK, "log", data)
 }
@@ -232,12 +233,10 @@ func (s *Server) parseRoutingLogPayload(e store.LogEntry, tz string) *routingLog
 
 	d := payload.Decision
 
-	// Find pair ID from decision target
-	pairID, _ := s.findPairIDForTarget(d.TargetID)
+	// TODO UI-15: Pair link stubbed - would need store.GetRelationshipByInstrument
+	// to look up the pair ID from the target instrument ID
+	pairID := int64(0)
 	pairLink := ""
-	if pairID > 0 {
-		pairLink = "/pairs/" + strconv.FormatInt(pairID, 10)
-	}
 
 	// Format order details
 	side := string(d.Order.Side)
@@ -388,15 +387,9 @@ func (s *Server) enrichRoutingEntries(ctx context.Context, st *store.Store, entr
 	}
 
 	// Batch-fetch all routing decisions (one query for all listed rows per UI-15 spec)
-	decisions := make(map[int64]store.RoutingDecision)
-	for _, id := range decisionIDs {
-		rd, err := st.GetRoutingDecision(ctx, id)
-		if err != nil && !isNotFound(err) {
-			return nil, err
-		}
-		if err == nil {
-			decisions[id] = rd
-		}
+	decisions, err := st.GetRoutingDecisionsBatch(ctx, decisionIDs)
+	if err != nil {
+		return nil, err
 	}
 
 	// Enrich entries with decision data
