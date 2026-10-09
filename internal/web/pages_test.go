@@ -365,19 +365,23 @@ func TestEvalPage(t *testing.T) {
 	for _, file := range []string{"", filepath.Join(t.TempDir(), "missing.json")} {
 		rec := get(New(Config{EvalSummaryFile: file}, Deps{}).Handler(), "/eval")
 		wantHTML(t, rec, http.StatusOK)
-		// UI-07: empty state references Q-7
-		wantContains(t, rec.Body.String(), "How accurate is the matcher on human-labelled pairs", "No labels confirmed yet (Q-7)", "0.95")
+		// UI-16: empty state in panel, references Q-7
+		wantContains(t, rec.Body.String(), "How accurate is the matcher on human-labelled pairs", "No labels confirmed yet (Q-7)")
 	}
 	// A valid artifact.
 	rec := get(New(Config{EvalSummaryFile: writeEval(t, sampleEval)}, Deps{}).Handler(), "/eval")
 	wantHTML(t, rec, http.StatusOK)
 	body := rec.Body.String()
 	// M3-08: Produced timestamp now formatted in user's timezone, so we check without the exact time
-	// UI-07: headline is now a strip, verdict is a chip, table uses type chips and td.num
+	// UI-16: headline panel with verdict badge, badges for types, F1 column, macro and weighted averages, meter bars
 	wantContains(t, body,
 		"by <code>equinox eval --round 3</code> on round <strong>3</strong>: <strong>40</strong> labelled pairs",
-		`<dl class="strip">`, "Precision at equivalent", "100.00%", `<span class="chip chip-ok">meets the 0.95 target</span>`,
-		`<span class="chip chip-ok">equivalent</span>`, `<td class="num">92.31%</td>`, `<td class="num">75.00%</td>`, `<td class="num">n/a</td>`,
+		`<div class="panel panel-info">`, "Precision at equivalent", "100.00%", "meets the 0.95 target", "✓",
+		`<span class="badge b-equivalent">`, `≡</span>equivalent`,
+		"92.31%", "75.00%", `>n/a<`, // UI-16: percentages are now in meter-cell spans, not bare td.num
+		"Macro average", "Weighted by support", "<th>F1</th>",
+		`<meter min="0" max="1"`,
+		"There is no calibration plot because confidence is a rules score",
 		"Notes from the run", "&lt;b&gt;x&lt;/b&gt;",
 	)
 	if strings.Contains(body, "<b>x</b>") {
@@ -386,11 +390,11 @@ func TestEvalPage(t *testing.T) {
 	// Below target.
 	low := strings.Replace(sampleEval, `"precision": "1"`, `"precision": "0.80"`, 1)
 	wantContains(t, get(New(Config{EvalSummaryFile: writeEval(t, low)}, Deps{}).Handler(), "/eval").Body.String(),
-		`<span class="chip chip-danger">below the 0.95 target</span>`, "80.00%")
+		"below the 0.95 target", "80.00%", "✕")
 	// Undefined precision at equivalent.
 	undef := strings.Replace(sampleEval, `"precision": "1"`, `"precision": null`, 1)
 	wantContains(t, get(New(Config{EvalSummaryFile: writeEval(t, undef)}, Deps{}).Handler(), "/eval").Body.String(),
-		"undefined: no equivalent predictions", "chip-muted")
+		"undefined: no equivalent predictions", "?")
 	// Broken artifacts: the page says so without echoing file content.
 	for name, body := range map[string]string{
 		"not json":       `{"generated_at": `,
