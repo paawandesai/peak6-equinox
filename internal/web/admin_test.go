@@ -210,8 +210,15 @@ func TestAdminIndexDatabaseUnavailable(t *testing.T) {
 	t.Cleanup(pool.Close)
 	s, _ := newAdminServer(t, Deps{Store: store.New(pool)}, "ci")
 	rec := do(s.Handler(), request(http.MethodGet, "/admin", withAuth(testUser, testPass)))
-	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "database unavailable") {
-		t.Errorf("status %d body %s", rec.Code, rec.Body.String())
+	body := rec.Body.String()
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d", rec.Code)
+	}
+	// UI-17: Database row should show Unknown (gray) when unavailable
+	for _, want := range []string{"database unavailable", "signal-unknown", "h-unknown"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("body lacks %q", want)
+		}
 	}
 }
 

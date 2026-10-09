@@ -150,7 +150,7 @@ func worstHealth(signals []Signal) HealthState {
 }
 
 // buildHealthRows constructs the health table rows for the admin page (UI-17, HANDOFF.md).
-func buildHealthRows(collector collectorStats, dbGrowth dbGrowth, hasDB bool, pinnedRound *roundView, llmState string, recentRounds []store.Round) []HealthRow {
+func buildHealthRows(collector collectorStats, dbGrowth dbGrowth, hasDB bool, dbError string, pinnedRound *roundView, llmState string, recentRounds []store.Round) []HealthRow {
 	rows := make([]HealthRow, 0, 5)
 
 	// Collectors row: success rate signal + recent-round bars
@@ -168,10 +168,13 @@ func buildHealthRows(collector collectorStats, dbGrowth dbGrowth, hasDB bool, pi
 		Bars:    bars,
 	})
 
-	// Database row: size against threshold
+	// Database row: size against threshold (UI-17: Unknown when unavailable)
 	var dbSignals []Signal
-	if !hasDB {
-		dbSignals = append(dbSignals, Signal{Glyph: "?", Class: "signal-unknown", Text: "Database not configured"})
+	if !hasDB || dbError != "" {
+		dbSignals = append(dbSignals, Signal{Glyph: "?", Class: "signal-unknown", Text: dbError})
+		if dbError == "" {
+			dbSignals[0].Text = "Database not configured"
+		}
 	} else if dbGrowth.Breached {
 		dbSignals = append(dbSignals, Signal{Glyph: "✕", Class: "signal-degraded", Text: "Above threshold"})
 	} else {
@@ -403,7 +406,7 @@ func (s *Server) handleAdminIndex(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// UI-17: build health rows with worst-signal rollup
-	p.Health = buildHealthRows(p.Collector, growth, hasDB, p.PinnedRound, p.LLMVerifierState, recentForBars)
+	p.Health = buildHealthRows(p.Collector, growth, hasDB, p.DBError, p.PinnedRound, p.LLMVerifierState, recentForBars)
 	// UI-17: freshness windows (D-077 threshold 120s, UI-19 will add warn windows)
 	p.FreshnessWindows = "Stale thresholds: Kalshi quotes 120 s, Polymarket quotes 120 s, rounds 10 min."
 

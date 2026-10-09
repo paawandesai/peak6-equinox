@@ -26,7 +26,7 @@
         {{if .Bars}}
           <ul class="signals">
             {{range .Signals}}
-              <li class="{{.Class}}" aria-label="{{.Text}}"><span class="g" aria-hidden="true">{{.Glyph}}</span></li>
+              <li class="{{.Class}}"><span class="g" aria-hidden="true">{{.Glyph}}</span> {{.Text}}</li>
             {{end}}
           </ul>
           <svg class="bars" width="240" height="24" aria-label="Recent rounds: {{len .Bars}} rounds shown" role="img">
@@ -41,7 +41,7 @@
         {{else}}
           <ul class="signals">
             {{range .Signals}}
-              <li class="{{.Class}}" aria-label="{{.Text}}"><span class="g" aria-hidden="true">{{.Glyph}}</span></li>
+              <li class="{{.Class}}"><span class="g" aria-hidden="true">{{.Glyph}}</span> {{.Text}}</li>
             {{end}}
           </ul>
         {{end}}
