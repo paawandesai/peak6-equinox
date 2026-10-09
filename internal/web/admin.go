@@ -215,11 +215,11 @@ func buildHealthRows(collector collectorStats, dbGrowth dbGrowth, hasDB bool, db
 		age := now.Sub(latestMatchRun.FinishedAt)
 		ageWindow := 6 * time.Hour
 		if age < ageWindow {
-			matcherSignals = append(matcherSignals, Signal{Glyph: "✓", Class: "signal-healthy", Text: fmt.Sprintf("Last run %s ago", formatDuration(age))})
+			matcherSignals = append(matcherSignals, Signal{Glyph: "✓", Class: "signal-healthy", Text: fmt.Sprintf("Last run %s ago", formatDurationShort(age))})
 		} else if age < 2*ageWindow {
-			matcherSignals = append(matcherSignals, Signal{Glyph: "!", Class: "signal-warning", Text: fmt.Sprintf("Last run %s ago", formatDuration(age))})
+			matcherSignals = append(matcherSignals, Signal{Glyph: "!", Class: "signal-warning", Text: fmt.Sprintf("Last run %s ago", formatDurationShort(age))})
 		} else {
-			matcherSignals = append(matcherSignals, Signal{Glyph: "✕", Class: "signal-degraded", Text: fmt.Sprintf("Last run %s ago", formatDuration(age))})
+			matcherSignals = append(matcherSignals, Signal{Glyph: "✕", Class: "signal-degraded", Text: fmt.Sprintf("Last run %s ago", formatDurationShort(age))})
 		}
 		// Signal 2: last run outcome (failure is degraded)
 		if latestMatchRun.Outcome == store.MatchRunFailed {
@@ -339,8 +339,9 @@ func buildDailyHistoryBars(history []store.DailyRoundSummary) []Bar {
 	return bars
 }
 
-// formatDuration formats a duration for display in health signals (UI-26).
-func formatDuration(d time.Duration) string {
+// formatDurationShort formats a duration for display in health signals (UI-26).
+// Returns compact format: "5s", "10m", "2h", "3d".
+func formatDurationShort(d time.Duration) string {
 	if d < time.Minute {
 		return fmt.Sprintf("%ds", int(d.Seconds()))
 	}

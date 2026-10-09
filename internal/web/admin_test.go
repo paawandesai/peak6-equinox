@@ -1176,14 +1176,14 @@ func TestDailyHistoryBars(t *testing.T) {
 		wantHeight string
 		wantTitle  string // substring
 	}{
-		{0, "missing", "0", "no rounds"},      // today (daysAgo=0, newest first)
-		{1, "partial", "75%", "1 partial"},    // yesterday (daysAgo=1)
-		{2, "ok", "100%", "1 ok"},             // daysAgo=2
-		{3, "missing", "0", "no rounds"},      // daysAgo=3 (gap)
-		{5, "failed", "50%", "1 failed"},      // daysAgo=5
-		{10, "ok", "100%", "1 ok"},            // daysAgo=10
-		{30, "partial", "75%", "2 partial"},   // daysAgo=30 (2 rounds, both partial)
-		{89, "ok", "100%", "1 ok"},            // oldest day with data (daysAgo=89)
+		{0, "missing", "0", "no rounds"},    // today (daysAgo=0, newest first)
+		{1, "partial", "75%", "1 partial"},  // yesterday (daysAgo=1)
+		{2, "ok", "100%", "1 ok"},           // daysAgo=2
+		{3, "missing", "0", "no rounds"},    // daysAgo=3 (gap)
+		{5, "failed", "50%", "1 failed"},    // daysAgo=5
+		{10, "ok", "100%", "1 ok"},          // daysAgo=10
+		{30, "partial", "75%", "2 partial"}, // daysAgo=30 (2 rounds, both partial)
+		{89, "ok", "100%", "1 ok"},          // oldest day with data (daysAgo=89)
 	}
 
 	for _, tt := range tests {
