@@ -180,17 +180,18 @@ func TestPublicMatchesPage(t *testing.T) {
 		`<dt>Pairs kept</dt><dd>2</dd>`,
 		`<dt>Routable</dt><dd><a href="#routable">1</a></dd>`,
 		`<dt>Related</dt><dd>1</dd>`,
-		// UI-03: type chips and confidence words.
-		`<span class="chip chip-ok">equivalent</span>`,
-		`0.97 high`, // confidence with bucket word
+		// UI-11 Cursor round 1: badges and conf template instead of inline chips/text.
+		"equivalent", "high",
 		// UI-03: related is inside <details>.
 		`<summary>related (1): same event, different payout; never routed</summary>`,
-		`<span class="chip chip-warn">related</span>`,
-		`0.40 low`,
+		"related", "low",
+		// UI-11: checks column and key.
+		`<ul class="checks"`,
+		`<div class="checks-key">`,
 	)
-	// UI-03 Cursor round 2 issue 2: assert round id appears in a row (not bare substring from strip).
-	// The strip also contains the round ID, so we need to check it's in a data-label="Round" cell.
-	wantContains(t, body, `data-label="Round"><small>round `+strconv.FormatInt(sd.round.ID, 10)+`</small>`)
+	// UI-11: assert Pair column with round id.
+	wantContains(t, body, `data-label="Pair">`)
+	wantContains(t, body, `<small>round `+strconv.FormatInt(sd.round.ID, 10)+`</small>`)
 	// UI-03: routable section comes before related details.
 	if strings.Index(body, `id="routable"`) > strings.Index(body, `<summary>related`) {
 		t.Error("routable section should come before related")
@@ -258,10 +259,11 @@ func TestPublicPairPage(t *testing.T) {
 	wantContains(t, body,
 		"Why does Equinox think these two contracts are, or are not, the same bet",
 		seedTitleA, seedTitleB, seedExplainEq, "No vetoes.",
-		// Diff rows: term, A, B, status.
-		`<tr class="diff-match"><td>subject</td><td>BTC</td><td>BTC</td><td>match</td></tr>`,
-		`<tr class="diff-differ"><td>resolution_source</td><td>CF Benchmarks</td><td>Binance</td><td>differ</td></tr>`,
-		`<tr class="diff-unknown"><td>edge_rules</td>`,
+		// UI-12: Diff rows with new format (t-match, t-differ, t-unknown classes, grouped by part)
+		`<tr class="t-match">`, `subject`, `BTC`, // match row with subject
+		`<tr class="t-differ">`, `resolution_source`, // differ row with resolution_source
+		`<tr class="t-unknown">`, `edge_rules`, // unknown row
+		`CF Benchmarks`, `Binance`, // diff values
 		// Touch on each venue.
 		"0.4800", "0.5200", "0.5000", "0.4900", "1/2", "2026-10-06 13:03:00 EDT", // seedNow+3min in ET (M3-08)
 		// Route form.
@@ -275,7 +277,7 @@ func TestPublicPairPage(t *testing.T) {
 	wantHTML(t, rec, http.StatusOK)
 	body = rec.Body.String()
 	wantContains(t, body, "Vetoes (1): each blocks equivalent", "subject_mismatch", "BTC is not ETH", "Different subject: BTC vs ETH.",
-		"No quote for this instrument in the round.", `class="chip chip-warn">related`)
+		"No quote for this instrument in the round.", `badge-l b-related"`, `related`) // UI-12: large badge instead of chip
 }
 
 func TestPublicPairNotFound(t *testing.T) {
@@ -321,7 +323,9 @@ func TestGroupPairsOrdering(t *testing.T) {
 		views[id] = missingInstrumentView(id)
 	}
 	now := time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)
-	groups := groupPairs(rels, views, now)
+	// UI-11 Cursor round 1: groupPairs now takes sortOrder, qParam, quoteTimes, and roundID.
+	quoteTimes := make(map[string]time.Time) // empty for this test
+	groups := groupPairs(rels, views, now, "confidence", "", quoteTimes, 1)
 	if len(groups) != 2 || groups[0].Type != "equivalent" || groups[1].Type != "related" {
 		t.Fatalf("groups = %+v", groups)
 	}
