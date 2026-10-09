@@ -206,7 +206,7 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, e := range entries {
-		data.LogEntries = append(data.LogEntries, newLogEntryView(e))
+		data.LogEntries = append(data.LogEntries, s.newLogEntryView(e, tz))
 	}
 	for _, q := range []struct {
 		id   string

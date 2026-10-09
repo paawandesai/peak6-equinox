@@ -135,28 +135,50 @@ func TestNearMissRowsOrdering(t *testing.T) {
 func TestDecisionLogPage(t *testing.T) {
 	s, st := newTestServer(t)
 	sd := seedPublic(t, st)
-	decisionID, _ := seedMore(t, s, st, sd)
+	_, _ = seedMore(t, s, st, sd)
 	rec := get(s.Handler(), "/log")
 	wantHTML(t, rec, http.StatusOK)
 	body := rec.Body.String()
 	wantContains(t, body,
 		"What did Equinox decide recently, and why?",
 		`href="/pairs/`+strconv.FormatInt(sd.eqID, 10)+`">pair #`+strconv.FormatInt(sd.eqID, 10)+`: kalshi / polymarket</a>`,
-		`href="/decisions/`+strconv.FormatInt(decisionID, 10)+`">decision #`+strconv.FormatInt(decisionID, 10)+`: Routed</a>`,
+		// UI-15: chip-filter links instead of select
+		`<a href="/log" class="chip-filter" aria-current="page">everything</a>`,
+		`<a href="/log?kind=relationship" class="chip-filter">relationship verdicts</a>`,
+		`<a href="/log?kind=routing" class="chip-filter">routing decisions</a>`,
 		`<span class="chip chip-info">relationship</span>`, `<span class="chip chip-ok">routing</span>`,
 		"route buy 100 contracts yes on "+seedKalshiA,
 		seedExplainEq, "Latest 3 entries",
-		`<option value="routing">routing decisions</option>`,
 	)
 	// Newest first: the routing decision (now = seedNow+1h) precedes the verdicts.
 	if strings.Index(body, `chip-ok">routing`) > strings.Index(body, `chip-info">relationship`) {
 		t.Error("entries are not newest first")
 	}
+
+	// UI-15: test routing-specific view with enriched columns
 	body = get(s.Handler(), "/log?kind=routing").Body.String()
-	wantContains(t, body, "Latest 1 entry", `<option value="routing" selected>`)
+	wantContains(t, body, "Latest 1 entry",
+		// aria-current on the selected kind chip
+		`<a href="/log?kind=routing" class="chip-filter" aria-current="page">routing decisions</a>`,
+		// Routing table columns (UI-15)
+		`<th>When</th>`,
+		`<th>About</th>`,
+		`<th>Order</th>`,
+		`<th>Outcome</th>`,
+		`<th class="num">All-in</th>`,
+		`<th class="num">Saving vs best ask</th>`,
+		// Group-by chips (UI-15)
+		`Group by`,
+		`href="/log?kind=routing&group=venue"`,
+		`href="/log?kind=routing&group=label"`,
+		// Sign rule (UI-15)
+		`<p class="sign-rule">`,
+		`Positive is favourable`,
+	)
 	if strings.Contains(body, `chip-info">relationship`) {
 		t.Error("kind filter did not apply")
 	}
+
 	wantContains(t, get(s.Handler(), "/log?kind=llm").Body.String(), "No decision-log entries of kind <code>llm</code> yet")
 	if rec := get(s.Handler(), "/log?kind=<script>"); rec.Code != http.StatusNotFound || strings.Contains(rec.Body.String(), "<script>") {
 		t.Errorf("unknown kind: %d; body echoes input: %v", rec.Code, strings.Contains(rec.Body.String(), "<script>"))

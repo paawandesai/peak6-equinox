@@ -1,27 +1,100 @@
 {{define "content"}}
-<h1>Decision log</h1>
-<p>Every verdict and simulated order Equinox stored, newest first: relationship verdicts from <code>equinox match</code>, routing decisions from the pair pages and <code>equinox route</code>, LLM verifier results (when enabled; never from a public request) and fetch rounds. Each line links to the pair or decision it is about.</p>
-<form method="get" action="/log">
-  <label>Show
-    <select name="kind">
-      <option value=""{{if not .Kind}} selected{{end}}>everything</option>
-      {{range .Kinds}}<option value="{{.Value}}"{{if .Selected}} selected{{end}}>{{.Label}}</option>{{end}}
-    </select>
-  </label>
-  <button type="submit">Filter</button>
-</form>
+<div class="page-head">
+  <h1>Decision log</h1>
+  <p class="question">What did Equinox decide recently, and why?</p>
+  {{if ge 390 1280}}
+  <details class="intro-collapse">
+    <summary>About this log</summary>
+    <p class="intro">Every verdict and simulated order Equinox stored, newest first: relationship verdicts from <code>equinox match</code>, routing decisions from the pair pages and <code>equinox route</code>, LLM verifier results (when enabled; never from a public request) and fetch rounds. Each line links to the pair or decision it is about.</p>
+  </details>
+  {{else}}
+  <p class="intro">Every verdict and simulated order Equinox stored, newest first: relationship verdicts from <code>equinox match</code>, routing decisions from the pair pages and <code>equinox route</code>, LLM verifier results (when enabled; never from a public request) and fetch rounds. Each line links to the pair or decision it is about.</p>
+  {{end}}
+</div>
+
+<div class="toolbar-chips">
+  <strong style="font-size: 0.875rem; color: var(--eq-muted);">Show</strong>
+  <a href="/log" class="chip-filter"{{if not .Kind}} aria-current="page"{{end}}>everything</a>
+  {{range .Kinds}}<a href="/log?kind={{.Value}}" class="chip-filter"{{if .Selected}} aria-current="page"{{end}}>{{.Label}}</a>{{end}}
+  <noscript>
+    <form method="get" action="/log" style="display:inline; margin-left: 1rem;">
+      <label>
+        <select name="kind">
+          <option value=""{{if not $.Kind}} selected{{end}}>everything</option>
+          {{range $.Kinds}}<option value="{{.Value}}"{{if .Selected}} selected{{end}}>{{.Label}}</option>{{end}}
+        </select>
+      </label>
+      <button type="submit">Filter</button>
+    </form>
+  </noscript>
+</div>
+
+{{if eq .Kind "routing"}}
+<div class="toolbar-chips">
+  <strong style="font-size: 0.875rem; color: var(--eq-muted);">Group by</strong>
+  {{range .Groups}}<a href="/log?kind=routing&group={{.Value}}" class="chip-filter"{{if .Selected}} aria-current="page"{{end}}>{{.Label}}</a>{{end}}
+</div>
+{{end}}
+
 {{if not .Entries}}
 <p>No decision-log entries{{if .Kind}} of kind <code>{{.Kind}}</code>{{end}} yet.</p>
 {{else}}
-<p>Latest {{len .Entries}} entr{{if eq (len .Entries) 1}}y{{else}}ies{{end}} (at most {{.Limit}}).</p>
+
+<p>Latest {{len .Entries}} entr{{if eq (len .Entries) 1}}y{{else}}ies{{end}} (at most {{.Limit}}).{{if .Newest}} Newest: {{formatTime .Newest $.Timezone}}.{{end}}</p>
+
+{{if .Outliers}}
+<div class="outliers">
+  <strong>Outliers</strong>
+  {{if .Outliers.WorstSaving}}
+  <p>Worst saving: <a href="{{.Outliers.WorstSaving.Link}}">{{.Outliers.WorstSaving.About}}</a> · {{.Outliers.WorstSaving.Value}}</p>
+  {{end}}
+  {{if .Outliers.OldestInputAge}}
+  <p>Oldest input: <a href="{{.Outliers.OldestInputAge.Link}}">{{.Outliers.OldestInputAge.About}}</a> · {{.Outliers.OldestInputStamp}}</p>
+  {{end}}
+</div>
+{{end}}
+
+{{if eq .Kind "routing"}}
 <table class="data stack">
-  <thead><tr><th>When</th><th>Kind</th><th>About</th><th>Summary</th></tr></thead>
+  <thead>
+    <tr>
+      <th>When</th>
+      <th>About</th>
+      <th>Order</th>
+      <th>Outcome</th>
+      <th class="num">All-in</th>
+      <th class="num">Saving vs best ask</th>
+      <th>Max quote age</th>
+      <th>Label</th>
+      <th>Summary</th>
+    </tr>
+  </thead>
   <tbody>
   {{range .Entries}}
     <tr>
       <td data-label="When"><small>{{formatTime .At $.Timezone}}</small></td>
-      <td data-label="Kind"><span class="chip {{.KindChipClass}}">{{.Kind}}</span></td>
-      <td data-label="About">{{if .Link}}<a href="{{.Link}}">{{.About}}</a>{{else if .About}}{{.About}}{{else}}<small>{{.Ref}}</small>{{end}}</td>
+      <td data-label="About">
+        {{if .Link}}<a href="{{.Link}}">{{.AboutTitle}}</a>{{else}}{{.AboutTitle}}{{end}}
+        {{if .Routing}}{{if .Routing.PairLink}} · <a href="{{.Routing.PairLink}}">pair</a>{{end}}{{end}}
+      </td>
+      <td data-label="Order">
+        {{if .Routing}}{{.Routing.Side}} {{.Routing.Size}} {{.Routing.Type}}{{end}}
+      </td>
+      <td data-label="Outcome">
+        {{if .Routing}}<span class="badge {{.Routing.Outcome.Class}}"><span class="g" aria-hidden="true">{{.Routing.Outcome.Glyph}}</span>{{.Routing.Outcome.Text}}</span>{{if .Routing.Venues}} · {{.Routing.Venues}}{{end}}{{end}}
+      </td>
+      <td data-label="All-in" class="num">
+        {{if .Routing}}{{.Routing.AverageAllIn}}{{end}}
+      </td>
+      <td data-label="Saving vs best ask" class="num">
+        {{if .Routing}}{{.Routing.SavingVsBest}}{{end}}
+      </td>
+      <td data-label="Max quote age">
+        {{if .Routing}}{{if .Routing.MaxQuoteAge}}<span class="badge {{.Routing.MaxQuoteAge.Badge.Class}}"><span class="g" aria-hidden="true">{{.Routing.MaxQuoteAge.Badge.Glyph}}</span>{{.Routing.MaxQuoteAge.Badge.Text}}</span> · {{formatTime .Routing.MaxQuoteAge.Time $.Timezone}}{{end}}{{end}}
+      </td>
+      <td data-label="Label">
+        {{if .Routing}}{{.Routing.Label}}{{end}}
+      </td>
       <td data-label="Summary">
         {{if .Summary}}
           <details>
@@ -34,5 +107,35 @@
   {{end}}
   </tbody>
 </table>
+
+<p class="sign-rule">Saving vs best ask: the per-contract difference between the best ask in the decision's stored input snapshot and its average fill. Positive is favourable, otherwise parentheses. Formula: best ask − average all-in.</p>
+
+{{else}}
+
+<table class="data stack">
+  <thead><tr><th>When</th><th>Kind</th><th>About</th><th>Summary</th></tr></thead>
+  <tbody>
+  {{range .Entries}}
+    <tr>
+      <td data-label="When"><small>{{formatTime .At $.Timezone}}</small></td>
+      <td data-label="Kind"><span class="chip {{.KindChipClass}}">{{.Kind}}</span></td>
+      <td data-label="About">
+        {{if .Link}}<a href="{{.Link}}">{{.About}}</a>{{else if .About}}{{.About}}{{else}}<small>{{.Ref}}</small>{{end}}
+        {{if .AboutTitle}}{{if ne .About .AboutTitle}} · {{.AboutTitle}}{{end}}{{end}}
+      </td>
+      <td data-label="Summary">
+        {{if .Summary}}
+          <details>
+            <summary title="{{.Summary}}"><span class="clamp-2">{{.Summary}}</span></summary>
+            <p>{{.Summary}}</p>
+          </details>
+        {{end}}
+      </td>
+    </tr>
+  {{end}}
+  </tbody>
+</table>
+
+{{end}}
 {{end}}
 {{end}}
