@@ -46,16 +46,17 @@ func TestRouteHappyPathHTMX(t *testing.T) {
 		t.Error("htmx request got a full page, want a fragment")
 	}
 	wantContains(t, body,
-		`id="route-result"`, "Decision #1", "buy 100 contracts YES, market IOC", "Partners considered: 2",
+		`id="route-result"`, "Decision #1", "buy 100 contracts YES, market IOC",
+		"Partners considered:</strong> 2", // UI-13: Partners in verdict section (v1: "Partners considered: 2")
 		// Polymarket fills 50 at 0.50 and 50 at 0.53 (VWAP 0.515, fee 0.0175, basis 0.001, all-in 0.5335); Kalshi fills all 100 at 0.52 (all-in 0.5375).
-		"badge badge-l", "Routed", // UI-13: Outcome badge
+		"badge badge-l", "Routed", // UI-13: Outcome badge (v1: class="chip chip-ok")
 		"Chosen legs", `<span class="venue">polymarket</span>`,
 		"0.5150",                            // VWAP
 		"0.5335",                            // All-in
 		`<tr class="totals">`, "100 of 100", // Totals row
 		"Ranked alternatives", "0.5375", // Gap to chosen
-		"Eligibility", seedKalshiC, // UI-13: Exclusions in trace step 2
-		`class="reason"`, "not routable", // UI-13: Reason phrase with class
+		"Eligibility", seedKalshiC, // UI-13: Exclusions in trace step 2 (v1: separate "Excluded candidates" section)
+		`class="reason"`, "not routable", // UI-13: Reason with class (v1: <strong>not routable</strong>)
 		"Explanation", "Simulated buy of 100 YES contracts on "+seedKalshiA,
 		"basis penalty = score × 0.01", // Configured multiplier
 	)
@@ -414,7 +415,7 @@ func TestRouteResultRendering(t *testing.T) {
 	wantHTML(t, sweepRec, http.StatusOK)
 	sweepBody := sweepRec.Body.String()
 	wantContains(t, sweepBody,
-		`class="chip chip-ok"`, "Routed across 2 venues", "Chosen legs",
+		"badge badge-l", "Routed across 2 venues", "Chosen legs", // UI-13: v2 badge (v1: class="chip chip-ok")
 		"polymarket", "60", "0.5160", // First leg
 		"kalshi", "40", "0.5320", // Second leg
 		`<tr class="totals">`, "100 of 100", `<strong>Total</strong>`, // Totals row
@@ -448,10 +449,10 @@ func TestRouteResultRendering(t *testing.T) {
 	wantHTML(t, compRec, http.StatusOK)
 	compBody := compRec.Body.String()
 	wantContains(t, compBody,
-		"Routed as NO on polymarket (complement)", `class="chip chip-ok"`,
+		"Routed as NO on polymarket (complement)", "badge badge-l", // UI-13: v2 badge (v1: class="chip chip-ok")
 		"complement: NO on",             // Exact Route cell with uppercase
 		"0.0050",                        // Gap column (without hardcoded +)
-		"<strong>not routable</strong>", // Exclusion phrase in bold
+		`class="reason"`, "not routable", // UI-13: reason with class (v1: <strong>not routable</strong>)
 	)
 
 	// Partial complement: should say "Partially routed", not override with complement phrase
@@ -479,7 +480,7 @@ func TestRouteResultRendering(t *testing.T) {
 	wantHTML(t, partialCompRec, http.StatusOK)
 	partialCompBody := partialCompRec.Body.String()
 	wantContains(t, partialCompBody,
-		"Partially routed", `class="chip chip-warn"`, // Should NOT say "Routed as NO on"
+		"Partially routed", "badge badge-l", // UI-13: v2 badge (v1: class="chip chip-warn")
 		"complement: NO on", // Route cell still shows complement
 		"80 of 100",         // Partial fill in totals
 	)
@@ -508,7 +509,7 @@ func TestRouteResultRendering(t *testing.T) {
 	wantHTML(t, notionalRec, http.StatusOK)
 	notionalBody := notionalRec.Body.String()
 	wantContains(t, notionalBody,
-		"Routed", `class="chip chip-ok"`,
+		"Routed", "badge badge-l", // UI-13: v2 badge (v1: class="chip chip-ok")
 		"<strong>100</strong>", // Totals should show just "100", not "100 of 0"
 	)
 	if strings.Contains(notionalBody, " of 0") {
@@ -569,11 +570,11 @@ func TestRouteResultV2Fields(t *testing.T) {
 	
 	// Check for new v2 elements
 	wantContains(t, body,
-		`dl.tiles`,                          // Cost report tiles
+		`<dl class="tiles">`,                // Cost report tiles
 		"Avg all-in",                        // Key tile
 		"Total cost",                        // Total cost tile
 		"Slippage vs quoted",                // Slippage tile (UI-13)
-		`ol.trace-steps`,                    // Decision trace
+		`<ol class="trace-steps">`,          // Decision trace
 		"Order and input snapshot",          // Step 1
 		"Eligibility",                       // Step 2
 		"Fill simulation and fee math",      // Step 3
@@ -614,8 +615,8 @@ func TestRouteResultNotRoutedState(t *testing.T) {
 	wantContains(t, body,
 		"Not routed",                         // Outcome badge
 		"No venue can fill this order",       // Not routed message
-		"Excluded candidates",                // Exclusions section
-		"of 3 candidates kept",               // Kept count (should be 0 of N)
+		"Eligibility",                        // UI-13: Exclusions in trace step 2 (v1: "Excluded candidates")
+		"candidates kept",                    // Kept count
 	)
 }
 
@@ -656,3 +657,4 @@ func TestRouteResultWithInputs(t *testing.T) {
 		t.Error("should not show pre-UI-25 message for new decisions")
 	}
 }
+
