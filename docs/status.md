@@ -106,6 +106,7 @@ None.
 | D-099 | Router stores input quotes with each decision (UI-25, D-098 call 3). `canonical.Decision` gains `Inputs []DecisionInput` (venue, instrument id, relationship type `"self"` for target, confidence at decision time, outcome side, best ask, ask depth capped at 10 levels, quote times, round id) and `TargetType` (relationship type label for UI grouping). Stored as optional jsonb fields; no SQL migration. Old decisions decode with empty Inputs and TargetType. | 2026-10-08 |
 | D-101 | M4-04: Cloud Run `min-instances=1` for the review window and the revert (`scripts/review-window.sh`); window, cost estimate and dry-run filled in by the M4-04 MR. Tier 2 (prod config, cost). Number reserved by the M4 tickets MR. | 2026-10-08 |
 | D-102 | M4-07: final production deploy of `main` for submission; sha, revision and smoke output filled in by the M4-07 MR. Tier 2 (prod deploy). Number reserved by the M4 tickets MR. | 2026-10-08 |
+| D-103 | UI-21: Rule layers columns (rules_summary, clarifications, clarifications_updated_at) added to instruments table. Kalshi rules_secondary captured as clarifications; Polymarket has no separate layers. Not fed to matcher/LLM in this ticket. Migration 0004. Tier 2 schema change. | 2026-10-09 |
 
 ## Kept decisions (veto closed)
 
@@ -180,5 +181,3 @@ Paawan kept these four in the operator chat on 2026-10-07 at 8:38 PM CT, after t
 | ID | Severity | Status | Ticket |
 |---|---|---|---|
 | none yet | | | AB harnesses landed in M1 (AB-01/02/05/06/07/08/11/12/13/14) |
-
-- **D-103** (UI-21): Rule layers columns (rules_summary, clarifications, clarifications_updated_at) added to instruments table. Kalshi rules_secondary captured as clarifications; Polymarket has no separate layers. Not fed to matcher/LLM in this ticket.
