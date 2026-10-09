@@ -115,17 +115,17 @@ echo
 # 1. /health is 200
 check "health" "$BASE_URL/health" >/dev/null
 
-# 2. / is 200 and contains the asof with a round id (and "pinned" when pinned)
+# 2. / is 200 and contains the context bar with a round id (and "pinned" when pinned)
 home_file=$(mktemp)
 check "home" "$BASE_URL/" > "$home_file"
-if ! grep -q 'class="asof"' "$home_file"; then
-	echo "FAIL: home ($BASE_URL/) — no asof paragraph" >&2
+if ! grep -q 'class="context-bar"' "$home_file"; then
+	echo "FAIL: home ($BASE_URL/) — no context-bar" >&2
 	((FAIL_COUNT++))
 fi
-# Extract round id from asof paragraph (format: "round 123" or "round 123, pinned")
+# Extract round id from context bar (format: "round 123" or "round 123, pinned")
 round_id=$(grep -oP 'round \K[0-9]+' "$home_file" | head -n1 || true)
 if [[ -z "$round_id" ]]; then
-	echo "FAIL: home ($BASE_URL/) — no round id in asof" >&2
+	echo "FAIL: home ($BASE_URL/) — no round id in context-bar" >&2
 	((FAIL_COUNT++))
 fi
 if [[ -n "$round_id" ]]; then
@@ -138,7 +138,7 @@ if [[ -n "$round_id" ]]; then
 			echo "PASS: pinned round $PINNED_ROUND matches served round" >&2
 		fi
 		if ! grep -q 'pinned' "$home_file"; then
-			echo "FAIL: home ($BASE_URL/) — pinned round $PINNED_ROUND but no 'pinned' in asof" >&2
+			echo "FAIL: home ($BASE_URL/) — pinned round $PINNED_ROUND but no 'pinned' in context-bar" >&2
 			((FAIL_COUNT++))
 		fi
 	fi
