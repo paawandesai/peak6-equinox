@@ -82,16 +82,18 @@ func TestNearMissesPage(t *testing.T) {
 	body := rec.Body.String()
 	wantContains(t, body,
 		"Which pairs looked like the same bet but were rejected, and by which rule?",
-		"2 near misses", "Stopped by a veto:", "1",
+		"2 near misses", "Stopped by a veto:", "1", "Fact did not close:", "1",
 		`href="/pairs/`+strconv.FormatInt(sd.relID, 10)+`"`, `href="/pairs/`+strconv.FormatInt(factMissID, 10)+`"`,
-		`<span class="chip chip-danger"><code>subject_mismatch</code></span>`, "BTC is not ETH", "Different subject: BTC vs ETH.",
-		`<span class="chip chip-info">no veto</span>`, "a fact was consulted but did not apply", seedTitleC,
+		`<code>subject_mismatch</code>`, "BTC is not ETH", "Different subject: BTC vs ETH.",
+		`<code>fact_did_not_close</code>`, "a fact was consulted but did not apply", seedTitleC,
+		"Not-a-match record →",
 	)
 	if strings.Contains(body, seedExplainEq) {
 		t.Error("the equivalent pair must not be listed as a near miss")
 	}
-	if strings.Index(body, "subject_mismatch") > strings.Index(body, "fed_next_meeting did not place it") {
-		t.Error("vetoed pairs should come first")
+	// Groups should exist
+	if !strings.Contains(body, `id="group-subject-mismatch"`) || !strings.Contains(body, `id="group-fact-did-not-close"`) {
+		t.Error("groups should be present")
 	}
 }
 
@@ -123,12 +125,18 @@ func TestNearMissRowsOrdering(t *testing.T) {
 	}
 	views := map[string]instrumentView{}
 	rows := nearMissRows(rels, views)
-	var order []int64
-	for _, r := range rows {
-		order = append(order, r.ID)
+	groups := groupNearMisses(rows)
+	// Should have 4 groups (x, y, z, fact_did_not_close)
+	if len(groups) != 4 {
+		t.Fatalf("groups = %d, want 4", len(groups))
 	}
-	if len(order) != 4 || order[0] != 3 || order[1] != 4 || order[2] != 2 || order[3] != 1 {
-		t.Errorf("order = %v, want [3 4 2 1] (vetoed first, confidence desc, id)", order)
+	// fact_did_not_close should be last
+	if groups[3].Code != "fact_did_not_close" {
+		t.Errorf("last group = %s, want fact_did_not_close", groups[3].Code)
+	}
+	// fact_did_not_close should have row 1
+	if len(groups[3].Rows) != 1 || groups[3].Rows[0].ID != 1 {
+		t.Errorf("fact_did_not_close group should have row 1")
 	}
 }
 
