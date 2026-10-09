@@ -60,6 +60,33 @@ var templateFuncs = template.FuncMap{
 	"httpURL": httpURL,
 	// formatTime formats a time.Time in the user's chosen timezone (M3-08).
 	"formatTime": formatTime,
+	// UI-12: partOrder returns the ordered list of rule parts for diff grouping.
+	"partOrder": func() []string {
+		return []string{
+			"Resolution criteria",
+			"Strike / threshold",
+			"Direction",
+			"Timeframe / cutoff",
+			"Sources",
+			"Qualifying / edge cases",
+			"Other terms",
+		}
+	},
+	// UI-12: filterByPart filters diff rows by rule part.
+	"filterByPart": func(rows []diffRowView, part string) []diffRowView {
+		var filtered []diffRowView
+		for _, r := range rows {
+			if r.Part == part {
+				filtered = append(filtered, r)
+			}
+		}
+		return filtered
+	},
+	// RoundStatusBadge returns a Badge for a round status (UI-17).
+	"RoundStatusBadge": RoundStatusBadge,
+	// Template arithmetic helpers (UI-17).
+	"mul": func(a, b int) int { return a * b },
+	"add": func(a, b int64) int64 { return a + b },
 }
 
 // pages are the parsed template sets, one per page, each with the layout.
