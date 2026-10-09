@@ -530,12 +530,22 @@ td.meter-cell meter { width: 100%; height: 6px; }
 table.health th[scope=row] { font-size: var(--eq-text-m); }
 ul.signals { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: .25rem; }
 ul.signals li { margin: 0; display: flex; gap: .5rem; }
+.signal-healthy { color: var(--eq-ok); }
+.signal-warning { color: var(--eq-warn); }
+.signal-degraded { color: var(--eq-danger); }
+.signal-unknown { color: var(--eq-muted); }
 svg.bars { display: block; width: 100%; height: 28px; }
 svg.bars .ok { fill: var(--eq-ok); } svg.bars .partial { fill: #c08a1e; } svg.bars .failed { fill: var(--eq-danger); }
 svg.bars .missing { fill: none; stroke: var(--eq-unknown); }
+.admin-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
+.admin-cols .count-chips { display: flex; flex-wrap: wrap; gap: .5rem; margin: .5rem 0; }
+.freshness-windows { margin-top: -.5rem; margin-bottom: 1.5rem; }
 .outliers, .data-notes { padding: .875rem 1rem; border-radius: var(--eq-r-3); }
 .outliers { background: color-mix(in srgb, var(--eq-warn-bg) 60%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--eq-warn) 45%, transparent); }
 .data-notes { background: var(--eq-surface); }
+.data-notes h3 { margin-top: 0; font-size: var(--eq-text-m); }
+.data-notes ul { margin: 0; padding-left: 1.25rem; }
+.data-notes li { margin-bottom: .25rem; }
 
 /* --- 390px: cost tables and health table become cards -------------------- */
 @media (max-width: 640px) {
@@ -546,4 +556,5 @@ svg.bars .missing { fill: none; stroke: var(--eq-unknown); }
   ol.trace-steps > li::before, ol.trace-steps > li::after { display: none; }
   a.chip-filter { min-height: 44px; }
   .toolbar-chips { flex-wrap: nowrap; overflow-x: auto; }
+  .admin-cols { grid-template-columns: 1fr; gap: 1rem; }
 }

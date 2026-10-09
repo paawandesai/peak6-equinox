@@ -169,6 +169,20 @@ func OutcomeBadge(outcome string) Badge {
 	}
 }
 
+// RoundStatusBadge returns a Badge for a round status (UI-17, HANDOFF.md).
+func RoundStatusBadge(status string) Badge {
+	switch status {
+	case "ok":
+		return Badge{Class: "b-ok", Glyph: "✓", Text: "ok"}
+	case "partial":
+		return Badge{Class: "b-partial", Glyph: "◐", Text: "partial"}
+	case "failed":
+		return Badge{Class: "b-failed", Glyph: "✕", Text: "failed"}
+	default:
+		return Badge{Class: "b-running", Glyph: "…", Text: "running"}
+	}
+}
+
 // OutcomePhrase returns the human-readable outcome phrase and chip class for a routing decision (design.md § 4).
 // It maps the decision state into a phrase and a CSS chip class for display.
 //

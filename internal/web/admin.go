@@ -70,6 +70,28 @@ type venueView struct {
 	Error       string
 }
 
+// Signal represents one health signal (UI-17, HANDOFF.md).
+type Signal struct {
+	Glyph string // ✓/!/✕/?
+	Class string // signal-healthy, signal-warning, signal-degraded, signal-unknown
+	Text  string // screen-reader text
+}
+
+// HealthRow represents one row in the admin health table (UI-17, HANDOFF.md).
+type HealthRow struct {
+	Name    string
+	Status  Badge    // worst signal as a badge
+	Signals []Signal // individual signals for the row
+	Bars    []Bar    // only for Collectors row: recent-round bars
+}
+
+// Bar represents one SVG bar for recent-round visualization (UI-17, HANDOFF.md).
+type Bar struct {
+	Title  string  // tooltip text (e.g. "Round 123: ok")
+	Class  string  // bar-ok, bar-partial, bar-failed, bar-missing
+	Height string  // SVG height attribute (100%, 75%, 50%, or just stroke for missing)
+}
+
 type adminPage struct {
 	page        // UI-08: embed base page (Title, Assets, Round, etc.)
 	Now         string
@@ -90,6 +112,152 @@ type adminPage struct {
 	LLMVerifierStateChip   string // chip class for the state
 	LLMVerifierStateText   string // human-readable state text
 	LLMVerifierButtonLabel string // button label
+	// UI-17: health rollup
+	Health             []HealthRow // health table rows (Collectors, Database, Matcher, Pinned, LLM)
+	FreshnessWindows   string      // freshness windows line under health table
+}
+
+// worstHealth returns the worst health state from a set of signals (UI-17, HANDOFF.md).
+// Precedence: degraded > warning > healthy. Unknown with nothing worse stays unknown.
+func worstHealth(signals []Signal) HealthState {
+	var hasHealthy, hasWarning, hasDegraded, hasUnknown bool
+	for _, sig := range signals {
+		switch sig.Class {
+		case "signal-healthy":
+			hasHealthy = true
+		case "signal-warning":
+			hasWarning = true
+		case "signal-degraded":
+			hasDegraded = true
+		case "signal-unknown":
+			hasUnknown = true
+		}
+	}
+	if hasDegraded {
+		return HealthDegraded
+	}
+	if hasWarning {
+		return HealthWarning
+	}
+	if hasHealthy {
+		return HealthHealthy
+	}
+	if hasUnknown {
+		return HealthUnknown
+	}
+	return HealthUnknown
+}
+
+// buildHealthRows constructs the health table rows for the admin page (UI-17, HANDOFF.md).
+func buildHealthRows(collector collectorStats, dbGrowth dbGrowth, hasDB bool, pinnedRound *roundView, llmState string, recentRounds []store.Round) []HealthRow {
+	rows := make([]HealthRow, 0, 5)
+
+	// Collectors row: success rate signal + recent-round bars
+	var collectorSignals []Signal
+	if collector.Meets {
+		collectorSignals = append(collectorSignals, Signal{Glyph: "✓", Class: "signal-healthy", Text: "Meets target"})
+	} else {
+		collectorSignals = append(collectorSignals, Signal{Glyph: "✕", Class: "signal-degraded", Text: "Below target"})
+	}
+	bars := buildBars(recentRounds)
+	rows = append(rows, HealthRow{
+		Name:    "Collectors",
+		Status:  HealthBadge(worstHealth(collectorSignals)),
+		Signals: collectorSignals,
+		Bars:    bars,
+	})
+
+	// Database row: size against threshold
+	var dbSignals []Signal
+	if !hasDB {
+		dbSignals = append(dbSignals, Signal{Glyph: "?", Class: "signal-unknown", Text: "Database not configured"})
+	} else if dbGrowth.Breached {
+		dbSignals = append(dbSignals, Signal{Glyph: "✕", Class: "signal-degraded", Text: "Above threshold"})
+	} else {
+		dbSignals = append(dbSignals, Signal{Glyph: "✓", Class: "signal-healthy", Text: "Below threshold"})
+	}
+	rows = append(rows, HealthRow{
+		Name:    "Database",
+		Status:  HealthBadge(worstHealth(dbSignals)),
+		Signals: dbSignals,
+	})
+
+	// Matcher row: Unknown until UI-26
+	matcherSignals := []Signal{{Glyph: "?", Class: "signal-unknown", Text: "No match runs recorded"}}
+	rows = append(rows, HealthRow{
+		Name:    "Matcher",
+		Status:  HealthBadge(HealthUnknown),
+		Signals: matcherSignals,
+	})
+
+	// Pinned round row: pinned vs unpinned
+	var pinnedSignals []Signal
+	if pinnedRound != nil {
+		pinnedSignals = append(pinnedSignals, Signal{Glyph: "✓", Class: "signal-healthy", Text: fmt.Sprintf("Round %d pinned", pinnedRound.ID)})
+	} else {
+		pinnedSignals = append(pinnedSignals, Signal{Glyph: "?", Class: "signal-unknown", Text: "No round pinned"})
+	}
+	rows = append(rows, HealthRow{
+		Name:    "Pinned round",
+		Status:  HealthBadge(worstHealth(pinnedSignals)),
+		Signals: pinnedSignals,
+	})
+
+	// LLM verifier row: based on existing state logic
+	var llmSignals []Signal
+	switch llmState {
+	case "disabled":
+		llmSignals = append(llmSignals, Signal{Glyph: "?", Class: "signal-unknown", Text: "Disabled"})
+	case "cap_reached":
+		llmSignals = append(llmSignals, Signal{Glyph: "✕", Class: "signal-degraded", Text: "Cap reached"})
+	case "ready", "last_run":
+		llmSignals = append(llmSignals, Signal{Glyph: "✓", Class: "signal-healthy", Text: "Ready"})
+	default:
+		llmSignals = append(llmSignals, Signal{Glyph: "?", Class: "signal-unknown", Text: "Unknown"})
+	}
+	rows = append(rows, HealthRow{
+		Name:    "LLM verifier",
+		Status:  HealthBadge(worstHealth(llmSignals)),
+		Signals: llmSignals,
+	})
+
+	return rows
+}
+
+// buildBars generates SVG bars for the last 24 rounds (UI-17, HANDOFF.md).
+// Full height = ok, 75% = partial, 50% = failed, outline only = missing.
+func buildBars(rounds []store.Round) []Bar {
+	// Take last 24 rounds
+	count := 24
+	if len(rounds) > count {
+		rounds = rounds[len(rounds)-count:]
+	}
+
+	bars := make([]Bar, 0, count)
+	for _, r := range rounds {
+		var class, height, title string
+		switch r.Status {
+		case store.RoundOK:
+			class = "ok"
+			height = "100%"
+			title = fmt.Sprintf("Round %d: ok", r.ID)
+		case store.RoundPartial:
+			class = "partial"
+			height = "75%"
+			title = fmt.Sprintf("Round %d: partial", r.ID)
+		case store.RoundFailed:
+			class = "failed"
+			height = "50%"
+			title = fmt.Sprintf("Round %d: failed", r.ID)
+		default:
+			class = "missing"
+			height = "0"
+			title = fmt.Sprintf("Round %d: missing", r.ID)
+		}
+		bars = append(bars, Bar{Title: title, Class: class, Height: height})
+	}
+
+	return bars
 }
 
 func (s *Server) handleAdminIndex(w http.ResponseWriter, r *http.Request) {
@@ -112,7 +280,7 @@ func (s *Server) handleAdminIndex(w http.ResponseWriter, r *http.Request) {
 
 	tz := timezoneFromRequest(r)
 	p := adminPage{
-		page:        s.pageBase(currentRound, "Admin", "", tz, ""),
+		page:        s.pageBase(currentRound, "Admin", "", tz, "Is data flowing, which round is pinned, and what can the LLM verifier spend?"),
 		Now:         s.now().Format(time.RFC3339),
 		AppEnv:      s.cfg.AppEnv,
 		IngestReady: s.deps.Ingester != nil,
@@ -161,6 +329,22 @@ func (s *Server) handleAdminIndex(w http.ResponseWriter, r *http.Request) {
 		}
 		p.Collector = collectorSuccess(recent, s.now())
 
+	}
+
+	// UI-17: Build health rows and freshness windows
+	var growth dbGrowth
+	hasDB := s.deps.Store != nil || s.deps.DBSize != nil
+	if p.DBError == "" {
+		growth = dbGrowth{Size: p.DBSize, Threshold: p.DBThreshold, Breached: p.DBAlert}
+	}
+
+	// Get recent rounds for bars (last 24)
+	var recentForBars []store.Round
+	if s.deps.Store != nil {
+		recent, err := s.deps.Store.ListRounds(ctx, 24)
+		if err == nil {
+			recentForBars = recent
+		}
 	}
 
 	// UI-08: LLM verifier state (design.md § 4)
@@ -212,6 +396,12 @@ func (s *Server) handleAdminIndex(w http.ResponseWriter, r *http.Request) {
 			p.LLMVerifierStateText = fmt.Sprintf("ready: 0 of %d calls used today", dailyCap)
 		}
 	}
+
+	// UI-17: build health rows with worst-signal rollup
+	p.Health = buildHealthRows(p.Collector, growth, hasDB, p.PinnedRound, p.LLMVerifierState, recentForBars)
+	// UI-17: freshness windows (D-077 threshold, UI-19 will add warn windows)
+	p.FreshnessWindows = "Stale thresholds: Kalshi quotes 180 s, Polymarket quotes 180 s, rounds 10 min."
+
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("X-Robots-Tag", "noindex") // UI-08: noindex via header, not meta tag
 	// UI-08: render through layout template
