@@ -631,17 +631,20 @@ func TestRouteResultSignRule(t *testing.T) {
 	// Sign rule text should be documented
 	wantContains(t, body, "Sign rule", "positive", "saving", "parentheses", "loss", "unfavourable")
 
-	// For slippage: negative slippage (VWAP < Quoted) is a saving, shown positive
-	// positive slippage (VWAP > Quoted) is a loss, shown in parentheses
-	// Check that parentheses are used for losses (can't predict exact values but structure should be there)
-	if !strings.Contains(body, "bps") {
-		t.Error("should show slippage in bps")
-	}
-
-	// Gap in alternatives: if chosen is best, gaps to worse alternatives are in parentheses
-	// Check for gap format with cents: either "X.XX¢" (saving) or "(X.XX)¢" (loss)
+	// Check for cents format with ¢ symbol
 	if !strings.Contains(body, "¢") {
 		t.Error("should show gap in cents (¢)")
+	}
+
+	// Assert sign rule application: losses (unfavourable) in parentheses with ¢ inside
+	// Pattern: (N.NN¢) where N is a digit - for alternatives with higher cost than chosen
+	if !strings.Contains(body, "¢)") {
+		t.Error("should show losses in parentheses as (X.XX¢) per sign rule")
+	}
+
+	// For slippage in bps: same sign rule applies
+	if !strings.Contains(body, "bps") {
+		t.Error("should show slippage/gap in bps")
 	}
 }
 

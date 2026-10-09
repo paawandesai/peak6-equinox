@@ -339,7 +339,8 @@ func newDecisionView(d canonical.Decision, partners int, snapshot time.Time, ins
 	inputsRecorded := len(d.Inputs) > 0
 
 	// Kept vs total candidates (UI-13, step 2)
-	keptCount := len(d.Chosen) + len(d.Alternatives)
+	// Alternatives already includes the chosen route (rank 1), so don't double-count
+	keptCount := len(d.Alternatives)
 	candidateCount := keptCount + len(d.Exclusions)
 
 	return &decisionView{
