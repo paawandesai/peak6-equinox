@@ -67,20 +67,20 @@ func TestRoutableGroupingAndOrder(t *testing.T) {
 	// Routable section exists with the count.
 	wantContains(t, body, `<h2 id="routable">Routable pairs (3)</h2>`)
 
-	// All three types appear in the routable section.
-	chipComplement := `<span class="chip chip-info">complement</span>`
-	chipEqGivenFacts := `<span class="chip chip-ok">equivalent_given_facts</span>`
-	chipEquivalent := `<span class="chip chip-ok">equivalent</span>`
-	wantContains(t, body, chipComplement, chipEqGivenFacts, chipEquivalent)
+	// All three types appear in the routable section (UI-11 Cursor round 2: badge template).
+	badgeComplement := `<span class="badge b-complement">`
+	badgeEqGivenFacts := `<span class="badge b-equivalent_given_facts">`
+	badgeEquivalent := `<span class="badge b-equivalent">`
+	wantContains(t, body, badgeComplement, badgeEqGivenFacts, badgeEquivalent)
 
 	// UI-11: Order is by ReviewPriority (confidence - 0.90) asc, then ID.
 	// complement 0.95 → +0.05, equivalent_given_facts 0.91 → +0.01, equivalent 0.90 → 0.00.
 	// So order: equivalent (0.00), equivalent_given_facts (+0.01), complement (+0.05).
-	idx1 := strings.Index(body, chipEquivalent)
-	idx2 := strings.Index(body, chipEqGivenFacts)
-	idx3 := strings.Index(body, chipComplement)
+	idx1 := strings.Index(body, badgeEquivalent)
+	idx2 := strings.Index(body, badgeEqGivenFacts)
+	idx3 := strings.Index(body, badgeComplement)
 	if idx1 < 0 || idx2 < 0 || idx3 < 0 || idx1 >= idx2 || idx2 >= idx3 {
-		t.Errorf("routable type chips not in priority order: equivalent at %d, equivalent_given_facts at %d, complement at %d", idx1, idx2, idx3)
+		t.Errorf("routable type badges not in priority order: equivalent at %d, equivalent_given_facts at %d, complement at %d", idx1, idx2, idx3)
 	}
 
 	// Cursor round 2 issue 2: assert round id appears inside a row (not bare substring from strip).
@@ -151,8 +151,8 @@ func TestConfidenceBucketWords(t *testing.T) {
 	wantHTML(t, rec, 200)
 	body := rec.Body.String()
 
-	// 0.89 shows "medium", 0.90 shows "high".
-	wantContains(t, body, "0.89 medium", "0.90 high")
+	// UI-11 Cursor round 2: conf template outputs score and word in separate elements.
+	wantContains(t, body, "0.89", "medium", "0.90", "high")
 }
 
 // TestVetoPhraseForFactsClosedPair verifies that equivalent_given_facts pairs with vetoes
@@ -258,9 +258,9 @@ func TestRelatedCountAndDetails(t *testing.T) {
 	if strings.Contains(body[detailsStart:detailsStart+25], "open") {
 		t.Error("details element should not have 'open' attribute (collapsed by default)")
 	}
-	// Verify related rows are inside the details element.
+	// Verify related rows are inside the details element (UI-11 Cursor round 2: badge template).
 	relatedSection := body[detailsStart:detailsEnd]
-	wantContains(t, relatedSection, `<span class="chip chip-warn">related</span>`)
+	wantContains(t, relatedSection, `<span class="badge b-related">`)
 
 	// Cursor round 1 issue 3: veto phrase "1 veto" with link to #diff.
 	wantContains(t, body, `<a href="/pairs/`+strconv.FormatInt(relID1, 10)+`#diff">1 veto</a>`)
@@ -546,8 +546,8 @@ func TestComplementBadge(t *testing.T) {
 	wantHTML(t, rec, 200)
 	body := rec.Body.String()
 
-	// UI-11: Complement uses chip-info class (per UI-10 TypeChipClass).
-	wantContains(t, body, "chip chip-info", "complement")
+	// UI-11 Cursor round 2: Complement uses b-complement badge class (per UI-10 TypeBadge).
+	wantContains(t, body, `<span class="badge b-complement">`, "complement")
 }
 
 // TestSectionOrder verifies that sections appear in the correct order: routable, then implies, then related (Cursor round 1 issue 3).

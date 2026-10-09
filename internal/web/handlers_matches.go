@@ -76,8 +76,8 @@ type pairRow struct {
 	Checks         []checkItem // date, strike, direction, source check glyphs
 	MaxQuoteAge    int         // seconds since oldest quote in this pair
 	ReviewPriority float64     // sort key: for routable, (conf - 0.90) asc, then veto count desc
-	TypeBadge      Badge // UI-11 Cursor round 1: use {{template "badge"}} not span.chip
-	FreshBadge     Badge // UI-11 Cursor round 1: freshness badge from MaxQuoteAge
+	TypeBadge      Badge       // UI-11 Cursor round 1: use {{template "badge"}} not span.chip
+	FreshBadge     Badge       // UI-11 Cursor round 1: freshness badge from MaxQuoteAge
 	ConfValue      struct {
 		Value float64
 		Word  string

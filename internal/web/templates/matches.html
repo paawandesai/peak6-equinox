@@ -21,13 +21,13 @@
 {{/* UI-11: toolbar with sort and filter chips */}}
 <form method="get" action="/" class="toolbar-chips">
   <label>Sort
-    <select name="sort" onchange="this.form.submit()">
+    <select name="sort">
       <option value="priority"{{if eq .Sort "priority"}} selected{{end}}>Review priority</option>
       <option value="confidence"{{if eq .Sort "confidence"}} selected{{end}}>Confidence</option>
       <option value="id"{{if eq .Sort "id"}} selected{{end}}>Pair id</option>
     </select>
   </label>
-  <noscript><button type="submit">Go</button></noscript>
+  <button type="submit">Go</button>
   {{/* UI-11 Cursor round 1: preserve filters when sorting via hidden fields */}}
   {{if .MinConf}}<input type="hidden" name="min" value="{{.MinConf}}">{{end}}
   {{if .Q}}<input type="hidden" name="q" value="{{.Q}}">{{end}}
