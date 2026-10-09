@@ -113,10 +113,10 @@ func nearMissRows(rels []canonical.Relationship, views map[string]instrumentView
 			LogLink:     fmt.Sprintf("/pairs/%d", r.ID),
 			TermGap:     computeTermGap(r.Diff),
 		}
-		// The first veto is shown (vetoes are ordered by severity in the matcher)
+		// The first veto is shown
 		if len(r.Vetoes) > 0 {
 			v := r.Vetoes[0]
-			row.VetoBadge = Badge{Class: "b-veto", Glyph: "✕", Text: v.Code}
+			row.VetoBadge = Badge{Class: "b-danger mono", Glyph: "✕", Text: v.Code}
 			row.VetoField = v.Field
 			row.VetoDetail = v.Detail
 		}

@@ -39,7 +39,7 @@ func TestNearMissCountCells(t *testing.T) {
 
 	wantContains(t, body, `<dl class="strip">`)
 	wantContains(t, body, "<dt>Count:</dt>", "<dd>2 near misses</dd>")
-	wantContains(t, body, "<dt>Stopped by a veto:</dt>", `<dd class="danger">1</dd>`)
+	wantContains(t, body, `<div class="strip-danger">`, "<dt>Stopped by a veto:</dt>", "<dd>1</dd>")
 	wantContains(t, body, "<dt>Fact did not close:</dt>", "<dd>1</dd>")
 }
 
@@ -53,7 +53,7 @@ func TestNearMissVetoBadge(t *testing.T) {
 	body := rec.Body.String()
 
 	// Badge with glyph
-	wantContains(t, body, `<span class="badge b-veto">`, `<span class="g" aria-hidden="true">✕</span>subject_mismatch`)
+	wantContains(t, body, `<span class="badge b-danger mono">`, `<span class="g" aria-hidden="true">✕</span>subject_mismatch`)
 	wantContains(t, body, "<strong>subject</strong>: BTC is not ETH")
 
 	// No-veto case
