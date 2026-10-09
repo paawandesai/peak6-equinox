@@ -31,6 +31,7 @@ type matchesPage struct {
 	RoutableCount int         // Count of routable pairs
 	ImpliesCount  int         // Count of implies pairs
 	RelatedCount  int         // Count of related pairs
+	FlaggedCount  int         // UI-18: Count of pairs flagged for review
 	Truncated     bool
 	// UI-11: filter and sort state
 	Sort        string // "priority", "confidence", "id"
@@ -41,6 +42,8 @@ type matchesPage struct {
 	QText       string // "Title contains "fed"", empty when no filter
 	QHref       string // URL to remove the q filter
 	HasFilters  bool   // true if any filter is active
+	// UI-18: fee estimates for checks key
+	FeeEstimates []FeeEstimate
 }
 
 // pairGroup is every pair of one relationship type, strongest type first.
@@ -83,6 +86,11 @@ type pairRow struct {
 		Word  string
 		Class string
 	} // UI-11 Cursor round 1: {{template "conf"}} expects Value/Word/Class
+	// UI-18: net gap and review flag
+	NetGap        NetGap // fee-adjusted gap at reference size
+	NetGapText    string // "0.02" or "(0.01)" per sign rule, empty when !NetGap.HasValue
+	IsFlagged     bool   // true when net gap >= REVIEW_EDGE_MIN and confidence < 0.90
+	FlaggedReason string // "⚠ review: large edge, low confidence" when IsFlagged
 }
 
 // typeLabels say what each relationship type means (domain.md), in one line.
@@ -189,6 +197,10 @@ func sortPairRows(pairs []pairRow, order string) {
 		})
 	default: // "priority"
 		sort.SliceStable(pairs, func(i, j int) bool {
+			// UI-18: flagged pairs sort first.
+			if pairs[i].IsFlagged != pairs[j].IsFlagged {
+				return pairs[i].IsFlagged // flagged = true sorts before false
+			}
 			// UI-11 Cursor round 1: ReviewPriority first, then veto count desc, then ID.
 			if pairs[i].ReviewPriority != pairs[j].ReviewPriority {
 				return pairs[i].ReviewPriority < pairs[j].ReviewPriority
@@ -277,15 +289,39 @@ func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
 	data.Total = len(rels)
 
 	// UI-11: load quotes for MaxQuoteAge calculation (freshness badge).
+	// UI-18: also used for net gap computation.
 	quotes, err := st.ListQuotes(ctx, round.ID)
 	if err != nil {
 		s.dbError(w, "loading quotes for matches", err)
 		return
 	}
 	quoteTimes := make(map[string]time.Time, len(quotes))
-	for _, q := range quotes {
-		quoteTimes[q.InstrumentID] = q.FetchedAt
+	quoteMap := make(map[string]*canonical.Quote, len(quotes))
+	now := s.now()
+	for i := range quotes {
+		quoteTimes[quotes[i].InstrumentID] = quotes[i].FetchedAt
+		// UI-18: exclude stale quotes from gap computation (AC: "missing/stale quote → no gap").
+		if isQuoteFresh(quotes[i].FetchedAt, now, s.cfg.StaleAfter) {
+			quoteMap[quotes[i].InstrumentID] = &quotes[i].Quote
+		}
+		// Stale quotes stay out of quoteMap, so ComputeNetGap receives nil and returns "no quote: <venue>".
 	}
+
+	// UI-18: load instruments for fee schedules (net gap computation).
+	instrumentRecs, err := st.GetInstruments(ctx, relationshipInstrumentIDs(rels))
+	if err != nil {
+		s.dbError(w, "loading instruments for matches", err)
+		return
+	}
+	instMap := make(map[string]canonical.Instrument, len(instrumentRecs))
+	var instruments []canonical.Instrument
+	for id, rec := range instrumentRecs {
+		instMap[id] = rec.Instrument
+		instruments = append(instruments, rec.Instrument)
+	}
+
+	// UI-18: build fee estimates for the checks key.
+	data.FeeEstimates = BuildFeeEstimates(instruments)
 
 	// groupPairs needs the raw time for pairRow.AsOf (M3-08 Cursor round 2: UI-02 contract keeps Round.AsOf formatted)
 	asOf := round.FinishedAt
@@ -293,7 +329,8 @@ func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
 		asOf = round.StartedAt
 	}
 	// UI-11: groupPairs now accepts sortOrder, qParam, and quoteTimes.
-	data.Groups = groupPairs(rels, views, asOf, sortOrder, qParam, quoteTimes, round.ID)
+	// UI-18: also accepts quoteMap, instMap, and reviewEdgeMin for net gap computation.
+	data.Groups = groupPairs(rels, views, asOf, sortOrder, qParam, quoteTimes, round.ID, quoteMap, instMap, s.cfg.ReviewEdgeMin)
 
 	// UI-03: split groups into Routable (combined, sorted by the chosen order), Implies, Related.
 	// Routable pairs are shown as one combined group, not separated by type.
@@ -304,6 +341,12 @@ func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
 		if typ.Routable() {
 			routablePairs = append(routablePairs, g.Pairs...)
 			data.RoutableCount += len(g.Pairs)
+			// UI-18: count flagged pairs.
+			for _, p := range g.Pairs {
+				if p.IsFlagged {
+					data.FlaggedCount++
+				}
+			}
 		} else if typ == canonical.RelImplies {
 			data.Implies = g
 			data.ImpliesCount = len(g.Pairs)
@@ -343,9 +386,9 @@ func relationshipInstrumentIDs(rels []canonical.Relationship) []string {
 	return ids
 }
 
-// groupPairs buckets rels by type, strongest type first, populates UI-11 fields.
+// groupPairs buckets rels by type, strongest type first, populates UI-11 and UI-18 fields.
 // Sorting by sortOrder happens in handleMatches; filtering is done before calling this.
-func groupPairs(rels []canonical.Relationship, views map[string]instrumentView, asOf time.Time, _ string, _ string, quoteTimes map[string]time.Time, _ int64) []pairGroup {
+func groupPairs(rels []canonical.Relationship, views map[string]instrumentView, asOf time.Time, _ string, _ string, quoteTimes map[string]time.Time, _ int64, quoteMap map[string]*canonical.Quote, instMap map[string]canonical.Instrument, reviewEdgeMin decimal.Decimal) []pairGroup {
 	byType := make(map[canonical.RelationshipType][]pairRow)
 
 	for _, r := range rels {
@@ -413,6 +456,33 @@ func groupPairs(rels []canonical.Relationship, views map[string]instrumentView, 
 		// UI-11 Cursor round 1: build ConfValue for {{template "conf"}}.
 		confWord := ConfidenceWord(r.Confidence)
 		confClass := "w-" + confWord // w-high, w-medium, w-low
+
+		// UI-18: compute net gap (fee-adjusted price difference at reference size).
+		aInst := instMap[r.AID]
+		bInst := instMap[r.BID]
+		aQuote := quoteMap[r.AID]
+		bQuote := quoteMap[r.BID]
+		netGap := ComputeNetGap(aInst, bInst, aQuote, bQuote)
+
+		// UI-18: format net gap with sign rule (D-098 call 2).
+		netGapText := ""
+		if netGap.HasValue {
+			if netGap.Value.IsNegative() {
+				// Unfavourable: show in parentheses.
+				netGapText = "(" + netGap.Value.Abs().StringFixed(2) + ")"
+			} else {
+				// Favourable or zero: show positive.
+				netGapText = netGap.Value.StringFixed(2)
+			}
+		}
+
+		// UI-18: flag for review when net gap >= REVIEW_EDGE_MIN and confidence < 0.90.
+		isFlagged := shouldFlagForReview(netGap, r.Confidence, reviewEdgeMin)
+		flaggedReason := ""
+		if isFlagged {
+			flaggedReason = "Likely a wrong pairing, not an arbitrage."
+		}
+
 		row := pairRow{
 			ID:             r.ID,
 			A:              views[r.AID],
@@ -432,6 +502,10 @@ func groupPairs(rels []canonical.Relationship, views map[string]instrumentView, 
 			ReviewPriority: reviewPriority,
 			TypeBadge:      TypeBadge(r.Type),
 			FreshBadge:     FreshBadge(freshState),
+			NetGap:         netGap,
+			NetGapText:     netGapText,
+			IsFlagged:      isFlagged,
+			FlaggedReason:  flaggedReason,
 		}
 		row.ConfValue.Value = ConfidenceValue(r.Confidence)
 		row.ConfValue.Word = confWord
