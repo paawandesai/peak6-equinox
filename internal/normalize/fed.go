@@ -45,6 +45,7 @@ const (
 	SubjectFedFunds      = "fed_funds_rate"   // the FOMC's target federal funds rate range
 	MetricRateUpperBound = "rate_upper_bound" // the upper bound of the target range after the meeting, in percent
 	MetricRateChange     = "rate_change"      // the signed change of the upper bound at the meeting, in percentage points
+	MetricRateCutCount   = "rate_cut_count"   // the count of rate cuts in a period (KXRATECUTCOUNT only, D-108)
 )
 
 // SourceFederalReserve is the resolution source ID for federalreserve.gov and
@@ -84,6 +85,9 @@ var (
 	// fedDecisionSubtitleRe: KXFEDDECISION subtitle after " — " (venue-published data, D-108).
 	// Matches "Cut 25bps", "Hike >25bps", "Fed maintains rate".
 	fedDecisionSubtitleRe = regexp.MustCompile(`(?i)—\s*(?:(cut|hike)\s+(25|>25)\s?bps|fed\s+maintains\s+rate)\s*$`)
+	// fedCutCountSubtitleRe: KXRATECUTCOUNT subtitle (venue-published data, D-108).
+	// Matches "Exactly N cut[s]" or "Exactly N hike[s]".
+	fedCutCountSubtitleRe = regexp.MustCompile(`(?i)—\s*exactly\s+(\d+)\s+(cut|hike)s?\s*$`)
 	// fedSequenceRe: the proposition is a sequence of decisions.
 	fedSequenceRe = regexp.MustCompile(`(?i)\b(?:next\s+(?:two|three|four|\d)\s+decisions|pause)\b`)
 	// upperBoundRe / lowerBoundRe: which bound of the target range the text resolves on.
@@ -158,6 +162,22 @@ func fedDecisionFromSubtitle(title string) (condition, bool) {
 	return signedChange(direction, comp, magnitude, false), true
 }
 
+// fedCutCountFromSubtitle parses KXRATECUTCOUNT subtitle (venue-published, D-108).
+// Returns (count, direction, true) if matched, else (zero, "", false).
+func fedCutCountFromSubtitle(title string) (decimal.Decimal, string, bool) {
+	m := fedCutCountSubtitleRe.FindStringSubmatch(title)
+	if m == nil {
+		return decimal.Decimal{}, "", false
+	}
+	// m[1] = count ("0", "1", "2", etc.)
+	// m[2] = direction ("cut" or "hike")
+	count, err := decimal.NewFromString(m[1])
+	if err != nil {
+		return decimal.Decimal{}, "", false
+	}
+	return count, strings.ToLower(m[2]), true
+}
+
 func extractFed(in canonical.Instrument) (canonical.Terms, canonical.Quality) {
 	var q canonical.Quality
 	t := canonical.UnknownTerms()
@@ -180,6 +200,28 @@ func extractFed(in canonical.Instrument) (canonical.Terms, canonical.Quality) {
 			return t, q
 		}
 	}
+
+	// KXRATECUTCOUNT: parse cut/hike count from subtitle (venue-published, D-108).
+	// Narrow extractor for this series only; fedCountRe veto remains for general text.
+	if in.Venue == canonical.VenueKalshi && strings.Contains(in.VenueMarketID, "KXRATECUTCOUNT") {
+		if count, direction, ok := fedCutCountFromSubtitle(title); ok {
+			t.Metric = MetricRateCutCount
+			t.Comparator = canonical.ComparatorEQ
+			t.Threshold = &count
+			t.Unit = UnitCount
+			t.Polarity = canonical.PolarityPositive
+			if direction == "hike" {
+				t.Polarity = canonical.PolarityNegative
+			}
+			textDeadline(&t, &q, in.CloseTime, srcs, meetingDatesIn)
+			t.ResolutionSource = namedSource(all, fedSourceNames, nil)
+			if t.ResolutionSource == canonical.Unknown {
+				t.ResolutionSource = SourceFederalReserve
+			}
+			return t, q
+		}
+	}
+
 	level, levelOK, levelAmbiguous := firstStated(srcs, levelConditionsIn, condition.key)
 	change, changeOK, changeAmbiguous := firstStated(srcs, changeConditionsIn, condition.key)
 	switch {
