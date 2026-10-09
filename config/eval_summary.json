@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-10-09T15:55:33Z",
-  "command": "equinox eval --verbose",
+  "generated_at": "2026-10-09T19:41:33Z",
+  "command": "equinox eval",
   "round_id": 2,
   "labels_file": "testdata/golden/labels.yaml",
   "labels": 95,

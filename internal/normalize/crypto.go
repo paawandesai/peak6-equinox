@@ -36,7 +36,6 @@ const (
 const (
 	UnitUSD     = "USD"     // $ amounts
 	UnitPercent = "percent" // percentages and (for fed) percentage points
-	UnitCount   = "count"   // integer counts (e.g., number of rate cuts)
 )
 
 func init() { Register(canonical.CategoryCrypto, extractCrypto) }

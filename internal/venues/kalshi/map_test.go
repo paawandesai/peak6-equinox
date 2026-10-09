@@ -231,6 +231,20 @@ func TestKalshiToInstrument(t *testing.T) {
 	if !ins.CloseTime.IsZero() || !ins.ExpirationTime.IsZero() || ins.Status != canonical.StatusUnknown || len(ins.Title) > maxTitleBytes+len(" — Above 3.25%") {
 		t.Errorf("degraded instrument = %+v", ins)
 	}
+
+	// D-108: settlement_sources appended to rules
+	sources := []settlementSource{
+		{Name: "Democratic National Committee", URL: "https://democrats.org"},
+		{Name: "Associated Press", URL: "https://apnews.com"},
+	}
+	ins, err = toInstrument(good, canonical.CategoryPolitics, sources)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "If above, Yes.\n\nKALSHI_EVENT_SETTLEMENT_SOURCES: Democratic National Committee, Associated Press"
+	if ins.RulesText != want {
+		t.Errorf("rules with settlement_sources = %q, want %q", ins.RulesText, want)
+	}
 }
 
 func TestKalshiMapStatusAndResult(t *testing.T) {
