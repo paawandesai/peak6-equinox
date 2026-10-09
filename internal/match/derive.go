@@ -67,6 +67,10 @@ func derive(a, b canonical.Instrument, vetoes []canonical.Veto, f facts.Set) (*d
 	if hasVeto(vetoes, VetoMetricMismatch) {
 		return deriveWithFacts(a, b, f)
 	}
+	// Try same-metric Fed pairs (both rate_change) with grid rounding (D-109).
+	if d, note := deriveSameMetricFed(a, b, vetoes, f); d != nil || note.reason != "" {
+		return d, note
+	}
 	pa, okA := propositionOf(a.Terms)
 	pb, okB := propositionOf(b.Terms)
 	if !okA || !okB {
