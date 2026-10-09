@@ -55,7 +55,7 @@ func TypeChipClass(t canonical.RelationshipType) string {
 	switch t {
 	case canonical.RelEquivalent, canonical.RelEquivalentGivenFacts:
 		return "chip-ok"
-	case canonical.RelImplies, canonical.RelComplement:
+	case canonical.RelImplies, canonical.RelComplement, canonical.RelComplementGivenFacts:
 		return "chip-info"
 	case canonical.RelRelated:
 		return "chip-warn"
@@ -76,6 +76,8 @@ func TypeBadge(t canonical.RelationshipType) Badge {
 		return Badge{Class: "b-equivalent_given_facts", Glyph: "≡*", Text: string(t)}
 	case canonical.RelComplement:
 		return Badge{Class: "b-complement", Glyph: "¬", Text: string(t)}
+	case canonical.RelComplementGivenFacts:
+		return Badge{Class: "b-complement_given_facts", Glyph: "¬*", Text: string(t)}
 	case canonical.RelImplies:
 		return Badge{Class: "b-implies", Glyph: "⇒", Text: string(t)}
 	case canonical.RelRelated:

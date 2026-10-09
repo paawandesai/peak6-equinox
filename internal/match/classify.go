@@ -121,7 +121,7 @@ func derivedConfidence(a, b canonical.Instrument, d *derivation) decimal.Decimal
 	switch d.typ {
 	case canonical.RelEquivalentGivenFacts:
 		conf = confGivenFactsBase
-	case canonical.RelComplement:
+	case canonical.RelComplement, canonical.RelComplementGivenFacts:
 		conf = confComplementBase
 	default:
 		conf = confImpliesBase
@@ -144,6 +144,8 @@ func derivedExplanation(a, b canonical.Instrument, vetoes []canonical.Veto, d *d
 		head = "equivalent_given_facts: the same payout once the facts are applied"
 	case canonical.RelComplement:
 		head = fmt.Sprintf("complement: YES on %s pays exactly when NO on %s pays", a.ID, b.ID)
+	case canonical.RelComplementGivenFacts:
+		head = fmt.Sprintf("complement_given_facts: YES on %s pays exactly when NO on %s pays, once the facts are applied", a.ID, b.ID)
 	default:
 		from, to := a.ID, b.ID
 		if !d.forward {

@@ -8,21 +8,21 @@ import (
 )
 
 func TestStrengthOrder(t *testing.T) {
-	// architecture.md: equivalent > equivalent_given_facts > complement = implies > related > unrelated.
+	// architecture.md: equivalent > equivalent_given_facts > complement = complement_given_facts = implies > related > unrelated.
 	order := []RelationshipType{RelEquivalent, RelEquivalentGivenFacts, RelComplement, RelRelated, RelUnrelated}
 	for i := 1; i < len(order); i++ {
 		if order[i-1].Strength() <= order[i].Strength() {
 			t.Errorf("%s (%d) not stronger than %s (%d)", order[i-1], order[i-1].Strength(), order[i], order[i].Strength())
 		}
 	}
-	if RelComplement.Strength() != RelImplies.Strength() {
-		t.Error("complement and implies must share a strength")
+	if RelComplement.Strength() != RelImplies.Strength() || RelComplement.Strength() != RelComplementGivenFacts.Strength() {
+		t.Error("complement, complement_given_facts and implies must share a strength")
 	}
 	if RelationshipType("identical").Strength() != 0 || RelationshipType("identical").Valid() {
 		t.Error("unknown type has non-zero strength")
 	}
-	if len(RelationshipTypes()) != 6 {
-		t.Error("RelationshipTypes() must list all six")
+	if len(RelationshipTypes()) != 7 {
+		t.Error("RelationshipTypes() must list all seven")
 	}
 }
 
@@ -65,7 +65,7 @@ func TestCanBecomeNeverUpgradesProperty(t *testing.T) {
 }
 
 func TestRoutable(t *testing.T) {
-	want := map[RelationshipType]bool{RelEquivalent: true, RelEquivalentGivenFacts: true, RelComplement: true}
+	want := map[RelationshipType]bool{RelEquivalent: true, RelEquivalentGivenFacts: true, RelComplement: true, RelComplementGivenFacts: true}
 	for _, rt := range RelationshipTypes() {
 		if rt.Routable() != want[rt] {
 			t.Errorf("%s.Routable() = %v", rt, rt.Routable())

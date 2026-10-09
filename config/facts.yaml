@@ -74,3 +74,21 @@ facts:
       27-28, 2026, December 8-9, 2026 and January 26-27, 2027 FOMC meetings,
       as scheduled on the official calendar. If a meeting is cancelled or
       moved, update this fact and revisit the golden labels that cite it.
+
+  # Historical fact for golden label row 19 (D-107): no Fed rate cuts occurred
+  # between January 1 and February 26, 2026. This fact closes the gap between
+  # Kalshi KXRATECUT-26DEC31 ("cuts at least once between Feb 26 and Dec 31, 2026")
+  # and Polymarket "no Fed rate cuts in 2026" (all of 2026), making them strict
+  # complements. The only change in 2026 was the September 17 hike (25 bps, to 3.75-4.00%).
+  - id: fed_no_cut_2026_jan1_feb26
+    value: "true"
+    source: https://www.federalreserve.gov/monetarypolicy/openmarket.htm
+    as_of: 2026-10-09
+    notes: >-
+      Boolean (string "true"). The Federal Reserve did not cut rates between
+      January 1, 2026 and February 26, 2026. Verified from the Open Market
+      Operations history: the only 2026 change before Feb 26 was a 25 bps hike
+      on September 17, 2026 (effective date). This is settled history, not a
+      forward assumption. Used for golden label row 19 (Kalshi KXRATECUT-26DEC31
+      vs Polymarket "no Fed rate cuts in 2026") to establish that the two contracts
+      are strict complements.

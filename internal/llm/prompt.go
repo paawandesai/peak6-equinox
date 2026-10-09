@@ -44,13 +44,14 @@ RELATIONSHIP TYPES (strongest first):
 - "equivalent": YES on A and YES on B pay the same in every reachable world: same proposition, same resolution window (within tolerance), same or documented-identical resolution source, same edge-case handling.
 - "equivalent_given_facts": equivalent once a stated public fact is applied (for example the current Fed upper bound).
 - "complement": YES on A pays exactly when NO on B pays.
+- "complement_given_facts": complement once a stated public fact is applied.
 - "implies": A=YES guarantees B=YES but not the reverse.
 - "related": same event, but a different payout.
 - "unrelated": everything else.
 When in doubt, choose the weaker type. A wrong "equivalent" is the worst possible answer.
 
 OUTPUT: answer with one JSON object and nothing else (no prose, no markdown), with exactly these keys and no others:
-{"relationship": "<one of the six types>", "differing_fields": ["<term field names that differ, e.g. threshold, deadline, resolution_source>"], "confidence": <number from 0 to 1>, "evidence": ["<up to 3 verbatim quotes from the data, each at most 200 characters>"]}`
+{"relationship": "<one of the seven types>", "differing_fields": ["<term field names that differ, e.g. threshold, deadline, resolution_source>"], "confidence": <number from 0 to 1>, "evidence": ["<up to 3 verbatim quotes from the data, each at most 200 characters>"]}`
 
 // Prompt is a complete request to the model: the fixed system prompt and the
 // user turn holding the delimited data blocks.

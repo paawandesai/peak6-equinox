@@ -82,10 +82,10 @@ func runGoldenDraft(ctx context.Context, args []string, stdout io.Writer) error 
 	by := cands.CountByType()
 	logger.Info("golden draft", "round", cands.RoundID, "pairs", pairs, "candidates", len(cands.Candidates), "out", *out)
 	_, err = fmt.Fprintf(stdout, "round %d: %d cross-venue pairs compared, %d candidates written to %s\n"+
-		"  equivalent %d, equivalent_given_facts %d, complement %d, implies %d, related %d, unrelated %d\n"+
+		"  equivalent %d, equivalent_given_facts %d, complement %d, complement_given_facts %d, implies %d, related %d, unrelated %d\n"+
 		"  next: the human confirms each pair's type in testdata/golden/labels.yaml (Tier 3), then run `equinox eval`\n",
 		cands.RoundID, pairs, len(cands.Candidates), *out,
-		by[canonical.RelEquivalent], by[canonical.RelEquivalentGivenFacts], by[canonical.RelComplement], by[canonical.RelImplies],
+		by[canonical.RelEquivalent], by[canonical.RelEquivalentGivenFacts], by[canonical.RelComplement], by[canonical.RelComplementGivenFacts], by[canonical.RelImplies],
 		by[canonical.RelRelated], by[canonical.RelUnrelated])
 	return err
 }

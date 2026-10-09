@@ -90,6 +90,7 @@ var typeLabels = map[canonical.RelationshipType]string{
 	canonical.RelEquivalent:           "Same bet: both contracts pay on the same proposition.",
 	canonical.RelEquivalentGivenFacts: "Same bet once a documented external fact is applied.",
 	canonical.RelComplement:           "Opposite sides: YES on one is NO on the other.",
+	canonical.RelComplementGivenFacts: "Opposite sides once a documented external fact is applied.",
 	canonical.RelImplies:              "One resolving YES forces the other YES.",
 	canonical.RelRelated:              "Near miss: same subject, but a term differs or a veto applies.",
 	canonical.RelUnrelated:            "Compared and found unrelated.",

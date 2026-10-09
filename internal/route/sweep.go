@@ -49,7 +49,7 @@ func Sweep(order canonical.Order, candidates []canonical.Candidate, cfg Config) 
 		// For complement relationships, evaluate the opposite outcome.
 		route := RouteDirect
 		evalOutcome := order.Outcome
-		if cand.Relationship != nil && cand.Relationship.Type == canonical.RelComplement {
+		if cand.Relationship != nil && (cand.Relationship.Type == canonical.RelComplement || cand.Relationship.Type == canonical.RelComplementGivenFacts) {
 			route = RouteComplement
 			evalOutcome = complementOutcome(order.Outcome)
 		}

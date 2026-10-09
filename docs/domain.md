@@ -31,7 +31,7 @@
 | **Golden set** | Human-confirmed labels on real pairs, used for precision and recall |
 | **Settlement back-test** | Running the matcher on resolved contracts to see whether "equivalent" pairs settled the same |
 
-## Relationship types (D-017)
+## Relationship types (D-017, D-107)
 
 These are listed strongest first. The LLM may only move a pair down this list (D-022).
 
@@ -40,6 +40,7 @@ These are listed strongest first. The LLM may only move a pair down this list (D
 | `equivalent` | Buying YES on A and YES on B pays the same in every reachable world: same proposition, same resolution window (within tolerance), same or documented-identical source, same edge-case handling |
 | `equivalent_given_facts` | `equivalent` once a stated fact is applied (e.g. "increase 25+ bps at the Oct meeting" ≡ "upper bound above 4.25% after Oct" given `fed_upper_bound=4.25%`) |
 | `complement` | YES on A pays exactly when NO on B pays |
+| `complement_given_facts` | `complement` once a stated fact is applied (e.g. "cut before 2027" ≡ "no cuts in 2026" given the fact that no cuts occurred Jan 1–Feb 26, 2026) |
 | `implies` | A=YES guarantees B=YES, but not the reverse (e.g. BTC > 120k ⇒ BTC > 110k on the same date and source) |
 | `related` | Same event, but a different payout. This includes outcomes that depend on a prior event (e.g. Polymarket's December buckets depend on October's decision). **Never routed.** |
 | `unrelated` | Everything else |

@@ -78,10 +78,10 @@ type matchSummary struct {
 
 func (s matchSummary) String() string {
 	return fmt.Sprintf("round %d: %d instruments, %d cross-venue pairs compared in %s\n"+
-		"  equivalent %d, equivalent_given_facts %d, complement %d, implies %d, related %d (near misses stored %d, other %d not stored), unrelated %d\n"+
+		"  equivalent %d, equivalent_given_facts %d, complement %d, complement_given_facts %d, implies %d, related %d (near misses stored %d, other %d not stored), unrelated %d\n"+
 		"  relationships stored %d, decision-log entries %d\n",
 		s.RoundID, s.Instruments, s.Pairs, s.Duration.Round(time.Millisecond),
-		s.ByType[canonical.RelEquivalent], s.ByType[canonical.RelEquivalentGivenFacts], s.ByType[canonical.RelComplement], s.ByType[canonical.RelImplies],
+		s.ByType[canonical.RelEquivalent], s.ByType[canonical.RelEquivalentGivenFacts], s.ByType[canonical.RelComplement], s.ByType[canonical.RelComplementGivenFacts], s.ByType[canonical.RelImplies],
 		s.ByType[canonical.RelRelated], s.ByType[canonical.RelRelated]-s.Skipped, s.Skipped,
 		s.ByType[canonical.RelUnrelated], s.Stored, s.Logged)
 }
@@ -130,7 +130,7 @@ func matchRound(ctx context.Context, st *store.Store, roundID int64, storeAll bo
 	sum.Duration = time.Since(start)
 	logger.Info("match finished", "round", round.ID, "instruments", sum.Instruments, "pairs", sum.Pairs,
 		"equivalent", sum.ByType[canonical.RelEquivalent], "equivalent_given_facts", sum.ByType[canonical.RelEquivalentGivenFacts],
-		"complement", sum.ByType[canonical.RelComplement], "implies", sum.ByType[canonical.RelImplies],
+		"complement", sum.ByType[canonical.RelComplement], "complement_given_facts", sum.ByType[canonical.RelComplementGivenFacts], "implies", sum.ByType[canonical.RelImplies],
 		"related", sum.ByType[canonical.RelRelated], "unrelated", sum.ByType[canonical.RelUnrelated],
 		"stored", sum.Stored, "facts", fs.Len(), "duration_ms", sum.Duration.Milliseconds())
 	return sum, nil

@@ -18,6 +18,7 @@ const (
 	RelEquivalent           RelationshipType = "equivalent"
 	RelEquivalentGivenFacts RelationshipType = "equivalent_given_facts"
 	RelComplement           RelationshipType = "complement"
+	RelComplementGivenFacts RelationshipType = "complement_given_facts"
 	RelImplies              RelationshipType = "implies"
 	RelRelated              RelationshipType = "related"
 	RelUnrelated            RelationshipType = "unrelated"
@@ -25,11 +26,11 @@ const (
 
 // RelationshipTypes lists every type, strongest first.
 func RelationshipTypes() []RelationshipType {
-	return []RelationshipType{RelEquivalent, RelEquivalentGivenFacts, RelComplement, RelImplies, RelRelated, RelUnrelated}
+	return []RelationshipType{RelEquivalent, RelEquivalentGivenFacts, RelComplement, RelComplementGivenFacts, RelImplies, RelRelated, RelUnrelated}
 }
 
 // Strength orders types for the downgrade-only guard (architecture.md):
-// equivalent (5) > equivalent_given_facts (4) > complement = implies (3) >
+// equivalent (5) > equivalent_given_facts (4) > complement = complement_given_facts = implies (3) >
 // related (2) > unrelated (1). An invalid type has strength 0.
 func (t RelationshipType) Strength() int {
 	switch t {
@@ -37,7 +38,7 @@ func (t RelationshipType) Strength() int {
 		return 5
 	case RelEquivalentGivenFacts:
 		return 4
-	case RelComplement, RelImplies:
+	case RelComplement, RelComplementGivenFacts, RelImplies:
 		return 3
 	case RelRelated:
 		return 2
@@ -63,7 +64,7 @@ func (t RelationshipType) CanBecome(next RelationshipType) bool {
 // Routable reports whether pairs of this type are routing candidates
 // (domain.md business rule 3).
 func (t RelationshipType) Routable() bool {
-	return t == RelEquivalent || t == RelEquivalentGivenFacts || t == RelComplement
+	return t == RelEquivalent || t == RelEquivalentGivenFacts || t == RelComplement || t == RelComplementGivenFacts
 }
 
 // Method records how a relationship was decided.

@@ -20,13 +20,14 @@ Sections: [definition](#1-the-definition) · [methodology](#2-methodology-block-
 
 ### Relationship types
 
-The six types are defined in [domain.md § Relationship types](domain.md#relationship-types-d-017) and encoded as `canonical.RelationshipType`. Strongest first, which is also the only direction the LLM verifier may move a pair (D-022):
+The seven types are defined in [domain.md § Relationship types](domain.md#relationship-types-d-017) and encoded as `canonical.RelationshipType`. Strongest first, which is also the only direction the LLM verifier may move a pair (D-022):
 
 | Type | Payout meaning | Routable? | How the matcher reaches it |
 |---|---|---|---|
 | `equivalent` | YES on A pays exactly when YES on B pays | yes | no veto fires |
 | `equivalent_given_facts` | `equivalent` once a stated external fact is applied | yes | the Fed level-vs-change rule closes the gap (§4, §10) |
 | `complement` | YES on A pays exactly when **NO** on B pays | yes (buy B's NO) | set algebra: same interval with opposite polarity, or two intervals that partition the line |
+| `complement_given_facts` | `complement` once a stated external fact is applied | yes (buy B's NO) | not yet emitted by matcher (D-107 future work); can be loaded from golden labels |
 | `implies` | YES on A guarantees YES on B, not the reverse | no | set algebra: strict containment, in either direction |
 | `related` | Same event, different payout; includes outcomes conditional on a prior event | **never** | any veto the derivations cannot explain away |
 | `unrelated` | Everything else | no | fails blocking |

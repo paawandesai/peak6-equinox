@@ -42,6 +42,8 @@ var buckets = []bucket{
 		accept: isType(canonical.RelEquivalentGivenFacts), less: byConfidence, weight: 2},
 	{name: "complement", why: "rules say complement: YES on A should pay exactly when NO on B pays",
 		accept: isType(canonical.RelComplement), less: byConfidence, weight: 1},
+	{name: "complement_given_facts", why: "rules say complement given a fact: YES on A should pay exactly when NO on B pays, once facts are applied",
+		accept: isType(canonical.RelComplementGivenFacts), less: byConfidence, weight: 1},
 	{name: "implies", why: "rules say implies: YES on one side should force YES on the other",
 		accept: isType(canonical.RelImplies), less: byConfidence, weight: 1},
 	{name: "near_miss", why: "related near miss: thresholds within 0.1 % or a fact was consulted; confirm it is not equivalent",

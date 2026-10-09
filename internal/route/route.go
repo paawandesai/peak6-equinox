@@ -153,7 +153,7 @@ func Route(o canonical.Order, target canonical.Candidate, partners []canonical.C
 	for _, p := range partners {
 		// For complement relationships, the outcome checked is opposite.
 		// For other relationships (equivalent, equivalent_given_facts), use the same outcome.
-		isComplement := p.Relationship != nil && p.Relationship.Type == canonical.RelComplement
+		isComplement := p.Relationship != nil && (p.Relationship.Type == canonical.RelComplement || p.Relationship.Type == canonical.RelComplementGivenFacts)
 		checkSide := o.Side
 		checkOutcome := o.Outcome
 		routeType := RouteDirect
