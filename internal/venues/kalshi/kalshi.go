@@ -150,7 +150,7 @@ func (a *Adapter) eventInstruments(endpoint string, ev event, cat canonical.Cate
 		if m.isMVE() {
 			continue
 		}
-		i, err := toInstrument(m, cat)
+		i, err := toInstrument(m, cat, ev.settlementSources)
 		if err != nil {
 			skips = append(skips, skip{ticker: m.Ticker, reason: err.Error()})
 			continue
@@ -314,7 +314,7 @@ func settledFrom(ms []market, cat canonical.Category) ([]canonical.Settled, []sk
 		if m.isMVE() {
 			continue
 		}
-		ins, err := toInstrument(m, cat)
+		ins, err := toInstrument(m, cat, nil) // settled markets: no event-level data
 		if err != nil {
 			skips = append(skips, skip{ticker: m.Ticker, reason: err.Error()})
 			continue
