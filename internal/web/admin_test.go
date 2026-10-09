@@ -186,11 +186,11 @@ func TestAdminIndexRendersRounds(t *testing.T) {
 		t.Fatalf("status %d: %s", rec.Code, rec.Body.String())
 	}
 	body := rec.Body.String()
-	// UI-08: table uses data-label attributes, health strip has DB size
+	// UI-17: table uses data-label attributes, status is badge, health table
 	for _, want := range []string{
-		"Last 2 rounds", `rowspan="2">partial`, "running", "2026-10-06 22:00:00", "41.2s", "955", "400",
+		"Last 2 rounds", `rowspan="2"`, "partial", "running", "2026-10-06 22:00:00", "41.2s", "955", "400",
 		"instruments: HTTP status 500 &lt;b&gt;", "kalshi", "polymarket", "Database size",
-		"Run one fetch round now",
+		"Run one fetch round now", `class="badge b-partial"`, `class="health"`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("body lacks %q", want)
