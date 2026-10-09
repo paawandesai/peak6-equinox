@@ -155,6 +155,13 @@ func extractFed(in canonical.Instrument) (canonical.Terms, canonical.Quality) {
 	}
 	textDeadline(&t, &q, in.CloseTime, srcs, meetingDatesIn)
 	t.ResolutionSource = namedSource(all, fedSourceNames, nil)
+
+	// D-109: KXFEDDECISION and KXRATECUTCOUNT markets resolve based on the Fed's official statement,
+	// even when the rules text doesn't explicitly mention federalreserve.gov.
+	if t.ResolutionSource == canonical.Unknown && (strings.HasPrefix(in.VenueMarketID, "KXFEDDECISION-") || strings.HasPrefix(in.VenueMarketID, "KXRATECUTCOUNT-")) {
+		t.ResolutionSource = SourceFederalReserve
+	}
+
 	return t, q
 }
 
