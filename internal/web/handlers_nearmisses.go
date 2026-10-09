@@ -28,11 +28,11 @@ type nearMissesPage struct {
 
 // nearMissGroup groups near-miss rows by the veto code that fired.
 type nearMissGroup struct {
-	Code        string          // veto code, or "fact_did_not_close"
-	Count       int             // rows in this group
-	Description string          // one-line description of this failure reason
+	Code        string // veto code, or "fact_did_not_close"
+	Count       int    // rows in this group
+	Description string // one-line description of this failure reason
 	Rows        []nearMissRow
-	Anchor      string          // HTML id for this section
+	Anchor      string // HTML id for this section
 }
 
 // nearMissRow is one stored `related` pair with the veto(s) that blocked it.
@@ -40,13 +40,13 @@ type nearMissRow struct {
 	ID          int64
 	A, B        instrumentView
 	Confidence  string
-	VetoBadge   Badge           // badge for the veto that fired
-	VetoField   string          // field name (e.g., "subject")
-	VetoDetail  string          // detail text (e.g., "BTC is not ETH")
-	TermGap     string          // how close (numeric difference or time distance, or "—")
+	VetoBadge   Badge  // badge for the veto that fired
+	VetoField   string // field name (e.g., "subject")
+	VetoDetail  string // detail text (e.g., "BTC is not ETH")
+	TermGap     string // how close (numeric difference or time distance, or "—")
 	Facts       []canonical.FactUse
 	Explanation string
-	LogLink     string          // link to the pair's verdict entry
+	LogLink     string // link to the pair's verdict entry
 }
 
 // handleNearMisses answers GET /near-misses: every `related` pair stored for
