@@ -22,15 +22,15 @@ const maxLogRows = 200
 // logPage is the data for log.html (US-08, FR-21).
 type logPage struct {
 	page
-	Kind          string // active filter, or "" for every kind
-	Kinds         []logKindOption
-	Group         string // active group: "", "venue", "staleness", "label"
-	Groups        []logGroupOption
-	Entries       []logEntryView
+	Kind           string // active filter, or "" for every kind
+	Kinds          []logKindOption
+	Group          string // active group: "", "venue", "staleness", "label"
+	Groups         []logGroupOption
+	Entries        []logEntryView
 	GroupedEntries []logEntryGroup // When Group is set, entries grouped by criterion (UI-15)
-	Outliers      *logOutliers // For routing entries only (UI-15)
-	Limit         int
-	Newest        time.Time // Raw UTC time of the newest entry
+	Outliers       *logOutliers    // For routing entries only (UI-15)
+	Limit          int
+	Newest         time.Time // Raw UTC time of the newest entry
 }
 
 type logEntryGroup struct {
@@ -67,12 +67,12 @@ type logEntryView struct {
 	ID            int64
 	At            time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
 	Kind          string
-	KindChipClass string         // CSS chip class for the kind (UI-06)
+	KindChipClass string // CSS chip class for the kind (UI-06)
 	Ref           string
 	Link          string
-	LinkLabel     string         // Deprecated: use About instead (UI-06)
-	About         string         // Human-readable "about" text (UI-06)
-	AboutTitle    string         // Short title for the About link (UI-15)
+	LinkLabel     string // Deprecated: use About instead (UI-06)
+	About         string // Human-readable "about" text (UI-06)
+	AboutTitle    string // Short title for the About link (UI-15)
 	Summary       string
 	// Routing-specific fields (UI-15), empty for other kinds
 	Routing *routingLogView
@@ -81,18 +81,18 @@ type logEntryView struct {
 // routingLogView holds enriched data for a routing decision log entry (UI-15).
 // Populated from the stored decision when kind=routing.
 type routingLogView struct {
-	PairID         int64
-	PairLink       string
-	Side           string
-	Size           string
-	Type           string
-	Outcome        Badge
-	Venues         string // Comma-separated venue names
-	AverageAllIn   string
-	SavingVsBest   string // Sign-rule formatted: positive or (parentheses)
-	HasInputs      bool   // True if decision has stored inputs (UI-25)
-	MaxQuoteAge    *stampView
-	Label          string // Relationship type at decision time (UI-25)
+	PairID       int64
+	PairLink     string
+	Side         string
+	Size         string
+	Type         string
+	Outcome      Badge
+	Venues       string // Comma-separated venue names
+	AverageAllIn string
+	SavingVsBest string // Sign-rule formatted: positive or (parentheses)
+	HasInputs    bool   // True if decision has stored inputs (UI-25)
+	MaxQuoteAge  *stampView
+	Label        string // Relationship type at decision time (UI-25)
 }
 
 // stampView holds the data for rendering a freshness stamp (UI-15).
@@ -220,7 +220,7 @@ func (s *Server) newLogEntryView(e store.LogEntry, tz string) logEntryView {
 }
 
 // parseRoutingLogPayload extracts routing-specific view data from an enriched log entry (UI-15).
-func (s *Server) parseRoutingLogPayload(e store.LogEntry, tz string) *routingLogView {
+func (s *Server) parseRoutingLogPayload(e store.LogEntry, _ string) *routingLogView {
 	var payload struct {
 		PairID        int64              `json:"pair_id"`
 		Decision      canonical.Decision `json:"decision"`
@@ -296,14 +296,6 @@ func (s *Server) parseRoutingLogPayload(e store.LogEntry, tz string) *routingLog
 		MaxQuoteAge:  maxQuoteAge,
 		Label:        label,
 	}
-}
-
-// findPairIDForTarget attempts to find the pair ID for a given target instrument (UI-15).
-// Returns 0 if not found. This is a best-effort lookup; failures are silent.
-func (s *Server) findPairIDForTarget(targetID string) (int64, error) {
-	// For now, return 0 to avoid complex query. The link will use decision ID instead.
-	// TODO: Add store method to lookup pair by instrument ID if needed
-	return 0, nil
 }
 
 // logKindChipClass maps a decision-log kind to its CSS chip class (UI-06, design.md § 4).
@@ -438,7 +430,7 @@ func (s *Server) enrichRoutingEntries(ctx context.Context, st *store.Store, entr
 }
 
 // buildRoutingLogPayload creates an enriched payload for a routing log entry (UI-15).
-func (s *Server) buildRoutingLogPayload(rd store.RoutingDecision, currentRoundID int64, pairID int64) (json.RawMessage, error) {
+func (s *Server) buildRoutingLogPayload(rd store.RoutingDecision, _ int64, pairID int64) (json.RawMessage, error) {
 	d := rd.Decision
 
 	// Compute outcome
@@ -522,25 +514,25 @@ func (s *Server) buildRoutingLogPayload(rd store.RoutingDecision, currentRoundID
 
 	// Build enriched payload
 	payload := struct {
-		PairID       int64              `json:"pair_id"`
-		Decision     canonical.Decision `json:"decision"`
-		OutcomePhrase string            `json:"outcome_phrase"`
-		OutcomeKey   string             `json:"outcome_key"`
-		Venues       []string           `json:"venues"`
-		AverageAllIn string             `json:"average_all_in"`
-		Saving       string             `json:"saving"`
-		HasInputs    bool               `json:"has_inputs"`
-		MaxQuoteAge  int64              `json:"max_quote_age_seconds,omitempty"`
-		OldestFetch  *time.Time         `json:"oldest_fetch,omitempty"`
+		PairID        int64              `json:"pair_id"`
+		Decision      canonical.Decision `json:"decision"`
+		OutcomePhrase string             `json:"outcome_phrase"`
+		OutcomeKey    string             `json:"outcome_key"`
+		Venues        []string           `json:"venues"`
+		AverageAllIn  string             `json:"average_all_in"`
+		Saving        string             `json:"saving"`
+		HasInputs     bool               `json:"has_inputs"`
+		MaxQuoteAge   int64              `json:"max_quote_age_seconds,omitempty"`
+		OldestFetch   *time.Time         `json:"oldest_fetch,omitempty"`
 	}{
-		PairID:       pairID,
-		Decision:     d,
+		PairID:        pairID,
+		Decision:      d,
 		OutcomePhrase: phrase,
-		OutcomeKey:   outcomeKey,
-		Venues:       venues,
-		AverageAllIn: formatPrice(avgAllIn),
-		Saving:       savingStr,
-		HasInputs:    hasInputs,
+		OutcomeKey:    outcomeKey,
+		Venues:        venues,
+		AverageAllIn:  formatPrice(avgAllIn),
+		Saving:        savingStr,
+		HasInputs:     hasInputs,
 	}
 
 	if hasInputs && maxQuoteAge > 0 {
@@ -562,7 +554,7 @@ func formatSaving(saving decimal.Decimal) string {
 }
 
 // computeOutliers finds the worst saving and oldest input among routing entries (UI-15).
-func (s *Server) computeOutliers(entries []logEntryView, tz string) *logOutliers {
+func (s *Server) computeOutliers(entries []logEntryView, _ string) *logOutliers {
 	var worstSaving *outlierEntry
 	var oldestInput *outlierEntry
 	worstSavingValue := decimal.RequireFromString("999999") // Start with a very high value
