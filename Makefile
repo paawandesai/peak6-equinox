@@ -146,13 +146,13 @@ ANTHROPIC_SECRET = $$(gcloud secrets versions list equinox-anthropic-key --proje
 # staging deploy pins traffic to a fixed revision, and later deploys keep that pin.
 deploy: ## Deploy prod to Cloud Run (needs gcloud credentials)
 	gcloud run deploy $(SERVICE) $(DEPLOY_FLAGS) \
-	  --set-env-vars=APP_ENV=prod,LLM_ENABLED=false,ADMIN_USER=admin \
+	  --update-env-vars=APP_ENV=prod,LLM_ENABLED=false,ADMIN_USER=admin,APP_VERSION=$$(git rev-parse HEAD),APP_BUILD_TIME=$$(date -u +%Y-%m-%dT%H:%M:%SZ) \
 	  --set-secrets=DATABASE_URL=equinox-database-url:latest,$(APP_SECRETS)$(ANTHROPIC_SECRET)
 	gcloud run services update-traffic $(SERVICE) --project=$(GCP_PROJECT) --region=$(GCP_REGION) --to-latest --quiet
 
 deploy-staging: ## Deploy a no-traffic revision tagged staging (needs gcloud credentials)
 	gcloud run deploy $(SERVICE) $(DEPLOY_FLAGS) --tag=staging --no-traffic \
-	  --set-env-vars=APP_ENV=staging,LLM_ENABLED=false,ADMIN_USER=admin \
+	  --update-env-vars=APP_ENV=staging,LLM_ENABLED=false,ADMIN_USER=admin,APP_VERSION=$$(git rev-parse HEAD),APP_BUILD_TIME=$$(date -u +%Y-%m-%dT%H:%M:%SZ) \
 	  --set-secrets=DATABASE_URL=equinox-staging-database-url:latest,$(APP_SECRETS)$(ANTHROPIC_SECRET)
 
 review-window-on: ## Set min-instances=1 for the review window (M4-04, D-101)

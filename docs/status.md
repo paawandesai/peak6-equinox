@@ -158,7 +158,7 @@ Paawan kept these four in the operator chat on 2026-10-07 at 8:38 PM CT, after t
 
 | ID | Status | | ID | Status |
 |---|---|---|---|---|
-| FR-01 | done (M1) | | NFR-01 | partial (M1 web clarity) |
+| FR-01 | done (M1) | | NFR-01 | partial (M1 web clarity; #80 /version + p95 baseline) |
 | FR-02 | done (M1) | | NFR-02 | partial (M1 quote cap / round timing) |
 | FR-03 | done (M1) | | NFR-03 | done (M1) |
 | FR-04 | done (M1) | | NFR-04 | partial (M1 e2e path) |
