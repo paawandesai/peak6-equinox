@@ -40,6 +40,8 @@ type Config struct {
 	MinBookDepth decimal.Decimal
 	// BasisPenaltyMult is the basis-risk penalty multiplier (BASIS_PENALTY_MULTIPLIER).
 	BasisPenaltyMult decimal.Decimal
+	// ReviewEdgeMin is the minimum net gap to flag for review (REVIEW_EDGE_MIN, UI-18).
+	ReviewEdgeMin decimal.Decimal
 	// StaleRoundWarnMinutes is the stale-round warning threshold (STALE_ROUND_WARN_MINUTES).
 	StaleRoundWarnMinutes int
 }
