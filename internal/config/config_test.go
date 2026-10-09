@@ -53,6 +53,7 @@ func TestLoadDefaults(t *testing.T) {
 		{"SkewMax", c.SkewMax, 30 * time.Second},
 		{"MinRouteConfidence", c.MinRouteConfidence.String(), "0.9"},
 		{"MinBookDepth", c.MinBookDepth.String(), "1"},
+		{"ReviewEdgeMin", c.ReviewEdgeMin.String(), "0.02"},
 		{"PublicRateLimitPerMin", c.PublicRateLimitPerMin, 60},
 		{"LLMEnabled", c.LLMEnabled, false},
 		{"AnthropicAPIKey", c.AnthropicAPIKey, ""},
