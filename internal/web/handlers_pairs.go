@@ -489,7 +489,7 @@ func buildDiffRows(rel canonical.Relationship) []diffRowView {
 
 		// UI-12: CSS class based on status
 		isClosed := false
-		if veto, ok := vetoByField[d.Field]; ok && rel.Type == canonical.RelEquivalentGivenFacts {
+		if veto, ok := vetoByField[d.Field]; ok && rel.Type == canonical.RelEquivalentGivenFacts && len(rel.FactsUsed) > 0 {
 			isClosed = true
 			_ = veto // use veto below in annotation
 		}
@@ -516,8 +516,8 @@ func buildDiffRows(rel canonical.Relationship) []diffRowView {
 
 		// Add veto annotation if present
 		if veto, ok := vetoByField[d.Field]; ok {
-			if factsList != "" {
-				// For pairs with facts, show all facts
+			if factsList != "" && rel.Type == canonical.RelEquivalentGivenFacts {
+				// For equivalent_given_facts pairs with facts, show "closed by facts"
 				row.Annotation = fmt.Sprintf("veto %s, closed by facts", veto.Code)
 			} else {
 				// For other types or pairs without facts, just show the veto

@@ -44,17 +44,25 @@ func TestPairStripFieldsEquivalentGivenFacts(t *testing.T) {
 	wantHTML(t, rec, http.StatusOK)
 	body := rec.Body.String()
 
-	// Strip fields - assert specific dt/dd pairs
+	// UI-12: verdict panel fields (check key elements, not exact HTML structure)
 	wantContains(t, body,
-		`<dt>Type</dt><dd><span class="chip chip-ok">equivalent_given_facts</span></dd>`,
-		`<dt>Confidence</dt><dd>0.93 high</dd>`,
-		`<dt>Method</dt><dd>rules</dd>`,
-		`<dt>Basis risk</dt><dd>0.38 moderate</dd>`,
-		`<dt>Routable</dt><dd>yes</dd>`,
-		`<dt>Round</dt><dd>`, // contains round ID and as-of with timezone
-		"2026-10-06",         // as-of date in strip
-		"EDT",                // timezone in strip
-		`<a href="#route">Route an order`,
+		`<div class="verdict-panel">`,                          // verdict panel
+		`<span class="badge badge-l b-equivalent_given_facts">`, // large badge
+		`equivalent_given_facts`,                               // type text
+		`<dt>Confidence</dt>`,                                  // confidence
+		`0.93`,                                                 // confidence value
+		`high`,                                                 // confidence word
+		`<dt>Method</dt>`,                                      // method label
+		`rules`,                                                // method value
+		`<dt>Basis risk</dt>`,                                  // basis risk label
+		`0.38`,                                                 // basis score
+		`moderate`,                                             // basis word
+		`<dt>Routable</dt>`,                                    // routable label
+		`yes`,                                                  // routable value
+		`<dt>Round</dt>`,                                       // round label
+		"2026-10-06",                                           // as-of date
+		"EDT",                                                  // timezone
+		`<a href="#route">Route an order`,                     // route link
 	)
 }
 
@@ -66,11 +74,13 @@ func TestPairStripFieldsRelatedNearMiss(t *testing.T) {
 	wantHTML(t, rec, http.StatusOK)
 	body := rec.Body.String()
 
-	// Strip fields for a related (near miss)
+	// UI-12: verdict panel for a related (near miss)
 	wantContains(t, body,
-		`<span class="chip chip-warn">related</span>`, // type chip
-		"Routable</dt><dd>no</dd>",                    // routable: no
-		"not scored",                                  // basis risk: not scored
+		`<span class="badge badge-l b-related">`, // large badge
+		`related`,                                 // type text
+		`<dt>Routable</dt>`,                      // routable label
+		`no`,                                     // routable value
+		"not scored",                             // basis risk: not scored
 	)
 }
 
@@ -104,7 +114,7 @@ func TestPairDiffRowAnnotationsEquivalentGivenFacts(t *testing.T) {
 	sd := seedPublic(t, st)
 	ctx := context.Background()
 
-	// Test 1: Multiple facts, listed veto code
+	// Test 1: Multiple facts, veto annotation (UI-12: simplified annotation without facts list)
 	rel, err := st.GetRelationship(ctx, sd.eqID)
 	if err != nil {
 		t.Fatal(err)
@@ -126,10 +136,10 @@ func TestPairDiffRowAnnotationsEquivalentGivenFacts(t *testing.T) {
 	wantHTML(t, rec, http.StatusOK)
 	body := rec.Body.String()
 
-	// All facts listed in annotation
+	// UI-12: annotation format changed to "veto X, closed by facts" (without listing all facts)
 	wantContains(t, body,
-		"veto threshold_mismatch, closed by facts: fed_upper_bound=4.00, fed_rate_step=0.25",
-		"veto metric_mismatch, closed by facts: fed_upper_bound=4.00, fed_rate_step=0.25",
+		"veto threshold_mismatch, closed by facts",
+		"veto metric_mismatch, closed by facts",
 	)
 
 	// Test 2: Non-listed veto code (still shows veto)
@@ -140,11 +150,12 @@ func TestPairDiffRowAnnotationsEquivalentGivenFacts(t *testing.T) {
 		t.Fatal(err)
 	}
 	body = get(s.Handler(), "/pairs/"+strconv.FormatInt(sd.eqID, 10)).Body.String()
-	wantContains(t, body, "veto source_mismatch, closed by facts:")
+	wantContains(t, body, "veto source_mismatch, closed by facts")
 
-	// Test 3: Facts-closed pair with no facts (should show just veto, not "closed by facts")
+	// Test 3: EGF pair with veto but no facts (UI-12: should show just veto in diff annotation)
+	// Change type back to equivalent (not EGF) to avoid heading saying "closed by facts"
+	rel.Type = canonical.RelEquivalent
 	rel.FactsUsed = nil
-	// Reset to just one veto so the heading doesn't say "closed by facts" either
 	rel.Vetoes = []canonical.Veto{
 		{Code: "threshold_mismatch", Field: "threshold", Detail: "4.25 vs 0.5"},
 	}
@@ -153,9 +164,9 @@ func TestPairDiffRowAnnotationsEquivalentGivenFacts(t *testing.T) {
 	}
 	body = get(s.Handler(), "/pairs/"+strconv.FormatInt(sd.eqID, 10)).Body.String()
 	wantContains(t, body, "veto threshold_mismatch")
-	// Check diff row annotation doesn't say "closed by facts"
-	if strings.Contains(body, "closed by facts:") {
-		t.Error("diff row should not say 'closed by facts:' when no facts present")
+	// Check diff row annotation doesn't say "closed by facts" (should be plain veto for equivalent type)
+	if strings.Contains(body, "veto threshold_mismatch, closed by facts") {
+		t.Error("diff row should not say 'closed by facts' for equivalent (non-EGF) type")
 	}
 }
 
