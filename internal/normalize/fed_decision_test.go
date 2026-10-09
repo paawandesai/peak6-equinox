@@ -3,8 +3,9 @@ package normalize
 import (
 	"testing"
 	"time"
+
 	"github.com/shopspring/decimal"
-	
+
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
 )
 
@@ -22,9 +23,9 @@ If the scheduled FOMC meeting is canceled and does not occur on its scheduled da
 		CloseTime: mustParse("2026-10-28T17:59:00Z"),
 		Category:  canonical.CategoryFed,
 	}
-	
+
 	terms, quality := extractFed(in)
-	
+
 	t.Logf("Subject: %s", terms.Subject)
 	t.Logf("Metric: %s", terms.Metric)
 	t.Logf("Comparator: %s", terms.Comparator)
@@ -33,11 +34,11 @@ If the scheduled FOMC meeting is canceled and does not occur on its scheduled da
 	t.Logf("Deadline: %v", terms.Deadline)
 	t.Logf("ResolutionSource: %s", terms.ResolutionSource)
 	t.Logf("Quality: %v", quality)
-	
+
 	if terms.Subject != SubjectFedFunds {
 		t.Errorf("Expected subject %s, got %s", SubjectFedFunds, terms.Subject)
 	}
-	
+
 	if terms.Metric != MetricRateChange {
 		t.Errorf("Expected metric %s, got %s", MetricRateChange, terms.Metric)
 	}
@@ -52,17 +53,17 @@ func TestExtractRateCutCount(t *testing.T) {
 		CloseTime: mustParse("2026-12-31T23:59:00Z"),
 		Category:  canonical.CategoryFed,
 	}
-	
+
 	terms, quality := extractFed(in)
-	
+
 	t.Logf("Subject: %s", terms.Subject)
 	t.Logf("Metric: %s", terms.Metric)
 	t.Logf("Quality: %v", quality)
-	
+
 	if terms.Subject != SubjectFedFunds {
 		t.Errorf("Expected subject %s, got %s", SubjectFedFunds, terms.Subject)
 	}
-	
+
 	// Currently, these are marked as unknown metric due to fedCountRe
 	if terms.Metric != canonical.Unknown {
 		t.Logf("Metric is %s (expected unknown currently, but should be rate_cut_count after D-109)", terms.Metric)
@@ -89,9 +90,9 @@ func TestExtractRealFixtureFedDecision(t *testing.T) {
 		CloseTime:     time.Date(2026, 10, 28, 17, 59, 0, 0, time.UTC),
 		Category:      canonical.CategoryFed,
 	}
-	
+
 	terms, quality := extractFed(in)
-	
+
 	t.Logf("Subject: %s", terms.Subject)
 	t.Logf("Metric: %s", terms.Metric)
 	t.Logf("Comparator: %s", terms.Comparator)
@@ -102,15 +103,15 @@ func TestExtractRealFixtureFedDecision(t *testing.T) {
 	}
 	t.Logf("Unit: %s", terms.Unit)
 	t.Logf("Quality: %v", quality)
-	
+
 	if terms.Subject != SubjectFedFunds {
 		t.Errorf("Expected subject %s, got %s", SubjectFedFunds, terms.Subject)
 	}
-	
+
 	if terms.Metric != MetricRateChange {
 		t.Errorf("Expected metric %s, got %s", MetricRateChange, terms.Metric)
 	}
-	
+
 	// D-109: the new changeOfRe pattern correctly extracts from the title ">25bps" as lt -0.25
 	if terms.Comparator != canonical.ComparatorLT {
 		t.Errorf("Expected comparator lt (from title '>25bps'), got %s", terms.Comparator)
@@ -130,7 +131,7 @@ func TestExtractPolymarketFedDecision(t *testing.T) {
 		"If the target federal funds rate is changed to a level not expressed in the displayed options, the change will be rounded up to " +
 		"the nearest 25 and will resolve to the relevant bracket. (e.g. if there's a cut/increase of 12.5 bps it will be considered to be 25 bps)\n\n" +
 		"The resolution source for this market is the FOMC's statement..."
-	
+
 	in := canonical.Instrument{
 		ID:        "polymarket:17010377994663817312158123655937348199252960045746746128731746451645055725586",
 		Title:     "Will the Fed decrease interest rates by 50+ bps after the October 2026 meeting?",
@@ -138,9 +139,9 @@ func TestExtractPolymarketFedDecision(t *testing.T) {
 		CloseTime: time.Date(2026, 10, 29, 3, 59, 0, 0, time.UTC),
 		Category:  canonical.CategoryFed,
 	}
-	
+
 	terms, _ := extractFed(in)
-	
+
 	t.Logf("Subject: %s", terms.Subject)
 	t.Logf("Metric: %s", terms.Metric)
 	t.Logf("Comparator: %s", terms.Comparator)
@@ -150,15 +151,15 @@ func TestExtractPolymarketFedDecision(t *testing.T) {
 		t.Logf("Threshold: nil")
 	}
 	t.Logf("Unit: %s", terms.Unit)
-	
+
 	if terms.Metric != MetricRateChange {
 		t.Errorf("Expected metric %s, got %s", MetricRateChange, terms.Metric)
 	}
-	
+
 	if terms.Comparator != canonical.ComparatorLTE {
 		t.Errorf("Expected comparator lte, got %s", terms.Comparator)
 	}
-	
+
 	expectedThresh := decimal.RequireFromString("-0.50")
 	if terms.Threshold == nil || !terms.Threshold.Equal(expectedThresh) {
 		t.Errorf("Expected threshold -0.50, got %v", terms.Threshold)
