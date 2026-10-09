@@ -164,8 +164,8 @@ if [[ -n "$pair_id" ]]; then
 	echo "# First pair: $pair_id"
 	pair_file=$(mktemp)
 	check "pair" "$BASE_URL/pairs/$pair_id" > "$pair_file"
-	if ! grep -q '<table class="data diff">' "$pair_file"; then
-		echo "FAIL: pair ($BASE_URL/pairs/$pair_id) — no diff table" >&2
+	if ! grep -q '<table class="data terms">' "$pair_file"; then
+		echo "FAIL: pair ($BASE_URL/pairs/$pair_id) — no terms table" >&2
 		((FAIL_COUNT++)) || true
 	fi
 fi
@@ -173,8 +173,8 @@ fi
 # 5. POST /route for that pair (buy 100 YES, market, IOC) is 200 and contains
 #    either a chosen venue or "not routed" with a reason
 if [[ -n "$pair_id" ]]; then
-	# Extract the target instrument from the pair page (first instrument ID in a code tag).
-	target=$(grep -oP 'ID <code>\K[^<]+' "$pair_file" | head -n1 || true)
+	# Extract the target instrument from the pair page (first ID in dt/dd/code structure).
+	target=$(grep -oP '<dt>ID</dt><dd><code>\K[^<]+' "$pair_file" | head -n1 || true)
 	if [[ -z "$target" ]]; then
 		echo "FAIL: pair ($BASE_URL/pairs/$pair_id) — no instrument id" >&2
 		((FAIL_COUNT++)) || true
