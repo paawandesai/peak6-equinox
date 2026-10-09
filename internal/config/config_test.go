@@ -53,6 +53,7 @@ func TestLoadDefaults(t *testing.T) {
 		{"SkewMax", c.SkewMax, 30 * time.Second},
 		{"MinRouteConfidence", c.MinRouteConfidence.String(), "0.9"},
 		{"MinBookDepth", c.MinBookDepth.String(), "1"},
+		{"ReviewEdgeMin", c.ReviewEdgeMin.String(), "0.02"},
 		{"PublicRateLimitPerMin", c.PublicRateLimitPerMin, 60},
 		{"LLMEnabled", c.LLMEnabled, false},
 		{"AnthropicAPIKey", c.AnthropicAPIKey, ""},
@@ -86,6 +87,7 @@ func TestLoadOverrides(t *testing.T) {
 		"SKEW_MAX_SECONDS":          "10",
 		"MIN_ROUTE_CONFIDENCE":      "0.95",
 		"MIN_BOOK_DEPTH":            "5",
+		"REVIEW_EDGE_MIN":           "0.03",
 		"PUBLIC_RATE_LIMIT_PER_MIN": "30",
 		"LLM_ENABLED":               "true",
 		"ANTHROPIC_API_KEY":         "test-key",
@@ -113,8 +115,9 @@ func TestLoadOverrides(t *testing.T) {
 		c.SkewWarn != 2*time.Second || c.SkewMax != 10*time.Second {
 		t.Errorf("duration overrides not applied: %+v", c)
 	}
-	if !c.MinRouteConfidence.Equal(decimal.RequireFromString("0.95")) || !c.MinBookDepth.Equal(decimal.RequireFromString("5")) || c.PublicRateLimitPerMin != 30 {
-		t.Errorf("routing overrides not applied: %s %s %d", c.MinRouteConfidence, c.MinBookDepth, c.PublicRateLimitPerMin)
+	if !c.MinRouteConfidence.Equal(decimal.RequireFromString("0.95")) || !c.MinBookDepth.Equal(decimal.RequireFromString("5")) ||
+		!c.ReviewEdgeMin.Equal(decimal.RequireFromString("0.03")) || c.PublicRateLimitPerMin != 30 {
+		t.Errorf("routing overrides not applied: conf=%s depth=%s edge=%s rate=%d", c.MinRouteConfidence, c.MinBookDepth, c.ReviewEdgeMin, c.PublicRateLimitPerMin)
 	}
 	if !c.LLMEnabled || c.AnthropicAPIKey != "test-key" || c.LLMModel != "other-model" ||
 		c.LLMDailyCallCap != 0 || c.LLMMaxOutputTokens != 100 {
