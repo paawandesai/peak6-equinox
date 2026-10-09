@@ -1,46 +1,61 @@
 {{define "content"}}
-<h1>Near misses</h1>
+<div class="page-head">
+  <h1>Near misses</h1>
+  <p class="question">{{.Question}}</p>
+</div>
 {{if .NoRound}}
 <p>No completed fetch round yet, so there is nothing to compare. Run <code>equinox seed</code> or <code>equinox ingest</code>, then <code>equinox match</code>.</p>
 {{else}}
 <dl class="strip">
   <div><dt>Count:</dt><dd>{{.Total}} near miss{{if ne .Total 1}}es{{end}}</dd></div>
-  <div><dt>Stopped by a veto:</dt><dd>{{.VetoCount}}</dd></div>
+  <div><dt>Stopped by a veto:</dt><dd class="danger">{{.VetoCount}}</dd></div>
+  <div><dt>Fact did not close:</dt><dd>{{.FactDidNotClose}}</dd></div>
 </dl>
 <p>A near miss is a <em>related</em> pair the matcher kept because it was close: the same subject with one term off, or a pair an external fact was consulted for but did not close. Each veto on its own blocks <em>equivalent</em>; a false "same bet" is the worst failure, so these are shown rather than hidden.</p>
-{{if .Truncated}}<p><mark>Showing the first {{.Total}} near misses only ({{.Truncated}} more not shown).</mark></p>{{end}}
-{{if not .Rows}}
+{{if .Truncated}}<p class="note-warn">Showing the first {{.Total}} near misses only ({{.Truncated}} more not shown).</p>{{end}}
+{{if not .Groups}}
 <p>Round {{.Round.ID}} has no stored near misses. Run <code>equinox match</code> against it, or see the <a href="/">matches</a>.</p>
 {{else}}
-<table class="data stack">
-  <thead>
-    <tr><th>Veto / Fact</th><th>Contracts</th><th>Explanation</th></tr>
-  </thead>
-  <tbody>
-  {{range .Rows}}
-    <tr>
-      <td data-label="Veto / Fact">
-        {{if .Vetoes}}
-          {{range .Vetoes}}<span class="chip chip-danger"><code>{{.Code}}</code></span> <strong>{{.Field}}</strong>: {{.Detail}}<br>{{end}}
-        {{else}}
-          <span class="chip chip-info">no veto</span>: {{if .Facts}}a fact was consulted but did not apply{{else}}a term differs{{end}}
-        {{end}}
-      </td>
-      <td data-label="Contracts">
-        <a href="/pairs/{{.ID}}">#{{.ID}}</a><br>
-        <span class="venue">{{.A.Venue}}</span> {{.A.Title}}<br>
-        <span class="venue">{{.B.Venue}}</span> {{.B.Title}}
-      </td>
-      <td data-label="Explanation">
-        <details>
-          <summary>Why</summary>
-          <p>{{.Explanation}}</p>
-        </details>
-      </td>
-    </tr>
-  {{end}}
-  </tbody>
-</table>
+<div class="toolbar-chips">
+  {{range .Groups}}<a href="#{{.Anchor}}" class="chip-filter">{{.Code}} ({{.Count}})</a> {{end}}
+</div>
+{{range .Groups}}
+<section id="{{.Anchor}}">
+  <h2><code>{{.Code}}</code> <small>({{.Count}})</small></h2>
+  <p>{{.Description}}</p>
+  <table class="data stack">
+    <thead>
+      <tr><th>Veto that fired</th><th>How close</th><th>Contracts</th><th>Explanation</th></tr>
+    </thead>
+    <tbody>
+    {{range .Rows}}
+      <tr>
+        <td data-label="Veto that fired">
+          {{if .VetoBadge.Text}}
+            {{template "badge" .VetoBadge}} <strong>{{.VetoField}}</strong>: {{.VetoDetail}}
+          {{else}}
+            <span class="badge b-info"><span class="g" aria-hidden="true">◇</span>no veto</span>: {{if .Facts}}a fact was consulted but did not apply{{else}}a term differs{{end}}
+          {{end}}
+        </td>
+        <td data-label="How close"><code>{{.TermGap}}</code></td>
+        <td data-label="Contracts">
+          <a href="/pairs/{{.ID}}">#{{.ID}}</a><br>
+          <span class="venue">{{.A.Venue}}</span> {{.A.Title}}<br>
+          <span class="venue">{{.B.Venue}}</span> {{.B.Title}}
+        </td>
+        <td data-label="Explanation">
+          <details>
+            <summary>Why</summary>
+            <p>{{.Explanation}}</p>
+          </details>
+          <a href="{{.LogLink}}">Not-a-match record →</a>
+        </td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+</section>
+{{end}}
 {{end}}
 {{end}}
 {{end}}
