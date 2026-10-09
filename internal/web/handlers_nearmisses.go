@@ -181,7 +181,7 @@ func computeTermGap(diff []canonical.FieldDiff) string {
 				if dur < 0 {
 					dur = -dur
 				}
-				return formatDuration(dur)
+				return formatDurationVerbose(dur)
 			}
 		}
 	}
@@ -189,7 +189,7 @@ func computeTermGap(diff []canonical.FieldDiff) string {
 }
 
 // formatDuration formats a duration as a readable distance.
-func formatDuration(d time.Duration) string {
+func formatDurationVerbose(d time.Duration) string {
 	absDays := math.Abs(d.Hours() / 24)
 	if absDays >= 1 {
 		return fmt.Sprintf("%.0f day%s", absDays, pluralS(int(absDays)))
