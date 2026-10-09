@@ -84,3 +84,28 @@ func (s *Store) ListRoutingDecisions(ctx context.Context, limit int) ([]RoutingD
 	}
 	return out, nil
 }
+
+// GetRoutingDecisionsBatch returns routing decisions for the given IDs in one query (UI-15).
+// Returns a map of ID -> RoutingDecision. Missing IDs are omitted from the result.
+func (s *Store) GetRoutingDecisionsBatch(ctx context.Context, ids []int64) (map[int64]RoutingDecision, error) {
+	if len(ids) == 0 {
+		return make(map[int64]RoutingDecision), nil
+	}
+	rows, err := s.pool.Query(ctx, `SELECT `+routingCols+` FROM routing_decisions WHERE id = ANY($1)`, ids)
+	if err != nil {
+		return nil, fmt.Errorf("batch getting routing decisions: %w", err)
+	}
+	defer rows.Close()
+	result := make(map[int64]RoutingDecision)
+	for rows.Next() {
+		r, err := scanRouting(rows)
+		if err != nil {
+			return nil, fmt.Errorf("batch getting routing decisions: %w", err)
+		}
+		result[r.ID] = r
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("batch getting routing decisions: %w", err)
+	}
+	return result, nil
+}
