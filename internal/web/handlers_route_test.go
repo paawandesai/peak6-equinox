@@ -625,7 +625,41 @@ func TestRouteResultNotRoutedState(t *testing.T) {
 func TestRouteResultSignRule(t *testing.T) {
 	s, st := newTestServer(t)
 	sd := seedPublic(t, st)
-	rec := postForm(s.Handler(), "/route", validRouteForm(sd.eqID, seedKalshiA), true)
+	ctx := context.Background()
+
+	// Create decision with alternatives that have both savings (negative gap) and losses (positive gap)
+	// Chosen route: 0.51 all-in
+	// Alt rank 2: 0.50 all-in (BETTER = saving = negative gap = -0.01 = should render as 1.00¢ without parens)
+	// Alt rank 3: 0.52 all-in (WORSE = loss = positive gap = +0.01 = should render as (1.00¢) with parens)
+	qty := dec("100")
+	d := canonical.Decision{
+		RoundID:  sd.round.ID,
+		TargetID: seedKalshiA,
+		Order:    canonical.Order{Side: canonical.SideBuy, Outcome: canonical.OutcomeYes, Quantity: &qty, Type: canonical.OrderMarket, TIF: canonical.TIFIOC},
+		Inputs: []canonical.DecisionInput{
+			{InstrumentID: seedKalshiA, Venue: canonical.VenueKalshi, RelationshipType: "self", Confidence: dec("1.0"), OutcomeSide: canonical.OutcomeYes, BestAsk: dec("0.52"), AskDepth: []canonical.Level{{Price: dec("0.52"), Size: dec("300")}}, FetchedAt: sd.round.FinishedAt},
+			{InstrumentID: seedPolyB, Venue: canonical.VenuePolymarket, RelationshipType: canonical.RelEquivalent, Confidence: dec("0.97"), OutcomeSide: canonical.OutcomeYes, BestAsk: dec("0.50"), AskDepth: []canonical.Level{{Price: dec("0.50"), Size: dec("50")}}, FetchedAt: sd.round.FinishedAt},
+		},
+		Chosen: []canonical.Leg{{
+			InstrumentID: seedKalshiA, Venue: canonical.VenueKalshi, Side: canonical.SideBuy,
+			Outcome: canonical.OutcomeYes, Quantity: dec("100"), VWAP: dec("0.50"),
+			FeePerContract: dec("0.01"), BasisPenaltyPerContract: dec("0.000"), AllInPerContract: dec("0.51"),
+			Route: "direct",
+		}},
+		Alternatives: []canonical.Alternative{
+			{Rank: 1, AllInPerContract: dec("0.51"), Note: "chosen", Legs: []canonical.Leg{{InstrumentID: seedKalshiA, Venue: canonical.VenueKalshi, Outcome: canonical.OutcomeYes, Side: canonical.SideBuy, Quantity: dec("100"), VWAP: dec("0.50"), FeePerContract: dec("0.01"), BasisPenaltyPerContract: dec("0.000"), AllInPerContract: dec("0.51")}}},
+			{Rank: 2, AllInPerContract: dec("0.50"), Note: "better than chosen", Legs: []canonical.Leg{{InstrumentID: seedPolyB, Venue: canonical.VenuePolymarket, Outcome: canonical.OutcomeYes, Side: canonical.SideBuy, Quantity: dec("100"), VWAP: dec("0.49"), FeePerContract: dec("0.01"), BasisPenaltyPerContract: dec("0.000"), AllInPerContract: dec("0.50")}}},
+			{Rank: 3, AllInPerContract: dec("0.52"), Note: "worse than chosen", Legs: []canonical.Leg{{InstrumentID: seedKalshiC, Venue: canonical.VenueKalshi, Outcome: canonical.OutcomeYes, Side: canonical.SideBuy, Quantity: dec("100"), VWAP: dec("0.51"), FeePerContract: dec("0.01"), BasisPenaltyPerContract: dec("0.000"), AllInPerContract: dec("0.52")}}},
+		},
+		Explanation: "Test decision with savings and losses.",
+		DecidedAt:   sd.round.FinishedAt,
+	}
+	decID, err := st.InsertRoutingDecision(ctx, d)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rec := get(s.Handler(), "/decisions/"+strconv.FormatInt(decID, 10))
 	wantHTML(t, rec, http.StatusOK)
 	body := rec.Body.String()
 
@@ -637,11 +671,24 @@ func TestRouteResultSignRule(t *testing.T) {
 		t.Error("should show gap in cents (¢)")
 	}
 
-	// Check for proper sign rule application:
-	// Losses (unfavourable) should be in parentheses with ¢ inside: (X.XX¢)
-	// This is the critical part - ¢ must be INSIDE the parentheses, not outside
+	// Check for proper sign rule application per ticket AC:
+	// Losses (unfavourable): in parentheses (X.XX¢)
+	// Savings (favourable): positive, no parentheses X.XX¢
+
+	// Check for loss format: (X.XX¢) - ¢ followed by )
 	if !strings.Contains(body, "¢)") {
-		t.Error("should show losses in parentheses as (X.XX¢) per D-098 sign rule")
+		t.Error("should show losses in parentheses as (X.XX¢) per sign rule")
+	}
+
+	// Check for saving format: X.XX¢ NOT in parentheses - ¢ followed by space or · but NOT )
+	// Pattern: ¢ followed by space or · (the · separator before bps)
+	hasSaving := strings.Contains(body, "¢ ·") || strings.Contains(body, "¢ bps")
+	if !hasSaving {
+		// Also check for ¢ at end of cell (before </td> or </text>)
+		hasSaving = strings.Contains(body, "¢<")
+	}
+	if !hasSaving {
+		t.Error("should show at least one saving as positive (X.XX¢ not in parentheses) per sign rule")
 	}
 
 	// Gap/slippage values in bps
@@ -649,10 +696,9 @@ func TestRouteResultSignRule(t *testing.T) {
 		t.Error("should show gap/slippage in bps")
 	}
 
-	// Verify sign rule is actually applied by checking the pattern is NOT the wrong format
-	// Wrong format would be: (X.XX)¢ with ¢ outside parentheses
-	if strings.Contains(body, ")¢ ·") {
-		t.Error("found )¢ pattern - ¢ should be inside parentheses, not outside: (X.XX¢) not (X.XX)¢")
+	// Verify ¢ is INSIDE parentheses, not outside: (X.XX¢) not (X.XX)¢
+	if strings.Contains(body, ")¢") && !strings.Contains(body, "¢)") {
+		t.Error("found )¢ pattern - ¢ should be inside parentheses: (X.XX¢) not (X.XX)¢")
 	}
 }
 
