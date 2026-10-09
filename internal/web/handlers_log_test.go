@@ -178,7 +178,9 @@ func TestLogSignRule(t *testing.T) {
 		DecidedAt:   seedNow,
 	}
 	savingID, _ := st.InsertRoutingDecision(ctx, savingDecision)
-	st.AppendLog(ctx, store.LogRouting, fmt.Sprintf("%d", savingID), "positive saving", nil, seedNow)
+	if _, err := st.AppendLog(ctx, store.LogRouting, fmt.Sprintf("%d", savingID), "positive saving", nil, seedNow); err != nil {
+		t.Fatal(err)
+	}
 
 	// Create decision with loss: best ask 0.50, filled at 0.55+0.01=0.56 → loss -0.06
 	lossBestAsk := dec("0.50")
@@ -209,7 +211,9 @@ func TestLogSignRule(t *testing.T) {
 		DecidedAt:   seedNow,
 	}
 	lossID, _ := st.InsertRoutingDecision(ctx, lossDecision)
-	st.AppendLog(ctx, store.LogRouting, fmt.Sprintf("%d", lossID), "negative saving (loss)", nil, seedNow)
+	if _, err := st.AppendLog(ctx, store.LogRouting, fmt.Sprintf("%d", lossID), "negative saving (loss)", nil, seedNow); err != nil {
+		t.Fatal(err)
+	}
 
 	rec := get(s.Handler(), "/log?kind=routing")
 	wantHTML(t, rec, 200)
@@ -370,7 +374,9 @@ func TestLogOutliers(t *testing.T) {
 		DecidedAt:   seedNow,
 	}
 	lossID, _ := st.InsertRoutingDecision(ctx, lossDecision)
-	st.AppendLog(ctx, store.LogRouting, fmt.Sprintf("%d", lossID), "worst saving", nil, seedNow)
+	if _, err := st.AppendLog(ctx, store.LogRouting, fmt.Sprintf("%d", lossID), "worst saving", nil, seedNow); err != nil {
+		t.Fatal(err)
+	}
 
 	// Decision 2: old input (fetched long ago)
 	oldFetchTime := seedNow.Add(-48 * time.Hour) // 48 hours ago
@@ -400,7 +406,9 @@ func TestLogOutliers(t *testing.T) {
 		DecidedAt:   seedNow,
 	}
 	oldID, _ := st.InsertRoutingDecision(ctx, oldInputDecision)
-	st.AppendLog(ctx, store.LogRouting, fmt.Sprintf("%d", oldID), "oldest input", nil, seedNow)
+	if _, err := st.AppendLog(ctx, store.LogRouting, fmt.Sprintf("%d", oldID), "oldest input", nil, seedNow); err != nil {
+		t.Fatal(err)
+	}
 
 	rec := get(s.Handler(), "/log?kind=routing")
 	wantHTML(t, rec, 200)
