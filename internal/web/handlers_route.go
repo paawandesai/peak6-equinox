@@ -403,14 +403,14 @@ func buildOutcomeSummary(d canonical.Decision, totalFill, totalReq, avgAllIn dec
 	}
 	// Routed: show filled quantity and average all-in
 	var fillMsg string
-	if d.Order.Quantity != nil {
+	if d.Order.Quantity != nil && !totalReq.IsZero() {
 		if totalFill.Equal(totalReq) {
 			fillMsg = fmt.Sprintf("filled %s contracts", totalFill.String())
 		} else {
 			fillMsg = fmt.Sprintf("filled %s of %s", totalFill.String(), totalReq.String())
 		}
 	} else {
-		// Notional order: just show contracts filled
+		// Notional order or zero quantity: just show contracts filled
 		fillMsg = fmt.Sprintf("filled %s contracts", totalFill.String())
 	}
 	if len(d.Chosen) == 1 {
