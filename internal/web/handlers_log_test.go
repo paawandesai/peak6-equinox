@@ -193,10 +193,13 @@ func TestLogOutliers(t *testing.T) {
 	wantHTML(t, rec, 200)
 	body := rec.Body.String()
 
-	// Outliers panel should appear on routing view
-	// TODO: verify actual outliers once we have test data with savings
-	// For now just check the structure is there if outliers exist
-	if strings.Contains(body, `<div class="outliers">`) {
-		wantContains(t, body, `Outliers`)
+	// Outliers panel structure: div.outliers with strong heading and p elements
+	wantContains(t, body,
+		`<div class="outliers">`,
+		`<strong>Outliers</strong>`,
+	)
+	// At least one of worst saving or oldest input should be present
+	if !strings.Contains(body, `Worst saving:`) && !strings.Contains(body, `Oldest input:`) {
+		t.Error("outliers panel must contain at least one outlier (worst saving or oldest input)")
 	}
 }
