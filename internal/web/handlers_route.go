@@ -525,7 +525,7 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) routePageHeader(pairID int64, round store.Round, tz string) page {
-	return s.pageBase(round, "Routing trace", fmt.Sprintf("Where would this order fill best, and why? (pair %d)", pairID), tz)
+	return s.pageBase(round, "Routing trace", fmt.Sprintf("Where would this order fill best, and why? (pair %d)", pairID), tz, "route")
 }
 
 // routeFailure renders the problems at the given status: as a fragment for

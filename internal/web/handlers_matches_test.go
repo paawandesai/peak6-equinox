@@ -67,7 +67,7 @@ func TestRoutableGroupingAndOrder(t *testing.T) {
 	wantContains(t, body, `<h2 id="routable">Routable pairs (3)</h2>`)
 
 	// All three types appear in the routable section.
-	chipComplement := `<span class="chip chip-ok">complement</span>`
+	chipComplement := `<span class="chip chip-info">complement</span>`
 	chipEqGivenFacts := `<span class="chip chip-ok">equivalent_given_facts</span>`
 	chipEquivalent := `<span class="chip chip-ok">equivalent</span>`
 	wantContains(t, body, chipComplement, chipEqGivenFacts, chipEquivalent)
