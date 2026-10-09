@@ -64,8 +64,8 @@ func TestEvalTypeChips(t *testing.T) {
 	body := rec.Body.String()
 	// Each type renders as a chip with the correct class from TypeChipClass.
 	wantContains(t, body,
-		`<span class="chip chip-ok">equivalent</span>`, // RelEquivalent -> chip-ok
-		`<span class="chip chip-ok">complement</span>`, // RelComplement -> chip-ok
-		`<span class="chip chip-info">implies</span>`,  // RelImplies -> chip-info
+		`<span class="chip chip-ok">equivalent</span>`,   // RelEquivalent -> chip-ok
+		`<span class="chip chip-info">complement</span>`, // RelComplement -> chip-info (D-098 call 1)
+		`<span class="chip chip-info">implies</span>`,    // RelImplies -> chip-info
 	)
 }

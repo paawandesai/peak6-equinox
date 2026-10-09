@@ -74,7 +74,7 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 	round := roundFromContext(r.Context())
 	tz := timezoneFromRequest(r)
 	data := logPage{
-		page:  s.pageBase(round, "Decision log", "What did Equinox decide recently, and why?", tz),
+		page:  s.pageBase(round, "Decision log", "What did Equinox decide recently, and why?", tz, "log"),
 		Kind:  string(kind),
 		Limit: maxLogRows,
 	}
@@ -228,7 +228,7 @@ func (s *Server) handleDecision(w http.ResponseWriter, r *http.Request) {
 	tz := timezoneFromRequest(r)
 	data := decisionPage{
 		routePage: routePage{
-			page:       s.pageBase(currentRound, "Decision "+r.PathValue("id"), "What did this simulated order do, and why did the router choose that venue?", tz),
+			page:       s.pageBase(currentRound, "Decision "+r.PathValue("id"), "What did this simulated order do, and why did the router choose that venue?", tz, "decision"),
 			DecisionID: rd.ID,
 			Decision:   newDecisionView(rd.Decision, countPartners(rd.Decision), snapshot, s.loadDecisionInstrumentTitles(ctx, st, rd.Decision), s.cfg.BasisPenaltyMult),
 		},
