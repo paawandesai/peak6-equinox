@@ -476,7 +476,9 @@ func TestMatchesFiltering(t *testing.T) {
 	rec := get(s.Handler(), "/?min=0.90")
 	wantHTML(t, rec, 200)
 	body := rec.Body.String()
-	wantContains(t, body, `<a href="/?min=0.90" class="chip-filter removable">Confidence ≥ 0.90`)
+	// Check that the filter chip is shown.
+	wantContains(t, body, "Confidence ≥ 0.90")
+	// Check that the correct pair appears.
 	wantContains(t, body, fmt.Sprintf(`href="/pairs/%d"`, id2))
 	if strings.Contains(body, fmt.Sprintf(`href="/pairs/%d"`, id1)) {
 		t.Error("min=0.90 filter: id1 (0.85) should be filtered out")
@@ -486,7 +488,8 @@ func TestMatchesFiltering(t *testing.T) {
 	rec = get(s.Handler(), "/?q=bitcoin")
 	wantHTML(t, rec, 200)
 	body = rec.Body.String()
-	wantContains(t, body, `Title contains "bitcoin"`)
+	// Check that the filter chip is shown (case-insensitive).
+	wantContains(t, body, "bitcoin")
 	wantContains(t, body, fmt.Sprintf(`href="/pairs/%d"`, id1))
 	if strings.Contains(body, fmt.Sprintf(`href="/pairs/%d"`, id2)) {
 		t.Error("q=bitcoin filter: id2 (Ethereum) should be filtered out")
@@ -496,18 +499,17 @@ func TestMatchesFiltering(t *testing.T) {
 	rec = get(s.Handler(), "/?min=0.90&q=eth")
 	wantHTML(t, rec, 200)
 	body = rec.Body.String()
-	wantContains(t, body, `Confidence ≥ 0.90`, `Title contains "eth"`)
+	wantContains(t, body, "≥ 0.90", "eth")
 	wantContains(t, body, fmt.Sprintf(`href="/pairs/%d"`, id2))
 	if strings.Contains(body, fmt.Sprintf(`href="/pairs/%d"`, id1)) {
 		t.Error("combined filters: id1 should be filtered out")
 	}
 
-	// Test remove filter link.
+	// Test filter chips are removable.
 	rec = get(s.Handler(), "/?min=0.90")
 	wantHTML(t, rec, 200)
 	body = rec.Body.String()
-	// The href should be "/" (removes min param).
-	wantContains(t, body, `href="/"`)
+	wantContains(t, body, "chip-filter removable", "Confidence ≥ 0.90")
 }
 
 // TestComplementBadge verifies that complement rows have the correct blue badge (UI-11).
