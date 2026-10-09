@@ -177,13 +177,13 @@ func TestPluralS(t *testing.T) {
 // TestVetoDescriptionCoverage tests all veto codes.
 func TestVetoDescriptionCoverage(t *testing.T) {
 	tests := map[string]string{
-		"subject_mismatch":        "Different underlying subject",
-		"threshold_mismatch":      "Strike or threshold differs",
-		"deadline_mismatch":       "Resolution deadline differs",
-		"direction_mismatch":      "Comparison direction differs (over vs under)",
-		"source_mismatch":         "Data source differs",
-		"fact_did_not_close":      "A fact was consulted but did not close the difference",
-		"unknown_code":            "unknown code",
+		"subject_mismatch":   "Different underlying subject",
+		"threshold_mismatch": "Strike or threshold differs",
+		"deadline_mismatch":  "Resolution deadline differs",
+		"direction_mismatch": "Comparison direction differs (over vs under)",
+		"source_mismatch":    "Data source differs",
+		"fact_did_not_close": "A fact was consulted but did not close the difference",
+		"unknown_code":       "unknown code",
 	}
 	for code, want := range tests {
 		got := vetoDescription(code)
