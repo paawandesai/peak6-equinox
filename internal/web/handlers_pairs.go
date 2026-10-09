@@ -87,7 +87,7 @@ type diffRowView struct {
 }
 
 // diffToken is one word/space token with its operation for word-level diffs (UI-12).
-// The template wraps delete/insert tokens in <del>/<ins> tags. HANDOFF.md: no template.HTML (AB-07).
+// The template wraps delete/insert tokens in <del>/<ins> tags (AB-07: templates escape, never unsafe HTML types).
 type diffToken struct {
 	Op   string // "keep", "delete", "insert"
 	Text string // the token text, pre-escaped by the template
@@ -145,7 +145,7 @@ var partOrder = []string{
 
 // wordDiff produces simple word-level diff tokens (UI-12).
 // This is a minimal implementation: split on whitespace, mark differing tokens.
-// HANDOFF.md: the template wraps these in <del>/<ins>, never template.HTML (AB-07).
+// AB-07: the template wraps these in <del>/<ins>, using auto-escaping only (no unsafe HTML types).
 func wordDiff(a, b string) ([]diffToken, []diffToken) {
 	if a == b {
 		// Identical: return as-is with keep
