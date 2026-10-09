@@ -59,12 +59,12 @@ func TestComputeNetGap(t *testing.T) {
 		if !gap.HasValue {
 			t.Fatalf("expected gap.HasValue=true, got false with reason %q", gap.Reason)
 		}
-		// Kalshi at 0.50: fee = ceil(0.07 × 100 × 0.50 × 0.50 / 0.01) × 0.01 = ceil(1.75) × 0.01 = $2.00
-		// All-in per contract: 0.50 + 2.00/100 = 0.52
+		// Kalshi at 0.50: fee = 0.07 × 100 × 0.50 × 0.50 = 1.75, rounds to $1.75 (already a cent multiple)
+		// All-in per contract: 0.50 + 1.75/100 = 0.5175
 		// Polymarket at 0.52: fee = 100 × 0.04 × 0.52 × 0.48 = 0.9984, rounded to 0.99840
 		// All-in per contract: 0.52 + 0.99840/100 = 0.529984
-		// Net gap = 0.529984 - 0.52 = 0.009984
-		expected := decimal.RequireFromString("0.009984")
+		// Net gap = 0.529984 - 0.5175 = 0.012484
+		expected := decimal.RequireFromString("0.012484")
 		if !gap.Value.Equal(expected) {
 			t.Errorf("gap.Value = %s, want %s", gap.Value, expected)
 		}
