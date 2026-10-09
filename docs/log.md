@@ -159,3 +159,4 @@ Add one line per action, newest at the bottom: `YYYY-MM-DD HH:MM UTC · actor ·
 2026-10-08 23:00 UTC · peak6-equinox-67 worker · M4-01 branch: merged origin/main (brought Go 1.27.2 from !73, clears vuln job). go version go1.27.2, go.mod toolchain go1.27.2, go vet ./... clean, go build ./... clean. Docs-only MR (README.md + docs/). · 4fa5681, docs/log.md
 
 2026-10-09 01:00 UTC · M4-04 worker · Merged main (894724c) to resolve merge conflicts; picked up M4-01 README update (b08b8d7); go vet clean. · !67
+2026-10-09 01:10 UTC · M4-04 worker · Merged main (0315757) to resolve merge conflicts; picked up !69 ai-usage update (e20916a) and !74 Dockerfile (alpine:3.21); bash -n and go vet clean. · !67
