@@ -5,17 +5,10 @@ _Last updated: 2026-10-08 17:30 UTC by orchestrator (M3-01…10, UI-01…08 and 
 
 ## Current milestone
 
-**M2 exit verification (2026-10-07 ~18:00 UTC):** **MISS.** All M2 code tickets merged and deployed to prod (revision equinox-00010-h9v); docs/equivalence.md landed; golden/eval machinery + back-test complete. Exit criteria status:
-  1. Precision ≥0.95 at `equivalent` on human-confirmed labels — **BLOCKED, now on `equivalent` pairs**. Q-7 progress 2026-10-07: testdata/golden/labels.yaml holds all 40 round-2 pairs (MR !44, `human-approved`). The operator checked them against the venue rules, Paawan approved them, and he accepted the 6 corrections at 9:30 PM CT. `make eval`: 34 of 40 correct. The matcher misses all 6 corrected pairs, and the `equivalent` row is still n/a because round 2 has no plain `equivalent` pair. labels.proposed.yaml holds 33 drafts pending Paawan: 9 politics `equivalent`, 18 fed `equivalent_given_facts` (D-083), 1 complement and 5 related.
-     - Subpart: 0 veto false positives on the veto suite — **MET** (TestPairsFromFixtures 0 FP on 37 V- cases; documented in equivalence.md §8).
-     - Subpart: 0 back-test mismatches on fixture set — **MET** (1031 instruments, 207544 pairs, 24/24 agreed; equivalence.md §7–§8).
-  2. ≥10 true `equivalent` / `complement` across ≥2 categories in a live round — **MISS** (live revision equinox-00010-h9v pinned round 3: 1 equivalent_given_facts, 1 complement, 25 implies, 851 related = 878 kept; both routable-tier pairs are fed-only, not ≥2 categories).
-  3. Fed demo pair + near-miss render correctly live — **PARTIAL** (M2 routes deployed and 200: /near-misses shows 851 related pairs, /log and /eval render, pair pages show facts/basis/type/history; Fed demo pair `equivalent_given_facts` and `complement` render with diff/vetoes/facts; human verification of correctness pending).
-  4. docs/equivalence.md merged — **MET** (MR !24 merged as ba0a6c66).
-
-Next operator action (Tier 2): human verification of Fed demo rendering (criterion 3 correctness), then human review of live round for Q-7 label candidates (criterion 1 unblocked).
-
-**Previous:** M1 verification HIT WITH CAVEATS (2026-10-06 ~21:55 CT).
+**M4 demo and submission (target freeze Sun 2026-10-11 09:00 CT, submit by 11:00 CT):** Exit criteria from plan.md § M4:
+  1. Every brief deliverable present and linked from README — **DONE** (M4-01 !59 merged: live URL, setup, architecture summary, 60-second walkthrough, recording placeholder; deliverables 2/5/6 already merged; deliverable 7 recording pending M4-H1 #67 Paawan human item)
+  2. Live URL and pinned round both pass E2E smoke test — **DONE** (M4-05 !66 merged: `scripts/smoke-live.sh` passes on live URL and pinned round 735; p95 <500ms pages, <300ms route per NFR-01)
+  3. After freeze, only docs and demo fixes — **pending** (freeze is 2026-10-11 09:00 CT; this status.md drafted 2026-10-09 as early DRAFT per operator)
 
 **M4-03 pinned demo round (2026-10-09 14:28 UTC):**
 - **Round ID:** 735
@@ -29,6 +22,29 @@ Next operator action (Tier 2): human verification of Fed demo rendering (criteri
   - unrelated: 42,090
 - **Total stored:** 613 relationships
 - **Verification:** pinned round serves on / with demo banner; Scheduler continues collecting (rounds 736-738+ after pin); NFR-04 test passes in CI (zero venue calls for pinned pages)
+
+**M4 tickets status:**
+- M4-01 README: merged !59
+- M4-02 ai-usage.md: merged !65
+- M4-03 pin demo round: merged !60 (round 735 pinned 2026-10-09 14:28 UTC)
+- M4-04 review-window script: merged !64 (D-101: estimated $0.27 for 3h window Sun 2026-10-11 09:00–12:00 CT)
+- M4-05 live smoke script: merged !66
+- M4-06 PRD sweep: merged !68 (PRD evaluation sweep section above; swept at 395ec34)
+- M4-07 final deploy: pending #65 (depends on: all UI-v2 and M3 follow-ups merged; open: #51 UI-19, #52 UI-20, #54 UI-22, #56 UI-24)
+- M4-08 final status.md: this MR (draft, depends on M4-06, M4-07)
+- M4-H1 recording: pending #67 (Paawan human item after M4-07)
+
+**M2 exit verification (2026-10-07 ~18:00 UTC):** **MISS.** All M2 code tickets merged and deployed to prod (revision equinox-00010-h9v); docs/equivalence.md landed; golden/eval machinery + back-test complete. Exit criteria status:
+  1. Precision ≥0.95 at `equivalent` on human-confirmed labels — **BLOCKED, now on `equivalent` pairs**. Q-7 progress 2026-10-07: testdata/golden/labels.yaml holds all 40 round-2 pairs (MR !44, `human-approved`). The operator checked them against the venue rules, Paawan approved them, and he accepted the 6 corrections at 9:30 PM CT. `make eval`: 34 of 40 correct. The matcher misses all 6 corrected pairs, and the `equivalent` row is still n/a because round 2 has no plain `equivalent` pair. labels.proposed.yaml holds 33 drafts pending Paawan: 9 politics `equivalent`, 18 fed `equivalent_given_facts` (D-083), 1 complement and 5 related.
+     - Subpart: 0 veto false positives on the veto suite — **MET** (TestPairsFromFixtures 0 FP on 37 V- cases; documented in equivalence.md §8).
+     - Subpart: 0 back-test mismatches on fixture set — **MET** (1031 instruments, 207544 pairs, 24/24 agreed; equivalence.md §7–§8).
+  2. ≥10 true `equivalent` / `complement` across ≥2 categories in a live round — **MISS** (live revision equinox-00010-h9v pinned round 3: 1 equivalent_given_facts, 1 complement, 25 implies, 851 related = 878 kept; both routable-tier pairs are fed-only, not ≥2 categories).
+  3. Fed demo pair + near-miss render correctly live — **PARTIAL** (M2 routes deployed and 200: /near-misses shows 851 related pairs, /log and /eval render, pair pages show facts/basis/type/history; Fed demo pair `equivalent_given_facts` and `complement` render with diff/vetoes/facts; human verification of correctness pending).
+  4. docs/equivalence.md merged — **MET** (MR !24 merged as ba0a6c66).
+
+Next operator action (Tier 2): human verification of Fed demo rendering (criterion 3 correctness), then human review of live round for Q-7 label candidates (criterion 1 unblocked).
+
+**Previous:** M1 verification HIT WITH CAVEATS (2026-10-06 ~21:55 CT).
 
 
 ## Done
@@ -78,11 +94,12 @@ Next operator action (Tier 2): human verification of Fed demo rendering (criteri
 
 ## In progress
 
-- M4 tickets written (docs/tickets/M4.md, GitLab issues labelled M4): M4-01 README, M4-02 ai-usage, M4-04 review-window script and M4-05 live smoke script can start now; M4-03 pin after #39 deploys; M4-06/07/08 after UI-v2 pages merge; M4-H1 is Paawan's recording.
+- M4-07 final deploy (#65): pending (all UI-v2 and M3 follow-ups must merge first; open: #51 UI-19, #52 UI-20, #54 UI-22, #56 UI-24)
+- M4-08 final status.md (#66): this MR, early DRAFT stacked on !68
+- M4-H1 backup recording (#67): Paawan human item after M4-07
 
-- #39 M2 follow-up: matcher misses the 6 corrected golden pairs (D-083) — MR !58 in operator review (round 4 asked for the 17 overwritten fixtures to be restored; worker steered 2026-10-08 17:30 UTC).
-- UI-09 (#41): Claude Design v2 approved by Paawan 2026-10-08 1:41 PM CT (D-098, with three calls). Design committed under `docs/design/claude-design-v2/` and the build tickets UI-10..UI-26 written in `docs/tickets/UI-v2.md`, all in one docs MR. Workers start once that MR merges: UI-10 (design system) and UI-25 (router stores inputs) first, then dependency-ready tickets, Sonnet, max 3.
-- Golden labels (Q-7 / D-083): human item.
+- Open UI-v2 tickets: #51 UI-19 (match cards), #52 UI-20 (pair page), #54 UI-22 (LLM runs table), #56 UI-24 (admin page v2)
+- #70 M4-70 matcher follow-up (Kalshi nomination formats, D-108): in review
 
 ## Blocked
 
@@ -158,33 +175,34 @@ Paawan kept these four in the operator chat on 2026-10-07 at 8:38 PM CT, after t
 
 | ID | Status | | ID | Status |
 |---|---|---|---|---|
-| FR-01 | done (M1) | | NFR-01 | partial (code done M3; measurement M4-05) |
-| FR-02 | done (M1) | | NFR-02 | partial (observed <60s; formal measurement pending) |
-| FR-03 | done (M1) | | NFR-03 | done (M1) |
-| FR-04 | done (M1) | | NFR-04 | partial (test exists M1; demo mode M3-07) |
-| FR-05 | done (M1) | | NFR-05 | partial (M2 admin page; 95% is measurement) |
-| FR-06 | done (M2 all cats) | | NFR-06 | partial (M2 machinery; no plain `equivalent` in labels yet) |
-| FR-07 | done (M1) | | NFR-07 | done (M2-06 fixture back-test) |
-| FR-08 | done (M2 all vetoes) | | NFR-08 | done (M1) |
-| FR-09 | partial (M2 all 5 types; LLM M3-06) | | NFR-09 | partial (code done M3-01; deployment pending) |
-| FR-10 | done (M2) | | NFR-10 | done (M1, M3-09 rate limit) |
-| FR-11 | done (M2 code + UI) | | NFR-11 | partial (M1 harness; live verifier M3-06) |
-| FR-12 | partial (single-venue done M1; multi-venue M3) | | NFR-12 | done (M1) |
-| FR-13 | partial (M3-03 ticket exists) | | NFR-13 | done (M1) |
-| FR-14 | partial (M3-04 ticket exists) | | NFR-14 | done (M1) |
-| FR-15 | partial (M3-01 ticket exists) | | NFR-15 | partial (cap in place; spend measurement M4-08) |
-| FR-16 | done (Q-8; both venues verified) | | NFR-16 | partial (pages exist; UI-v2 clarity #43–#49) |
-| FR-17 | done (M2 persisted + UI) | | NFR-17 | done (M1) |
-| FR-18 | partial (M2 machinery; 40 labels confirmed Q-7) | | | |
-| FR-19 | done (M2-06 fixture back-test) | | | |
-| FR-20 | partial (M3-06 ticket exists) | | | |
-| FR-21 | partial (all pages exist M1-M2; UI-v2 #43–#49) | | | |
-| FR-22 | done (M1) | | | |
-| FR-23 | partial (M3-07 ticket exists) | | | |
-| FR-24 | done (M3-08) | | | |
-| FR-25 | done (M2) | | | |
-| FR-26 | partial (7 of 8 subcommands done; streaming won't) | | | |
-| FR-27 | done (M1) | | | |
+| FR-01 | done (M1-04 !7) | | NFR-01 | done (M4-05 !66, smoke p95 met) |
+| FR-02 | done (M1-05 !8) | | NFR-02 | partial (observed <60s; formal measurement pending) |
+| FR-03 | done (M1-06 !13) | | NFR-03 | done (M1-06 !13) |
+| FR-04 | done (M1-12 !16, D-065) | | NFR-04 | done (M3-07 !46, AB-04 test) |
+| FR-05 | done (M1-03 !5) | | NFR-05 | partial (M2-07 !27 admin page; 95% is measurement) |
+| FR-06 | done (M2-01 !21, M2-02 !22, M1-07 !12) | | NFR-06 | partial (M2-05 !26 machinery; equiv precision 1.0 on 9 labels, no plain `equivalent` in original 40) |
+| FR-07 | done (M1-07 !12) | | NFR-07 | done (M2-06 !29, 0 mismatches) |
+| FR-08 | done (M2-04 !23) | | NFR-08 | done (M1-03 !5, property tests) |
+| FR-09 | done (M2-04 !23, M3-06 !38) | | NFR-09 | done (M3-01 !34, D-077) |
+| FR-10 | done (M2-03 !20) | | NFR-10 | done (M1-09 !14, M3-09 !37) |
+| FR-11 | done (M2-04 !23, M2-07 !27) | | NFR-11 | done (M1-11 !9, M3-06 !38, D-075) |
+| FR-12 | done (M1-08 !10, M3-02 !40, M3-01 !34) | | NFR-12 | done (M1-09 !14, AB-02/AB-07 tests) |
+| FR-13 | done (M3-03 !45) | | NFR-13 | done (M1-01 !1 CI, AB-06/AB-09 tests) |
+| FR-14 | done (M3-04 !48) | | NFR-14 | done (M1-03 !5, AB-08 tests) |
+| FR-15 | done (M3-01 !34, D-074/D-077) | | NFR-15 | partial (cap in place M3-06 !38; spend pending: GCP billing page, Anthropic console) |
+| FR-16 | done (M3-05 !33, D-073, Q-8) | | NFR-16 | done (M1-09 !14, UI-v2 !50–!57, !62–!63) |
+| FR-17 | done (M2-07 !27) | | NFR-17 | done (M1-01 !1 CI coverage, M3-01 imports test) |
+| FR-18 | done (M2-05 !26, Q-7, 95 labels) | | | |
+| FR-19 | done (M2-06 !29) | | | |
+| FR-20 | done (M3-06 !38, D-075) | | | |
+| FR-21 | done (M1-09 !14, M2-07 !27, UI-v2 !50–!57, !62–!63) | | | |
+| FR-22 | done (M1-09 !14, AB-05 test) | | | |
+| FR-23 | done (M3-07 !46, M4-03 !60, round 735) | | | |
+| FR-24 | done (M3-08 !47, !51) | | | |
+| FR-25 | done (M2-07 !27) | | | |
+| FR-26 | done (M1-06 !13, M2-05 !26, M2-06 !29; streaming won't FR-28) | | | |
+| FR-27 | done (M1-09 !14) | | | |
+| FR-28 | won't (documented in brief.md, README what's next M4-01 !59) | | | |
 
 ## PRD evaluation sweep (M4)
 
@@ -252,10 +270,28 @@ Paawan kept these four in the operator chat on 2026-10-07 at 8:38 PM CT, after t
 
 | Date | GCP | Anthropic | Total | Cap |
 |---|---|---|---|---|
+| 2026-10-09 | pending: GCP billing page | pending: Anthropic console | pending | $50 |
 | 2026-10-06 | $0 (not yet measured) | $0 | $0 | $50 |
+
+**Note:** Review-window cost (D-101): estimated $0.27 for 3 hours `min-instances=1` (Sun 2026-10-11 09:00–12:00 CT). This is included in the $50 cap and will be reflected in the final GCP billing measurement.
 
 ## Security findings
 
-| ID | Severity | Status | Ticket |
+All abuse cases have mitigation tests in `tests/security/`. CI runs these on every MR pipeline. No open findings.
+
+| ID | Threat | Mitigation test(s) | Status |
 |---|---|---|---|
-| none yet | | | AB harnesses landed in M1 (AB-01/02/05/06/07/08/11/12/13/14) |
+| AB-01 | Prompt injection in venue data tries to make LLM upgrade or create relationships | `TestAB01_PromptInjectionSuite`, `TestAB01_UnrelatedNeverBecomesRelated` | mitigated (M1-11 !9) |
+| AB-02 | Hostile venue payloads (malformed JSON, huge bodies, nested structures, NaN/negative prices) | `TestAB02_Kalshi*` (5 tests), `TestAB02_Polymarket*` (10 tests) | mitigated (M1-04 !7, M1-05 !8) |
+| AB-03 | DoS via request flood | `TestAB03_PublicRateLimit`, `TestAB03_RateLimitPerIP`, `TestAB03_RateLimitWindowExpires`, `TestAB03_XFFRightmost`, `TestAB03_AdminExempt` | mitigated (M3-09 !37, D-076) |
+| AB-04 | Public route triggers unbounded LLM spend | `TestAB04_PublicRoutesNeverCallLLM`, `TestAB04_AdminRouteCanCallLLM`, `TestAB04_AdminRouteWithMockAPI`, `TestNFR04PinnedRoundZeroOutbound` | mitigated (M1-11 !9, M3-06 !38, M3-07 !46) |
+| AB-05 | Admin brute-force attack | `TestAB05_AdminBruteForceLockout`, `TestAB05_CredentialsUseConstantTimeCompare`, `TestAB05_LockoutUsesForwardedIPOnlyBehindCloudRun` | mitigated (M1-09 !14) |
+| AB-06 | Secrets in repo or logs | `TestAB06_GitignoreIgnoresEnv`, `TestAB06_IsEnvFile`, `TestAB06_NoTrackedEnvFiles`, CI gitleaks job | mitigated (M1-01 !1, D-061, D-078) |
+| AB-07 | XSS via hostile venue text | `TestAB07_HostileTextRendersEscaped` | mitigated (M1-09 !14) |
+| AB-08 | SQL injection or hostile IDs | `TestAB08_StoreQueriesAreConstant`, `TestAB08_HostilePairIDsInPath`, `TestAB08_HostileRouteFormIDs`, `TestAB08_HostileIDsThroughStoreLookups` | mitigated (M1-03 !5) |
+| AB-09 | Known-vulnerable dependencies | CI govulncheck job | mitigated (M1-01 !1) |
+| AB-11 | LLM cache poisoning or upgrade via cache | `TestAB11_CacheKeyUniqueness`, `TestAB11_CacheKeyIgnoresPresentation`, `TestAB11_CachedVerdictNeverUpgrades`, `TestAB11_CachedVerifierNeverUpgrades` | mitigated (M3-06 !38) |
+| AB-12 | CSRF on admin mutations | `TestAB12_AdminMutationsArePostOnly`, `TestAB12_AdminMutationRejectsForeignOrigin`, `TestAB12_OriginCheckNeedsAuthFirst` | mitigated (M1-09 !14) |
+| AB-13 | LLM output schema violation or output-based upgrade | `TestAB13_ValidOutputStillGuarded`, `TestAB13_SchemaFailuresLeaveRulesVerdict`, `TestAB13_VerifierSurfacesDecodeErrors` | mitigated (M1-11 !9, M3-06 !38) |
+| AB-14 | Public route mutation (create/update/delete data or trigger actions) | `TestAB14_PublicRoutesRejectMutations`, `TestAB14_RouteIsTheOnlyPublicPost`, `TestAB14_AdminIsTheOnlyMutatingSurface` | mitigated (M1-09 !14, M2-07 !27) |
+| AB-15 | Unbounded collector growth exhausts DB or budget | `TestAB15_AlertAboveThreshold`, `TestAB15_NoAlertAtOrBelowThreshold`, `TestAB15_IngestTriggersCheck`, `TestAB15_UnauthenticatedSeesNothing` (5 GiB alert on /admin) | mitigated (M2-07 !27, D-069) |
