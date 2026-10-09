@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-10-09T14:32:57Z",
-  "command": "equinox eval --out /workspace/scratch-eqx/gold/seed-after.json",
+  "generated_at": "2026-10-09T15:55:33Z",
+  "command": "equinox eval --verbose",
   "round_id": 2,
   "labels_file": "testdata/golden/labels.yaml",
   "labels": 95,
@@ -9,11 +9,11 @@
     {
       "type": "equivalent",
       "support": 9,
-      "tp": 0,
-      "fp": 0,
-      "fn": 9,
-      "precision": null,
-      "recall": "0"
+      "tp": 9,
+      "fp": 15,
+      "fn": 0,
+      "precision": "0.375",
+      "recall": "1"
     },
     {
       "type": "equivalent_given_facts",
@@ -46,9 +46,9 @@
       "type": "related",
       "support": 36,
       "tp": 25,
-      "fp": 31,
+      "fp": 7,
       "fn": 11,
-      "precision": "0.4464",
+      "precision": "0.7813",
       "recall": "0.6944"
     },
     {
@@ -62,7 +62,7 @@
     }
   ],
   "notes": [
-    "equivalent precision not measurable: no equivalent prediction among the labelled pairs (target \u003e= 0.95, NFR-06)",
+    "equivalent precision 0.3750 on 24 predictions is BELOW the 0.95 target (NFR-06)",
     "rules+llm: not evaluated (M3)",
     "not evaluated: kalshi:KXBTCD-26OCT0812-T77999.99 / polymarket:77443519844770925744859368185756294247896766669594679461676958360391934252270 (instrument not found)",
     "not evaluated: kalshi:KXBTCD-26OCT0812-T79999.99 / polymarket:40485584554428668469241611958393793104417692929486209319873780168120657704330 (instrument not found)",
