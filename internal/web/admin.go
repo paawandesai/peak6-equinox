@@ -87,9 +87,9 @@ type HealthRow struct {
 
 // Bar represents one SVG bar for recent-round visualization (UI-17, HANDOFF.md).
 type Bar struct {
-	Title  string  // tooltip text (e.g. "Round 123: ok")
-	Class  string  // bar-ok, bar-partial, bar-failed, bar-missing
-	Height string  // SVG height attribute (100%, 75%, 50%, or just stroke for missing)
+	Title  string // tooltip text (e.g. "Round 123: ok")
+	Class  string // bar-ok, bar-partial, bar-failed, bar-missing
+	Height string // SVG height attribute (100%, 75%, 50%, or just stroke for missing)
 }
 
 type adminPage struct {
@@ -113,8 +113,8 @@ type adminPage struct {
 	LLMVerifierStateText   string // human-readable state text
 	LLMVerifierButtonLabel string // button label
 	// UI-17: health rollup
-	Health             []HealthRow // health table rows (Collectors, Database, Matcher, Pinned, LLM)
-	FreshnessWindows   string      // freshness windows line under health table
+	Health           []HealthRow // health table rows (Collectors, Database, Matcher, Pinned, LLM)
+	FreshnessWindows string      // freshness windows line under health table
 }
 
 // worstHealth returns the worst health state from a set of signals (UI-17, HANDOFF.md).
