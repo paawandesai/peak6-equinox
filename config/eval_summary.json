@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-10-09T14:32:57Z",
-  "command": "equinox eval --out /workspace/scratch-eqx/gold/seed-after.json",
+  "generated_at": "2026-10-09T17:13:08Z",
+  "command": "equinox eval",
   "round_id": 2,
   "labels_file": "testdata/golden/labels.yaml",
   "labels": 95,
