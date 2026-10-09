@@ -73,12 +73,14 @@ func TestRoutableGroupingAndOrder(t *testing.T) {
 	chipEquivalent := `<span class="chip chip-ok">equivalent</span>`
 	wantContains(t, body, chipComplement, chipEqGivenFacts, chipEquivalent)
 
-	// Order is by confidence desc, then ID: complement (0.95), equivalent_given_facts (0.91), equivalent (0.90).
-	idx1 := strings.Index(body, chipComplement)
+	// UI-11: Order is by ReviewPriority (confidence - 0.90) asc, then ID.
+	// complement 0.95 → +0.05, equivalent_given_facts 0.91 → +0.01, equivalent 0.90 → 0.00.
+	// So order: equivalent (0.00), equivalent_given_facts (+0.01), complement (+0.05).
+	idx1 := strings.Index(body, chipEquivalent)
 	idx2 := strings.Index(body, chipEqGivenFacts)
-	idx3 := strings.Index(body, chipEquivalent)
+	idx3 := strings.Index(body, chipComplement)
 	if idx1 < 0 || idx2 < 0 || idx3 < 0 || idx1 >= idx2 || idx2 >= idx3 {
-		t.Errorf("routable type chips not in correct order: complement at %d, equivalent_given_facts at %d, equivalent at %d", idx1, idx2, idx3)
+		t.Errorf("routable type chips not in priority order: equivalent at %d, equivalent_given_facts at %d, complement at %d", idx1, idx2, idx3)
 	}
 
 	// Cursor round 2 issue 2: assert round id appears inside a row (not bare substring from strip).
@@ -102,8 +104,8 @@ func TestRoutableGroupingAndOrder(t *testing.T) {
 		t.Errorf("first data row lacks round text %q; row content: %s", wantRoundText, firstDataRow[:200])
 	}
 
-	// 2-click path: / contains /pairs/{id}#route for a routable pair.
-	wantContains(t, body, `href="/pairs/`+strconv.FormatInt(eqID, 10)+`#route"`, "<strong>Route</strong>")
+	// UI-11: 2-click path: / contains /pairs/{id}#route for a routable pair.
+	wantContains(t, body, `href="/pairs/`+strconv.FormatInt(eqID, 10)+`#route"`, "Route →")
 }
 
 // TestConfidenceBucketWords verifies that confidence scores map to the correct bucket words:
@@ -247,13 +249,13 @@ func TestRelatedCountAndDetails(t *testing.T) {
 	// The summary contains the count and the phrase.
 	wantContains(t, body, `<summary>related (2): same event, different payout; never routed</summary>`)
 
-	// Cursor round 1 issue 3: assert related rows sit inside details element without "open".
-	detailsStart := strings.Index(body, "<details>")
+	// UI-11: assert related rows sit inside details.fold element without "open".
+	detailsStart := strings.Index(body, `<details class="fold">`)
 	detailsEnd := strings.Index(body, "</details>")
 	if detailsStart < 0 || detailsEnd < 0 {
-		t.Fatal("related pairs should be inside a <details> element")
+		t.Fatal("related pairs should be inside a <details class=\"fold\"> element")
 	}
-	if strings.Contains(body[detailsStart:detailsStart+10], "open") {
+	if strings.Contains(body[detailsStart:detailsStart+25], "open") {
 		t.Error("details element should not have 'open' attribute (collapsed by default)")
 	}
 	// Verify related rows are inside the details element.
@@ -274,9 +276,9 @@ func TestTwoClickPath(t *testing.T) {
 	wantHTML(t, rec, 200)
 	body := rec.Body.String()
 
-	// The matches page contains a link to /pairs/{id}#route for the equivalent pair.
+	// UI-11: The matches page contains a link to /pairs/{id}#route for the equivalent pair.
 	wantContains(t, body, `href="/pairs/`+strconv.FormatInt(sd.eqID, 10)+`#route"`)
-	wantContains(t, body, "<strong>Route</strong>")
+	wantContains(t, body, "Route →")
 }
 
 // TestMatchesSortOrders verifies that sort query param changes the order (UI-11).
@@ -544,8 +546,8 @@ func TestComplementBadge(t *testing.T) {
 	wantHTML(t, rec, 200)
 	body := rec.Body.String()
 
-	// Complement uses chip-ok class.
-	wantContains(t, body, `<span class="chip chip-ok">complement</span>`)
+	// UI-11: Complement uses chip-info class (per UI-10 TypeChipClass).
+	wantContains(t, body, "chip chip-info", "complement")
 }
 
 // TestSectionOrder verifies that sections appear in the correct order: routable, then implies, then related (Cursor round 1 issue 3).
