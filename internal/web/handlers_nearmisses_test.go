@@ -139,3 +139,56 @@ func TestNearMissLogLink(t *testing.T) {
 		`href="/pairs/`+strconv.FormatInt(sd.relID, 10)+`">Not-a-match record →</a>`,
 		`href="/pairs/`+strconv.FormatInt(factMissID, 10)+`">Not-a-match record →</a>`)
 }
+
+// TestFormatDurationCoverage tests all branches of formatDuration.
+func TestFormatDurationCoverage(t *testing.T) {
+	tests := []struct {
+		dur  time.Duration
+		want string
+	}{
+		{48 * time.Hour, "2 days"},
+		{24 * time.Hour, "1 day"},
+		{2 * time.Hour, "2 hours"},
+		{1 * time.Hour, "1 hour"},
+		{30 * time.Minute, "30 minutes"},
+		{1 * time.Minute, "1 minute"},
+	}
+	for _, tt := range tests {
+		got := formatDuration(tt.dur)
+		if got != tt.want {
+			t.Errorf("formatDuration(%v) = %q, want %q", tt.dur, got, tt.want)
+		}
+	}
+}
+
+// TestPluralS tests the pluralS helper.
+func TestPluralS(t *testing.T) {
+	if got := pluralS(0); got != "s" {
+		t.Errorf("pluralS(0) = %q, want \"s\"", got)
+	}
+	if got := pluralS(1); got != "" {
+		t.Errorf("pluralS(1) = %q, want \"\"", got)
+	}
+	if got := pluralS(2); got != "s" {
+		t.Errorf("pluralS(2) = %q, want \"s\"", got)
+	}
+}
+
+// TestVetoDescriptionCoverage tests all veto codes.
+func TestVetoDescriptionCoverage(t *testing.T) {
+	tests := map[string]string{
+		"subject_mismatch":        "Different underlying subject",
+		"threshold_mismatch":      "Strike or threshold differs",
+		"deadline_mismatch":       "Resolution deadline differs",
+		"direction_mismatch":      "Comparison direction differs (over vs under)",
+		"source_mismatch":         "Data source differs",
+		"fact_did_not_close":      "A fact was consulted but did not close the difference",
+		"unknown_code":            "unknown code",
+	}
+	for code, want := range tests {
+		got := vetoDescription(code)
+		if got != want {
+			t.Errorf("vetoDescription(%q) = %q, want %q", code, got, want)
+		}
+	}
+}
