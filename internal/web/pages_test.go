@@ -250,9 +250,9 @@ func TestPairPageShowsHistoryFactsBasisAndLog(t *testing.T) {
 		// Facts: the URL source is a link, the free-text source is not.
 		"External facts consulted (2)", "<code>fed_upper_bound</code>", `<a href="https://www.federalreserve.gov/newsevents/pressreleases/monetary20260916a.htm" rel="noopener noreferrer">`,
 		"<td>FOMC history, not a URL</td>",
-		// Basis risk components and strip.
-		"0.55 high", // basis risk in strip
-		"Basis risk: 0.55", "<code>source_difference</code></td><td>0.50</td><td>CF Benchmarks vs Binance</td>",
+		// Basis risk components and verdict panel (UI-12: structured display with <strong>score</strong> <span>word</span>).
+		"<strong>0.55</strong>", ">high<", // basis risk in verdict panel
+		"Basis risk: 0.55", "<code>source_difference</code></td><td>0.50</td><td>CF Benchmarks vs Binance</td><td>", // 4-column basis table (added "Diff row" column)
 		// Full type set.
 		"The full set of relationship types", `<li class="type-complement">complement (routable):`, `<li class="type-implies">implies:`,
 		// History: two rounds, four touches; polylines for both series.
@@ -430,5 +430,13 @@ func TestFormatPercentAndHTTPURL(t *testing.T) {
 
 func TestLayoutNavLinksNewPages(t *testing.T) {
 	body := get(New(Config{}, Deps{}).Handler(), "/eval").Body.String()
-	wantContains(t, body, `<a href="/near-misses">Near misses</a>`, `<a href="/log">Decision log</a>`, `<a href="/eval">Eval</a>`)
+	// UI-10: nav links now include aria-current on the active page
+	wantContains(t, body,
+		`<a href="/near-misses"`,
+		`>Near misses</a>`,
+		`<a href="/log"`,
+		`>Decision log</a>`,
+		`<a href="/eval"`,
+		`aria-current="page"`,
+		`>Eval</a>`)
 }
