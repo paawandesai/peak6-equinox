@@ -921,3 +921,308 @@ func TestAdminLLMVerifyRedirect(t *testing.T) {
 		})
 	}
 }
+
+// UI-26: Test Matcher health row states based on match runs
+func TestMatcherHealthStates(t *testing.T) {
+	ctx := context.Background()
+	st := store.New(tdb.Pool(t))
+	tdb.Reset(t)
+
+	// Create a round for the match runs
+	round, err := st.CreateRound(ctx, t0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.FinishRound(ctx, round.ID, store.RoundOK, nil, t0.Add(30*time.Second)); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name      string
+		matchRun  *store.MatchRun
+		now       time.Time
+		wantClass string // signal class: signal-unknown, signal-healthy, signal-warning, signal-degraded
+		wantText  string // substring of signal text
+	}{
+		{
+			name:      "no run recorded",
+			matchRun:  nil,
+			now:       t0,
+			wantClass: "signal-unknown",
+			wantText:  "No match runs recorded",
+		},
+		{
+			name: "recent run, healthy",
+			matchRun: &store.MatchRun{
+				RoundID:             round.ID,
+				StartedAt:           t0,
+				FinishedAt:          t0.Add(5 * time.Second),
+				DurationMS:          5000,
+				PairsCompared:       100,
+				RelationshipsStored: 50,
+				Outcome:             store.MatchRunOK,
+			},
+			now:       t0.Add(1 * time.Hour), // ~1h ago, within 6h window
+			wantClass: "signal-healthy",
+			wantText:  "Last run",
+		},
+		{
+			name: "old run, warning",
+			matchRun: &store.MatchRun{
+				RoundID:             round.ID,
+				StartedAt:           t0,
+				FinishedAt:          t0.Add(5 * time.Second),
+				DurationMS:          5000,
+				PairsCompared:       100,
+				RelationshipsStored: 50,
+				Outcome:             store.MatchRunOK,
+			},
+			now:       t0.Add(8 * time.Hour), // ~8h ago, between 6h and 12h
+			wantClass: "signal-warning",
+			wantText:  "Last run",
+		},
+		{
+			name: "very old run, degraded",
+			matchRun: &store.MatchRun{
+				RoundID:             round.ID,
+				StartedAt:           t0,
+				FinishedAt:          t0.Add(5 * time.Second),
+				DurationMS:          5000,
+				PairsCompared:       100,
+				RelationshipsStored: 50,
+				Outcome:             store.MatchRunOK,
+			},
+			now:       t0.Add(25 * time.Hour), // >24h ago, > 12h
+			wantClass: "signal-degraded",
+			wantText:  "Last run",
+		},
+		{
+			name: "failed run, degraded",
+			matchRun: &store.MatchRun{
+				RoundID:             round.ID,
+				StartedAt:           t0,
+				FinishedAt:          t0.Add(5 * time.Second),
+				DurationMS:          5000,
+				PairsCompared:       0,
+				RelationshipsStored: 0,
+				Outcome:             store.MatchRunFailed,
+			},
+			now:       t0.Add(1 * time.Hour),
+			wantClass: "signal-degraded",
+			wantText:  "Last run failed",
+		},
+		{
+			name: "slow run, warning",
+			matchRun: &store.MatchRun{
+				RoundID:             round.ID,
+				StartedAt:           t0,
+				FinishedAt:          t0.Add(90 * time.Second),
+				DurationMS:          90000,
+				PairsCompared:       100,
+				RelationshipsStored: 50,
+				Outcome:             store.MatchRunOK,
+			},
+			now:       t0.Add(1 * time.Hour),
+			wantClass: "signal-warning",
+			wantText:  "Last run took 90s",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Clean DB for each subtest
+			tdb.Reset(t)
+			st := store.New(tdb.Pool(t))
+
+			// Recreate round for this subtest
+			round, err := st.CreateRound(ctx, t0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := st.FinishRound(ctx, round.ID, store.RoundOK, nil, t0.Add(30*time.Second)); err != nil {
+				t.Fatal(err)
+			}
+
+			// Insert match run if provided
+			if tt.matchRun != nil {
+				mr := *tt.matchRun
+				mr.RoundID = round.ID // Use the fresh round ID
+				if _, err := st.InsertMatchRun(ctx, mr); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			// Build health rows
+			ck := &clock{t: tt.now}
+			s, _ := newAdminServer(t, Deps{Store: st}, "ci")
+			s.deps.Now = ck.now
+
+			// Fetch data as the handler does
+			var latestMatchRun *store.MatchRun
+			if mr, err := st.GetLatestMatchRun(ctx); err == nil {
+				latestMatchRun = &mr
+			} else if !isNotFound(err) {
+				t.Fatal(err)
+			}
+
+			var dailyHistory []store.DailyRoundSummary
+			if history, err := st.DailyRoundHistory(ctx, 90); err == nil {
+				dailyHistory = history
+			} else {
+				t.Fatal(err)
+			}
+
+			// Build health rows
+			rows := buildHealthRows(collectorStats{}, dbGrowth{}, false, "", nil, "ready", nil, latestMatchRun, dailyHistory, tt.now)
+
+			// Find Matcher row
+			var matcherRow *HealthRow
+			for i := range rows {
+				if rows[i].Name == "Matcher" {
+					matcherRow = &rows[i]
+					break
+				}
+			}
+			if matcherRow == nil {
+				t.Fatal("Matcher row not found")
+			}
+
+			// Check signals
+			if len(matcherRow.Signals) == 0 {
+				t.Fatal("Matcher row has no signals")
+			}
+
+			// Check that at least one signal matches
+			found := false
+			for _, sig := range matcherRow.Signals {
+				if sig.Class == tt.wantClass && strings.Contains(sig.Text, tt.wantText) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				t.Errorf("signal class %q with text %q not found in signals %+v", tt.wantClass, tt.wantText, matcherRow.Signals)
+			}
+		})
+	}
+}
+
+// UI-26: Test 90-day daily history bars
+func TestDailyHistoryBars(t *testing.T) {
+	ctx := context.Background()
+	st := store.New(tdb.Pool(t))
+	tdb.Reset(t)
+
+	// Use the current date at noon UTC (so test works on any date and timezone)
+	// Noon UTC ensures the date is the same in all US timezones (UTC-5 to UTC-8)
+	now := time.Now().UTC().Truncate(24 * time.Hour).Add(12 * time.Hour)
+
+	// Create rounds across 90 days with gaps and mixed outcomes
+	days := []struct {
+		daysAgo int
+		status  store.RoundStatus
+		rounds  int // number of rounds on this day
+	}{
+		{89, store.RoundOK, 1},      // oldest day
+		{87, store.RoundPartial, 1}, // gap at 88
+		{85, store.RoundFailed, 1},  // gap at 86
+		{80, store.RoundOK, 2},      // multiple rounds, all OK
+		{75, store.RoundPartial, 1}, // gaps 76-84
+		{70, store.RoundOK, 1},      // gap 71-74
+		{50, store.RoundFailed, 1},  // gap 51-69
+		{30, store.RoundPartial, 2}, // gap 31-49, mixed partial
+		{10, store.RoundOK, 1},      // gap 11-29
+		{5, store.RoundFailed, 1},   // gap 6-9
+		{2, store.RoundOK, 1},       // gap 3-4
+		{1, store.RoundPartial, 1},  // yesterday
+		// Today (day 0): no rounds (missing)
+	}
+
+	for _, d := range days {
+		dayStart := now.AddDate(0, 0, -d.daysAgo)
+		for i := 0; i < d.rounds; i++ {
+			r, err := st.CreateRound(ctx, dayStart.Add(time.Duration(i)*time.Hour))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := st.FinishRound(ctx, r.ID, d.status, nil, dayStart.Add(time.Duration(i)*time.Hour+30*time.Second)); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	// Get daily history for last 90 days
+	history, err := st.DailyRoundHistory(ctx, 90)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(history) != 90 {
+		t.Fatalf("got %d history days, want 90", len(history))
+	}
+
+	// Build bars
+	bars := buildDailyHistoryBars(history)
+
+	// Verify 90 bars
+	if len(bars) != 90 {
+		t.Errorf("got %d bars, want 90", len(bars))
+	}
+
+	// Spot-check bar properties (bars are in descending date order from history)
+	tests := []struct {
+		index      int
+		wantClass  string
+		wantHeight string
+		wantTitle  string // substring
+	}{
+		{0, "missing", "0", "no rounds"},    // today (daysAgo=0, newest first)
+		{1, "partial", "75%", "1 partial"},  // yesterday (daysAgo=1)
+		{2, "ok", "100%", "1 ok"},           // daysAgo=2
+		{3, "missing", "0", "no rounds"},    // daysAgo=3 (gap)
+		{5, "failed", "50%", "1 failed"},    // daysAgo=5
+		{10, "ok", "100%", "1 ok"},          // daysAgo=10
+		{30, "partial", "75%", "2 partial"}, // daysAgo=30 (2 rounds, both partial)
+		{89, "ok", "100%", "1 ok"},          // oldest day with data (daysAgo=89)
+	}
+
+	for _, tt := range tests {
+		if tt.index >= len(bars) {
+			t.Errorf("bar index %d out of range", tt.index)
+			continue
+		}
+		bar := bars[tt.index]
+		if bar.Class != tt.wantClass {
+			t.Errorf("bars[%d].Class = %q, want %q", tt.index, bar.Class, tt.wantClass)
+		}
+		if bar.Height != tt.wantHeight {
+			t.Errorf("bars[%d].Height = %q, want %q", tt.index, bar.Height, tt.wantHeight)
+		}
+		if !strings.Contains(bar.Title, tt.wantTitle) {
+			t.Errorf("bars[%d].Title = %q, want substring %q", tt.index, bar.Title, tt.wantTitle)
+		}
+	}
+
+	// Verify all 90 bars are present with correct CSS classes (UI-26 acceptance criterion)
+	okCount, partialCount, failedCount, missingCount := 0, 0, 0, 0
+	for _, bar := range bars {
+		switch bar.Class {
+		case "ok":
+			okCount++
+		case "partial":
+			partialCount++
+		case "failed":
+			failedCount++
+		case "missing":
+			missingCount++
+		default:
+			t.Errorf("unexpected bar class: %q", bar.Class)
+		}
+	}
+
+	// Verify that all 90 days are accounted for with correct outcome classes
+	total := okCount + partialCount + failedCount + missingCount
+	if total != 90 {
+		t.Errorf("total bars = %d (ok=%d, partial=%d, failed=%d, missing=%d), want 90", total, okCount, partialCount, failedCount, missingCount)
+	}
+}
