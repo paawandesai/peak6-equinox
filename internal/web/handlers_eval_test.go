@@ -290,3 +290,60 @@ func TestEvalCellRateLimit(t *testing.T) {
 		t.Errorf("request 61: got %d, want 429", rec.Code)
 	}
 }
+
+// TestConfusionClassBuckets tests the bucket assignment based on count (UI-23 round 2).
+func TestConfusionClassBuckets(t *testing.T) {
+	tests := []struct {
+		label     string
+		predicted string
+		count     int
+		wantClass string
+	}{
+		{"equivalent", "equivalent", 1, "d1"},   // diagonal, light
+		{"equivalent", "equivalent", 5, "d1"},   // diagonal, light (boundary)
+		{"equivalent", "equivalent", 6, "d2"},   // diagonal, medium
+		{"equivalent", "equivalent", 15, "d2"},  // diagonal, medium (boundary)
+		{"equivalent", "equivalent", 16, "d3"},  // diagonal, dark
+		{"equivalent", "equivalent", 99, "d3"},  // diagonal, dark (high)
+		{"equivalent", "related", 1, "e1"},      // off-diagonal, light
+		{"equivalent", "related", 5, "e1"},      // off-diagonal, light (boundary)
+		{"equivalent", "related", 6, "e2"},      // off-diagonal, medium
+		{"equivalent", "related", 15, "e2"},     // off-diagonal, medium (boundary)
+		{"equivalent", "related", 16, "e3"},     // off-diagonal, dark
+		{"equivalent", "related", 99, "e3"},     // off-diagonal, dark (high)
+	}
+	funcs := templateFuncs
+	classFunc := funcs["ConfusionClass"].(func(string, string, int) string)
+	for _, tt := range tests {
+		got := classFunc(tt.label, tt.predicted, tt.count)
+		if got != tt.wantClass {
+			t.Errorf("ConfusionClass(%q, %q, %d) = %q, want %q", tt.label, tt.predicted, tt.count, got, tt.wantClass)
+		}
+	}
+}
+
+// TestEvalCellWithoutStore tests that eval cell handles missing store gracefully (UI-23 round 2).
+func TestEvalCellWithoutStore(t *testing.T) {
+	summary := `{
+		"generated_at": "2026-10-09T12:00:00Z",
+		"method": "rules",
+		"labels": 1,
+		"round_id": 1,
+		"labels_file": "labels.yaml",
+		"command": "equinox eval",
+		"types": [],
+		"notes": [],
+		"confusion": {
+			"cells": {
+				"equivalent:equivalent": {"count": 2, "pair_ids": ["kalshi:A / polymarket:1", "kalshi:B / polymarket:2"]}
+			}
+		}
+	}`
+	// No store provided - should fall back to showing canonical IDs
+	s := New(Config{EvalSummaryFile: writeEval(t, summary)}, Deps{})
+	rec := get(s.Handler(), "/eval/cell?label=equivalent&predicted=equivalent")
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+	// Should show canonical IDs as code blocks (fallback when no store)
+	wantContains(t, body, "kalshi:A / polymarket:1", "kalshi:B / polymarket:2")
+}
