@@ -17,19 +17,24 @@
 </div>
 
 {{else}}{{with .Summary}}
+<div class="eval-head">
 {{if $.Equiv}}
 {{with $.Equiv}}
-<div class="panel panel-info">
-  {{template "badge" .VerdictBadge}}
-  <p><strong>Precision at equivalent:</strong> {{.Precision}}</p>
-  <p>Support: {{.Support}} labelled pairs</p>
-  <p>The exit bar is precision ≥ {{$.Target}} at <em>equivalent</em>: a false "same bet" is the worst failure, so precision counts more than recall.</p>
+  <div class="panel panel-info">
+    {{template "badge" .VerdictBadge}}
+    <p><strong>Precision at equivalent:</strong> {{.Precision}}</p>
+    <p>Support: {{.Support}} labelled pairs</p>
+    <p>The exit bar is precision ≥ {{$.Target}} at <em>equivalent</em>: a false "same bet" is the worst failure, so precision counts more than recall.</p>
+  </div>
+{{end}}
+{{else}}
+  <div></div>
+{{end}}
+  <div>
+    <p>Precision and recall per relationship type, computed by <code>equinox eval</code> over the human-confirmed labels in <code>testdata/golden/labels.yaml</code>. This page only reads the stored summary.</p>
+    <p>Produced <strong>{{formatTime $.Produced $.Timezone}}</strong>{{if .Command}} by <code>{{.Command}}</code>{{end}}{{if .RoundID}} on round <strong>{{.RoundID}}</strong>{{end}}: <strong>{{.Labels}}</strong> labelled pair{{if ne .Labels 1}}s{{end}}{{if .LabelsFile}} from <code>{{.LabelsFile}}</code>{{end}}{{if .Method}}, method <code>{{.Method}}</code>{{end}}.</p>
+  </div>
 </div>
-{{end}}
-{{end}}
-
-<p>Precision and recall per relationship type, computed by <code>equinox eval</code> over the human-confirmed labels in <code>testdata/golden/labels.yaml</code>. This page only reads the stored summary.</p>
-<p>Produced <strong>{{formatTime $.Produced $.Timezone}}</strong>{{if .Command}} by <code>{{.Command}}</code>{{end}}{{if .RoundID}} on round <strong>{{.RoundID}}</strong>{{end}}: <strong>{{.Labels}}</strong> labelled pair{{if ne .Labels 1}}s{{end}}{{if .LabelsFile}} from <code>{{.LabelsFile}}</code>{{end}}{{if .Method}}, method <code>{{.Method}}</code>{{end}}.</p>
 {{end}}
 
 {{if .Rows}}
