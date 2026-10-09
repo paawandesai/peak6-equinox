@@ -17,6 +17,19 @@ Next operator action (Tier 2): human verification of Fed demo rendering (criteri
 
 **Previous:** M1 verification HIT WITH CAVEATS (2026-10-06 ~21:55 CT).
 
+**M4-03 pinned demo round (2026-10-09 14:28 UTC):**
+- **Round ID:** 735
+- **Finished at:** 2026-10-09 14:15:12 UTC
+- **Relationship counts:**
+  - equivalent: 0
+  - equivalent_given_facts: 1 (Fed demo pair: kalshi:KXFED-26OCT-T4.25 ↔ polymarket Will the Fed increase interest rates by 50+ bps after October 2026 meeting)
+  - complement: 1
+  - implies: 25
+  - related: 11,223 (613 near misses stored)
+  - unrelated: 42,090
+- **Total stored:** 613 relationships
+- **Verification:** pinned round serves on / with demo banner; Scheduler continues collecting (rounds 736-738+ after pin); NFR-04 test passes in CI (zero venue calls for pinned pages)
+
 
 ## Done
 
