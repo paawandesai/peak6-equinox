@@ -1,20 +1,50 @@
 {{define "content"}}
+{{/* UI-12: Pair detail v2, section order per HANDOFF.md */}}
+<nav aria-label="breadcrumb"><a href="/">Matches</a> &gt; Pair #{{.ID}}</nav>
 <h1>Pair #{{.ID}}</h1>
-<dl class="strip">
-  <div><dt>Type</dt><dd><span class="chip {{.TypeChipClass}}">{{.Type}}</span></dd></div>
-  <div><dt>Confidence</dt><dd>{{.Confidence}} {{.ConfidenceWord}}</dd></div>
-  <div><dt>Method</dt><dd>{{.Method}}</dd></div>
-  <div><dt>Basis risk</dt><dd>{{.BasisRiskScore}}</dd></div>
-  <div><dt>Routable</dt><dd>{{if .Routable}}yes{{else}}no{{end}}</dd></div>
-  <div><dt>Round</dt><dd>{{.Round.ID}}, as of {{.Round.AsOf}}</dd></div>
-  <div><dt></dt><dd><a href="#route">Route an order ↓</a></dd></div>
-</dl>
-<p>{{.TypeLabel}}{{if .NearMiss}} This pair is a <a href="/near-misses">near miss</a>: {{if .Vetoes}}a hard veto fired{{else}}no veto fired, but the external fact consulted did not close the gap{{end}}.{{end}}</p>
+
+{{/* UI-12: verdict panel with large badge, confidence, method, basis risk, routable, round */}}
+<div class="verdict-panel">
+  <div class="verdict-head">
+    {{template "badge-l" .TypeBadge}}
+    <span class="type-label">{{.TypeLabel}}</span>
+  </div>
+  <dl class="verdict-meta">
+    <div>
+      <dt>Confidence</dt>
+      <dd>{{template "conf" .Confidence}}</dd>
+    </div>
+    <div>
+      <dt>Method</dt>
+      <dd>{{.Method}}</dd>
+    </div>
+    <div>
+      <dt>Basis risk</dt>
+      <dd>
+        {{if eq .BasisRisk.Score "not scored"}}{{.BasisRisk.Word}}{{else}}<strong>{{.BasisRisk.Score}}</strong> <span class="{{.BasisRisk.Class}}">{{.BasisRisk.Word}}</span>{{end}}
+        (<a href="#basis">{{.DiffRowCount}}</a>)
+      </dd>
+    </div>
+    <div>
+      <dt>Routable</dt>
+      <dd>{{if .Routable}}✓ yes{{else}}no{{end}}</dd>
+    </div>
+    <div>
+      <dt>Round</dt>
+      <dd>{{.Round.ID}}, as of {{.Round.AsOf}}</dd>
+    </div>
+  </dl>
+  <p class="type-explain">{{.TypeLabel}}{{if .NearMiss}} This pair is a <a href="/near-misses">near miss</a>: {{if .Vetoes}}a hard veto fired{{else}}no veto fired, but the external fact consulted did not close the gap{{end}}.{{end}}</p>
+  <p class="route-link"><a href="#route">Route an order ↓</a></p>
+</div>
+
+{{/* UI-12: types legend as details */}}
 <details class="types">
   <summary>The full set of relationship types</summary>
   <ul>{{range .Types}}<li class="type-{{.Type}}">{{.Type}}{{if .Routable}} (routable){{end}}: <span class="plain">{{.Label}}</span></li>{{end}}</ul>
 </details>
 
+{{/* UI-12: The two contracts with .layers details group */}}
 <section>
   <h2>The two contracts</h2>
   <div class="grid">
@@ -23,16 +53,40 @@
   </div>
 </section>
 
+{{/* UI-12: Contract diff as table.terms, one tbody per rule part */}}
 <section id="diff">
   <h2>Contract diff</h2>
   <p>Every term the normaliser extracted, side by side. <em>unknown</em> means a term could not be parsed on at least one side; it is never guessed.</p>
-  <table class="data diff">
-    <thead><tr><th>Term</th><th>A: {{.A.Venue}}</th><th>B: {{.B.Venue}}</th><th>Status</th></tr></thead>
-    <tbody>
-    {{range .DiffRows}}<tr class="diff-{{.Status}}"><td>{{.Field}}</td><td>{{.A}}</td><td>{{.B}}</td><td>{{.StatusText}}{{if .Annotation}} <small>{{.Annotation}}</small>{{end}}</td></tr>{{end}}
-    {{if not .DiffRows}}<tr><td colspan="4">No diff was stored for this pair.</td></tr>{{end}}
-    </tbody>
+  <table class="data terms">
+    <thead><tr><th>Term</th><th>A: {{.A.Venue}}</th><th>B: {{.B.Venue}}</th><th>Verdict</th></tr></thead>
+    {{/* UI-12: group diff rows by rule part */}}
+    {{range $part := partOrder}}
+      {{$rows := filterByPart $.DiffRows $part}}
+      {{if $rows}}
+      <tbody>
+        <tr><th class="part" colspan="4">{{$part}}</th></tr>
+        {{range $rows}}
+        <tr class="{{.Class}}">
+          <td>{{.Field}}</td>
+          <td class="val">{{template "diffTokens" .ATokens}}</td>
+          <td class="val">{{template "diffTokens" .BTokens}}</td>
+          <td>
+            {{template "badge" .Badge}}
+            {{if .Annotation}}<small>{{.Annotation}}</small>{{end}}
+            {{if .BasisLink}}<a href="{{.BasisLink}}" class="basis-link">basis →</a>{{end}}
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+      {{end}}
+    {{end}}
+    {{if not .DiffRows}}<tbody><tr><td colspan="4">No diff was stored for this pair.</td></tr></tbody>{{end}}
   </table>
+  <p class="diff-counts">{{.DiffCounts}}</p>
+</section>
+
+{{/* UI-12: Vetoes (heading variant unchanged from UI-04) */}}
+<section>
   {{if .Vetoes}}
   <h3>{{.VetoHeading}}</h3>
   {{if eq .Type "equivalent_given_facts"}}<p>These term differences exist, but documented external facts close them.</p>{{else}}<p>Each veto on its own blocks <em>equivalent</em>.</p>{{end}}
@@ -45,34 +99,41 @@
   {{end}}
 </section>
 
-<section>
-  <h3>External facts {{if .Facts}}consulted ({{len .Facts}}){{else}}consulted{{end}}</h3>
-  {{if .Facts}}
-  <p>Each fact is reviewed data from <code>config/facts.yaml</code> (FR-10). For <em>equivalent_given_facts</em> the verdict rests on them; for a <em>related</em> verdict they are the facts that were tried and did not close the gap.</p>
-  <table class="data facts">
-    <thead><tr><th>Fact</th><th>Value</th><th>Source</th><th>As of</th></tr></thead>
-    <tbody>{{range .Facts}}<tr><td><code>{{.Key}}</code></td><td>{{.Value}}</td><td>{{with httpURL .Source}}<a href="{{.}}" rel="noopener noreferrer">{{.}}</a>{{else}}{{.Source}}{{end}}</td><td>{{formatTime .AsOf $.Timezone}}</td></tr>{{end}}</tbody>
-  </table>
-  {{else}}
-  <p>None: this verdict rests on the contract terms alone.</p>
-  {{end}}
-  <h3>Basis risk{{if .BasisRisk}}: {{conf .BasisRisk.Score}}{{end}}</h3>
-  {{if .BasisRisk}}
-  <p>The residual chance that the two contracts settle differently even though they are matched, as a score in [0,1] built from documented components (FR-11). The router charges it as a per-contract penalty.</p>
-  <table class="data basis">
-    <thead><tr><th>Component</th><th>Score</th><th>Detail</th></tr></thead>
-    <tbody>{{range .BasisRisk.Components}}<tr><td><code>{{.Name}}</code></td><td>{{conf .Score}}</td><td>{{.Detail}}</td></tr>{{end}}</tbody>
-  </table>
-  {{else}}
-  <p>Not scored for this pair. Basis risk is computed for routable and implication verdicts by matcher v1 (pairs matched earlier have none stored); <em>related</em> and <em>unrelated</em> pairs are never scored.</p>
-  {{end}}
+{{/* UI-12: Facts and Basis side by side */}}
+<section class="grid">
+  <div>
+    <h3>External facts {{if .Facts}}consulted ({{len .Facts}}){{else}}consulted{{end}}</h3>
+    {{if .Facts}}
+    <p>Each fact is reviewed data from <code>config/facts.yaml</code> (FR-10). For <em>equivalent_given_facts</em> the verdict rests on them; for a <em>related</em> verdict they are the facts that were tried and did not close the gap.</p>
+    <table class="data facts">
+      <thead><tr><th>Fact</th><th>Value</th><th>Source</th><th>As of</th></tr></thead>
+      <tbody>{{range .Facts}}<tr><td><code>{{.Key}}</code></td><td>{{.Value}}</td><td>{{with httpURL .Source}}<a href="{{.}}" rel="noopener noreferrer">{{.}}</a>{{else}}{{.Source}}{{end}}</td><td>{{formatTime .AsOf $.Timezone}}</td></tr>{{end}}</tbody>
+    </table>
+    {{else}}
+    <p>None: this verdict rests on the contract terms alone.</p>
+    {{end}}
+  </div>
+  <div id="basis">
+    <h3>Basis risk{{if .BasisRiskFull}}: {{.BasisRisk.Score}} {{.BasisRisk.Word}}{{end}}</h3>
+    {{if .BasisRiskFull}}
+    <p>The residual chance that the two contracts settle differently even though they are matched, as a score in [0,1] built from documented components (FR-11). The router charges it as a per-contract penalty.</p>
+    <table class="data basis">
+      <thead><tr><th>Component</th><th>Score</th><th>Detail</th><th>Diff row</th></tr></thead>
+      <tbody>{{range .BasisComponents}}<tr><td><code>{{.Name}}</code></td><td>{{.Score}}</td><td>{{.Detail}}</td><td>{{if .Row}}<a href="#diff">{{.Row}}</a>{{else}}—{{end}}</td></tr>{{end}}</tbody>
+    </table>
+    {{else}}
+    <p>Not scored for this pair. Basis risk is computed for routable and implication verdicts by matcher v1 (pairs matched earlier have none stored); <em>related</em> and <em>unrelated</em> pairs are never scored.</p>
+    {{end}}
+  </div>
 </section>
 
+{{/* UI-12: Why (explanation only; LLM rationale comes in UI-22) */}}
 <section>
   <h2>Why: the explanation</h2>
   <p class="explanation">{{.Explanation}}</p>
 </section>
 
+{{/* UI-12: Current touch with freshness badge in Fetched column */}}
 <section>
   <h2>Current touch in round {{.Round.ID}}</h2>
   <p>Best YES bid and ask on each venue as fetched in this round. Mid is for display only; routing walks the book.</p>
@@ -85,22 +146,25 @@
   </table>
 </section>
 
+{{/* UI-12: Price history (history.html unchanged) */}}
 <section id="history">
   <h2>Price history</h2>
   {{template "history" .History}}
 </section>
 
+{{/* UI-12: Decision-log entries with kind as badge */}}
 {{if .LogEntries}}
 <section>
   <h3>Decision-log entries for this pair</h3>
   <table class="data log">
     <thead><tr><th>When</th><th>Kind</th><th>Summary</th></tr></thead>
-    <tbody>{{range .LogEntries}}<tr><td><small>{{formatTime .At $.Timezone}}</small></td><td><code>{{.Kind}}</code></td><td class="summary">{{.Summary}}</td></tr>{{end}}</tbody>
+    <tbody>{{range .LogEntries}}<tr><td><small>{{formatTime .At $.Timezone}}</small></td><td><span class="badge b-{{.Kind}}">{{.Kind}}</span></td><td class="summary">{{.Summary}}</td></tr>{{end}}</tbody>
   </table>
   <p><a href="/log">Full decision log</a></p>
 </section>
 {{end}}
 
+{{/* UI-12: Route form - 7 fields, one row at 1280px, stacked at 390px, hints in small */}}
 <section id="route">
   <h2>Route a hypothetical order</h2>
   <p>Simulates the order against the target's book and every routable partner in this round, then explains the choice. Nothing is sent to a venue.</p>
@@ -108,26 +172,31 @@
     <input type="hidden" name="pair" value="{{.Form.PairID}}">
     <div class="grid">
       <label>Target
+        <small>A or B</small>
         <select name="target">{{range .Form.Targets}}<option value="{{.}}"{{if eq . $.Form.Target}} selected{{end}}>{{.}}</option>{{end}}</select>
       </label>
       <label>Side
+        <small>buy or sell</small>
         <select name="side"><option value="buy"{{if eq .Form.Side "buy"}} selected{{end}}>buy</option><option value="sell"{{if eq .Form.Side "sell"}} selected{{end}}>sell</option></select>
       </label>
       <label>Outcome
+        <small>yes or no</small>
         <select name="outcome"><option value="yes"{{if eq .Form.Outcome "yes"}} selected{{end}}>yes</option><option value="no"{{if eq .Form.Outcome "no"}} selected{{end}}>no</option></select>
       </label>
-    </div>
-    <div class="grid">
-      <label>Quantity (contracts, 1 to 100,000)
+      <label>Quantity
+        <small>1 to 100,000 contracts</small>
         <input type="number" name="quantity" min="1" max="100000" step="1" value="{{.Form.Quantity}}" required>
       </label>
       <label>Order type
+        <small>market or limit</small>
         <select name="type"><option value="market"{{if eq .Form.Type "market"}} selected{{end}}>market</option><option value="limit"{{if eq .Form.Type "limit"}} selected{{end}}>limit</option></select>
       </label>
-      <label>Limit price (0 to 1, limit orders only)
+      <label>Limit price
+        <small>0 to 1, limit orders only</small>
         <input type="number" name="limit" min="0" max="1" step="0.0001" value="{{.Form.Limit}}" placeholder="0.50">
       </label>
       <label>Time in force
+        <small>fill strategy</small>
         <select name="tif"><option value="IOC"{{if eq .Form.TIF "IOC"}} selected{{end}}>IOC (fill what you can)</option><option value="FOK"{{if eq .Form.TIF "FOK"}} selected{{end}}>FOK (all or nothing)</option></select>
       </label>
     </div>
@@ -137,31 +206,53 @@
 </section>
 {{end}}
 
+{{/* UI-12: instrument card with .layers for rules (Title and Full rules only; Summary and Clarifications come in UI-21) */}}
 {{define "instrument"}}
 <article>
   <header><span class="venue">{{.Venue}}</span> <strong>{{.Title}}</strong></header>
   {{if .Missing}}
   <p>This instrument is no longer in the store.</p>
   {{else}}
-  <p><small>ID <code>{{.ID}}</code> · market <code>{{.MarketID}}</code>{{if .EventID}} · event <code>{{.EventID}}</code>{{end}}</small></p>
+  <dl>
+    <div><dt>ID</dt><dd><code>{{.ID}}</code></dd></div>
+    <div><dt>Market</dt><dd><code>{{.MarketID}}</code></dd></div>
+    {{if .EventID}}<div><dt>Event</dt><dd><code>{{.EventID}}</code></dd></div>{{end}}
+  </dl>
   <p><small>{{.Category}} · {{.Status}} · closes {{formatTime .Close .Tz}}</small></p>
-  <details>
-    <summary>Rules text</summary>
-    <p class="rules">{{.Rules}}</p>
-  </details>
+  <div class="layers">
+    <details name="layers-{{.Venue}}" open>
+      <summary>Title</summary>
+      <p class="rules">{{.Title}}</p>
+    </details>
+    <details name="layers-{{.Venue}}" open>
+      <summary>Full rules</summary>
+      <p class="rules">{{.Rules}}</p>
+    </details>
+  </div>
   {{if .Quality}}<p><small>Quality flags: {{range .Quality}}<code>{{.Flag}}</code> {{end}}</small></p>{{end}}
   {{end}}
 </article>
 {{end}}
 
+{{/* UI-12: touch row with freshness badge in Fetched column */}}
 {{define "touch"}}
 <tr>
   <td><span class="venue">{{.Venue}}</span></td>
   {{if .Present}}
-  <td>{{.BestBid}}</td><td>{{.BestAsk}}</td><td>{{.Mid}}</td><td>{{.BidLevels}}/{{.AskLevels}}</td><td>{{formatTime .FetchedAt .Tz}}</td><td>{{if .VenueTS}}{{formatTime .VenueTS .Tz}}{{else}}{{.VenueTSStr}}{{end}}</td>
+  <td>{{.BestBid}}</td><td>{{.BestAsk}}</td><td>{{.Mid}}</td><td>{{.BidLevels}}/{{.AskLevels}}</td>
+  <td>
+    {{if .FreshBadge.Glyph}}{{template "badge" .FreshBadge}} {{end}}as of <time datetime="{{.StampDT}}">{{.StampAsOf}}</time>{{if .Age}} · {{.Age}}{{end}}
+  </td>
+  <td>{{if .VenueTS}}{{formatTime .VenueTS .Tz}}{{else}}{{.VenueTSStr}}{{end}}</td>
   <td>{{if .Quality}}{{range .Quality}}<code>{{.Flag}}</code> {{end}}{{else}}ok{{end}}</td>
   {{else}}
   <td colspan="7">No quote for this instrument in the round.</td>
   {{end}}
 </tr>
 {{end}}
+
+{{/* UI-12: word-level diff tokens (HANDOFF.md: no template.HTML, AB-07) */}}
+{{define "diffTokens"}}{{range .}}{{if eq .Op "delete"}}<del>{{.Text}}</del>{{else if eq .Op "insert"}}<ins>{{.Text}}</ins>{{else}}{{.Text}}{{end}} {{end}}{{end}}
+
+{{/* UI-12: large badge for verdict panel */}}
+{{define "badge-l"}}<span class="badge badge-l {{.Class}}"><span class="g" aria-hidden="true">{{.Glyph}}</span>{{.Text}}</span>{{end}}
