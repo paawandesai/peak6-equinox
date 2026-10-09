@@ -139,30 +139,92 @@ func TestLogRoutingColumns(t *testing.T) {
 	wantContains(t, body, `Positive is favourable`)
 }
 
-// TestLogSignRule verifies the sign rule for savings (UI-15, D-098 call 2).
+// TestLogSignRule verifies the sign rule for savings and losses (UI-15, D-098 call 2).
+// Ticket requires testing both a positive saving AND a loss (parenthesized).
 func TestLogSignRule(t *testing.T) {
 	s, st := newTestServer(t)
 	sd := seedPublic(t, st)
-	seedMore(t, s, st, sd)
+	ctx := context.Background()
+
+	// Create decision with positive saving: best ask 0.55, filled at 0.50+0.01=0.51 → saving 0.04
+	bestAsk := dec("0.55")
+	vwap := dec("0.50")
+	fee := dec("0.01")
+	qty := dec("10")
+	savingDecision := canonical.Decision{
+		RoundID:    sd.round.ID,
+		TargetID:   seedKalshiA,
+		TargetType: canonical.RelEquivalent,
+		Order: canonical.Order{
+			Side:     canonical.SideBuy,
+			Type:     canonical.OrderMarket,
+			Outcome:  canonical.OutcomeYes,
+			TIF:      canonical.TIFIOC,
+			Quantity: &qty,
+		},
+		Chosen: []canonical.Leg{{
+			Venue:                   canonical.VenueKalshi,
+			InstrumentID:            seedKalshiA,
+			Side:                    canonical.SideBuy,
+			Outcome:                 canonical.OutcomeYes,
+			Quantity:                qty,
+			VWAP:                    vwap,
+			FeePerContract:          fee,
+			BasisPenaltyPerContract: dec("0"),
+		}},
+		Inputs:      []canonical.DecisionInput{{InstrumentID: seedKalshiA, BestAsk: bestAsk, FetchedAt: seedNow}},
+		Explanation: "Test saving",
+		DecidedAt:   seedNow,
+	}
+	savingID, _ := st.InsertRoutingDecision(ctx, savingDecision)
+	st.AppendLog(ctx, store.LogRouting, fmt.Sprintf("%d", savingID), "positive saving", nil, seedNow)
+
+	// Create decision with loss: best ask 0.50, filled at 0.55+0.01=0.56 → loss -0.06
+	lossBestAsk := dec("0.50")
+	lossVWAP := dec("0.55")
+	lossDecision := canonical.Decision{
+		RoundID:    sd.round.ID,
+		TargetID:   seedKalshiA,
+		TargetType: canonical.RelEquivalent,
+		Order: canonical.Order{
+			Side:     canonical.SideBuy,
+			Type:     canonical.OrderMarket,
+			Outcome:  canonical.OutcomeYes,
+			TIF:      canonical.TIFIOC,
+			Quantity: &qty,
+		},
+		Chosen: []canonical.Leg{{
+			Venue:                   canonical.VenueKalshi,
+			InstrumentID:            seedKalshiA,
+			Side:                    canonical.SideBuy,
+			Outcome:                 canonical.OutcomeYes,
+			Quantity:                qty,
+			VWAP:                    lossVWAP,
+			FeePerContract:          fee,
+			BasisPenaltyPerContract: dec("0"),
+		}},
+		Inputs:      []canonical.DecisionInput{{InstrumentID: seedKalshiA, BestAsk: lossBestAsk, FetchedAt: seedNow}},
+		Explanation: "Test loss",
+		DecidedAt:   seedNow,
+	}
+	lossID, _ := st.InsertRoutingDecision(ctx, lossDecision)
+	st.AppendLog(ctx, store.LogRouting, fmt.Sprintf("%d", lossID), "negative saving (loss)", nil, seedNow)
+
 	rec := get(s.Handler(), "/log?kind=routing")
 	wantHTML(t, rec, 200)
 	body := rec.Body.String()
 
-	// Verify sign rule footnote is present
-	wantContains(t, body, `best ask`)
-	wantContains(t, body, `parentheses`)
-	wantContains(t, body, `Formula: best ask − average all-in`)
+	// Verify sign rule footnote
+	wantContains(t, body, `best ask`, `parentheses`, `Formula: best ask − average all-in`)
 
-	// Verify saving value is displayed (positive or parenthesized loss)
-	// The seeded decision should have a computed saving
-	if !strings.Contains(body, `data-label="Saving vs best ask"`) {
-		t.Error("Saving vs best ask column not found")
+	// Verify both positive saving and loss appear with correct formatting
+	// Saving: 0.55 - 0.51 = 0.04 → "0.0400"
+	// Loss: 0.50 - 0.56 = -0.06 → "(0.0600)"
+	if !strings.Contains(body, `0.0400`) {
+		t.Error("Positive saving 0.0400 not found")
 	}
-	// Check that at least one saving value appears (either plain number or parenthesized)
-	hasSaving := strings.Contains(body, `<td data-label="Saving vs best ask" class="num">`) &&
-		(strings.Contains(body, `0.`) || strings.Contains(body, `(`))
-	if !hasSaving {
-		t.Error("No saving values found in table")
+	if !strings.Contains(body, `(0.0600)`) {
+		t.Error("Parenthesized loss (0.0600) not found")
 	}
 }
 
@@ -209,8 +271,18 @@ func TestLogNotStoredForOldDecision(t *testing.T) {
 	// Verify "not stored" appears for the decision without inputs
 	// The label column should show "label not stored" for empty TargetType
 	wantContains(t, body, "label not stored")
-	// The saving column should show "not stored" for decisions without inputs
-	wantContains(t, body, "not stored")
+
+	// Verify saving column contains "not stored" for decision without inputs (non-vacuous assertion)
+	// Extract the relevant portion to debug
+	savingIdx := strings.Index(body, `data-label="Saving vs best ask"`)
+	if savingIdx == -1 {
+		t.Fatal("Saving vs best ask column not found in output")
+	}
+	// Check for "not stored" near the saving column
+	snippet := body[savingIdx : savingIdx+200]
+	if !strings.Contains(snippet, "not stored") {
+		t.Errorf("Expected 'not stored' in Saving vs best ask column. Snippet: %s", snippet)
+	}
 }
 
 // TestLogGrouping verifies grouping by venue, staleness, and label (UI-15).

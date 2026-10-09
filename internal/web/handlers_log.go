@@ -396,17 +396,38 @@ func (s *Server) enrichRoutingEntries(ctx context.Context, st *store.Store, entr
 		return nil, err
 	}
 
-	// Batch-fetch pair IDs for each decision's target instrument (UI-15)
+	// Batch-fetch pair IDs by unique (roundID, targetID) combinations (UI-15)
+	type instrumentKey struct {
+		roundID  int64
+		targetID string
+	}
+	instrumentToPairID := make(map[instrumentKey]int64)
 	pairIDs := make(map[int64]int64) // decision ID -> pair ID
-	for id, rd := range decisions {
-		// Look up the pair for this target instrument
+
+	// Collect unique instruments
+	uniqueInstruments := make(map[instrumentKey]bool)
+	for _, rd := range decisions {
+		key := instrumentKey{rd.Decision.RoundID, rd.Decision.TargetID}
+		uniqueInstruments[key] = true
+	}
+
+	// Fetch pair for each unique instrument (one query per unique instrument)
+	for key := range uniqueInstruments {
 		rels, err := st.ListRelationships(ctx, store.RelationshipFilter{
-			RoundID:      rd.Decision.RoundID,
-			InstrumentID: rd.Decision.TargetID,
+			RoundID:      key.roundID,
+			InstrumentID: key.targetID,
 			Limit:        1,
 		})
 		if err == nil && len(rels) > 0 {
-			pairIDs[id] = rels[0].ID
+			instrumentToPairID[key] = rels[0].ID
+		}
+	}
+
+	// Map pair IDs back to decision IDs
+	for id, rd := range decisions {
+		key := instrumentKey{rd.Decision.RoundID, rd.Decision.TargetID}
+		if pairID, ok := instrumentToPairID[key]; ok {
+			pairIDs[id] = pairID
 		}
 	}
 
