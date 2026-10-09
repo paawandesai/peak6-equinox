@@ -49,12 +49,16 @@ func TestLoadDefaults(t *testing.T) {
 		{"HTTPTimeout", c.HTTPTimeout, 10 * time.Second},
 		{"MaxBodyBytes", c.MaxBodyBytes, int64(10485760)},
 		{"StaleAfter", c.StaleAfter, 120 * time.Second},
+		{"KalshiWarnAfter", c.KalshiWarnAfter, 60 * time.Second},
+		{"PolymarketWarnAfter", c.PolymarketWarnAfter, 60 * time.Second},
 		{"SkewWarn", c.SkewWarn, 5 * time.Second},
 		{"SkewMax", c.SkewMax, 30 * time.Second},
 		{"MinRouteConfidence", c.MinRouteConfidence.String(), "0.9"},
 		{"MinBookDepth", c.MinBookDepth.String(), "1"},
 		{"ReviewEdgeMin", c.ReviewEdgeMin.String(), "0.02"},
 		{"PublicRateLimitPerMin", c.PublicRateLimitPerMin, 60},
+		{"StaleRoundWarnMinutes", c.StaleRoundWarnMinutes, 10},
+		{"RoundWarnMinutes", c.RoundWarnMinutes, 5},
 		{"LLMEnabled", c.LLMEnabled, false},
 		{"AnthropicAPIKey", c.AnthropicAPIKey, ""},
 		{"LLMModel", c.LLMModel, "claude-haiku-4-5-20251001"},
@@ -80,10 +84,12 @@ func TestLoadOverrides(t *testing.T) {
 		"POLYMARKET_CLOB_URL":       "http://127.0.0.1:8090/clob",
 		"UNIVERSE_DIR":              "/tmp/u",
 		"FACTS_FILE":                "/tmp/f.yaml",
-		"HTTP_TIMEOUT_SECONDS":      "3",
-		"MAX_BODY_BYTES":            "1024",
-		"STALE_AFTER_SECONDS":       "60",
-		"SKEW_WARN_SECONDS":         "2",
+		"HTTP_TIMEOUT_SECONDS":           "3",
+		"MAX_BODY_BYTES":                 "1024",
+		"STALE_AFTER_SECONDS":            "60",
+		"KALSHI_WARN_AFTER_SECONDS":      "30",
+		"POLYMARKET_WARN_AFTER_SECONDS":  "30",
+		"SKEW_WARN_SECONDS":              "2",
 		"SKEW_MAX_SECONDS":          "10",
 		"MIN_ROUTE_CONFIDENCE":      "0.95",
 		"MIN_BOOK_DEPTH":            "5",
@@ -247,6 +253,86 @@ func TestLoadInvalidMinBookDepth(t *testing.T) {
 			_, err := Load(lookupFrom(env))
 			if err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Errorf("Load with MIN_BOOK_DEPTH=%q: err=%v, want %q", tt.value, err, tt.want)
+			}
+		})
+	}
+}
+
+// TestWarnWindowValidation tests UI-19 config validation: warn windows must be < stale thresholds.
+func TestWarnWindowValidation(t *testing.T) {
+	tests := []struct {
+		name string
+		env  map[string]string
+		want string
+	}{
+		{
+			name: "kalshi warn >= stale",
+			env: map[string]string{
+				"STALE_AFTER_SECONDS":       "120",
+				"KALSHI_WARN_AFTER_SECONDS": "120",
+			},
+			want: "KALSHI_WARN_AFTER_SECONDS must be less than STALE_AFTER_SECONDS",
+		},
+		{
+			name: "kalshi warn > stale",
+			env: map[string]string{
+				"STALE_AFTER_SECONDS":       "120",
+				"KALSHI_WARN_AFTER_SECONDS": "130",
+			},
+			want: "KALSHI_WARN_AFTER_SECONDS must be less than STALE_AFTER_SECONDS",
+		},
+		{
+			name: "polymarket warn >= stale",
+			env: map[string]string{
+				"STALE_AFTER_SECONDS":           "120",
+				"POLYMARKET_WARN_AFTER_SECONDS": "120",
+			},
+			want: "POLYMARKET_WARN_AFTER_SECONDS must be less than STALE_AFTER_SECONDS",
+		},
+		{
+			name: "round warn >= stale",
+			env: map[string]string{
+				"STALE_ROUND_WARN_MINUTES": "10",
+				"ROUND_WARN_MINUTES":       "10",
+			},
+			want: "ROUND_WARN_MINUTES must be less than STALE_ROUND_WARN_MINUTES",
+		},
+		{
+			name: "round warn > stale",
+			env: map[string]string{
+				"STALE_ROUND_WARN_MINUTES": "10",
+				"ROUND_WARN_MINUTES":       "15",
+			},
+			want: "ROUND_WARN_MINUTES must be less than STALE_ROUND_WARN_MINUTES",
+		},
+		{
+			name: "all warn < stale: valid",
+			env: map[string]string{
+				"STALE_AFTER_SECONDS":           "120",
+				"KALSHI_WARN_AFTER_SECONDS":     "60",
+				"POLYMARKET_WARN_AFTER_SECONDS": "60",
+				"STALE_ROUND_WARN_MINUTES":      "10",
+				"ROUND_WARN_MINUTES":            "5",
+			},
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			env := requiredEnv()
+			for k, v := range tt.env {
+				env[k] = v
+			}
+			_, err := Load(lookupFrom(env))
+			if tt.want == "" {
+				if err != nil {
+					t.Errorf("Load: unexpected error: %v", err)
+				}
+			} else {
+				if err == nil || !strings.Contains(err.Error(), tt.want) {
+					t.Errorf("Load: err=%v, want substring %q", err, tt.want)
+				}
 			}
 		})
 	}

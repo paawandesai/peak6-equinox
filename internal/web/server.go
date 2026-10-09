@@ -31,7 +31,10 @@ type Config struct {
 	// renders (EVAL_SUMMARY_FILE). Empty or missing means "no eval yet".
 	EvalSummaryFile string
 	// StaleAfter is the staleness threshold (STALE_AFTER_SECONDS).
-	StaleAfter time.Duration
+	StaleAfter          time.Duration
+	KalshiWarnAfter     time.Duration
+	PolymarketWarnAfter time.Duration
+	RoundWarnMinutes    int
 	// SkewWarn is the skew warning threshold (SKEW_WARN_SECONDS).
 	SkewWarn time.Duration
 	// SkewMax is the skew exclusion threshold (SKEW_MAX_SECONDS).

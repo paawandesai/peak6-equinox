@@ -31,10 +31,12 @@ func (s *Server) pageBase(r store.Round, title, question, timezone, pageName str
 			// Pinned round: show the demo mode banner formatted in the user's timezone (M3-08)
 			bnr = banner{Show: true, Pinned: true, AsOf: formatTime(asOf, timezone), RoundID: r.ID}
 		} else if r.Status == store.RoundOK || r.Status == store.RoundPartial {
-			// Determine freshness based on D-077 page-freshness threshold (STALE_ROUND_WARN_MINUTES)
+			// Determine freshness based on D-077 page-freshness threshold and UI-19 warn window
 			ageMinutes := int(age.Minutes())
 			if s.cfg.StaleRoundWarnMinutes > 0 && ageMinutes >= s.cfg.StaleRoundWarnMinutes {
 				freshState = FreshStateStale
+			} else if s.cfg.RoundWarnMinutes > 0 && ageMinutes >= s.cfg.RoundWarnMinutes {
+				freshState = FreshStateWarn
 			} else {
 				freshState = FreshStateFresh
 			}
