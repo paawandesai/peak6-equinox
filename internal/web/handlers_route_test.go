@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -478,5 +479,48 @@ func TestRouteResultRendering(t *testing.T) {
 	)
 	if strings.Contains(notionalBody, " of 0") {
 		t.Error("notional order totals row shows 'of 0'")
+	}
+}
+
+// TestPOSTRouteP95 measures p95 latency for POST /route HTTP endpoint (UI-25 AC ≤ 300ms).
+func TestPOSTRouteP95(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping p95 measurement in short mode")
+	}
+
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+	form := validRouteForm(sd.eqID, seedKalshiA)
+
+	const samples = 1000
+	durations := make([]time.Duration, samples)
+
+	for i := 0; i < samples; i++ {
+		start := time.Now()
+		rec := postForm(s.Handler(), "/route", form, true)
+		durations[i] = time.Since(start)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("POST /route: status %d, want 200", rec.Code)
+		}
+	}
+
+	// Calculate percentiles
+	sortFunc := func(a, b time.Duration) int {
+		if a < b {
+			return -1
+		}
+		if a > b {
+			return 1
+		}
+		return 0
+	}
+	slices.SortFunc(durations, sortFunc)
+	p50 := durations[samples*50/100]
+	p95 := durations[samples*95/100]
+	p99 := durations[samples*99/100]
+
+	t.Logf("POST /route HTTP endpoint latency over %d samples: p50=%v, p95=%v, p99=%v", samples, p50, p95, p99)
+	if p95 > 300*time.Millisecond {
+		t.Errorf("p95 latency %v > 300ms AC", p95)
 	}
 }

@@ -244,7 +244,7 @@ func TestRouteIOCPartialSweep(t *testing.T) {
 		rel(kalshiID, polymarketID, canonical.RelEquivalent, "0.97"))
 	partner.Relationship.BasisRisk = &canonical.BasisRisk{Score: d("0"), Components: []canonical.BasisComponent{}}
 
-	dec, err := Route(buy("200"), target, []canonical.Candidate{partner}, cfg, t0)
+	dec, err := Route(buy("200"), target, []canonical.Candidate{partner}, cfg, canonical.RelEquivalent, t0)
 	if err != nil {
 		t.Fatalf("Route: %v", err)
 	}
@@ -292,7 +292,7 @@ func TestRouteFOKInsufficientDepth(t *testing.T) {
 
 	o := buy("200")
 	o.TIF = canonical.TIFFOK
-	dec, err := Route(o, target, []canonical.Candidate{partner}, cfg, t0)
+	dec, err := Route(o, target, []canonical.Candidate{partner}, cfg, canonical.RelEquivalent, t0)
 	if err != nil {
 		t.Fatalf("Route: %v", err)
 	}
@@ -327,7 +327,7 @@ func TestRouteFOKMultiVenueFullFill(t *testing.T) {
 
 	o := buy("100")
 	o.TIF = canonical.TIFFOK
-	dec, err := Route(o, target, []canonical.Candidate{partner}, cfg, t0)
+	dec, err := Route(o, target, []canonical.Candidate{partner}, cfg, canonical.RelEquivalent, t0)
 	if err != nil {
 		t.Fatalf("Route: %v", err)
 	}
@@ -365,7 +365,7 @@ func TestRouteSellSideGreedySweep(t *testing.T) {
 
 	o := canonical.Order{Side: canonical.SideSell, Outcome: canonical.OutcomeYes,
 		Quantity: ptr("100"), Type: canonical.OrderMarket, TIF: canonical.TIFIOC}
-	dec, err := Route(o, target, []canonical.Candidate{partner}, cfg, t0)
+	dec, err := Route(o, target, []canonical.Candidate{partner}, cfg, canonical.RelEquivalent, t0)
 	if err != nil {
 		t.Fatalf("Route: %v", err)
 	}
