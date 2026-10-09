@@ -301,8 +301,7 @@ func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
 	for i := range quotes {
 		quoteTimes[quotes[i].InstrumentID] = quotes[i].FetchedAt
 		// UI-18: exclude stale quotes from gap computation (AC: "missing/stale quote → no gap").
-		age := now.Sub(quotes[i].FetchedAt)
-		if age <= s.cfg.StaleAfter {
+		if isQuoteFresh(quotes[i].FetchedAt, now, s.cfg.StaleAfter) {
 			quoteMap[quotes[i].InstrumentID] = &quotes[i].Quote
 		}
 		// Stale quotes stay out of quoteMap, so ComputeNetGap receives nil and returns "no quote: <venue>".
@@ -478,10 +477,9 @@ func groupPairs(rels []canonical.Relationship, views map[string]instrumentView, 
 		}
 
 		// UI-18: flag for review when net gap >= REVIEW_EDGE_MIN and confidence < 0.90.
-		isFlagged := false
+		isFlagged := shouldFlagForReview(netGap, r.Confidence, reviewEdgeMin)
 		flaggedReason := ""
-		if netGap.HasValue && netGap.Value.Abs().GreaterThanOrEqual(reviewEdgeMin) && r.Confidence.LessThan(decimal.RequireFromString("0.90")) {
-			isFlagged = true
+		if isFlagged {
 			flaggedReason = "Likely a wrong pairing, not an arbitrage."
 		}
 
