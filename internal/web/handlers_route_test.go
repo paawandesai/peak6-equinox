@@ -498,8 +498,8 @@ func TestRouteResultRendering(t *testing.T) {
 			Route: "direct",
 		}},
 		Alternatives: []canonical.Alternative{{Rank: 1, AllInPerContract: dec("0.51"), Note: "chosen", Legs: []canonical.Leg{{InstrumentID: seedPolyB, Venue: canonical.VenuePolymarket, Outcome: canonical.OutcomeYes, Side: canonical.SideBuy, Quantity: dec("100"), VWAP: dec("0.50"), FeePerContract: dec("0.01"), BasisPenaltyPerContract: dec("0.000"), AllInPerContract: dec("0.51")}}}},
-		Explanation: "Notional order filled with 100 contracts.",
-		DecidedAt:   sd.round.FinishedAt,
+		Explanation:  "Notional order filled with 100 contracts.",
+		DecidedAt:    sd.round.FinishedAt,
 	}
 	notionalID, err := st.InsertRoutingDecision(ctx, notionalDec)
 	if err != nil {
