@@ -221,7 +221,7 @@ func toInstrument(m market, cat canonical.Category) (canonical.Instrument, error
 		Category:       cat,
 		Title:          title,
 		RulesText:      rules,
-		RulesSummary:   "", // Kalshi does not publish a separate summary
+		RulesSummary:   rulesPrimary, // Kalshi's rules_primary is the per-strike summary
 		Clarifications: clarifications,
 		// ClarificationsUpdatedAt: Kalshi does not provide a specific timestamp for clarifications
 		Terms:          canonical.UnknownTerms(),

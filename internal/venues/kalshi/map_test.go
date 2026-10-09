@@ -197,8 +197,8 @@ func TestKalshiToInstrument(t *testing.T) {
 		t.Errorf("rules %q title %q", ins.RulesText, ins.Title)
 	}
 	// UI-21: rule layers (summary, clarifications)
-	if ins.RulesSummary != "" {
-		t.Errorf("RulesSummary = %q, want empty (Kalshi doesn't publish)", ins.RulesSummary)
+	if ins.RulesSummary != "If above, Yes." {
+		t.Errorf("RulesSummary = %q, want rules_primary", ins.RulesSummary)
 	}
 	if ins.Clarifications != "Additional details here." {
 		t.Errorf("Clarifications = %q, want rules_secondary", ins.Clarifications)
@@ -242,28 +242,48 @@ func TestKalshiToInstrument(t *testing.T) {
 		t.Errorf("degraded instrument = %+v", ins)
 	}
 
-	// UI-21: test empty and oversized clarifications (AB-02)
+	// UI-21: test empty and oversized summary and clarifications (AB-02)
 	m2 := good
-	m2.RulesSecondary = ""
+	m2.RulesPrimary = ""
 	ins2, err := toInstrument(m2, canonical.CategoryFed)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ins2.Clarifications != "" {
-		t.Errorf("empty rules_secondary: Clarifications = %q, want empty", ins2.Clarifications)
+	if ins2.RulesSummary != "" {
+		t.Errorf("empty rules_primary: RulesSummary = %q, want empty", ins2.RulesSummary)
 	}
 
 	m3 := good
-	m3.RulesSecondary = strings.Repeat("x", maxRulesBytes+1000)
+	m3.RulesSecondary = ""
 	ins3, err := toInstrument(m3, canonical.CategoryFed)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(ins3.Clarifications) > maxRulesBytes {
-		t.Errorf("oversized clarifications: len = %d, want ≤ %d", len(ins3.Clarifications), maxRulesBytes)
+	if ins3.Clarifications != "" {
+		t.Errorf("empty rules_secondary: Clarifications = %q, want empty", ins3.Clarifications)
 	}
-	if !ins3.Quality.Has("text_truncated") {
-		t.Errorf("oversized clarifications not flagged: %+v", ins3.Quality)
+
+	m4 := good
+	m4.RulesPrimary = strings.Repeat("x", maxRulesBytes+1000)
+	ins4, err := toInstrument(m4, canonical.CategoryFed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ins4.RulesSummary) > maxRulesBytes {
+		t.Errorf("oversized summary: len = %d, want ≤ %d", len(ins4.RulesSummary), maxRulesBytes)
+	}
+
+	m5 := good
+	m5.RulesSecondary = strings.Repeat("x", maxRulesBytes+1000)
+	ins5, err := toInstrument(m5, canonical.CategoryFed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ins5.Clarifications) > maxRulesBytes {
+		t.Errorf("oversized clarifications: len = %d, want ≤ %d", len(ins5.Clarifications), maxRulesBytes)
+	}
+	if !ins5.Quality.Has("text_truncated") {
+		t.Errorf("oversized clarifications not flagged: %+v", ins5.Quality)
 	}
 }
 
