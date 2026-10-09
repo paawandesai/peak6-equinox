@@ -44,39 +44,42 @@ func TestRejectSureLossComplement(t *testing.T) {
 		t.Errorf("chosen route = %s, want %s", chosen.Route, RouteDirect)
 	}
 
-	// The complement must appear in exclusions with a "sure loss" or cost-related reason
+	// The complement must be excluded with reason "sure_loss" (Cursor round 1 #3)
 	foundExclusion := false
 	for _, ex := range dec.Exclusions {
 		if ex.InstrumentID == polymarketID {
 			foundExclusion = true
-			// The reason should indicate the all-in cost is invalid
-			if !strings.Contains(ex.Reason, "cost") && !strings.Contains(ex.Detail, "cost") &&
-				!strings.Contains(ex.Detail, "$1") && !strings.Contains(ex.Detail, "loss") {
-				t.Errorf("exclusion reason/detail should mention cost or loss: reason=%s, detail=%s",
-					ex.Reason, ex.Detail)
+			if ex.Reason != ReasonSureLoss {
+				t.Errorf("exclusion reason = %s, want %s", ex.Reason, ReasonSureLoss)
+			}
+			if !strings.Contains(ex.Detail, "$1 payout") && !strings.Contains(ex.Detail, "guaranteed loss") {
+				t.Errorf("exclusion detail should mention $1 payout or guaranteed loss: %s", ex.Detail)
 			}
 		}
 	}
 	if !foundExclusion {
-		t.Errorf("complement %s should be excluded for sure-loss cost, but exclusions = %+v",
-			polymarketID, dec.Exclusions)
+		t.Errorf("complement %s should be excluded, but exclusions = %+v", polymarketID, dec.Exclusions)
 	}
 }
 
 // TestRejectComplementCostlierThanDirect: never pick a complement leg costlier than the direct leg.
 func TestRejectComplementCostlierThanDirect(t *testing.T) {
-	// Target: Kalshi YES @ 0.50 (all-in ≈ 0.507)
+	// Target: Kalshi YES @ 0.50
+	// Fee: ceil(0.07 × 100 × 0.50 × 0.50) = ceil(1.75) = 1.75 → 0.0175/contract
+	// All-in: 0.50 + 0.0175 = 0.5175
 	target := cand(kalshiID, []canonical.Level{lv("0.48", "100")}, []canonical.Level{lv("0.50", "100")}, nil)
 
-	// Complement: Polymarket, YES bid @ 0.40 → NO ask @ 0.60 (all-in ≈ 0.607)
-	// This is worse than the direct route (0.507), so it should not be chosen.
+	// Complement: Polymarket, YES bid @ 0.40 → NO ask @ 0.60
+	// Fee: 100 × 0.07 × 0.60 × 0.40 = 1.68 → 0.0168/contract
+	// All-in: 0.60 + 0.0168 = 0.6168
+	// This is worse than the direct route (0.5175), so it should not be chosen.
 	compPartner := cand(polymarketID, []canonical.Level{lv("0.40", "100")}, []canonical.Level{lv("0.60", "100")},
 		rel(kalshiID, polymarketID, canonical.RelComplement, "0.98"))
 	compPartner.Relationship.BasisRisk = &canonical.BasisRisk{Score: d("0"), Components: []canonical.BasisComponent{}}
 
 	dec := mustRoute(t, buy("100"), target, []canonical.Candidate{compPartner})
 
-	// The direct route should be chosen (cheaper)
+	// The direct route should be chosen (cheaper: 0.5175 < 0.6168)
 	if len(dec.Chosen) != 1 {
 		t.Fatalf("chosen = %+v, want 1 leg (target)", dec.Chosen)
 	}
@@ -87,6 +90,10 @@ func TestRejectComplementCostlierThanDirect(t *testing.T) {
 	if chosen.Route != RouteDirect {
 		t.Errorf("chosen route = %s, want %s", chosen.Route, RouteDirect)
 	}
+	// Verify the actual all-in cost (Cursor round 1 #2)
+	if !chosen.AllInPerContract.Equal(d("0.5175")) {
+		t.Errorf("chosen all-in = %s, want 0.5175", chosen.AllInPerContract)
+	}
 
 	// The complement should appear in alternatives ranked lower
 	foundComplement := false
@@ -95,6 +102,10 @@ func TestRejectComplementCostlierThanDirect(t *testing.T) {
 			foundComplement = true
 			if alt.Rank < 2 {
 				t.Errorf("complement should not be rank 1 when it's costlier: rank=%d", alt.Rank)
+			}
+			// Verify the complement's all-in cost
+			if !alt.Legs[0].AllInPerContract.Equal(d("0.6168")) {
+				t.Errorf("complement all-in = %s, want 0.6168", alt.Legs[0].AllInPerContract)
 			}
 		}
 	}
@@ -138,11 +149,14 @@ func TestRegressionRound735Decision71(t *testing.T) {
 		t.Errorf("chosen all-in = %s, must be < $1 per $1 payout", chosen.AllInPerContract)
 	}
 
-	// The complement must be excluded
+	// The complement must be excluded with reason "sure_loss"
 	foundExclusion := false
 	for _, ex := range dec.Exclusions {
 		if ex.InstrumentID == otherID {
 			foundExclusion = true
+			if ex.Reason != ReasonSureLoss {
+				t.Errorf("exclusion reason = %s, want %s", ex.Reason, ReasonSureLoss)
+			}
 		}
 	}
 	if !foundExclusion {
