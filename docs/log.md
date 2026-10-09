@@ -154,3 +154,7 @@ Add one line per action, newest at the bottom: `YYYY-MM-DD HH:MM UTC · actor ·
 
 2026-10-09 00:xx UTC · peak6-equinox-58 · UI-10 (!63): merged origin/main (MR !66 README update, !73 Go 1.27.2; auto-merge clean). Tests: go build clean, go vet clean, go test ./internal/web/... ./tests/security/... PASS (cached web, 0.463s security). · README.md, docs/log.md
 2026-10-09 00:xx UTC · peak6-equinox-58 · UI-10 (!63): merged origin/main (MR !74 Dockerfile golang:1.27.2-bookworm; auto-merge clean). Tests: go build clean, go vet clean, go test ./internal/web/... ./tests/security/... PASS (cached web, 0.148s security). · Dockerfile, docs/ai-usage.md, docs/log.md
+
+## 2026-10-09: UI-21 (rule layers)
+
+Add rule layers to instruments: rules_summary, clarifications, clarifications_updated_at. Kalshi adapter captures rules_secondary as clarifications. Polymarket has no separate layers. Pair page displays all layers (Title, Summary, Full rules, Clarifications) with empty state 'venue publishes none'. Migration 0003, D-103.

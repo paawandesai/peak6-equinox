@@ -56,6 +56,63 @@ func instrument(id string) canonical.Instrument {
 	}
 }
 
+// TestInstrumentRuleLayers tests rule layers persistence (UI-21).
+func TestInstrumentRuleLayers(t *testing.T) {
+	s := newStore(t)
+	r := mustRound(t, s)
+
+	// Test with all fields populated
+	clarTime := t0.Add(24 * time.Hour)
+	ins := instrument("kalshi:TEST-1")
+	ins.RulesSummary = "Brief summary"
+	ins.Clarifications = "Additional details and clarifications"
+	ins.ClarificationsUpdatedAt = clarTime
+
+	if err := s.UpsertInstrument(ctx, r.ID, ins); err != nil {
+		t.Fatalf("UpsertInstrument: %v", err)
+	}
+
+	got, err := s.GetInstrument(ctx, ins.ID)
+	if err != nil {
+		t.Fatalf("GetInstrument: %v", err)
+	}
+
+	if got.RulesSummary != "Brief summary" {
+		t.Errorf("RulesSummary = %q, want %q", got.RulesSummary, "Brief summary")
+	}
+	if got.Clarifications != "Additional details and clarifications" {
+		t.Errorf("Clarifications = %q, want %q", got.Clarifications, "Additional details and clarifications")
+	}
+	if !got.ClarificationsUpdatedAt.Equal(clarTime) {
+		t.Errorf("ClarificationsUpdatedAt = %v, want %v", got.ClarificationsUpdatedAt, clarTime)
+	}
+
+	// Test with empty fields
+	ins2 := instrument("polymarket:TEST-2")
+	ins2.RulesSummary = ""
+	ins2.Clarifications = ""
+	// ClarificationsUpdatedAt zero by default
+
+	if err := s.UpsertInstrument(ctx, r.ID, ins2); err != nil {
+		t.Fatalf("UpsertInstrument empty: %v", err)
+	}
+
+	got2, err := s.GetInstrument(ctx, ins2.ID)
+	if err != nil {
+		t.Fatalf("GetInstrument empty: %v", err)
+	}
+
+	if got2.RulesSummary != "" {
+		t.Errorf("empty RulesSummary = %q, want empty", got2.RulesSummary)
+	}
+	if got2.Clarifications != "" {
+		t.Errorf("empty Clarifications = %q, want empty", got2.Clarifications)
+	}
+	if !got2.ClarificationsUpdatedAt.IsZero() {
+		t.Errorf("ClarificationsUpdatedAt = %v, want zero", got2.ClarificationsUpdatedAt)
+	}
+}
+
 func TestRounds(t *testing.T) {
 	s := newStore(t)
 	if _, err := s.CurrentRound(ctx); !errors.Is(err, store.ErrNotFound) {

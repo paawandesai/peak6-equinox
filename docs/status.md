@@ -179,3 +179,5 @@ Paawan kept these four in the operator chat on 2026-10-07 at 8:38 PM CT, after t
 | ID | Severity | Status | Ticket |
 |---|---|---|---|
 | none yet | | | AB harnesses landed in M1 (AB-01/02/05/06/07/08/11/12/13/14) |
+
+- **D-103** (UI-21): Rule layers columns (rules_summary, clarifications, clarifications_updated_at) added to instruments table. Kalshi rules_secondary captured as clarifications; Polymarket has no separate layers. Not fed to matcher/LLM in this ticket.

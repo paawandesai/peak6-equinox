@@ -116,7 +116,7 @@ Postgres. Migrations live in `migrations/NNNN_name.sql`, run with goose.
 |---|---|
 | `fetch_rounds` | `id bigserial pk`, `started_at`, `finished_at`, `status` (`running` until finished, then `ok`/`partial`/`failed`), `venue_status jsonb`, `pinned bool` (at most one true) |
 | `raw_responses` | `id`, `round_id fk`, `venue`, `endpoint`, `http_status`, `body_gz bytea`, `fetched_at` |
-| `instruments` | `id text pk` (`kalshi:<ticker>`, `polymarket:<token_id>`), `venue`, `venue_market_id`, `venue_event_id`, `category`, `title`, `rules_text`, `terms jsonb`, `polarity`, `close_time`, `expiration_time`, `status`, `fee_schedule jsonb`, `quality jsonb`, `first_seen_round`, `last_seen_round` |
+| `instruments` | `id text pk` (`kalshi:<ticker>`, `polymarket:<token_id>`), `venue`, `venue_market_id`, `venue_event_id`, `category`, `title`, `rules_text`, `rules_summary text`, `clarifications text`, `clarifications_updated_at timestamptz`, `terms jsonb`, `polarity`, `close_time`, `expiration_time`, `status`, `fee_schedule jsonb`, `quality jsonb`, `first_seen_round`, `last_seen_round` |
 | `quotes` | `pk(round_id, instrument_id)`, `yes_bids jsonb`, `yes_asks jsonb`, `best_bid`, `best_ask`, `mid numeric`, `fetched_at`, `venue_ts`, `quality jsonb` |
 | `relationships` | `id`, `round_id`, `a_id`, `b_id`, `type`, `confidence numeric`, `method` (`rules`/`rules+llm`), `diff jsonb`, `vetoes jsonb`, `facts_used jsonb`, `basis_risk jsonb`, `explanation text`, unique `(round_id,a_id,b_id)` |
 | `llm_verdicts` | `cache_key text pk` (sha256), `model`, `prompt_version`, `verdict jsonb`, `created_at` |
