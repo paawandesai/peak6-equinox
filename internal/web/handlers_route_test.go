@@ -71,6 +71,40 @@ func TestRouteHappyPathHTMX(t *testing.T) {
 	if dec.RoundID != sd.round.ID || dec.Decision.TargetID != seedKalshiA || len(dec.Decision.Chosen) != 1 || dec.Decision.Chosen[0].Venue != canonical.VenuePolymarket {
 		t.Errorf("stored decision = %+v", dec.Decision)
 	}
+	// Verify Inputs and TargetType are stored (UI-25, D-099)
+	if dec.Decision.TargetType == "" {
+		t.Error("Decision.TargetType is empty, want non-empty relationship type")
+	}
+	if dec.Decision.TargetType != canonical.RelEquivalent {
+		t.Errorf("Decision.TargetType = %q, want %q", dec.Decision.TargetType, canonical.RelEquivalent)
+	}
+	if len(dec.Decision.Inputs) == 0 {
+		t.Error("Decision.Inputs is empty, want at least target input")
+	}
+	// Should have inputs for target + partners considered (target + 2 partners in seedPublic)
+	if len(dec.Decision.Inputs) < 2 {
+		t.Errorf("Decision.Inputs count = %d, want >= 2 (target + partners)", len(dec.Decision.Inputs))
+	}
+	// Verify target input (first one should be target with RelationshipType="self")
+	var foundTarget bool
+	for _, input := range dec.Decision.Inputs {
+		if input.RelationshipType == "self" {
+			foundTarget = true
+			if input.InstrumentID == "" {
+				t.Error("target input InstrumentID is empty")
+			}
+			if input.Venue == "" {
+				t.Error("target input Venue is empty")
+			}
+			if input.Confidence.IsZero() {
+				t.Error("target input Confidence is zero")
+			}
+			break
+		}
+	}
+	if !foundTarget {
+		t.Error("Decision.Inputs missing target input with RelationshipType=self")
+	}
 	entries, err := st.ListLog(context.Background(), store.LogFilter{Kind: store.LogRouting, Ref: "1"})
 	if err != nil || len(entries) != 1 || !strings.HasPrefix(entries[0].Summary, "route buy 100 contracts yes on "+seedKalshiA+": polymarket") {
 		t.Errorf("log entries = %+v, %v", entries, err)
