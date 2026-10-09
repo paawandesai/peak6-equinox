@@ -161,7 +161,7 @@
         {{with index $.ConfusionMatrix (printf "%s:%s" $label $pred)}}
           <td aria-label="{{.Count}} pair{{if ne .Count 1}}s{{end}} labelled {{$label}}, predicted {{$pred}}">
             {{if gt .Count 0}}
-              <a href="/eval/cell?label={{$label}}&predicted={{$pred}}" class="{{ConfusionClass $label $pred}}" hx-get="/eval/cell?label={{$label}}&predicted={{$pred}}" hx-target="body" hx-push-url="true">{{.Count}}</a>
+              <a href="/eval/cell?label={{$label}}&predicted={{$pred}}" class="{{ConfusionClass $label $pred .Count}}" hx-get="/eval/cell?label={{$label}}&predicted={{$pred}}" hx-target="body" hx-push-url="true">{{.Count}}</a>
             {{else}}
               <a class="zero">0</a>
             {{end}}

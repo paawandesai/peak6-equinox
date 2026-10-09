@@ -87,12 +87,22 @@ var templateFuncs = template.FuncMap{
 	// Template arithmetic helpers (UI-17).
 	"mul": func(a, b int) int { return a * b },
 	"add": func(a, b int64) int64 { return a + b },
-	// UI-23: confusion matrix and delta helpers
-	"ConfusionClass": func(label, predicted string) string {
-		if label == predicted {
-			return "d1" // diagonal
+	// UI-23: confusion matrix bucket classes (HANDOFF ◆9: d1-d3 diagonal, e1-e3 off-diagonal)
+	"ConfusionClass": func(label, predicted string, count int) string {
+		// Bucket by count: 1-5 light, 6-15 medium, 16+ dark
+		var bucket string
+		switch {
+		case count <= 5:
+			bucket = "1"
+		case count <= 15:
+			bucket = "2"
+		default:
+			bucket = "3"
 		}
-		return "e1" // off-diagonal
+		if label == predicted {
+			return "d" + bucket // diagonal: d1/d2/d3 (green intensity)
+		}
+		return "e" + bucket // off-diagonal: e1/e2/e3 (red intensity)
 	},
 	"FormatDelta": func(current, previous string) string {
 		if current == "n/a" || previous == "n/a" {

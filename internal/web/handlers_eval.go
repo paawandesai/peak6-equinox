@@ -2,6 +2,7 @@ package web
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,11 +10,13 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/shopspring/decimal"
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
+	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/store"
 )
 
 // Eval artifact contract (FR-21 eval page, US-06). `equinox eval` (M2-05)
@@ -288,6 +291,47 @@ func (s *Server) handleEvalCell(w http.ResponseWriter, r *http.Request) {
 		// Empty cell: valid but no pairs
 		cell = evalConfusionCell{Count: 0, PairIDs: []string{}}
 	}
+	// UI-23 AC: resolve canonical IDs to numeric pair IDs for linking to Pair detail
+	type pairLink struct {
+		ID    int64
+		Label string
+	}
+	pairs := make([]pairLink, 0, len(cell.PairIDs))
+	if s.deps.Store != nil && sum.RoundID > 0 {
+		st := s.deps.Store
+		ctx, cancel := context.WithTimeout(r.Context(), dbTimeout)
+		defer cancel()
+		for _, pairID := range cell.PairIDs {
+			// Parse "a_id / b_id" format
+			parts := strings.Split(pairID, " / ")
+			if len(parts) != 2 {
+				continue // skip malformed IDs
+			}
+			aID, bID := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
+			// Query relationships involving aID
+			rels, err := st.ListRelationships(ctx, store.RelationshipFilter{
+				RoundID:      sum.RoundID,
+				InstrumentID: aID,
+				Limit:        100,
+			})
+			if err != nil {
+				continue // skip on error
+			}
+			// Find the one where the other instrument is bID
+			for _, rel := range rels {
+				if (rel.AID == aID && rel.BID == bID) || (rel.AID == bID && rel.BID == aID) {
+					pairs = append(pairs, pairLink{ID: rel.ID, Label: pairID})
+					break
+				}
+			}
+		}
+	}
+	// If no pairs were resolved (no store or not found), fall back to showing canonical IDs
+	if len(pairs) == 0 && len(cell.PairIDs) > 0 {
+		for _, pairID := range cell.PairIDs {
+			pairs = append(pairs, pairLink{ID: 0, Label: pairID})
+		}
+	}
 	round := roundFromContext(r.Context())
 	tz := timezoneFromRequest(r)
 	data := struct {
@@ -295,13 +339,13 @@ func (s *Server) handleEvalCell(w http.ResponseWriter, r *http.Request) {
 		Label     string
 		Predicted string
 		Count     int
-		PairIDs   []string
+		Pairs     []pairLink
 	}{
 		page:      s.pageBase(round, "Eval Cell", fmt.Sprintf("Pairs labelled %s, predicted %s", label, predicted), tz, "eval"),
 		Label:     label,
 		Predicted: predicted,
 		Count:     cell.Count,
-		PairIDs:   cell.PairIDs,
+		Pairs:     pairs,
 	}
 	s.render(w, http.StatusOK, "eval_cell", data)
 }

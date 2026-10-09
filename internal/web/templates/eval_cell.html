@@ -8,8 +8,8 @@
 
 <h2>Pairs in this cell</h2>
 <ul>
-{{range .PairIDs}}
-  <li><code>{{.}}</code></li>
+{{range .Pairs}}
+  <li>{{if gt .ID 0}}<a href="/pairs/{{.ID}}">{{.Label}}</a>{{else}}<code>{{.Label}}</code>{{end}}</li>
 {{end}}
 </ul>
 <p><a href="/eval">← Back to Eval</a></p>
