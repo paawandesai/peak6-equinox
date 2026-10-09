@@ -207,18 +207,28 @@ rm -f "$home_file"
 
 # 6. Every public page sends the CSP header
 for page in "/" "/near-misses" "/log" "/eval"; do
+	start=$(date +%s%3N)
 	csp=$(curl -fsS --max-time "$TIMEOUT" -I "$BASE_URL$page" 2>/dev/null | grep -i '^Content-Security-Policy:' || true)
+	end=$(date +%s%3N)
+	elapsed=$((end - start))
 	if [[ -z "$csp" ]]; then
-		echo "FAIL: CSP header ($BASE_URL$page) — no Content-Security-Policy header" >&2
+		echo "FAIL: CSP header ($BASE_URL$page) — no Content-Security-Policy header — ${elapsed}ms" >&2
 		((FAIL_COUNT++))
+	else
+		echo "PASS: CSP header ($BASE_URL$page) — ${elapsed}ms" >&2
 	fi
 done
 # Also check the pair page if we have one
 if [[ -n "$pair_id" ]]; then
+	start=$(date +%s%3N)
 	csp=$(curl -fsS --max-time "$TIMEOUT" -I "$BASE_URL/pairs/$pair_id" 2>/dev/null | grep -i '^Content-Security-Policy:' || true)
+	end=$(date +%s%3N)
+	elapsed=$((end - start))
 	if [[ -z "$csp" ]]; then
-		echo "FAIL: CSP header ($BASE_URL/pairs/$pair_id) — no Content-Security-Policy header" >&2
+		echo "FAIL: CSP header ($BASE_URL/pairs/$pair_id) — no Content-Security-Policy header — ${elapsed}ms" >&2
 		((FAIL_COUNT++))
+	else
+		echo "PASS: CSP header ($BASE_URL/pairs/$pair_id) — ${elapsed}ms" >&2
 	fi
 fi
 
