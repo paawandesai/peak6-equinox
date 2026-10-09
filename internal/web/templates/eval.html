@@ -1,37 +1,128 @@
 {{define "content"}}
 <h1>Eval: matcher accuracy on labelled pairs</h1>
-<p>Precision and recall per relationship type, computed by <code>equinox eval</code> over the human-confirmed labels in <code>testdata/golden/labels.yaml</code>. The exit bar is precision ≥ {{.Target}} at <em>equivalent</em>: a false "same bet" is the worst failure, so precision counts more than recall. This page only reads the stored summary.</p>
+<p class="question">How accurate is the matcher on human-labelled pairs, per relationship type?</p>
+
 {{if .Missing}}
-<p><mark>No labels confirmed yet (Q-7). Confirm <code>testdata/golden/labels.yaml</code>, run <code>equinox eval --out config/eval_summary.json</code>, and this page reads the result.</mark></p>
+<div class="panel panel-warn">
+  <p><strong>No labels confirmed yet (Q-7).</strong> Confirm <code>testdata/golden/labels.yaml</code>, run <code>equinox eval --out config/eval_summary.json</code>, and this page reads the result.</p>
+</div>
+
 {{else if .Broken}}
-<p><mark>{{.Broken}}</mark></p>
+<div class="panel panel-danger">
+  <p><strong>{{.Broken}}</strong></p>
+</div>
+
 {{else}}{{with .Summary}}
+{{if $.Equiv}}
+{{with $.Equiv}}
+<div class="panel panel-info">
+  {{template "badge" .VerdictBadge}}
+  <p><strong>Precision at equivalent:</strong> {{.Precision}}</p>
+  <p>Support: {{.Support}} labelled pairs</p>
+  <p>The exit bar is precision ≥ {{$.Target}} at <em>equivalent</em>: a false "same bet" is the worst failure, so precision counts more than recall.</p>
+</div>
+{{end}}
+{{end}}
+
+<p>Precision and recall per relationship type, computed by <code>equinox eval</code> over the human-confirmed labels in <code>testdata/golden/labels.yaml</code>. This page only reads the stored summary.</p>
 <p>Produced <strong>{{formatTime $.Produced $.Timezone}}</strong>{{if .Command}} by <code>{{.Command}}</code>{{end}}{{if .RoundID}} on round <strong>{{.RoundID}}</strong>{{end}}: <strong>{{.Labels}}</strong> labelled pair{{if ne .Labels 1}}s{{end}}{{if .LabelsFile}} from <code>{{.LabelsFile}}</code>{{end}}{{if .Method}}, method <code>{{.Method}}</code>{{end}}.</p>
 {{end}}
-{{with .Equiv}}
-<dl class="strip">
-  <div><dt>Precision at equivalent</dt> <dd>{{.Precision}} <span class="chip {{.VerdictChip}}">{{.VerdictText}}</span></dd></div>
-</dl>
-{{end}}
+
 {{if .Rows}}
+<h2>Quality by type</h2>
 <table class="data">
-  <thead><tr><th>Type</th><th>Labelled</th><th>True positives</th><th>False positives</th><th>False negatives</th><th>Precision</th><th>Recall</th></tr></thead>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Support</th>
+      <th>True positives</th>
+      <th>False positives</th>
+      <th>False negatives</th>
+      <th>Precision</th>
+      <th>Recall</th>
+      <th>F1</th>
+    </tr>
+  </thead>
   <tbody>
   {{range .Rows}}
     <tr>
-      <td><span class="chip {{.TypeChipClass}}">{{.Type}}</span></td>
-      <td class="num">{{.Support}}</td><td class="num">{{.TP}}</td><td class="num">{{.FP}}</td><td class="num">{{.FN}}</td>
-      <td class="num">{{.Precision}}</td><td class="num">{{.Recall}}</td>
+      <td>{{template "badge" .TypeBadge}}</td>
+      <td class="num">{{.Support}}</td>
+      <td class="num">{{.TP}}</td>
+      <td class="num">{{.FP}}</td>
+      <td class="num">{{.FN}}</td>
+      <td class="meter-cell">
+        {{if ne .Precision "n/a"}}
+        <meter min="0" max="1" low="0.7" high="0.9" optimum="1" value="{{.PrecisionFloat}}"></meter>
+        {{end}}
+        <span class="num">{{.Precision}}</span>
+      </td>
+      <td class="meter-cell">
+        {{if ne .Recall "n/a"}}
+        <meter min="0" max="1" low="0.7" high="0.9" optimum="1" value="{{.RecallFloat}}"></meter>
+        {{end}}
+        <span class="num">{{.Recall}}</span>
+      </td>
+      <td class="num">{{.F1}}</td>
     </tr>
+  {{end}}
+  {{if .MacroAverage}}
+  <tr class="summary-row">
+    <td><strong>Macro average</strong></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td class="meter-cell">
+      {{if ne .MacroAverage.Precision "n/a"}}
+      <meter min="0" max="1" low="0.7" high="0.9" optimum="1" value="{{.MacroAverage.PrecisionFloat}}"></meter>
+      {{end}}
+      <span class="num">{{.MacroAverage.Precision}}</span>
+    </td>
+    <td class="meter-cell">
+      {{if ne .MacroAverage.Recall "n/a"}}
+      <meter min="0" max="1" low="0.7" high="0.9" optimum="1" value="{{.MacroAverage.RecallFloat}}"></meter>
+      {{end}}
+      <span class="num">{{.MacroAverage.Recall}}</span>
+    </td>
+    <td class="num">{{.MacroAverage.F1}}</td>
+  </tr>
+  {{end}}
+  {{if .WeightedAverage}}
+  <tr class="summary-row">
+    <td><strong>Weighted by support</strong></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td class="meter-cell">
+      {{if ne .WeightedAverage.Precision "n/a"}}
+      <meter min="0" max="1" low="0.7" high="0.9" optimum="1" value="{{.WeightedAverage.PrecisionFloat}}"></meter>
+      {{end}}
+      <span class="num">{{.WeightedAverage.Precision}}</span>
+    </td>
+    <td class="meter-cell">
+      {{if ne .WeightedAverage.Recall "n/a"}}
+      <meter min="0" max="1" low="0.7" high="0.9" optimum="1" value="{{.WeightedAverage.RecallFloat}}"></meter>
+      {{end}}
+      <span class="num">{{.WeightedAverage.Recall}}</span>
+    </td>
+    <td class="num">{{.WeightedAverage.F1}}</td>
+  </tr>
   {{end}}
   </tbody>
 </table>
+
+<p class="note">There is no calibration plot because confidence is a rules score, not a probability.</p>
+
 {{else}}
 <p>The summary has no per-type metrics.</p>
 {{end}}
+
 {{if .Notes}}
 <h2>Notes from the run</h2>
 <ul>{{range .Notes}}<li>{{.}}</li>{{end}}</ul>
 {{end}}
+
 {{end}}
 {{end}}
