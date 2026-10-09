@@ -162,4 +162,6 @@ Stored in the same `routing_decisions.decision` jsonb; no SQL migration needed. 
 **Decision size (AB-15):** Measured for fixture sweep orders (2 candidates: target + partner). Without inputs (main): min=1043, median=1045, max=1045 bytes. With inputs (this head): min=1594, median=1596, max=1596 bytes. Increase: ~551 bytes (+53%). Bounded by candidate count (capped by partner count) and 10-level depth cap per candidate.
 
 **Docs:** Updated `docs/architecture.md` (routing_decisions table), `docs/routing.md` (Decision fields table), added D-099 to `docs/decisions.md` and "Awaiting human veto" row to `docs/status.md`. D-099 mentions both `inputs` and `target_type` fields (target_type without omitempty).
+
+**Merge:** Merged origin/main at 558bd16 to pick up Go 1.27.2 from !73; go vet clean, tests pass, go version confirms go1.27.2.
 2026-10-08 21:45 UTC · orchestrator · §10.3: wrote docs/tickets/M4.md (M4-01…M4-08 + M4-H1 human item) with ACs, dependencies on open UI-v2/M3 issues, file ownership and parallel-safe flags; reserved D-101 (review-window min-instances) and D-102 (final prod deploy) as Tier 2 with veto rows; GitLab issues created with labels M4 + kind. · docs/tickets/M4.md, docs/decisions.md, docs/status.md
