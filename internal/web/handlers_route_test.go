@@ -631,20 +631,27 @@ func TestRouteResultSignRule(t *testing.T) {
 	// Sign rule text should be documented
 	wantContains(t, body, "Sign rule", "positive", "saving", "parentheses", "loss", "unfavourable")
 
-	// Check for cents format with ¢ symbol
+	// Check for cents format
 	if !strings.Contains(body, "¢") {
 		t.Error("should show gap in cents (¢)")
 	}
 
-	// Assert sign rule application: losses (unfavourable) in parentheses with ¢ inside
-	// Pattern: (N.NN¢) where N is a digit - for alternatives with higher cost than chosen
+	// Check for proper sign rule application:
+	// Losses (unfavourable) should be in parentheses with ¢ inside: (X.XX¢)
+	// This is the critical part - ¢ must be INSIDE the parentheses, not outside
 	if !strings.Contains(body, "¢)") {
-		t.Error("should show losses in parentheses as (X.XX¢) per sign rule")
+		t.Error("should show losses in parentheses as (X.XX¢) per D-098 sign rule")
 	}
 
-	// For slippage in bps: same sign rule applies
+	// Gap/slippage values in bps
 	if !strings.Contains(body, "bps") {
-		t.Error("should show slippage/gap in bps")
+		t.Error("should show gap/slippage in bps")
+	}
+
+	// Verify sign rule is actually applied by checking the pattern is NOT the wrong format
+	// Wrong format would be: (X.XX)¢ with ¢ outside parentheses
+	if strings.Contains(body, ")¢ ·") {
+		t.Error("found )¢ pattern - ¢ should be inside parentheses, not outside: (X.XX¢) not (X.XX)¢")
 	}
 }
 
