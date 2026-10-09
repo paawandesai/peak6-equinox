@@ -50,6 +50,7 @@ var pinnedAssets = assets{PicoURL: picoURL, PicoSRI: picoSRI, HtmxURL: htmxURL, 
 // auto-escaped (AB-07).
 var templateFuncs = template.FuncMap{
 	"money": func(d decimal.Decimal) string { return d.StringFixed(4) },
+	"cents": func(d decimal.Decimal) string { return d.Mul(decimal.NewFromInt(100)).StringFixed(2) },
 	"conf":  func(d decimal.Decimal) string { return d.StringFixed(2) },
 	"price": nullPrice,
 	"utc":   formatUTC,
@@ -60,6 +61,8 @@ var templateFuncs = template.FuncMap{
 	"httpURL": httpURL,
 	// formatTime formats a time.Time in the user's chosen timezone (M3-08).
 	"formatTime": formatTime,
+	// Age formats a duration as a human-readable age (UI-13).
+	"Age": Age,
 	// UI-12: partOrder returns the ordered list of rule parts for diff grouping.
 	"partOrder": func() []string {
 		return []string{
