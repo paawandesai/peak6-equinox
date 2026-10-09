@@ -161,6 +161,9 @@ type evalRow struct {
 	VerdictText    string  // for the headline: "meets the 0.95 target", "below the 0.95 target", "undefined: no equivalent predictions"
 	VerdictBadge   Badge   // UI-16: verdict badge for headline panel
 	VerdictChip    string  // chip class for the verdict (kept for compatibility)
+	// UI-23: delta vs previous
+	PrecisionDelta string // formatted delta with sign rule, or empty if no previous
+	RecallDelta    string // formatted delta with sign rule, or empty if no previous
 }
 
 // handleEval answers GET /eval: the latest `equinox eval` summary from the
@@ -184,8 +187,24 @@ func (s *Server) handleEval(w http.ResponseWriter, r *http.Request) {
 		data.Summary = sum
 		data.Produced = sum.GeneratedAt
 		data.Notes = sum.Notes
+		// UI-23: prepare previous metrics map for delta computation
+		var prevMetrics map[string]evalPreviousType
+		if sum.Previous != nil && sum.LabelsSHA256 == sum.Previous.LabelsSHA256 {
+			prevMetrics = make(map[string]evalPreviousType)
+			for typ, m := range sum.Previous.Types {
+				prevMetrics[typ] = evalPreviousType{
+					Precision: formatPercent(m.Precision),
+					Recall:    formatPercent(m.Recall),
+				}
+			}
+		}
 		for _, m := range sum.Types {
 			row := newEvalRow(m, data.Target)
+			// UI-23: compute deltas if labels match
+			if prev, ok := prevMetrics[m.Type]; ok {
+				row.PrecisionDelta = computeDelta(row.Precision, prev.Precision)
+				row.RecallDelta = computeDelta(row.Recall, prev.Recall)
+			}
 			data.Rows = append(data.Rows, row)
 			if m.Type == string(canonical.RelEquivalent) {
 				r := row
@@ -330,6 +349,27 @@ func newEvalRow(m evalTypeMetrics, target string) evalRow {
 		}
 	}
 	return row
+}
+
+// computeDelta applies the sign rule: positive shows "+X%", negative shows "(X%)". UI-23.
+func computeDelta(current, previous string) string {
+	if current == "n/a" || previous == "n/a" {
+		return ""
+	}
+	// Parse as percentage strings (already formatted with %)
+	curr, err1 := decimal.NewFromString(current[:len(current)-1]) // strip %
+	prev, err2 := decimal.NewFromString(previous[:len(previous)-1])
+	if err1 != nil || err2 != nil {
+		return ""
+	}
+	delta := curr.Sub(prev)
+	if delta.IsZero() {
+		return ""
+	}
+	if delta.IsPositive() {
+		return "+" + delta.StringFixed(2) + "%"
+	}
+	return "(" + delta.Abs().StringFixed(2) + "%)"
 }
 
 // computeMacroAverage computes the macro average (unweighted mean) of precision, recall and F1

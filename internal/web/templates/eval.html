@@ -32,23 +32,17 @@
   <div>
     <p>Precision and recall per relationship type, computed by <code>equinox eval</code> over the human-confirmed labels in <code>testdata/golden/labels.yaml</code>. This page only reads the stored summary.</p>
     <p>Produced <strong>{{formatTime $.Produced $.Timezone}}</strong>{{if .Command}} by <code>{{.Command}}</code>{{end}}{{if .RoundID}} on round <strong>{{.RoundID}}</strong>{{end}}: <strong>{{.Labels}}</strong> labelled pair{{if ne .Labels 1}}s{{end}}{{if .LabelsFile}} from <code>{{.LabelsFile}}</code>{{end}}{{if .Method}}, method <code>{{.Method}}</code>{{end}}.</p>
-    {{if .LabelsSHA256}}<p><strong>Golden-set version:</strong> <code>{{.LabelsSHA256}}</code></p>{{end}}
-    {{if .Previous}}
-    <p><strong>Δ vs previous run</strong> ({{formatTime .Previous.GeneratedAt $.Timezone}}):
-    {{if ne .LabelsSHA256 .Previous.LabelsSHA256}}
+    {{if $.LabelsSHA256}}<p><strong>Golden-set version:</strong> <code>{{$.LabelsSHA256}}</code></p>{{end}}
+    {{if $.Previous}}
+    <p><strong>Δ vs previous run</strong> ({{formatTime $.Previous.GeneratedAt $.Timezone}}):
+    {{if ne $.LabelsSHA256 $.Previous.LabelsSHA256}}
       labels changed, Δ not comparable
     {{else}}
       {{range $.Rows}}
-        {{if index $.Previous.Types .Type}}
-          {{with index $.Previous.Types .Type}}
-            {{$.TypeLabel .Type}}:
-            {{if and .Precision $.HasPrec}}
-              P {{$.FormatDelta .Precision $.PrevPrecision}}
-            {{end}}
-            {{if and .Recall $.HasRec}}
-              R {{$.FormatDelta .Recall $.PrevRecall}}
-            {{end}}
-          {{end}}
+        {{if or .PrecisionDelta .RecallDelta}}
+          {{.Label}}:
+          {{if .PrecisionDelta}}P {{.PrecisionDelta}}{{end}}
+          {{if .RecallDelta}}{{if .PrecisionDelta}} {{end}}R {{.RecallDelta}}{{end}}.
         {{end}}
       {{end}}
     {{end}}
@@ -151,6 +145,7 @@
 
 {{if $.ConfusionMatrix}}
 <h2>Confusion matrix</h2>
+<div class="confusion-wrap">
 <table class="data confusion">
   <thead>
     <tr>
@@ -164,21 +159,22 @@
       <th>{{$label}}</th>
       {{range $pred := $.AllTypes}}
         {{with index $.ConfusionMatrix (printf "%s:%s" $label $pred)}}
-          <td class="{{$.ConfusionClass $label $pred}}">
+          <td aria-label="{{.Count}} pair{{if ne .Count 1}}s{{end}} labelled {{$label}}, predicted {{$pred}}">
             {{if gt .Count 0}}
-              <a href="/eval/cell?label={{$label}}&predicted={{$pred}}">{{.Count}}</a>
+              <a href="/eval/cell?label={{$label}}&predicted={{$pred}}" class="{{ConfusionClass $label $pred}}" hx-get="/eval/cell?label={{$label}}&predicted={{$pred}}" hx-target="body" hx-push-url="true">{{.Count}}</a>
             {{else}}
-              0
+              <a class="zero">0</a>
             {{end}}
           </td>
         {{else}}
-          <td class="{{$.ConfusionClass $label $pred}}">0</td>
+          <td aria-label="0 pairs labelled {{$label}}, predicted {{$pred}}"><a class="zero">0</a></td>
         {{end}}
       {{end}}
     </tr>
   {{end}}
   </tbody>
 </table>
+</div>
 {{end}}
 
 {{if $.Thresholds}}
@@ -196,7 +192,7 @@
   </thead>
   <tbody>
   {{range $.Thresholds}}
-    <tr{{if eq .Threshold "0.90"}} class="highlight"{{end}}>
+    <tr{{if eq .Threshold "0.90"}} class="chosen"{{end}}>
       <td>≥ {{.Threshold}}</td>
       <td class="num">{{.TP}}</td>
       <td class="num">{{.FP}}</td>

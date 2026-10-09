@@ -2,6 +2,7 @@ package web
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 )
@@ -202,5 +203,90 @@ func TestEvalCellInvalidParams(t *testing.T) {
 	rec = get(s.Handler(), "/eval/cell?label=equivalent&predicted=<script>")
 	if rec.Code != http.StatusBadRequest {
 		t.Errorf("invalid predicted: got %d, want 400", rec.Code)
+	}
+}
+
+// TestEvalWithConfusionMatrix tests that /eval renders successfully with UI-23 fields.
+func TestEvalWithConfusionMatrix(t *testing.T) {
+	summary := `{
+		"generated_at": "2026-10-09T12:00:00Z",
+		"method": "rules",
+		"labels": 5,
+		"round_id": 1,
+		"labels_file": "labels.yaml",
+		"command": "equinox eval",
+		"types": [
+			{"type": "equivalent", "support": 2, "tp": 2, "fp": 0, "fn": 0, "precision": "1.0", "recall": "1.0"}
+		],
+		"notes": ["test note"],
+		"confusion": {
+			"cells": {
+				"equivalent:equivalent": {"count": 2, "pair_ids": ["kalshi:A / polymarket:1", "kalshi:B / polymarket:2"]},
+				"equivalent:related": {"count": 1, "pair_ids": ["kalshi:C / polymarket:3"]}
+			}
+		},
+		"thresholds": [
+			{"threshold": "0.90", "tp": 2, "fp": 0, "precision": "1.0", "recall": "1.0"}
+		],
+		"labels_sha256": "abc123",
+		"previous": {
+			"generated_at": "2026-10-08T12:00:00Z",
+			"labels_sha256": "abc123",
+			"types": {
+				"equivalent": {"precision": "0.95", "recall": "0.90"}
+			}
+		}
+	}`
+	s := New(Config{EvalSummaryFile: writeEval(t, summary)}, Deps{})
+	rec := get(s.Handler(), "/eval")
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+	// Verify UI-23 elements render
+	wantContains(t, body,
+		"Confusion matrix",
+		"Golden-set version",
+		"abc123",
+		"Δ vs previous run",
+		"P/R at confidence thresholds",
+		"≥ 0.90",
+	)
+}
+
+// TestEvalCellRateLimit tests that /eval/cell is rate-limited (AB-03).
+func TestEvalCellRateLimit(t *testing.T) {
+	summary := `{
+		"generated_at": "2026-10-09T12:00:00Z",
+		"method": "rules",
+		"labels": 1,
+		"round_id": 1,
+		"labels_file": "labels.yaml",
+		"command": "equinox eval",
+		"types": [],
+		"notes": [],
+		"confusion": {
+			"cells": {"equivalent:equivalent": {"count": 1, "pair_ids": ["kalshi:A / polymarket:1"]}}
+		}
+	}`
+	s := New(Config{EvalSummaryFile: writeEval(t, summary), PublicRateLimitPerMin: 60, AppEnv: "ci"}, Deps{})
+	h := s.Handler()
+
+	// Fill the 60 req/min limit
+	for i := 0; i < 60; i++ {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/eval/cell?label=equivalent&predicted=equivalent", nil)
+		req.RemoteAddr = "203.0.113.42:51000"
+		h.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Errorf("request %d: got %d, want 200", i+1, rec.Code)
+		}
+	}
+
+	// Next request should be rate-limited (429)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/eval/cell?label=equivalent&predicted=equivalent", nil)
+	req.RemoteAddr = "203.0.113.42:51000"
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusTooManyRequests {
+		t.Errorf("request 61: got %d, want 429", rec.Code)
 	}
 }
