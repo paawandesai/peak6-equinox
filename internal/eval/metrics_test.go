@@ -17,9 +17,9 @@ func fixturePredictor(t *testing.T) Predictor {
 		t.Fatal(err)
 	}
 	sug := c.Suggestions()
-	return func(a, b string) (canonical.RelationshipType, bool) {
+	return func(a, b string) (canonical.RelationshipType, decimal.Decimal, bool) {
 		typ, ok := sug[PairKey(a, b)]
-		return typ, ok
+		return typ, decimal.NewFromInt(1), ok
 	}
 }
 
@@ -94,13 +94,13 @@ func TestEvaluateTargetMetAndUnmeasured(t *testing.T) {
 		{AID: "kalshi:B", BID: "polymarket:2", Label: canonical.RelRelated, ConfirmedBy: "h", ConfirmedOn: "2026-10-07"},
 	}}
 	all := func(typ canonical.RelationshipType) Predictor {
-		return func(string, string) (canonical.RelationshipType, bool) { return typ, true }
+		return func(string, string) (canonical.RelationshipType, decimal.Decimal, bool) { return typ, decimal.NewFromInt(1), true }
 	}
-	r := Evaluate(l, func(a, _ string) (canonical.RelationshipType, bool) {
+	r := Evaluate(l, func(a, _ string) (canonical.RelationshipType, decimal.Decimal, bool) {
 		if a == "kalshi:A" {
-			return canonical.RelEquivalent, true
+			return canonical.RelEquivalent, decimal.NewFromInt(1), true
 		}
-		return canonical.RelRelated, true
+		return canonical.RelRelated, decimal.NewFromInt(1), true
 	}, canonical.MethodRules)
 	if met, measured := r.MeetsTarget(); !met || !measured {
 		t.Errorf("MeetsTarget = %v %v", met, measured)
@@ -144,9 +144,9 @@ func TestEvaluateCountsAddUp(t *testing.T) {
 				preds[PairKey(a, b)] = rapid.SampledFrom(types).Draw(rt, "pred")
 			}
 		}
-		r := Evaluate(l, func(a, b string) (canonical.RelationshipType, bool) {
+		r := Evaluate(l, func(a, b string) (canonical.RelationshipType, decimal.Decimal, bool) {
 			typ, ok := preds[PairKey(a, b)]
-			return typ, ok
+			return typ, decimal.NewFromInt(1), ok
 		}, canonical.MethodRules)
 		if r.Evaluated+len(r.Missing) != n || r.Evaluated != len(r.Outcomes) {
 			rt.Fatalf("evaluated %d + missing %d != %d", r.Evaluated, len(r.Missing), n)

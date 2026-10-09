@@ -98,6 +98,7 @@ var pages = map[string]*template.Template{
 	"decision":    parsePage("decision.html", "route_result.html"),
 	"log":         parsePage("log.html"),
 	"eval":        parsePage("eval.html"),
+	"eval_cell":   parsePage("eval_cell.html"), // UI-23
 	"error":       parsePage("error.html"),
 }
 
@@ -125,6 +126,7 @@ func (s *Server) publicRoutes(mux *http.ServeMux) {
 	mux.Handle("GET /decisions/{id}", wrap(s.handleDecision))
 	mux.Handle("GET /log", wrap(s.handleLog))
 	mux.Handle("GET /eval", wrap(s.handleEval))
+	mux.Handle("GET /eval/cell", wrap(s.handleEvalCell)) // UI-23
 	// POST /timezone sets the user's timezone preference cookie (M3-08, no round middleware needed)
 	mux.Handle("POST /timezone", s.rateLimitMiddleware(http.HandlerFunc(s.handleTimezone)))
 	mux.HandleFunc("GET /static/app.css", s.handleAppCSS)

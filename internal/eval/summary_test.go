@@ -16,9 +16,11 @@ import (
 
 var summaryNow = time.Date(2026, 10, 7, 12, 0, 0, 999, time.UTC)
 
-// contractKeys are the only keys the web page accepts (internal/web/handlers_eval.go).
+// contractKeys are the required keys the web page accepts (internal/web/handlers_eval.go).
+// D-070 defined these; UI-23 (D-104) adds optional fields.
 var (
 	contractTopKeys  = []string{"command", "generated_at", "labels", "labels_file", "method", "notes", "round_id", "types"}
+	contractOptionalKeys = []string{"confusion", "labels_sha256", "previous", "thresholds"} // UI-23
 	contractTypeKeys = []string{"fn", "fp", "precision", "recall", "support", "tp", "type"}
 )
 
@@ -28,7 +30,7 @@ func TestSummaryRoundTripsAgainstTheContract(t *testing.T) {
 		t.Fatal(err)
 	}
 	r := Evaluate(labels, fixturePredictor(t), canonical.MethodRules)
-	s := r.Summary(summaryNow, "equinox eval --labels x.yaml", 7, fixtureLabels, len(labels.Labels))
+	s := r.Summary(summaryNow, "equinox eval --labels x.yaml", 7, fixtureLabels, len(labels.Labels), "", "")
 	if s.Labels != 7 || s.RoundID != 7 || s.Method != "rules" || !s.GeneratedAt.Equal(summaryNow.Truncate(time.Second)) || len(s.Types) != 6 {
 		t.Fatalf("summary = %+v", s)
 	}
@@ -66,8 +68,32 @@ func TestSummaryRoundTripsAgainstTheContract(t *testing.T) {
 	if err := json.Unmarshal(raw, &generic); err != nil {
 		t.Fatal(err)
 	}
-	if got := sortedKeys(generic); strings.Join(got, ",") != strings.Join(contractTopKeys, ",") {
-		t.Errorf("top-level keys = %v, want %v", got, contractTopKeys)
+	// Check all required keys are present, and allow UI-23 optional keys
+	got := sortedKeys(generic)
+	for _, required := range contractTopKeys {
+		found := false
+		for _, k := range got {
+			if k == required {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("missing required key %q in %v", required, got)
+		}
+	}
+	// Check no unexpected keys
+	allowed := make(map[string]bool)
+	for _, k := range contractTopKeys {
+		allowed[k] = true
+	}
+	for _, k := range contractOptionalKeys {
+		allowed[k] = true
+	}
+	for _, k := range got {
+		if !allowed[k] {
+			t.Errorf("unexpected key %q in %v", k, got)
+		}
 	}
 	var types []map[string]json.RawMessage
 	if err := json.Unmarshal(generic["types"], &types); err != nil {
@@ -93,7 +119,7 @@ func TestSummaryRoundTripsAgainstTheContract(t *testing.T) {
 }
 
 func TestSummaryEmptyLabelsAndTargetMet(t *testing.T) {
-	s := Evaluate(Labels{Version: 1}, nil, canonical.MethodRules).Summary(summaryNow, "equinox eval", 0, "labels.yaml", 0)
+	s := Evaluate(Labels{Version: 1}, nil, canonical.MethodRules).Summary(summaryNow, "equinox eval", 0, "labels.yaml", 0, "", "")
 	if s.Labels != 0 || len(s.Types) != 6 || s.Types[0].Precision != nil {
 		t.Errorf("empty = %+v", s)
 	}
@@ -104,8 +130,8 @@ func TestSummaryEmptyLabelsAndTargetMet(t *testing.T) {
 		t.Error(err)
 	}
 	l := Labels{Version: 1, Labels: []Label{{AID: "kalshi:A", BID: "polymarket:1", Label: canonical.RelEquivalent, ConfirmedBy: "h", ConfirmedOn: "2026-10-07"}}}
-	met := Evaluate(l, func(string, string) (canonical.RelationshipType, bool) { return canonical.RelEquivalent, true }, canonical.MethodRules).
-		Summary(summaryNow, "equinox eval", 3, "labels.yaml", 1)
+	met := Evaluate(l, func(string, string) (canonical.RelationshipType, decimal.Decimal, bool) { return canonical.RelEquivalent, decimal.NewFromInt(1), true }, canonical.MethodRules).
+		Summary(summaryNow, "equinox eval", 3, "labels.yaml", 1, "", "")
 	if !strings.Contains(met.Notes[0], "meets the 0.95 target") || met.Types[0].Recall == nil || !met.Types[0].Recall.Equal(decimal.NewFromInt(1)) {
 		t.Errorf("met = %+v", met)
 	}

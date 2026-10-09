@@ -38,14 +38,15 @@ import (
 // precision and recall are decimal strings or numbers in [0,1], or null when
 // undefined (no predictions, or no labelled positives).
 type evalSummary struct {
-	GeneratedAt time.Time         `json:"generated_at"`
-	Command     string            `json:"command"`
-	RoundID     int64             `json:"round_id"`
-	LabelsFile  string            `json:"labels_file"`
-	Labels      int               `json:"labels"`
-	Method      string            `json:"method"`
-	Types       []evalTypeMetrics `json:"types"`
-	Notes       []string          `json:"notes"`
+	GeneratedAt time.Time            `json:"generated_at"`
+	Command     string               `json:"command"`
+	RoundID     int64                `json:"round_id"`
+	LabelsFile  string               `json:"labels_file"`
+	Labels      int                  `json:"labels"`
+	Method      string               `json:"method"`
+	Types       []evalTypeMetrics    `json:"types"`
+	Notes       []string             `json:"notes"`
+	Confusion   *evalConfusionMatrix `json:"confusion,omitempty"` // UI-23
 }
 
 type evalTypeMetrics struct {
@@ -56,6 +57,16 @@ type evalTypeMetrics struct {
 	FN        int              `json:"fn"`
 	Precision *decimal.Decimal `json:"precision"`
 	Recall    *decimal.Decimal `json:"recall"`
+}
+
+// evalConfusionMatrix and evalConfusionCell mirror the eval.Summary UI-23 types.
+type evalConfusionMatrix struct {
+	Cells map[string]evalConfusionCell `json:"cells"`
+}
+
+type evalConfusionCell struct {
+	Count   int      `json:"count"`
+	PairIDs []string `json:"pair_ids,omitempty"`
 }
 
 // maxEvalArtifactBytes bounds the artifact read; a real summary is a few KB.
@@ -135,6 +146,56 @@ func (s *Server) handleEval(w http.ResponseWriter, r *http.Request) {
 		data.WeightedAverage = computeWeightedAverage(sum.Types)
 	}
 	s.render(w, http.StatusOK, "eval", data)
+}
+
+// handleEvalCell answers GET /eval/cell?label=X&predicted=Y: drill-down into one
+// confusion matrix cell. UI-23.
+func (s *Server) handleEvalCell(w http.ResponseWriter, r *http.Request) {
+	label := r.URL.Query().Get("label")
+	predicted := r.URL.Query().Get("predicted")
+	// AB-08: validate params against known types
+	labelType := canonical.RelationshipType(label)
+	predType := canonical.RelationshipType(predicted)
+	if !labelType.Valid() || !predType.Valid() {
+		http.Error(w, "Invalid label or predicted type", http.StatusBadRequest)
+		return
+	}
+	sum, err := readEvalSummary(s.cfg.EvalSummaryFile)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			http.Error(w, "Eval summary not found", http.StatusNotFound)
+		} else {
+			s.log.Error("reading eval summary for cell", "file", s.cfg.EvalSummaryFile, "err", err)
+			http.Error(w, "Could not read eval summary", http.StatusInternalServerError)
+		}
+		return
+	}
+	if sum.Confusion == nil {
+		http.Error(w, "Confusion matrix not available in summary", http.StatusNotFound)
+		return
+	}
+	key := fmt.Sprintf("%s:%s", label, predicted)
+	cell, ok := sum.Confusion.Cells[key]
+	if !ok {
+		// Empty cell: valid but no pairs
+		cell = evalConfusionCell{Count: 0, PairIDs: []string{}}
+	}
+	round := roundFromContext(r.Context())
+	tz := timezoneFromRequest(r)
+	data := struct {
+		page
+		Label     string
+		Predicted string
+		Count     int
+		PairIDs   []string
+	}{
+		page:      s.pageBase(round, "Eval Cell", fmt.Sprintf("Pairs labelled %s, predicted %s", label, predicted), tz, "eval"),
+		Label:     label,
+		Predicted: predicted,
+		Count:     cell.Count,
+		PairIDs:   cell.PairIDs,
+	}
+	s.render(w, http.StatusOK, "eval_cell", data)
 }
 
 func newEvalRow(m evalTypeMetrics, target string) evalRow {
