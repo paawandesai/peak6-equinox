@@ -19,14 +19,14 @@ const (
 
 // MatchRun is a match_runs row, recording one execution of the matcher.
 type MatchRun struct {
-	ID                   int64
-	RoundID              int64
-	StartedAt            time.Time
-	FinishedAt           time.Time
-	DurationMS           int
-	PairsCompared        int
-	RelationshipsStored  int
-	Outcome              MatchRunOutcome
+	ID                  int64
+	RoundID             int64
+	StartedAt           time.Time
+	FinishedAt          time.Time
+	DurationMS          int
+	PairsCompared       int
+	RelationshipsStored int
+	Outcome             MatchRunOutcome
 }
 
 const matchRunCols = `id, round_id, started_at, finished_at, duration_ms, pairs_compared, relationships_stored, outcome`

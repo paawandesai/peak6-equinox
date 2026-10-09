@@ -502,22 +502,22 @@ func TestDailyRoundHistory(t *testing.T) {
 
 	// Today: 2 ok, 1 partial
 	r1, _ := s.CreateRound(ctx, today)
-	s.FinishRound(ctx, r1.ID, store.RoundOK, nil, today.Add(time.Minute))
+	_ = s.FinishRound(ctx, r1.ID, store.RoundOK, nil, today.Add(time.Minute))
 	r2, _ := s.CreateRound(ctx, today.Add(5*time.Minute))
-	s.FinishRound(ctx, r2.ID, store.RoundOK, nil, today.Add(6*time.Minute))
+	_ = s.FinishRound(ctx, r2.ID, store.RoundOK, nil, today.Add(6*time.Minute))
 	r3, _ := s.CreateRound(ctx, today.Add(10*time.Minute))
-	s.FinishRound(ctx, r3.ID, store.RoundPartial, nil, today.Add(11*time.Minute))
+	_ = s.FinishRound(ctx, r3.ID, store.RoundPartial, nil, today.Add(11*time.Minute))
 
 	// Yesterday: 1 failed, 1 ok
 	r4, _ := s.CreateRound(ctx, yesterday)
-	s.FinishRound(ctx, r4.ID, store.RoundFailed, nil, yesterday.Add(time.Minute))
+	_ = s.FinishRound(ctx, r4.ID, store.RoundFailed, nil, yesterday.Add(time.Minute))
 	r5, _ := s.CreateRound(ctx, yesterday.Add(5*time.Minute))
-	s.FinishRound(ctx, r5.ID, store.RoundOK, nil, yesterday.Add(6*time.Minute))
+	_ = s.FinishRound(ctx, r5.ID, store.RoundOK, nil, yesterday.Add(6*time.Minute))
 
 	// Two days ago: no rounds (missing)
 	// Three days ago: 1 ok
 	r6, _ := s.CreateRound(ctx, threeDaysAgo)
-	s.FinishRound(ctx, r6.ID, store.RoundOK, nil, threeDaysAgo.Add(time.Minute))
+	_ = s.FinishRound(ctx, r6.ID, store.RoundOK, nil, threeDaysAgo.Add(time.Minute))
 
 	// Query 7 days of history.
 	history, err := s.DailyRoundHistory(ctx, 7)

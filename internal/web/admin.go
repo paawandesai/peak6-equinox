@@ -150,17 +150,18 @@ func worstHealth(signals []Signal) HealthState {
 }
 
 // buildHealthRows constructs the health table rows for the admin page (UI-17, HANDOFF.md).
-func buildHealthRows(collector collectorStats, dbGrowth dbGrowth, hasDB bool, dbError string, pinnedRound *roundView, llmState string, recentRounds []store.Round) []HealthRow {
+// UI-26: accepts match run data and daily history for Matcher row and 90-day bars.
+func buildHealthRows(collector collectorStats, dbGrowth dbGrowth, hasDB bool, dbError string, pinnedRound *roundView, llmState string, _ []store.Round, latestMatchRun *store.MatchRun, dailyHistory []store.DailyRoundSummary, now time.Time) []HealthRow {
 	rows := make([]HealthRow, 0, 5)
 
-	// Collectors row: success rate signal + recent-round bars
+	// Collectors row: success rate signal + 90-day bars (UI-26)
 	var collectorSignals []Signal
 	if collector.Meets {
 		collectorSignals = append(collectorSignals, Signal{Glyph: "✓", Class: "signal-healthy", Text: "Meets target"})
 	} else {
 		collectorSignals = append(collectorSignals, Signal{Glyph: "✕", Class: "signal-degraded", Text: "Below target"})
 	}
-	bars := buildBars(recentRounds)
+	bars := buildDailyHistoryBars(dailyHistory)
 	rows = append(rows, HealthRow{
 		Name:    "Collectors",
 		Status:  HealthBadge(worstHealth(collectorSignals)),
@@ -186,11 +187,34 @@ func buildHealthRows(collector collectorStats, dbGrowth dbGrowth, hasDB bool, db
 		Signals: dbSignals,
 	})
 
-	// Matcher row: Unknown until UI-26
-	matcherSignals := []Signal{{Glyph: "?", Class: "signal-unknown", Text: "No match runs recorded"}}
+	// Matcher row: derives signals from match runs (UI-26, HANDOFF.md ◆ 14)
+	var matcherSignals []Signal
+	if latestMatchRun == nil {
+		matcherSignals = append(matcherSignals, Signal{Glyph: "?", Class: "signal-unknown", Text: "No match runs recorded"})
+	} else {
+		// Signal 1: last run age against a 6-hour window
+		age := now.Sub(latestMatchRun.FinishedAt)
+		ageWindow := 6 * time.Hour
+		if age < ageWindow {
+			matcherSignals = append(matcherSignals, Signal{Glyph: "✓", Class: "signal-healthy", Text: fmt.Sprintf("Last run %s ago", formatDuration(age))})
+		} else if age < 2*ageWindow {
+			matcherSignals = append(matcherSignals, Signal{Glyph: "!", Class: "signal-warning", Text: fmt.Sprintf("Last run %s ago", formatDuration(age))})
+		} else {
+			matcherSignals = append(matcherSignals, Signal{Glyph: "✕", Class: "signal-degraded", Text: fmt.Sprintf("Last run %s ago", formatDuration(age))})
+		}
+		// Signal 2: last run outcome (failure is degraded)
+		if latestMatchRun.Outcome == store.MatchRunFailed {
+			matcherSignals = append(matcherSignals, Signal{Glyph: "✕", Class: "signal-degraded", Text: "Last run failed"})
+		}
+		// Signal 3: last run duration (warn if > 60s)
+		durationS := latestMatchRun.DurationMS / 1000
+		if durationS > 60 {
+			matcherSignals = append(matcherSignals, Signal{Glyph: "!", Class: "signal-warning", Text: fmt.Sprintf("Last run took %ds", durationS)})
+		}
+	}
 	rows = append(rows, HealthRow{
 		Name:    "Matcher",
-		Status:  HealthBadge(HealthUnknown),
+		Status:  HealthBadge(worstHealth(matcherSignals)),
 		Signals: matcherSignals,
 	})
 
@@ -262,6 +286,52 @@ func buildBars(rounds []store.Round) []Bar {
 	}
 
 	return bars
+}
+
+// buildDailyHistoryBars generates 90-day SVG bars for daily round outcomes (UI-26, HANDOFF.md ◆ 15).
+// Statuspage-style bars: gray outline for no-data days, full height = ok, 75% = partial, 50% = failed.
+func buildDailyHistoryBars(history []store.DailyRoundSummary) []Bar {
+	bars := make([]Bar, 0, 90)
+	for _, day := range history {
+		if day.Missing {
+			// No-data day: gray outline only (height "0")
+			bars = append(bars, Bar{
+				Title:  fmt.Sprintf("%s: no rounds", day.Date.Format("2006-01-02")),
+				Class:  "bar-missing",
+				Height: "0",
+			})
+		} else {
+			// Determine worst outcome for the day
+			var class, height string
+			if day.Failed > 0 {
+				class = "failed"
+				height = "50%"
+			} else if day.Partial > 0 {
+				class = "partial"
+				height = "75%"
+			} else {
+				class = "ok"
+				height = "100%"
+			}
+			title := fmt.Sprintf("%s: %d ok, %d partial, %d failed", day.Date.Format("2006-01-02"), day.OK, day.Partial, day.Failed)
+			bars = append(bars, Bar{Title: title, Class: "bar-" + class, Height: height})
+		}
+	}
+	return bars
+}
+
+// formatDuration formats a duration for display in health signals (UI-26).
+func formatDuration(d time.Duration) string {
+	if d < time.Minute {
+		return fmt.Sprintf("%ds", int(d.Seconds()))
+	}
+	if d < time.Hour {
+		return fmt.Sprintf("%dm", int(d.Minutes()))
+	}
+	if d < 24*time.Hour {
+		return fmt.Sprintf("%dh", int(d.Hours()))
+	}
+	return fmt.Sprintf("%dd", int(d.Hours()/24))
 }
 
 func (s *Server) handleAdminIndex(w http.ResponseWriter, r *http.Request) {
@@ -339,19 +409,39 @@ func (s *Server) handleAdminIndex(w http.ResponseWriter, r *http.Request) {
 
 	}
 
-	// UI-17: Build health rows and freshness windows
+	// UI-17 + UI-26: Build health rows and freshness windows
 	var growth dbGrowth
 	hasDB := s.deps.Store != nil || s.deps.DBSize != nil
 	if p.DBError == "" {
 		growth = dbGrowth{Size: p.DBSize, Threshold: p.DBThreshold, Breached: p.DBAlert}
 	}
 
-	// Get recent rounds for bars (last 24)
+	// Get recent rounds for bars (last 24) - kept for compatibility
 	var recentForBars []store.Round
 	if s.deps.Store != nil {
 		recent, err := s.deps.Store.ListRounds(ctx, 24)
 		if err == nil {
 			recentForBars = recent
+		}
+	}
+
+	// UI-26: Get latest match run for Matcher row
+	var latestMatchRun *store.MatchRun
+	if s.deps.Store != nil {
+		if mr, err := s.deps.Store.GetLatestMatchRun(ctx); err == nil {
+			latestMatchRun = &mr
+		} else if !isNotFound(err) {
+			s.log.Error("getting latest match run", "error", err)
+		}
+	}
+
+	// UI-26: Get 90-day daily history for Collectors bars
+	var dailyHistory []store.DailyRoundSummary
+	if s.deps.Store != nil {
+		if history, err := s.deps.Store.DailyRoundHistory(ctx, 90); err == nil {
+			dailyHistory = history
+		} else {
+			s.log.Error("getting daily round history", "error", err)
 		}
 	}
 
@@ -405,8 +495,8 @@ func (s *Server) handleAdminIndex(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// UI-17: build health rows with worst-signal rollup
-	p.Health = buildHealthRows(p.Collector, growth, hasDB, p.DBError, p.PinnedRound, p.LLMVerifierState, recentForBars)
+	// UI-17 + UI-26: build health rows with worst-signal rollup, match runs, and 90-day bars
+	p.Health = buildHealthRows(p.Collector, growth, hasDB, p.DBError, p.PinnedRound, p.LLMVerifierState, recentForBars, latestMatchRun, dailyHistory, s.now())
 	// UI-17: freshness windows (D-077 threshold 120s, UI-19 will add warn windows)
 	p.FreshnessWindows = "Stale thresholds: Kalshi quotes 120 s, Polymarket quotes 120 s, rounds 10 min."
 
