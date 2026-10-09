@@ -231,8 +231,12 @@ func (s *Server) handleEval(w http.ResponseWriter, r *http.Request) {
 		}
 		if len(sum.Thresholds) > 0 {
 			for _, t := range sum.Thresholds {
+				var threshold string
+				if t.Threshold != nil {
+					threshold = t.Threshold.StringFixed(2)
+				}
 				data.Thresholds = append(data.Thresholds, evalThresholdRow{
-					Threshold: t.Threshold.StringFixed(2),
+					Threshold: threshold,
 					TP:        t.TP,
 					FP:        t.FP,
 					Precision: formatPercent(t.Precision),
