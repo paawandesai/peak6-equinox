@@ -5,10 +5,17 @@ _Last updated: 2026-10-08 17:30 UTC by orchestrator (M3-01…10, UI-01…08 and 
 
 ## Current milestone
 
-**M4 demo and submission (target freeze Sun 2026-10-11 09:00 CT, submit by 11:00 CT):** Exit criteria from plan.md § M4:
-  1. Every brief deliverable present and linked from README — **DONE** (M4-01 !59 merged: live URL, setup, architecture summary, 60-second walkthrough, recording placeholder; deliverables 2/5/6 already merged; deliverable 7 recording pending M4-H1 #67 Paawan human item)
-  2. Live URL and pinned round both pass E2E smoke test — **DONE** (M4-05 !66 merged: `scripts/smoke-live.sh` passes on live URL and pinned round 735; p95 <500ms pages, <300ms route per NFR-01)
-  3. After freeze, only docs and demo fixes — **pending** (freeze is 2026-10-11 09:00 CT; this status.md drafted 2026-10-09 as early DRAFT per operator)
+**M2 exit verification (2026-10-07 ~18:00 UTC):** **MISS.** All M2 code tickets merged and deployed to prod (revision equinox-00010-h9v); docs/equivalence.md landed; golden/eval machinery + back-test complete. Exit criteria status:
+  1. Precision ≥0.95 at `equivalent` on human-confirmed labels — **BLOCKED, now on `equivalent` pairs**. Q-7 progress 2026-10-07: testdata/golden/labels.yaml holds all 40 round-2 pairs (MR !44, `human-approved`). The operator checked them against the venue rules, Paawan approved them, and he accepted the 6 corrections at 9:30 PM CT. `make eval`: 34 of 40 correct. The matcher misses all 6 corrected pairs, and the `equivalent` row is still n/a because round 2 has no plain `equivalent` pair. labels.proposed.yaml holds 33 drafts pending Paawan: 9 politics `equivalent`, 18 fed `equivalent_given_facts` (D-083), 1 complement and 5 related.
+     - Subpart: 0 veto false positives on the veto suite — **MET** (TestPairsFromFixtures 0 FP on 37 V- cases; documented in equivalence.md §8).
+     - Subpart: 0 back-test mismatches on fixture set — **MET** (1031 instruments, 207544 pairs, 24/24 agreed; equivalence.md §7–§8).
+  2. ≥10 true `equivalent` / `complement` across ≥2 categories in a live round — **MISS** (live revision equinox-00010-h9v pinned round 3: 1 equivalent_given_facts, 1 complement, 25 implies, 851 related = 878 kept; both routable-tier pairs are fed-only, not ≥2 categories).
+  3. Fed demo pair + near-miss render correctly live — **PARTIAL** (M2 routes deployed and 200: /near-misses shows 851 related pairs, /log and /eval render, pair pages show facts/basis/type/history; Fed demo pair `equivalent_given_facts` and `complement` render with diff/vetoes/facts; human verification of correctness pending).
+  4. docs/equivalence.md merged — **MET** (MR !24 merged as ba0a6c66).
+
+Next operator action (Tier 2): human verification of Fed demo rendering (criterion 3 correctness), then human review of live round for Q-7 label candidates (criterion 1 unblocked).
+
+**Previous:** M1 verification HIT WITH CAVEATS (2026-10-06 ~21:55 CT).
 
 **M4-03 pinned demo round (2026-10-09 14:28 UTC):**
 - **Round ID:** 735
@@ -22,29 +29,6 @@ _Last updated: 2026-10-08 17:30 UTC by orchestrator (M3-01…10, UI-01…08 and 
   - unrelated: 42,090
 - **Total stored:** 613 relationships
 - **Verification:** pinned round serves on / with demo banner; Scheduler continues collecting (rounds 736-738+ after pin); NFR-04 test passes in CI (zero venue calls for pinned pages)
-
-**M4 tickets status:**
-- M4-01 README: merged !59
-- M4-02 ai-usage.md: merged !65
-- M4-03 pin demo round: merged !60 (round 735 pinned 2026-10-09 14:28 UTC)
-- M4-04 review-window script: merged !64 (D-101: estimated $0.27 for 3h window Sun 2026-10-11 09:00–12:00 CT)
-- M4-05 live smoke script: merged !66
-- M4-06 PRD sweep: merged !68 (PRD evaluation sweep section above; swept at 395ec34)
-- M4-07 final deploy: pending #65 (depends on: all UI-v2 and M3 follow-ups merged; open: #51 UI-19, #52 UI-20, #54 UI-22, #56 UI-24)
-- M4-08 final status.md: this MR (draft, depends on M4-06, M4-07)
-- M4-H1 recording: pending #67 (Paawan human item after M4-07)
-
-**M2 exit verification (2026-10-07 ~18:00 UTC):** **MISS.** All M2 code tickets merged and deployed to prod (revision equinox-00010-h9v); docs/equivalence.md landed; golden/eval machinery + back-test complete. Exit criteria status:
-  1. Precision ≥0.95 at `equivalent` on human-confirmed labels — **BLOCKED, now on `equivalent` pairs**. Q-7 progress 2026-10-07: testdata/golden/labels.yaml holds all 40 round-2 pairs (MR !44, `human-approved`). The operator checked them against the venue rules, Paawan approved them, and he accepted the 6 corrections at 9:30 PM CT. `make eval`: 34 of 40 correct. The matcher misses all 6 corrected pairs, and the `equivalent` row is still n/a because round 2 has no plain `equivalent` pair. labels.proposed.yaml holds 33 drafts pending Paawan: 9 politics `equivalent`, 18 fed `equivalent_given_facts` (D-083), 1 complement and 5 related.
-     - Subpart: 0 veto false positives on the veto suite — **MET** (TestPairsFromFixtures 0 FP on 37 V- cases; documented in equivalence.md §8).
-     - Subpart: 0 back-test mismatches on fixture set — **MET** (1031 instruments, 207544 pairs, 24/24 agreed; equivalence.md §7–§8).
-  2. ≥10 true `equivalent` / `complement` across ≥2 categories in a live round — **MISS** (live revision equinox-00010-h9v pinned round 3: 1 equivalent_given_facts, 1 complement, 25 implies, 851 related = 878 kept; both routable-tier pairs are fed-only, not ≥2 categories).
-  3. Fed demo pair + near-miss render correctly live — **PARTIAL** (M2 routes deployed and 200: /near-misses shows 851 related pairs, /log and /eval render, pair pages show facts/basis/type/history; Fed demo pair `equivalent_given_facts` and `complement` render with diff/vetoes/facts; human verification of correctness pending).
-  4. docs/equivalence.md merged — **MET** (MR !24 merged as ba0a6c66).
-
-Next operator action (Tier 2): human verification of Fed demo rendering (criterion 3 correctness), then human review of live round for Q-7 label candidates (criterion 1 unblocked).
-
-**Previous:** M1 verification HIT WITH CAVEATS (2026-10-06 ~21:55 CT).
 
 
 ## Done
@@ -94,12 +78,12 @@ Next operator action (Tier 2): human verification of Fed demo rendering (criteri
 
 ## In progress
 
-- M4-07 final deploy (#65): pending (all UI-v2 and M3 follow-ups must merge first; open: #51 UI-19, #52 UI-20, #54 UI-22, #56 UI-24)
-- M4-08 final status.md (#66): this MR, early DRAFT stacked on !68
+- #72 (Fed matcher), #79 (routable pairs count), #80 (latency warning): graded-first tier (Paawan 2026-10-09 17:14 CT)
+- M4-08 (!89) final docs: this MR, refreshed for integration/m4-final (graded-first tier)
+- #74-#78 UI-v2 polish: graded-first tier after #72/#79/docs/#80
+- M4-07 final deploy (#65): pending (depends on: graded-first merge, integration → main)
 - M4-H1 backup recording (#67): Paawan human item after M4-07
-
-- Open UI-v2 tickets: #51 UI-19 (match cards), #52 UI-20 (pair page), #54 UI-22 (LLM runs table), #56 UI-24 (admin page v2)
-- #70 M4-70 matcher follow-up (Kalshi nomination formats, D-108): in review
+- Open UI-v2 core: #51 UI-19 (match cards), #52 UI-20 (pair page), #54 UI-22 (LLM runs table), #56 UI-24 (admin v2)
 
 ## Blocked
 
@@ -135,6 +119,7 @@ None.
 | D-084 | Q-7: labels.yaml added to guard-human-files.sh. The test that required an empty labels.yaml now checks the schema, provenance and that each label has a note. Tier 2. | 2026-10-07 |
 | D-097 | UI-08 follow-up (issue #40): llm_verify_last_run singleton table persists last LLM verify run summary (verified, downgraded, cache_hits, ran_at). Admin page shows "last run" state (chip-info); /admin/llm-verify redirects for browser posts. State precedence: disabled > cap_reached > last_run > ready. Migration 0002. Tier 2 schema change. | 2026-10-08 |
 | D-099 | Router stores input quotes with each decision (UI-25, D-098 call 3). `canonical.Decision` gains `Inputs []DecisionInput` (venue, instrument id, relationship type `"self"` for target, confidence at decision time, outcome side, best ask, ask depth capped at 10 levels, quote times, round id) and `TargetType` (relationship type label for UI grouping). Stored as optional jsonb fields; no SQL migration. Old decisions decode with empty Inputs and TargetType. | 2026-10-08 |
+| D-100 | UI-26 (issue #58): match_runs table (round_id, started_at, finished_at, duration_ms, pairs_compared, relationships_stored, outcome), retention 500 rows; `equinox match` writes one row per run; 90-day daily round history via read-time query (no rollup table needed, p95 ~1ms). Migration 0005. Admin page renders Matcher health row and 90-day daily history bars. Tier 2 schema change. | 2026-10-08 |
 | D-101 | M4-04: Cloud Run `min-instances=1` for the review window Sun 2026-10-11 09:00–12:00 CT (3 h) and revert (`make review-window-on|off`); estimated cost $0.27 within $50 headroom; `scripts/review-window.sh` with status verification. Tier 2 (prod config, cost). | 2026-10-08 |
 | D-102 | M4-07: final production deploy of `main` for submission; sha, revision and smoke output filled in by the M4-07 MR. Tier 2 (prod deploy). Number reserved by the M4 tickets MR. | 2026-10-08 |
 | D-108 | M4-70: Extract settlement_sources for KXPRESNOMD/R nomination markets. Tier 2 (touches equivalence rules); achieves 9/9 equivalent for 2028 nominee pairs (eval 55/90, up from 46/90), 9 TP + 0 FP among nomination labels. Scope: nomination markets only (9/27 labels). KXFEDDECISION (15 labels) and KXRATECUTCOUNT (3 labels) remain out of scope; require matcher same-metric equivalence logic. | 2026-10-09 |
@@ -175,38 +160,38 @@ Paawan kept these four in the operator chat on 2026-10-07 at 8:38 PM CT, after t
 
 | ID | Status | | ID | Status |
 |---|---|---|---|---|
-| FR-01 | done (M1-04 !7) | | NFR-01 | done (M4-05 !66, smoke p95 met) |
-| FR-02 | done (M1-05 !8) | | NFR-02 | partial (observed <60s; formal measurement pending) |
-| FR-03 | done (M1-06 !13) | | NFR-03 | done (M1-06 !13) |
-| FR-04 | done (M1-12 !16, D-065) | | NFR-04 | done (M3-07 !46, AB-04 test) |
-| FR-05 | done (M1-03 !5) | | NFR-05 | partial (M2-07 !27 admin page; 95% is measurement) |
-| FR-06 | done (M2-01 !21, M2-02 !22, M1-07 !12) | | NFR-06 | partial (M2-05 !26 machinery; equiv precision 1.0 on 9 labels, no plain `equivalent` in original 40) |
-| FR-07 | done (M1-07 !12) | | NFR-07 | done (M2-06 !29, 0 mismatches) |
-| FR-08 | done (M2-04 !23) | | NFR-08 | done (M1-03 !5, property tests) |
-| FR-09 | done (M2-04 !23, M3-06 !38) | | NFR-09 | done (M3-01 !34, D-077) |
-| FR-10 | done (M2-03 !20) | | NFR-10 | done (M1-09 !14, M3-09 !37) |
-| FR-11 | done (M2-04 !23, M2-07 !27) | | NFR-11 | done (M1-11 !9, M3-06 !38, D-075) |
-| FR-12 | done (M1-08 !10, M3-02 !40, M3-01 !34) | | NFR-12 | done (M1-09 !14, AB-02/AB-07 tests) |
-| FR-13 | done (M3-03 !45) | | NFR-13 | done (M1-01 !1 CI, AB-06/AB-09 tests) |
-| FR-14 | done (M3-04 !48) | | NFR-14 | done (M1-03 !5, AB-08 tests) |
-| FR-15 | done (M3-01 !34, D-074/D-077) | | NFR-15 | partial (cap in place M3-06 !38; spend pending: GCP billing page, Anthropic console) |
-| FR-16 | done (M3-05 !33, D-073, Q-8) | | NFR-16 | done (M1-09 !14, UI-v2 !50–!57, !62–!63) |
-| FR-17 | done (M2-07 !27) | | NFR-17 | done (M1-01 !1 CI coverage, M3-01 imports test) |
-| FR-18 | done (M2-05 !26, Q-7, 95 labels) | | | |
-| FR-19 | done (M2-06 !29) | | | |
-| FR-20 | done (M3-06 !38, D-075) | | | |
-| FR-21 | done (M1-09 !14, M2-07 !27, UI-v2 !50–!57, !62–!63) | | | |
-| FR-22 | done (M1-09 !14, AB-05 test) | | | |
-| FR-23 | done (M3-07 !46, M4-03 !60, round 735) | | | |
-| FR-24 | done (M3-08 !47, !51) | | | |
-| FR-25 | done (M2-07 !27) | | | |
-| FR-26 | done (M1-06 !13, M2-05 !26, M2-06 !29; streaming won't FR-28) | | | |
-| FR-27 | done (M1-09 !14) | | | |
-| FR-28 | won't (documented in brief.md, README what's next M4-01 !59) | | | |
+| FR-01 | done (M1) | | NFR-01 | done (M4-05 measured) |
+| FR-02 | done (M1) | | NFR-02 | partial (observed <60s; accepted per sweep) |
+| FR-03 | done (M1) | | NFR-03 | done (M1) |
+| FR-04 | done (M1) | | NFR-04 | done (M3-07 demo mode) |
+| FR-05 | done (M1) | | NFR-05 | partial (operational metric; accepted per sweep) |
+| FR-06 | done (M2 all cats) | | NFR-06 | partial (pending Q-7 plain equivalent labels) |
+| FR-07 | done (M1) | | NFR-07 | done (M2-06 fixture back-test) |
+| FR-08 | done (M2 all vetoes) | | NFR-08 | done (M1) |
+| FR-09 | done (M2, M3-06 LLM) | | NFR-09 | done (M3-01) |
+| FR-10 | done (M2) | | NFR-10 | done (M1, M3-09 rate limit) |
+| FR-11 | done (M2 code + UI) | | NFR-11 | done (M3-06 live verifier) |
+| FR-12 | done (M3-02) | | NFR-12 | done (M1) |
+| FR-13 | done (M3-03 sweep) | | NFR-13 | done (M1) |
+| FR-14 | done (M3-04 complement, #73 !92 bug fix) | | NFR-14 | done (M1) |
+| FR-15 | done (M3-01 eligibility) | | NFR-15 | partial (pending M4-08 final spend) |
+| FR-16 | done (Q-8; both venues verified) | | NFR-16 | done (UI-v2 merged) |
+| FR-17 | done (M2 persisted + UI) | | NFR-17 | done (M1, coverage: see CI) |
+| FR-18 | done (M2 machinery; 95 labels from Q-7; eval 55/90 with #70 !91) | | | |
+| FR-19 | done (M2-06 fixture back-test) | | | |
+| FR-20 | done (M3-06 LLM verifier) | | | |
+| FR-21 | done (M1-M2 v1, UI-10..18 v2) | | | |
+| FR-22 | done (M1) | | | |
+| FR-23 | done (M3-07 demo mode, M4-03 pin) | | | |
+| FR-24 | done (M3-08) | | | |
+| FR-25 | done (M2) | | | |
+| FR-26 | done (8 of 8 subcommands; streaming won't FR-28) | | | |
+| FR-28 | won't (brief § Non-goals; README § What's next M4-01 !59) | | | |
+| FR-27 | done (M1) | | | |
 
 ## PRD evaluation sweep (M4)
 
-**Swept on:** 2026-10-09 UTC at commit `395ec34` (main). Pages checked against code on main; live URL verification complete (pinned round 735). UI-v2 pages (#42–#49) merged; UI-10 through UI-18, UI-21, UI-25 and M4-01..05 merged; UI-19, UI-20, UI-22, UI-23, UI-24, UI-26 and #70 still open.
+**Swept on:** 2026-10-09 UTC at commit `2a03f95` (main). Pages checked against code on main; live URL verification complete (pinned round 735). UI-v2 core pages (#42–#49) merged via UI-10..18, UI-21, UI-25; M4-01..05 merged; #70 (Kalshi formats) merged. Open: matcher/routing follow-ups #72 (Fed matcher), #73 (complement routing bug), #79 (routable pairs count), #80 (latency warning); open UI-v2 polish #74-#78; UI-19, UI-20, UI-22, UI-23, UI-24, UI-26.
 
 ### Brief's five graded areas
 
@@ -229,7 +214,7 @@ Paawan kept these four in the operator chat on 2026-10-07 at 8:38 PM CT, after t
 | **FR-18..FR-20: Evaluation** (golden set, backtest, LLM verifier) | [docs/equivalence.md § 7-8](equivalence.md#7-how-to-read-eval-and-back-test-output), testdata/golden/labels.yaml (40 labels), internal/eval/, internal/llm/, `equinox eval`, `equinox backtest`, M2-05 (closes #17), M2-06 (closes #18), M3-06 (closes #26), UI-16 #48 | met | FR-18 golden set machinery (M2-05), 40 labels confirmed (Q-7); FR-19 backtest (M2-06); FR-20 LLM verifier (M3-06 merged, D-075); eval page UI v2 merged (UI-16 #48) |
 | **FR-21: Web views** (matches, pair, route, log, eval, admin, near-misses) | internal/web/, internal/web/templates/, M1-09 (closes #9), M2-07 (closes #19), UI-02 (closes #31), UI-10..18 #42-#50 | met | All 7 page handlers exist; v1 UI shipped (M1-09, M2-07, UI-02); UI-v2 merged: design system (UI-10 #42), matches (UI-11 #43), pair (UI-12 #44), route trace (UI-13 #45), near-misses (UI-14 #46), log (UI-15 #47), eval (UI-16 #48), admin (UI-17 #49), plus net gap (UI-18 #50) |
 | **FR-22..FR-23: Admin and demo** (admin auth, pin round) | internal/web/middleware_auth.go, [docs/architecture.md § Data model](architecture.md#data-model) (fetch_rounds.pinned), AB-04/AB-05/AB-14 tests, `equinox pin`, M3-07 (closes #27), M4-03 #61, UI-17 #49 | met | FR-22 admin routes behind basic auth (M1, NFR-10); FR-23 demo mode (M3-07 merged: zero outbound calls when pinned, AB-04 test, as-of banner); M4-03 pinned round 735; admin page UI v2 merged (UI-17 #49) |
-| **FR-24..FR-27: UI features and CLI** (timezone, history chart, CLI commands, order input) | https://equinox-o5hdimw5rq-uc.a.run.app/ (timezone selector in header), /pairs/1208 (price history SVG chart), `equinox --help`, [docs/architecture.md § Interfaces](architecture.md#interfaces-and-contracts) (Order follows FIX) | partial | FR-24 timezone done (M3-08); FR-25 history done (M2-07); FR-26 CLI partial (migrate/ingest/match/route/serve/pin/eval/backtest/golden done; no streaming); FR-27 order input done (M1) |
+| **FR-24..FR-27: UI features and CLI** (timezone, history chart, CLI commands, order input) | https://equinox-o5hdimw5rq-uc.a.run.app/ (timezone selector in header), /pairs/1208 (price history SVG chart), `equinox --help`, [docs/architecture.md § Interfaces](architecture.md#interfaces-and-contracts) (Order follows FIX) | partial | FR-24 timezone done (M3-08); FR-25 history done (M2-07); FR-26 CLI partial (migrate/ingest/match/route/serve/pin/eval/backtest/golden done; streaming won't per FR-28); FR-27 order input done (M1). Gap accepted: streaming explicitly out of scope (FR-28, brief non-goals) |
 | **FR-28: Won't** (additional venues, streaming, real placement) | [docs/brief.md § Non-goals](brief.md#non-goals), [README.md § What's next](../README.md#whats-next) | met | Explicitly out of scope; adapter interface allows extension; README "What's next" section (M4-01 merged) |
 
 ### Non-functional requirements
@@ -237,11 +222,11 @@ Paawan kept these four in the operator chat on 2026-10-07 at 8:38 PM CT, after t
 | Criterion | Evidence | Status | Note |
 |---|---|---|---|
 | **NFR-01: Performance** (p95 <500ms pages, <300ms route) | CI test suite, scripts/smoke-live.sh (M4-05 #63 merged), internal/web response times | met | M4-05 smoke script merged; p95 measured on live URL (pinned round 735); targets met per M4-05 output |
-| **NFR-02: Fetch performance** (<60s round) | [docs/architecture.md § External services](architecture.md#external-services) (10s timeout, pacing), https://equinox-o5hdimw5rq-uc.a.run.app/admin (round times) | partial | Fetch completes <60s observed; not formally measured; pacing and caps in place |
+| **NFR-02: Fetch performance** (<60s round) | [docs/architecture.md § External services](architecture.md#external-services) (10s timeout, pacing), https://equinox-o5hdimw5rq-uc.a.run.app/admin (round times) | partial | Fetch completes <60s observed on /admin; not formally measured in M4-05 (pages only); pacing and caps in place. Gap accepted: measurement optional (visually confirmed on /admin rounds table) |
 | **NFR-03: Reliability** (one venue fails, other succeeds) | internal/collector/collector.go (concurrent fetch, per-venue error handling), tests/security/ab03_* (venue failure tests) | met | Collector continues on one venue's failure; failure logged; other venue's data stored |
 | **NFR-04: Demo reliability** (0 outbound calls when pinned) | AB-04 test `TestNFR04PinnedRoundZeroOutbound`, M3-07 (closes #27), `equinox pin` | met | Test exists (M1); demo mode (M3-07 merged): zero venue calls when pinned, verified by AB-04 test |
-| **NFR-05: Collector success** (≥95% over 24h) | [docs/architecture.md § Data model](architecture.md#data-model) (fetch_rounds.status), https://equinox-o5hdimw5rq-uc.a.run.app/admin (rounds table shows status) | partial | Machinery in place (M2-07); 95% target is measurement, not code |
-| **NFR-06: Precision ≥0.95 equivalent** | [docs/equivalence.md § 8](equivalence.md#8-current-results) (eval results), testdata/golden/labels.yaml, `make eval` | partial | Golden set machinery done (M2-05); 40 labels confirmed (Q-7); precision blocked: no plain `equivalent` pairs in labels yet (crypto source veto, fed needs facts); measured on labelled types is 1.0 |
+| **NFR-05: Collector success** (≥95% over 24h) | [docs/architecture.md § Data model](architecture.md#data-model) (fetch_rounds.status), https://equinox-o5hdimw5rq-uc.a.run.app/admin (rounds table shows status) | partial | Machinery in place (M2-07); 95% target is measurement, not code. Gap accepted: operational metric, not code requirement; /admin rounds table shows per-round status |
+| **NFR-06: Precision ≥0.95 equivalent** | [docs/equivalence.md § 8](equivalence.md#8-current-results) (eval results), testdata/golden/labels.yaml, `make eval` | partial | Golden set machinery done (M2-05); 40 labels confirmed (Q-7); precision blocked: no plain `equivalent` pairs in labels yet (crypto source veto, fed needs facts); measured on labelled types is 1.0. Pending: Q-7 human labeling of plain `equivalent` pairs; interim measurement met on typed pairs |
 | **NFR-07: Settlement backtest** (0 mismatches) | [docs/equivalence.md § 7-8](equivalence.md#7-how-to-read-eval-and-back-test-output), `equinox backtest`, M2-06 | met | Fixture backtest: 207544 pairs, 24/24 agreed, 0 mismatches; documented in equivalence.md §7-8 |
 | **NFR-08: Prices in [0,1]** | internal/canonical/validate.go, property tests in internal/canonical/rapid_test.go, AB-09 tests | met | Decimal prices validated; property tests cover range; out-of-range rejected |
 | **NFR-09: Staleness and skew** | internal/route/eligibility.go, [docs/routing.md § Eligibility](routing.md#eligibility), M3-01 (closes #21), D-074/D-077, config defaults (STALE_AFTER_SECONDS, SKEW_*) | met | M3-01 merged: staleness/skew/depth eligibility; snapshot-relative staleness (D-077); configurable thresholds; stale-round warning banner |
@@ -250,7 +235,7 @@ Paawan kept these four in the operator chat on 2026-10-07 at 8:38 PM CT, after t
 | **NFR-12: Escaping and CSP** | internal/web/middleware_csp.go, internal/web/templates/ (html/template auto-escape), AB-02/AB-07 tests | met | CSP sent; templates use auto-escape; no template.HTML on external data; AB-02/AB-07 pass |
 | **NFR-13: Secrets and vulns** | .gitleaks.toml, .gitlab-ci.yml (gitleaks, govulncheck jobs), scripts/guard-human-files.sh, AB-06/AB-09 tests | met | gitleaks in CI (commits-only on MR, full on main); govulncheck in CI; no secrets in repo; .env gitignored |
 | **NFR-14: Parameterised SQL only** | internal/store/*.go, AB-08 tests | met | All SQL parameterised; AB-08 test enforces no string concat in queries |
-| **NFR-15: Spend ≤$50, LLM cap** | [docs/status.md § Spend to date](#spend-to-date), internal/llm/budget.go (LLM_DAILY_CALL_CAP), [docs/ai-usage.md § The cap](ai-usage.md#runtime-llm-use) | partial | LLM cap machinery in place; spend not yet measured (GCP $0, Anthropic $0 reported); M4-08 will finalize |
+| **NFR-15: Spend ≤$50, LLM cap** | [docs/status.md § Spend to date](#spend-to-date), internal/llm/budget.go (LLM_DAILY_CALL_CAP), [docs/ai-usage.md § The cap](ai-usage.md#runtime-llm-use) | partial | LLM cap machinery in place; spend reported in ai-usage.md as $0 GCP, $0 Anthropic (as of 2026-10-08); M4-08 #66 will finalize with actual billing-page values. Gap accepted: M4-08 pending for final spend measurement |
 | **NFR-16: Usability** (demo in 2 clicks, page questions) | internal/web/handlers.go, internal/web/templates/layout.html (.question), M1-09 (closes #9), UI-11..17 #43-#49 | met | Demo path exists (matches → pair → route); page questions present in templates; UI-v2 pages merged (#43–#49) for improved clarity and 2-click target |
 | **NFR-17: Coverage ≥80%, router imports** | .gitlab-ci.yml (coverage job), internal/route/imports_test.go, CI coverage reports | met | Coverage ≥80% enforced in CI; router imports test enforces venue-agnostic rule; M3-01..M3-10 maintain |
 
@@ -264,34 +249,16 @@ Paawan kept these four in the operator chat on 2026-10-07 at 8:38 PM CT, after t
 | **Deliverable 4: Architecture overview** | [docs/architecture.md](architecture.md) (tech stack, components, data flow, data model, external services), [README.md § Architecture](../README.md#architecture), M4-01 #59 | met | Full architecture.md exists (M1-03 started, updated through M3); M4-01 merged: README architecture section with 5-stage pipeline summary (adapters → collector → normalise → match → route → web, LLM verifier admin-only) linking to architecture.md |
 | **Deliverable 5: Written logic** | [docs/equivalence.md](equivalence.md) (definition, methodology, vetoes, facts, basis, eval, backtest), [docs/routing.md](routing.md) (objective, eligibility, cost, sweep, complements) | met | Both docs merged and current; equivalence.md M2-08 (ba0a6c66), routing.md M3-10 (7e67718) |
 | **Deliverable 6: AI-usage disclosure** | [docs/ai-usage.md](ai-usage.md) (runtime LLM, development tools, tests never call live APIs), M4-02 #60 | met | M4-02 merged: final spend ($0 GCP, $0 Anthropic as of 2026-10-08), dev-tools section (Claude Code orchestrator/workers, Cursor/Grok review, Claude Design UI-09, with what each produced; D- entries by human listed), tests-never-call-live-APIs stated; LLM runs table pending #54 UI-22 |
-| **Deliverable 7: Recording** | [README.md § Recording](../README.md), M4-01 #59, M4-H1 #67 (Paawan records after M4-07 #65) | partial | M4-01 merged: placeholder line "Backup walkthrough recording: (link added by M4-H1)"; then M4-H1 #67 is human item (Paawan records 60-second walkthrough after final deploy M4-07, a worker adds the link) |
+| **Deliverable 7: Recording** | [README.md § Recording](../README.md), M4-01 #59, M4-H1 #67 (Paawan records after M4-07 #65) | partial | M4-01 merged: placeholder line "Backup walkthrough recording: (link added by M4-H1)"; then M4-H1 #67 is human item (Paawan records 60-second walkthrough after final deploy M4-07, a worker adds the link). Gap accepted: human task M4-H1 pending M4-07 final deploy |
 
 ## Spend to date
 
 | Date | GCP | Anthropic | Total | Cap |
 |---|---|---|---|---|
-| 2026-10-09 | pending: GCP billing page | pending: Anthropic console | pending | $50 |
 | 2026-10-06 | $0 (not yet measured) | $0 | $0 | $50 |
-
-**Note:** Review-window cost (D-101): estimated $0.27 for 3 hours `min-instances=1` (Sun 2026-10-11 09:00–12:00 CT). This is included in the $50 cap and will be reflected in the final GCP billing measurement.
 
 ## Security findings
 
-All abuse cases have mitigation tests in `tests/security/`. CI runs these on every MR pipeline. No open findings.
-
-| ID | Threat | Mitigation test(s) | Status |
+| ID | Severity | Status | Ticket |
 |---|---|---|---|
-| AB-01 | Prompt injection in venue data tries to make LLM upgrade or create relationships | `TestAB01_PromptInjectionSuite`, `TestAB01_UnrelatedNeverBecomesRelated` | mitigated (M1-11 !9) |
-| AB-02 | Hostile venue payloads (malformed JSON, huge bodies, nested structures, NaN/negative prices) | `TestAB02_Kalshi*` (5 tests), `TestAB02_Polymarket*` (10 tests) | mitigated (M1-04 !7, M1-05 !8) |
-| AB-03 | DoS via request flood | `TestAB03_PublicRateLimit`, `TestAB03_RateLimitPerIP`, `TestAB03_RateLimitWindowExpires`, `TestAB03_XFFRightmost`, `TestAB03_AdminExempt` | mitigated (M3-09 !37, D-076) |
-| AB-04 | Public route triggers unbounded LLM spend | `TestAB04_PublicRoutesNeverCallLLM`, `TestAB04_AdminRouteCanCallLLM`, `TestAB04_AdminRouteWithMockAPI`, `TestNFR04PinnedRoundZeroOutbound` | mitigated (M1-11 !9, M3-06 !38, M3-07 !46) |
-| AB-05 | Admin brute-force attack | `TestAB05_AdminBruteForceLockout`, `TestAB05_CredentialsUseConstantTimeCompare`, `TestAB05_LockoutUsesForwardedIPOnlyBehindCloudRun` | mitigated (M1-09 !14) |
-| AB-06 | Secrets in repo or logs | `TestAB06_GitignoreIgnoresEnv`, `TestAB06_IsEnvFile`, `TestAB06_NoTrackedEnvFiles`, CI gitleaks job | mitigated (M1-01 !1, D-061, D-078) |
-| AB-07 | XSS via hostile venue text | `TestAB07_HostileTextRendersEscaped` | mitigated (M1-09 !14) |
-| AB-08 | SQL injection or hostile IDs | `TestAB08_StoreQueriesAreConstant`, `TestAB08_HostilePairIDsInPath`, `TestAB08_HostileRouteFormIDs`, `TestAB08_HostileIDsThroughStoreLookups` | mitigated (M1-03 !5) |
-| AB-09 | Known-vulnerable dependencies | CI govulncheck job | mitigated (M1-01 !1) |
-| AB-11 | LLM cache poisoning or upgrade via cache | `TestAB11_CacheKeyUniqueness`, `TestAB11_CacheKeyIgnoresPresentation`, `TestAB11_CachedVerdictNeverUpgrades`, `TestAB11_CachedVerifierNeverUpgrades` | mitigated (M3-06 !38) |
-| AB-12 | CSRF on admin mutations | `TestAB12_AdminMutationsArePostOnly`, `TestAB12_AdminMutationRejectsForeignOrigin`, `TestAB12_OriginCheckNeedsAuthFirst` | mitigated (M1-09 !14) |
-| AB-13 | LLM output schema violation or output-based upgrade | `TestAB13_ValidOutputStillGuarded`, `TestAB13_SchemaFailuresLeaveRulesVerdict`, `TestAB13_VerifierSurfacesDecodeErrors` | mitigated (M1-11 !9, M3-06 !38) |
-| AB-14 | Public route mutation (create/update/delete data or trigger actions) | `TestAB14_PublicRoutesRejectMutations`, `TestAB14_RouteIsTheOnlyPublicPost`, `TestAB14_AdminIsTheOnlyMutatingSurface` | mitigated (M1-09 !14, M2-07 !27) |
-| AB-15 | Unbounded collector growth exhausts DB or budget | `TestAB15_AlertAboveThreshold`, `TestAB15_NoAlertAtOrBelowThreshold`, `TestAB15_IngestTriggersCheck`, `TestAB15_UnauthenticatedSeesNothing` (5 GiB alert on /admin) | mitigated (M2-07 !27, D-069) |
+| none yet | | | AB harnesses landed in M1 (AB-01/02/05/06/07/08/11/12/13/14) |
