@@ -90,7 +90,7 @@
           {{if .VetoPhrase}}<a href="/pairs/{{.ID}}#diff">{{.VetoPhrase}}</a>{{end}}
         </td>
         <td data-label="Market">{{template "badge" .FreshBadge}}</td>
-        <td data-label="Route" class="full"><a href="/pairs/{{.ID}}#route" class="btn-block">Route →</a></td>
+        <td data-label="Route" class="action"><a href="/pairs/{{.ID}}#route" class="btn">Route →</a></td>
       </tr>
       {{end}}
     {{end}}
