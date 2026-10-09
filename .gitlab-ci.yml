@@ -21,7 +21,7 @@ variables:
   GOFLAGS: -mod=readonly
 
 default:
-  image: golang:1.27.1
+  image: golang:1.27.2
   interruptible: true
 
 # One manual click per MR pipeline. Absent on main and schedule pipelines, so the
