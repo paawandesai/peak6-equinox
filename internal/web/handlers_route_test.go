@@ -627,13 +627,22 @@ func TestRouteResultSignRule(t *testing.T) {
 	rec := postForm(s.Handler(), "/route", validRouteForm(sd.eqID, seedKalshiA), true)
 	wantHTML(t, rec, http.StatusOK)
 	body := rec.Body.String()
-	
-	// Sign rule should be documented
-	wantContains(t, body, "Sign rule", "positive", "saving", "parentheses")
-	
-	// Gap in alternatives table: parentheses for unfavourable (higher cost than chosen)
-	// The chosen alternative costs less, so gap should show positives for better ones
-	// or parentheses for worse ones
+
+	// Sign rule text should be documented
+	wantContains(t, body, "Sign rule", "positive", "saving", "parentheses", "loss", "unfavourable")
+
+	// For slippage: negative slippage (VWAP < Quoted) is a saving, shown positive
+	// positive slippage (VWAP > Quoted) is a loss, shown in parentheses
+	// Check that parentheses are used for losses (can't predict exact values but structure should be there)
+	if !strings.Contains(body, "bps") {
+		t.Error("should show slippage in bps")
+	}
+
+	// Gap in alternatives: if chosen is best, gaps to worse alternatives are in parentheses
+	// Check for gap format with cents: either "X.XX¢" (saving) or "(X.XX)¢" (loss)
+	if !strings.Contains(body, "¢") {
+		t.Error("should show gap in cents (¢)")
+	}
 }
 
 // UI-13: Test input snapshots for decisions with stored inputs
@@ -696,4 +705,37 @@ func TestRouteResultPreUI25Message(t *testing.T) {
 	if strings.Contains(body, "Best ask") || strings.Contains(body, "Depth") {
 		t.Error("should not show input snapshot table for pre-UI-25 decisions")
 	}
+}
+
+// TestRouteResultPartialFillBar tests that partial fills show the .seg-unfilled segment.
+func TestRouteResultPartialFillBar(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+
+	// Create a decision with a partial fill (requested 100, filled 60)
+	qty := dec("100")
+	filled := dec("60")
+	decision := canonical.Decision{
+		RoundID:   sd.round.ID,
+		TargetID:  seedKalshiA,
+		DecidedAt: seedNow,
+		Order:     canonical.Order{Side: "buy", Outcome: "yes", Quantity: &qty, Type: "market", TIF: "IOC"},
+		Chosen:    []canonical.Leg{{Venue: "kalshi", InstrumentID: seedKalshiA, Outcome: "yes", Quantity: filled, VWAP: dec("0.50"), FeePerContract: dec("0.007"), BasisPenaltyPerContract: dec("0.01"), AllInPerContract: dec("0.517")}},
+		Explanation: "Partial fill due to insufficient depth.",
+	}
+	id, err := st.InsertRoutingDecision(context.Background(), decision)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rec := get(s.Handler(), "/decisions/"+strconv.FormatInt(id, 10))
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+
+	// Partial fill should show unfilled segment in split bar
+	wantContains(t, body,
+		"svg",             // SVG element exists
+		"class=\"split\"", // Split bar class
+		"seg-unfilled",    // Unfilled segment for partial (40% of 100)
+	)
 }

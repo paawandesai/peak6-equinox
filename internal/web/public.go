@@ -50,6 +50,7 @@ var pinnedAssets = assets{PicoURL: picoURL, PicoSRI: picoSRI, HtmxURL: htmxURL, 
 // auto-escaped (AB-07).
 var templateFuncs = template.FuncMap{
 	"money": func(d decimal.Decimal) string { return d.StringFixed(4) },
+	"cents": func(d decimal.Decimal) string { return d.Mul(decimal.NewFromInt(100)).StringFixed(2) },
 	"conf":  func(d decimal.Decimal) string { return d.StringFixed(2) },
 	"price": nullPrice,
 	"utc":   formatUTC,

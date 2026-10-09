@@ -35,7 +35,7 @@
       {{end}}
     </dl>
 
-    {{if gt (len .Chosen) 1}}
+    {{if .Chosen}}
     <svg class="split" role="img" aria-label="Split: {{range $i, $leg := .Chosen}}{{if $i}}, {{end}}{{$leg.Quantity.String}} on {{$leg.Venue}}{{end}}{{if not .UnfilledPct.IsZero}}, {{.UnfilledPct.StringFixed 0}}% unfilled{{end}}">
       {{range $i, $leg := .Chosen}}
       <rect class="seg-{{$i}}" x="{{$leg.X.StringFixed 2}}%" width="{{$leg.SharePct.StringFixed 2}}%" height="34" />
@@ -118,7 +118,7 @@
           <td class="num" data-label="Basis">{{money $leg.BasisPenaltyPerContract}}</td>
           {{if eq $i 0}}
           <td class="num allin" rowspan="{{len $alt.Legs}}" data-label="All-in">{{money $alt.AllInPerContract}}</td>
-          <td class="num gap" rowspan="{{len $alt.Legs}}" data-label="Gap">{{if $alt.GapToChosen.IsNegative}}{{money $alt.GapToChosen.Abs}}{{else}}({{money $alt.GapToChosen}}){{end}} · {{if $alt.GapBps.IsNegative}}{{$alt.GapBps.Abs.StringFixed 0}}{{else}}({{$alt.GapBps.StringFixed 0}}){{end}} bps</td>
+          <td class="num gap" rowspan="{{len $alt.Legs}}" data-label="Gap">{{if $alt.GapToChosen.IsNegative}}{{cents $alt.GapToChosen.Abs}}¢{{else}}({{cents $alt.GapToChosen}})¢{{end}} · {{if $alt.GapBps.IsNegative}}{{$alt.GapBps.Abs.StringFixed 0}}{{else}}({{$alt.GapBps.StringFixed 0}}){{end}} bps</td>
           <td rowspan="{{len $alt.Legs}}" data-label="Note">{{$alt.Note}}</td>
           {{end}}
         </tr>
@@ -203,7 +203,7 @@
               {{range $i, $alt := .Alternatives}}
               <g transform="translate(0, {{mul $i 32}})">
                 <rect class="alt-bar{{if eq $alt.Rank 1}} bar-chosen{{end}}" x="0" y="0" width="{{$alt.BarWidthPct.StringFixed 1}}%" height="24" />
-                <text class="alt-label" x="4" y="16">{{if eq $alt.Rank 1}}✓ {{end}}{{money $alt.AllInPerContract}} · {{if $alt.GapToChosen.IsNegative}}{{money $alt.GapToChosen.Abs}}{{else}}({{money $alt.GapToChosen}}){{end}} · {{if $alt.GapBps.IsNegative}}{{$alt.GapBps.Abs.StringFixed 0}}{{else}}({{$alt.GapBps.StringFixed 0}}){{end}} bps</text>
+                <text class="alt-label" x="4" y="16">{{if eq $alt.Rank 1}}✓ {{end}}{{money $alt.AllInPerContract}} · {{if $alt.GapToChosen.IsNegative}}{{cents $alt.GapToChosen.Abs}}¢{{else}}({{cents $alt.GapToChosen}})¢{{end}} · {{if $alt.GapBps.IsNegative}}{{$alt.GapBps.Abs.StringFixed 0}}{{else}}({{$alt.GapBps.StringFixed 0}}){{end}} bps</text>
               </g>
               {{end}}
             </svg>
