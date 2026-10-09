@@ -23,6 +23,11 @@ FAIL_COUNT=0
 while [[ $# -gt 0 ]]; do
 	case "$1" in
 		--pinned)
+			if [[ -z "${2:-}" ]]; then
+				echo "Error: --pinned requires a round-id argument" >&2
+				echo "Usage: $(basename "$0") [--dry-run] [base-url] [--pinned round-id]" >&2
+				exit 2
+			fi
 			PINNED_ROUND="$2"
 			shift 2
 			;;
@@ -120,26 +125,26 @@ home_file=$(mktemp)
 check "home" "$BASE_URL/" > "$home_file"
 if ! grep -q 'class="context-bar"' "$home_file"; then
 	echo "FAIL: home ($BASE_URL/) — no context-bar" >&2
-	((FAIL_COUNT++))
+	((FAIL_COUNT++)) || true
 fi
 # Extract round id from context bar (format: "round 123" or "round 123, pinned")
 round_id=$(grep -oP 'round \K[0-9]+' "$home_file" | head -n1 || true)
 if [[ -z "$round_id" ]]; then
 	echo "FAIL: home ($BASE_URL/) — no round id in context-bar" >&2
-	((FAIL_COUNT++))
+	((FAIL_COUNT++)) || true
 fi
 if [[ -n "$round_id" ]]; then
 	echo "# Round id: $round_id"
 	if [[ -n "$PINNED_ROUND" ]]; then
 		if [[ "$round_id" != "$PINNED_ROUND" ]]; then
 			echo "FAIL: home ($BASE_URL/) — round $round_id, want pinned round $PINNED_ROUND" >&2
-			((FAIL_COUNT++))
+			((FAIL_COUNT++)) || true
 		else
 			echo "PASS: pinned round $PINNED_ROUND matches served round" >&2
 		fi
 		if ! grep -q 'pinned' "$home_file"; then
 			echo "FAIL: home ($BASE_URL/) — pinned round $PINNED_ROUND but no 'pinned' in context-bar" >&2
-			((FAIL_COUNT++))
+			((FAIL_COUNT++)) || true
 		fi
 	fi
 fi
@@ -153,7 +158,7 @@ check "eval" "$BASE_URL/eval" >/dev/null
 pair_id=$(grep -oP 'href="/pairs/\K[0-9]+' "$home_file" | head -n1 || true)
 if [[ -z "$pair_id" ]]; then
 	echo "FAIL: home ($BASE_URL/) — no /pairs/<id> link" >&2
-	((FAIL_COUNT++))
+	((FAIL_COUNT++)) || true
 fi
 if [[ -n "$pair_id" ]]; then
 	echo "# First pair: $pair_id"
@@ -161,7 +166,7 @@ if [[ -n "$pair_id" ]]; then
 	check "pair" "$BASE_URL/pairs/$pair_id" > "$pair_file"
 	if ! grep -q '<table class="data diff">' "$pair_file"; then
 		echo "FAIL: pair ($BASE_URL/pairs/$pair_id) — no diff table" >&2
-		((FAIL_COUNT++))
+		((FAIL_COUNT++)) || true
 	fi
 fi
 
@@ -172,7 +177,7 @@ if [[ -n "$pair_id" ]]; then
 	target=$(grep -oP 'ID <code>\K[^<]+' "$pair_file" | head -n1 || true)
 	if [[ -z "$target" ]]; then
 		echo "FAIL: pair ($BASE_URL/pairs/$pair_id) — no instrument id" >&2
-		((FAIL_COUNT++))
+		((FAIL_COUNT++)) || true
 	fi
 	if [[ -n "$target" ]]; then
 		echo "# Target instrument: $target"
@@ -184,20 +189,20 @@ if [[ -n "$pair_id" ]]; then
 		if grep -q '<h3>Chosen legs</h3>' "$route_file"; then
 			if ! grep -qP '<span class="venue">[a-z]+</span>' "$route_file"; then
 				echo "FAIL: route ($BASE_URL/route) — chosen legs but no venue" >&2
-				((FAIL_COUNT++))
+				((FAIL_COUNT++)) || true
 			else
 				echo "PASS: route ($BASE_URL/route) — chosen venue found" >&2
 			fi
 		elif grep -qi 'not routed' "$route_file"; then
 			if ! grep -q '<p class="explanation">' "$route_file"; then
 				echo "FAIL: route ($BASE_URL/route) — not routed but no explanation" >&2
-				((FAIL_COUNT++))
+				((FAIL_COUNT++)) || true
 			else
 				echo "PASS: route ($BASE_URL/route) — not routed with explanation" >&2
 			fi
 		else
 			echo "FAIL: route ($BASE_URL/route) — no chosen venue or 'not routed' message" >&2
-			((FAIL_COUNT++))
+			((FAIL_COUNT++)) || true
 		fi
 		rm -f "$route_file"
 	fi
@@ -213,7 +218,7 @@ for page in "/" "/near-misses" "/log" "/eval"; do
 	elapsed=$((end - start))
 	if [[ -z "$csp" ]]; then
 		echo "FAIL: CSP header ($BASE_URL$page) — no Content-Security-Policy header — ${elapsed}ms" >&2
-		((FAIL_COUNT++))
+		((FAIL_COUNT++)) || true
 	else
 		echo "PASS: CSP header ($BASE_URL$page) — ${elapsed}ms" >&2
 	fi
@@ -226,7 +231,7 @@ if [[ -n "$pair_id" ]]; then
 	elapsed=$((end - start))
 	if [[ -z "$csp" ]]; then
 		echo "FAIL: CSP header ($BASE_URL/pairs/$pair_id) — no Content-Security-Policy header — ${elapsed}ms" >&2
-		((FAIL_COUNT++))
+		((FAIL_COUNT++)) || true
 	else
 		echo "PASS: CSP header ($BASE_URL/pairs/$pair_id) — ${elapsed}ms" >&2
 	fi
