@@ -1116,55 +1116,73 @@ func TestDailyHistoryBars(t *testing.T) {
 	// Use a fixed "now" time
 	now := time.Date(2026, 10, 9, 12, 0, 0, 0, time.UTC)
 
-	// Create rounds across multiple days (relative to now)
+	// Create rounds across 90 days with gaps and mixed outcomes
 	days := []struct {
-		date   time.Time
-		status store.RoundStatus
+		daysAgo int
+		status  store.RoundStatus
+		rounds  int // number of rounds on this day
 	}{
-		{now.AddDate(0, 0, -2), store.RoundOK},                         // 2 days ago
-		{now.AddDate(0, 0, -2).Add(1 * time.Hour), store.RoundPartial}, // 2 days ago, second round
-		{now.AddDate(0, 0, -1), store.RoundFailed},                     // yesterday
-		// Today: no rounds (missing day)
+		{89, store.RoundOK, 1},      // oldest day
+		{87, store.RoundPartial, 1}, // gap at 88
+		{85, store.RoundFailed, 1},  // gap at 86
+		{80, store.RoundOK, 2},      // multiple rounds, all OK
+		{75, store.RoundPartial, 1}, // gaps 76-84
+		{70, store.RoundOK, 1},      // gap 71-74
+		{50, store.RoundFailed, 1},  // gap 51-69
+		{30, store.RoundPartial, 2}, // gap 31-49, mixed partial
+		{10, store.RoundOK, 1},      // gap 11-29
+		{5, store.RoundFailed, 1},   // gap 6-9
+		{2, store.RoundOK, 1},       // gap 3-4
+		{1, store.RoundPartial, 1},  // yesterday
+		// Today (day 0): no rounds (missing)
 	}
 
 	for _, d := range days {
-		r, err := st.CreateRound(ctx, d.date)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := st.FinishRound(ctx, r.ID, d.status, nil, d.date.Add(30*time.Second)); err != nil {
-			t.Fatal(err)
+		dayStart := now.AddDate(0, 0, -d.daysAgo)
+		for i := 0; i < d.rounds; i++ {
+			r, err := st.CreateRound(ctx, dayStart.Add(time.Duration(i)*time.Hour))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := st.FinishRound(ctx, r.ID, d.status, nil, dayStart.Add(time.Duration(i)*time.Hour+30*time.Second)); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 
-	// Get daily history for last 3 days
-	history, err := st.DailyRoundHistory(ctx, 3)
+	// Get daily history for last 90 days
+	history, err := st.DailyRoundHistory(ctx, 90)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if len(history) != 3 {
-		t.Fatalf("got %d history days, want 3", len(history))
+	if len(history) != 90 {
+		t.Fatalf("got %d history days, want 90", len(history))
 	}
 
 	// Build bars
 	bars := buildDailyHistoryBars(history)
 
-	// Verify bars (newest first: today, yesterday, 2 days ago)
-	if len(bars) != 3 {
-		t.Errorf("got %d bars, want 3", len(bars))
+	// Verify 90 bars
+	if len(bars) != 90 {
+		t.Errorf("got %d bars, want 90", len(bars))
 	}
 
-	// Check bar properties (bars are in descending date order from history)
+	// Spot-check bar properties (bars are in descending date order from history)
 	tests := []struct {
 		index      int
 		wantClass  string
 		wantHeight string
 		wantTitle  string // substring
 	}{
-		{0, "bar-missing", "0", "no rounds"},         // today (newest first)
-		{1, "bar-failed", "50%", "failed"},           // yesterday
-		{2, "bar-partial", "75%", "1 ok, 1 partial"}, // 2 days ago (worst of ok+partial)
+		{0, "missing", "0", "no rounds"},      // today (daysAgo=0, newest first)
+		{1, "partial", "75%", "1 partial"},    // yesterday (daysAgo=1)
+		{2, "ok", "100%", "1 ok"},             // daysAgo=2
+		{3, "missing", "0", "no rounds"},      // daysAgo=3 (gap)
+		{5, "failed", "50%", "1 failed"},      // daysAgo=5
+		{10, "ok", "100%", "1 ok"},            // daysAgo=10
+		{30, "partial", "75%", "2 partial"},   // daysAgo=30 (2 rounds, both partial)
+		{89, "ok", "100%", "1 ok"},            // oldest day with data (daysAgo=89)
 	}
 
 	for _, tt := range tests {
@@ -1182,5 +1200,28 @@ func TestDailyHistoryBars(t *testing.T) {
 		if !strings.Contains(bar.Title, tt.wantTitle) {
 			t.Errorf("bars[%d].Title = %q, want substring %q", tt.index, bar.Title, tt.wantTitle)
 		}
+	}
+
+	// Verify all 90 bars are present with correct CSS classes (UI-26 acceptance criterion)
+	okCount, partialCount, failedCount, missingCount := 0, 0, 0, 0
+	for _, bar := range bars {
+		switch bar.Class {
+		case "ok":
+			okCount++
+		case "partial":
+			partialCount++
+		case "failed":
+			failedCount++
+		case "missing":
+			missingCount++
+		default:
+			t.Errorf("unexpected bar class: %q", bar.Class)
+		}
+	}
+
+	// Verify that all 90 days are accounted for with correct outcome classes
+	total := okCount + partialCount + failedCount + missingCount
+	if total != 90 {
+		t.Errorf("total bars = %d (ok=%d, partial=%d, failed=%d, missing=%d), want 90", total, okCount, partialCount, failedCount, missingCount)
 	}
 }

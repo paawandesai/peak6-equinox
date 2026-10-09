@@ -79,10 +79,11 @@ type Signal struct {
 
 // HealthRow represents one row in the admin health table (UI-17, HANDOFF.md).
 type HealthRow struct {
-	Name    string
-	Status  Badge    // worst signal as a badge
-	Signals []Signal // individual signals for the row
-	Bars    []Bar    // only for Collectors row: recent-round bars
+	Name      string
+	Status    Badge    // worst signal as a badge
+	Signals   []Signal // individual signals for the row
+	Bars      []Bar    // only for Collectors row: recent-round bars
+	AriaLabel string   // aria-label for the bars SVG (UI-26)
 }
 
 // Bar represents one SVG bar for recent-round visualization (UI-17, HANDOFF.md).
@@ -162,11 +163,29 @@ func buildHealthRows(collector collectorStats, dbGrowth dbGrowth, hasDB bool, db
 		collectorSignals = append(collectorSignals, Signal{Glyph: "✕", Class: "signal-degraded", Text: "Below target"})
 	}
 	bars := buildDailyHistoryBars(dailyHistory)
+
+	// Compute aria-label for 90-day bars
+	okCount, partialCount, failedCount, missingCount := 0, 0, 0, 0
+	for _, bar := range bars {
+		switch bar.Class {
+		case "ok":
+			okCount++
+		case "partial":
+			partialCount++
+		case "failed":
+			failedCount++
+		case "missing":
+			missingCount++
+		}
+	}
+	ariaLabel := fmt.Sprintf("%d days: %d ok, %d partial, %d failed, %d no data", len(bars), okCount, partialCount, failedCount, missingCount)
+
 	rows = append(rows, HealthRow{
-		Name:    "Collectors",
-		Status:  HealthBadge(worstHealth(collectorSignals)),
-		Signals: collectorSignals,
-		Bars:    bars,
+		Name:      "Collectors",
+		Status:    HealthBadge(worstHealth(collectorSignals)),
+		Signals:   collectorSignals,
+		Bars:      bars,
+		AriaLabel: ariaLabel,
 	})
 
 	// Database row: size against threshold (UI-17: Unknown when unavailable)
@@ -297,7 +316,7 @@ func buildDailyHistoryBars(history []store.DailyRoundSummary) []Bar {
 			// No-data day: gray outline only (height "0")
 			bars = append(bars, Bar{
 				Title:  fmt.Sprintf("%s: no rounds", day.Date.Format("2006-01-02")),
-				Class:  "bar-missing",
+				Class:  "missing",
 				Height: "0",
 			})
 		} else {
@@ -314,7 +333,7 @@ func buildDailyHistoryBars(history []store.DailyRoundSummary) []Bar {
 				height = "100%"
 			}
 			title := fmt.Sprintf("%s: %d ok, %d partial, %d failed", day.Date.Format("2006-01-02"), day.OK, day.Partial, day.Failed)
-			bars = append(bars, Bar{Title: title, Class: "bar-" + class, Height: height})
+			bars = append(bars, Bar{Title: title, Class: class, Height: height})
 		}
 	}
 	return bars
