@@ -72,3 +72,7 @@ go run ./cmd/equinox ingest   # one live fetch round
 ## Staging
 
 Staging is a Cloud Run revision tagged `staging` with no traffic (`make deploy-staging`). It uses the same project, a separate database `equinox_staging` on the same Cloud SQL instance, and `LLM_ENABLED=false`. Red-team and performance checks run only here or locally (see [threat-model.md](threat-model.md#red-team-rules-of-engagement)).
+
+## Review window (M4-04, D-101, Tier 2)
+
+`make review-window-on`, `make review-window-off`, `make review-window-status`: set Cloud Run `min-instances=1` for the review window (to avoid cold starts during the live walkthrough) and revert it afterwards. The production change is run by the operator or Paawan at the review window, not automatically.
