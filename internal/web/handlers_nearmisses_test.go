@@ -140,7 +140,7 @@ func TestNearMissLogLink(t *testing.T) {
 		`href="/pairs/`+strconv.FormatInt(factMissID, 10)+`">Not-a-match record →</a>`)
 }
 
-// TestFormatDurationCoverage tests all branches of formatDuration.
+// TestFormatDurationCoverage tests all branches of formatNearMissDuration.
 func TestFormatDurationCoverage(t *testing.T) {
 	tests := []struct {
 		dur  time.Duration
@@ -154,9 +154,9 @@ func TestFormatDurationCoverage(t *testing.T) {
 		{1 * time.Minute, "1 minute"},
 	}
 	for _, tt := range tests {
-		got := formatDuration(tt.dur)
+		got := formatNearMissDuration(tt.dur)
 		if got != tt.want {
-			t.Errorf("formatDuration(%v) = %q, want %q", tt.dur, got, tt.want)
+			t.Errorf("formatNearMissDuration(%v) = %q, want %q", tt.dur, got, tt.want)
 		}
 	}
 }
