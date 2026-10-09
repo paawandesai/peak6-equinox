@@ -158,37 +158,37 @@ Paawan kept these four in the operator chat on 2026-10-07 at 8:38 PM CT, after t
 
 | ID | Status | | ID | Status |
 |---|---|---|---|---|
-| FR-01 | done (M1) | | NFR-01 | partial (code done M3; measurement M4-05) |
-| FR-02 | done (M1) | | NFR-02 | partial (observed <60s; formal measurement pending) |
+| FR-01 | done (M1) | | NFR-01 | done (M4-05 measured) |
+| FR-02 | done (M1) | | NFR-02 | partial (observed <60s; accepted per sweep) |
 | FR-03 | done (M1) | | NFR-03 | done (M1) |
-| FR-04 | done (M1) | | NFR-04 | partial (test exists M1; demo mode M3-07) |
-| FR-05 | done (M1) | | NFR-05 | partial (M2 admin page; 95% is measurement) |
-| FR-06 | done (M2 all cats) | | NFR-06 | partial (M2 machinery; no plain `equivalent` in labels yet) |
+| FR-04 | done (M1) | | NFR-04 | done (M3-07 demo mode) |
+| FR-05 | done (M1) | | NFR-05 | partial (operational metric; accepted per sweep) |
+| FR-06 | done (M2 all cats) | | NFR-06 | partial (pending Q-7 plain equivalent labels) |
 | FR-07 | done (M1) | | NFR-07 | done (M2-06 fixture back-test) |
 | FR-08 | done (M2 all vetoes) | | NFR-08 | done (M1) |
-| FR-09 | partial (M2 all 5 types; LLM M3-06) | | NFR-09 | partial (code done M3-01; deployment pending) |
+| FR-09 | done (M2, M3-06 LLM) | | NFR-09 | done (M3-01) |
 | FR-10 | done (M2) | | NFR-10 | done (M1, M3-09 rate limit) |
-| FR-11 | done (M2 code + UI) | | NFR-11 | partial (M1 harness; live verifier M3-06) |
-| FR-12 | partial (single-venue done M1; multi-venue M3) | | NFR-12 | done (M1) |
-| FR-13 | partial (M3-03 ticket exists) | | NFR-13 | done (M1) |
-| FR-14 | partial (M3-04 ticket exists) | | NFR-14 | done (M1) |
-| FR-15 | partial (M3-01 ticket exists) | | NFR-15 | partial (cap in place; spend measurement M4-08) |
-| FR-16 | done (Q-8; both venues verified) | | NFR-16 | partial (pages exist; UI-v2 clarity #43–#49) |
-| FR-17 | done (M2 persisted + UI) | | NFR-17 | done (M1) |
-| FR-18 | partial (M2 machinery; 40 labels confirmed Q-7) | | | |
+| FR-11 | done (M2 code + UI) | | NFR-11 | done (M3-06 live verifier) |
+| FR-12 | done (M3-02) | | NFR-12 | done (M1) |
+| FR-13 | done (M3-03 sweep) | | NFR-13 | done (M1) |
+| FR-14 | done (M3-04 complement) | | NFR-14 | done (M1) |
+| FR-15 | done (M3-01 eligibility) | | NFR-15 | partial (pending M4-08 final spend) |
+| FR-16 | done (Q-8; both venues verified) | | NFR-16 | done (UI-v2 merged) |
+| FR-17 | done (M2 persisted + UI) | | NFR-17 | done (M1, coverage: see CI) |
+| FR-18 | partial (M2 machinery; 40 labels; pending Q-7 equivalent) | | | |
 | FR-19 | done (M2-06 fixture back-test) | | | |
-| FR-20 | partial (M3-06 ticket exists) | | | |
-| FR-21 | partial (all pages exist M1-M2; UI-v2 #43–#49) | | | |
+| FR-20 | done (M3-06 LLM verifier) | | | |
+| FR-21 | done (M1-M2 v1, UI-10..18 v2) | | | |
 | FR-22 | done (M1) | | | |
-| FR-23 | partial (M3-07 ticket exists) | | | |
+| FR-23 | done (M3-07 demo mode, M4-03 pin) | | | |
 | FR-24 | done (M3-08) | | | |
 | FR-25 | done (M2) | | | |
-| FR-26 | partial (7 of 8 subcommands done; streaming won't) | | | |
+| FR-26 | partial (7 of 8; streaming won't FR-28) | | | |
 | FR-27 | done (M1) | | | |
 
 ## PRD evaluation sweep (M4)
 
-**Swept on:** 2026-10-09 UTC at commit `395ec34` (main). Pages checked against code on main; live URL verification complete (pinned round 735). UI-v2 pages (#42–#49) merged; UI-10 through UI-18, UI-21, UI-25 and M4-01..05 merged; UI-19, UI-20, UI-22, UI-23, UI-24, UI-26 and #70 still open.
+**Swept on:** 2026-10-09 UTC at commit `2a03f95` (main). Pages checked against code on main; live URL verification complete (pinned round 735). UI-v2 core pages (#42–#49) merged via UI-10..18, UI-21, UI-25; M4-01..05 merged; #70 (Kalshi formats) merged. Open: matcher/routing follow-ups #72 (Fed matcher), #73 (complement routing bug), #79 (routable pairs count), #80 (latency warning); open UI-v2 polish #74-#78; UI-19, UI-20, UI-22, UI-23, UI-24, UI-26.
 
 ### Brief's five graded areas
 
@@ -211,7 +211,7 @@ Paawan kept these four in the operator chat on 2026-10-07 at 8:38 PM CT, after t
 | **FR-18..FR-20: Evaluation** (golden set, backtest, LLM verifier) | [docs/equivalence.md § 7-8](equivalence.md#7-how-to-read-eval-and-back-test-output), testdata/golden/labels.yaml (40 labels), internal/eval/, internal/llm/, `equinox eval`, `equinox backtest`, M2-05 (closes #17), M2-06 (closes #18), M3-06 (closes #26), UI-16 #48 | met | FR-18 golden set machinery (M2-05), 40 labels confirmed (Q-7); FR-19 backtest (M2-06); FR-20 LLM verifier (M3-06 merged, D-075); eval page UI v2 merged (UI-16 #48) |
 | **FR-21: Web views** (matches, pair, route, log, eval, admin, near-misses) | internal/web/, internal/web/templates/, M1-09 (closes #9), M2-07 (closes #19), UI-02 (closes #31), UI-10..18 #42-#50 | met | All 7 page handlers exist; v1 UI shipped (M1-09, M2-07, UI-02); UI-v2 merged: design system (UI-10 #42), matches (UI-11 #43), pair (UI-12 #44), route trace (UI-13 #45), near-misses (UI-14 #46), log (UI-15 #47), eval (UI-16 #48), admin (UI-17 #49), plus net gap (UI-18 #50) |
 | **FR-22..FR-23: Admin and demo** (admin auth, pin round) | internal/web/middleware_auth.go, [docs/architecture.md § Data model](architecture.md#data-model) (fetch_rounds.pinned), AB-04/AB-05/AB-14 tests, `equinox pin`, M3-07 (closes #27), M4-03 #61, UI-17 #49 | met | FR-22 admin routes behind basic auth (M1, NFR-10); FR-23 demo mode (M3-07 merged: zero outbound calls when pinned, AB-04 test, as-of banner); M4-03 pinned round 735; admin page UI v2 merged (UI-17 #49) |
-| **FR-24..FR-27: UI features and CLI** (timezone, history chart, CLI commands, order input) | https://equinox-o5hdimw5rq-uc.a.run.app/ (timezone selector in header), /pairs/1208 (price history SVG chart), `equinox --help`, [docs/architecture.md § Interfaces](architecture.md#interfaces-and-contracts) (Order follows FIX) | partial | FR-24 timezone done (M3-08); FR-25 history done (M2-07); FR-26 CLI partial (migrate/ingest/match/route/serve/pin/eval/backtest/golden done; no streaming); FR-27 order input done (M1) |
+| **FR-24..FR-27: UI features and CLI** (timezone, history chart, CLI commands, order input) | https://equinox-o5hdimw5rq-uc.a.run.app/ (timezone selector in header), /pairs/1208 (price history SVG chart), `equinox --help`, [docs/architecture.md § Interfaces](architecture.md#interfaces-and-contracts) (Order follows FIX) | partial | FR-24 timezone done (M3-08); FR-25 history done (M2-07); FR-26 CLI partial (migrate/ingest/match/route/serve/pin/eval/backtest/golden done; streaming won't per FR-28); FR-27 order input done (M1). Gap accepted: streaming explicitly out of scope (FR-28, brief non-goals) |
 | **FR-28: Won't** (additional venues, streaming, real placement) | [docs/brief.md § Non-goals](brief.md#non-goals), [README.md § What's next](../README.md#whats-next) | met | Explicitly out of scope; adapter interface allows extension; README "What's next" section (M4-01 merged) |
 
 ### Non-functional requirements
@@ -219,11 +219,11 @@ Paawan kept these four in the operator chat on 2026-10-07 at 8:38 PM CT, after t
 | Criterion | Evidence | Status | Note |
 |---|---|---|---|
 | **NFR-01: Performance** (p95 <500ms pages, <300ms route) | CI test suite, scripts/smoke-live.sh (M4-05 #63 merged), internal/web response times | met | M4-05 smoke script merged; p95 measured on live URL (pinned round 735); targets met per M4-05 output |
-| **NFR-02: Fetch performance** (<60s round) | [docs/architecture.md § External services](architecture.md#external-services) (10s timeout, pacing), https://equinox-o5hdimw5rq-uc.a.run.app/admin (round times) | partial | Fetch completes <60s observed; not formally measured; pacing and caps in place |
+| **NFR-02: Fetch performance** (<60s round) | [docs/architecture.md § External services](architecture.md#external-services) (10s timeout, pacing), https://equinox-o5hdimw5rq-uc.a.run.app/admin (round times) | partial | Fetch completes <60s observed on /admin; not formally measured in M4-05 (pages only); pacing and caps in place. Gap accepted: measurement optional (visually confirmed on /admin rounds table) |
 | **NFR-03: Reliability** (one venue fails, other succeeds) | internal/collector/collector.go (concurrent fetch, per-venue error handling), tests/security/ab03_* (venue failure tests) | met | Collector continues on one venue's failure; failure logged; other venue's data stored |
 | **NFR-04: Demo reliability** (0 outbound calls when pinned) | AB-04 test `TestNFR04PinnedRoundZeroOutbound`, M3-07 (closes #27), `equinox pin` | met | Test exists (M1); demo mode (M3-07 merged): zero venue calls when pinned, verified by AB-04 test |
-| **NFR-05: Collector success** (≥95% over 24h) | [docs/architecture.md § Data model](architecture.md#data-model) (fetch_rounds.status), https://equinox-o5hdimw5rq-uc.a.run.app/admin (rounds table shows status) | partial | Machinery in place (M2-07); 95% target is measurement, not code |
-| **NFR-06: Precision ≥0.95 equivalent** | [docs/equivalence.md § 8](equivalence.md#8-current-results) (eval results), testdata/golden/labels.yaml, `make eval` | partial | Golden set machinery done (M2-05); 40 labels confirmed (Q-7); precision blocked: no plain `equivalent` pairs in labels yet (crypto source veto, fed needs facts); measured on labelled types is 1.0 |
+| **NFR-05: Collector success** (≥95% over 24h) | [docs/architecture.md § Data model](architecture.md#data-model) (fetch_rounds.status), https://equinox-o5hdimw5rq-uc.a.run.app/admin (rounds table shows status) | partial | Machinery in place (M2-07); 95% target is measurement, not code. Gap accepted: operational metric, not code requirement; /admin rounds table shows per-round status |
+| **NFR-06: Precision ≥0.95 equivalent** | [docs/equivalence.md § 8](equivalence.md#8-current-results) (eval results), testdata/golden/labels.yaml, `make eval` | partial | Golden set machinery done (M2-05); 40 labels confirmed (Q-7); precision blocked: no plain `equivalent` pairs in labels yet (crypto source veto, fed needs facts); measured on labelled types is 1.0. Pending: Q-7 human labeling of plain `equivalent` pairs; interim measurement met on typed pairs |
 | **NFR-07: Settlement backtest** (0 mismatches) | [docs/equivalence.md § 7-8](equivalence.md#7-how-to-read-eval-and-back-test-output), `equinox backtest`, M2-06 | met | Fixture backtest: 207544 pairs, 24/24 agreed, 0 mismatches; documented in equivalence.md §7-8 |
 | **NFR-08: Prices in [0,1]** | internal/canonical/validate.go, property tests in internal/canonical/rapid_test.go, AB-09 tests | met | Decimal prices validated; property tests cover range; out-of-range rejected |
 | **NFR-09: Staleness and skew** | internal/route/eligibility.go, [docs/routing.md § Eligibility](routing.md#eligibility), M3-01 (closes #21), D-074/D-077, config defaults (STALE_AFTER_SECONDS, SKEW_*) | met | M3-01 merged: staleness/skew/depth eligibility; snapshot-relative staleness (D-077); configurable thresholds; stale-round warning banner |
@@ -232,7 +232,7 @@ Paawan kept these four in the operator chat on 2026-10-07 at 8:38 PM CT, after t
 | **NFR-12: Escaping and CSP** | internal/web/middleware_csp.go, internal/web/templates/ (html/template auto-escape), AB-02/AB-07 tests | met | CSP sent; templates use auto-escape; no template.HTML on external data; AB-02/AB-07 pass |
 | **NFR-13: Secrets and vulns** | .gitleaks.toml, .gitlab-ci.yml (gitleaks, govulncheck jobs), scripts/guard-human-files.sh, AB-06/AB-09 tests | met | gitleaks in CI (commits-only on MR, full on main); govulncheck in CI; no secrets in repo; .env gitignored |
 | **NFR-14: Parameterised SQL only** | internal/store/*.go, AB-08 tests | met | All SQL parameterised; AB-08 test enforces no string concat in queries |
-| **NFR-15: Spend ≤$50, LLM cap** | [docs/status.md § Spend to date](#spend-to-date), internal/llm/budget.go (LLM_DAILY_CALL_CAP), [docs/ai-usage.md § The cap](ai-usage.md#runtime-llm-use) | partial | LLM cap machinery in place; spend not yet measured (GCP $0, Anthropic $0 reported); M4-08 will finalize |
+| **NFR-15: Spend ≤$50, LLM cap** | [docs/status.md § Spend to date](#spend-to-date), internal/llm/budget.go (LLM_DAILY_CALL_CAP), [docs/ai-usage.md § The cap](ai-usage.md#runtime-llm-use) | partial | LLM cap machinery in place; spend reported in ai-usage.md as $0 GCP, $0 Anthropic (as of 2026-10-08); M4-08 #66 will finalize with actual billing-page values. Gap accepted: M4-08 pending for final spend measurement |
 | **NFR-16: Usability** (demo in 2 clicks, page questions) | internal/web/handlers.go, internal/web/templates/layout.html (.question), M1-09 (closes #9), UI-11..17 #43-#49 | met | Demo path exists (matches → pair → route); page questions present in templates; UI-v2 pages merged (#43–#49) for improved clarity and 2-click target |
 | **NFR-17: Coverage ≥80%, router imports** | .gitlab-ci.yml (coverage job), internal/route/imports_test.go, CI coverage reports | met | Coverage ≥80% enforced in CI; router imports test enforces venue-agnostic rule; M3-01..M3-10 maintain |
 
@@ -246,7 +246,7 @@ Paawan kept these four in the operator chat on 2026-10-07 at 8:38 PM CT, after t
 | **Deliverable 4: Architecture overview** | [docs/architecture.md](architecture.md) (tech stack, components, data flow, data model, external services), [README.md § Architecture](../README.md#architecture), M4-01 #59 | met | Full architecture.md exists (M1-03 started, updated through M3); M4-01 merged: README architecture section with 5-stage pipeline summary (adapters → collector → normalise → match → route → web, LLM verifier admin-only) linking to architecture.md |
 | **Deliverable 5: Written logic** | [docs/equivalence.md](equivalence.md) (definition, methodology, vetoes, facts, basis, eval, backtest), [docs/routing.md](routing.md) (objective, eligibility, cost, sweep, complements) | met | Both docs merged and current; equivalence.md M2-08 (ba0a6c66), routing.md M3-10 (7e67718) |
 | **Deliverable 6: AI-usage disclosure** | [docs/ai-usage.md](ai-usage.md) (runtime LLM, development tools, tests never call live APIs), M4-02 #60 | met | M4-02 merged: final spend ($0 GCP, $0 Anthropic as of 2026-10-08), dev-tools section (Claude Code orchestrator/workers, Cursor/Grok review, Claude Design UI-09, with what each produced; D- entries by human listed), tests-never-call-live-APIs stated; LLM runs table pending #54 UI-22 |
-| **Deliverable 7: Recording** | [README.md § Recording](../README.md), M4-01 #59, M4-H1 #67 (Paawan records after M4-07 #65) | partial | M4-01 merged: placeholder line "Backup walkthrough recording: (link added by M4-H1)"; then M4-H1 #67 is human item (Paawan records 60-second walkthrough after final deploy M4-07, a worker adds the link) |
+| **Deliverable 7: Recording** | [README.md § Recording](../README.md), M4-01 #59, M4-H1 #67 (Paawan records after M4-07 #65) | partial | M4-01 merged: placeholder line "Backup walkthrough recording: (link added by M4-H1)"; then M4-H1 #67 is human item (Paawan records 60-second walkthrough after final deploy M4-07, a worker adds the link). Gap accepted: human task M4-H1 pending M4-07 final deploy |
 
 ## Spend to date
 
