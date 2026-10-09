@@ -258,10 +258,11 @@ func TestPublicPairPage(t *testing.T) {
 	wantContains(t, body,
 		"Why does Equinox think these two contracts are, or are not, the same bet",
 		seedTitleA, seedTitleB, seedExplainEq, "No vetoes.",
-		// Diff rows: term, A, B, status.
-		`<tr class="diff-match"><td>subject</td><td>BTC</td><td>BTC</td><td>match</td></tr>`,
-		`<tr class="diff-differ"><td>resolution_source</td><td>CF Benchmarks</td><td>Binance</td><td>differ</td></tr>`,
-		`<tr class="diff-unknown"><td>edge_rules</td>`,
+		// UI-12: Diff rows with new format (t-match, t-differ, t-unknown classes, grouped by part)
+		`<tr class="t-match">`, `subject`, `BTC`, // match row with subject
+		`<tr class="t-differ">`, `resolution_source`, // differ row with resolution_source
+		`<tr class="t-unknown">`, `edge_rules`, // unknown row
+		`CF Benchmarks`, `Binance`, // diff values
 		// Touch on each venue.
 		"0.4800", "0.5200", "0.5000", "0.4900", "1/2", "2026-10-06 13:03:00 EDT", // seedNow+3min in ET (M3-08)
 		// Route form.
@@ -275,7 +276,7 @@ func TestPublicPairPage(t *testing.T) {
 	wantHTML(t, rec, http.StatusOK)
 	body = rec.Body.String()
 	wantContains(t, body, "Vetoes (1): each blocks equivalent", "subject_mismatch", "BTC is not ETH", "Different subject: BTC vs ETH.",
-		"No quote for this instrument in the round.", `class="chip chip-warn">related`)
+		"No quote for this instrument in the round.", `badge-l b-related"`, `related`) // UI-12: large badge instead of chip
 }
 
 func TestPublicPairNotFound(t *testing.T) {
