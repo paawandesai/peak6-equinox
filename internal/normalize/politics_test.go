@@ -515,6 +515,69 @@ func TestPoliticsExtractNeverPanicsProperty(t *testing.T) {
 	})
 }
 
+// TestExtractSettlementSource tests the settlement_sources parsing helper for
+// KXPRESNOMD/R nomination markets (D-108).
+func TestExtractSettlementSource(t *testing.T) {
+	cases := []struct {
+		name   string
+		rules  string
+		metric string
+		want   string
+	}{
+		{
+			name:   "democratic nomination with democratic settlement source",
+			rules:  "Some rules text.\n\nKALSHI_EVENT_SETTLEMENT_SOURCES: Democratic National Committee",
+			metric: "win_nomination:us_president:democratic:2028",
+			want:   "democratic_party_official",
+		},
+		{
+			name:   "republican nomination with republican settlement source",
+			rules:  "Some rules text.\n\nKALSHI_EVENT_SETTLEMENT_SOURCES: Republican National Committee",
+			metric: "win_nomination:us_president:republican:2028",
+			want:   "republican_party_official",
+		},
+		{
+			name:   "no marker in rules",
+			rules:  "Some rules text without the marker.",
+			metric: "win_nomination:us_president:democratic:2028",
+			want:   "",
+		},
+		{
+			name:   "metric without party",
+			rules:  "KALSHI_EVENT_SETTLEMENT_SOURCES: Democratic National Committee",
+			metric: "win_election:us_president:2028",
+			want:   "",
+		},
+		{
+			name:   "wrong party in settlement source",
+			rules:  "KALSHI_EVENT_SETTLEMENT_SOURCES: Republican National Committee",
+			metric: "win_nomination:us_president:democratic:2028",
+			want:   "",
+		},
+		{
+			name:   "settlement source at end without newline",
+			rules:  "Some rules.\n\nKALSHI_EVENT_SETTLEMENT_SOURCES: Republican National Committee",
+			metric: "win_nomination:us_president:republican:2028",
+			want:   "republican_party_official",
+		},
+		{
+			name:   "multiple settlement sources",
+			rules:  "Some rules.\n\nKALSHI_EVENT_SETTLEMENT_SOURCES: Democratic National Committee, Associated Press\n\nMore text.",
+			metric: "win_nomination:us_president:democratic:2028",
+			want:   "democratic_party_official",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := extractSettlementSource(tc.rules, tc.metric)
+			if got != tc.want {
+				t.Errorf("extractSettlementSource(%q, %q) = %q; want %q", tc.rules, tc.metric, got, tc.want)
+			}
+		})
+	}
+}
+
 func FuzzExtractPolitics(f *testing.F) {
 	f.Add("Will JD Vance win the 2028 US Presidential Election?", pmWinRules)
 	f.Add("Will J.D. Vance be the nominee for the Presidency for the Republican party?", kxNomRVanceRules)
