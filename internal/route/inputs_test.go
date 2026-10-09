@@ -216,6 +216,9 @@ func TestOldDecisionDecodesWithoutInputs(t *testing.T) {
 	if len(dec.Inputs) != 0 {
 		t.Errorf("old decision inputs = %d, want 0 (empty)", len(dec.Inputs))
 	}
+	if dec.TargetType != "" {
+		t.Errorf("old decision target_type = %q, want empty", dec.TargetType)
+	}
 	// Other fields should decode as before.
 	if dec.RoundID != 7 || dec.TargetID != kalshiID {
 		t.Errorf("old decision header = %+v", dec)

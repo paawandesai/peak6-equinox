@@ -513,6 +513,9 @@ func TestRoutingDecisions(t *testing.T) {
 			if len(rd.Decision.Inputs) != 2 {
 				t.Errorf("ListRoutingDecisions inputs count = %d, want 2", len(rd.Decision.Inputs))
 			}
+			if rd.Decision.TargetType != canonical.RelEquivalent {
+				t.Errorf("ListRoutingDecisions TargetType = %q, want equivalent", rd.Decision.TargetType)
+			}
 			break
 		}
 	}
