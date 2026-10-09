@@ -60,6 +60,7 @@ const (
 	ReasonBasisRiskUnknown      = "basis_risk_unknown"
 	ReasonStale                 = "stale"
 	ReasonSkew                  = "skew"
+	ReasonSureLoss              = "sure_loss" // Issue #73: all-in cost >= $1 per $1 payout (buy) or <= $0 (sell)
 )
 
 // Note values on an Alternative.
@@ -509,6 +510,16 @@ func evaluate(c candidate, o canonical.Order, sz sizing, cfg Config) (option, ca
 		Route:                   c.route,
 	}
 	leg.AllInPerContract = allIn(leg)
+
+	// Never pick a leg with guaranteed loss (Issue #73): for a buy, all-in cost must be < $1
+	// per $1 payout; for a sell, net proceeds must be > $0. Reject with a dedicated reason.
+	if o.Side == canonical.SideBuy && leg.AllInPerContract.GreaterThanOrEqual(decimal.NewFromInt(1)) {
+		return fail(ReasonSureLoss, fmt.Sprintf("all-in cost %s per $1 payout is a guaranteed loss", money(leg.AllInPerContract)))
+	}
+	if o.Side == canonical.SideSell && leg.AllInPerContract.LessThanOrEqual(decimal.Zero) {
+		return fail(ReasonSureLoss, fmt.Sprintf("net proceeds %s per contract is a guaranteed loss", money(leg.AllInPerContract)))
+	}
+
 	return option{leg: leg, fill: f, full: f.Quantity.Equal(sz.qty), verified: c.Instrument.FeeSchedule.Verified, basisScore: basisScore}, canonical.Exclusion{}, true
 }
 
@@ -823,9 +834,14 @@ func buildInput(c canonical.Candidate, side canonical.Side, outcomeSide canonica
 	}
 
 	// Copy to avoid aliasing the live quote slice (Grok nit).
+	// For NO outcomes, re-price the levels as 1 - p to match the router's view (Issue #73).
 	asks := make([]canonical.Level, 0, min(len(src), maxDepth))
 	for i := 0; i < len(src) && i < maxDepth; i++ {
-		asks = append(asks, src[i])
+		lvl := src[i]
+		if flip {
+			lvl.Price = one.Sub(lvl.Price)
+		}
+		asks = append(asks, lvl)
 	}
 
 	bestAsk := decimal.Zero
