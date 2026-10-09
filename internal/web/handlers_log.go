@@ -22,14 +22,20 @@ const maxLogRows = 200
 // logPage is the data for log.html (US-08, FR-21).
 type logPage struct {
 	page
-	Kind     string // active filter, or "" for every kind
-	Kinds    []logKindOption
-	Group    string // active group: "", "venue", "staleness", "label"
-	Groups   []logGroupOption
-	Entries  []logEntryView
-	Outliers *logOutliers // For routing entries only (UI-15)
-	Limit    int
-	Newest   time.Time // Raw UTC time of the newest entry
+	Kind          string // active filter, or "" for every kind
+	Kinds         []logKindOption
+	Group         string // active group: "", "venue", "staleness", "label"
+	Groups        []logGroupOption
+	Entries       []logEntryView
+	GroupedEntries []logEntryGroup // When Group is set, entries grouped by criterion (UI-15)
+	Outliers      *logOutliers // For routing entries only (UI-15)
+	Limit         int
+	Newest        time.Time // Raw UTC time of the newest entry
+}
+
+type logEntryGroup struct {
+	Label   string
+	Entries []logEntryView
 }
 
 type logKindOption struct {
@@ -184,10 +190,10 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 		data.Outliers = s.computeOutliers(data.Entries, tz)
 	}
 
-	// TODO UI-15: Grouping logic stubbed for future implementation
-	// Group entries if requested: group by venue (Decision.Chosen venues),
-	// staleness (FreshState from max quote age), or label (Decision.TargetType).
-	// Each group would be a section with its own table.
+	// Group entries if requested (UI-15)
+	if group != "" && kind == store.LogRouting && len(data.Entries) > 0 {
+		data.GroupedEntries = groupRoutingEntries(data.Entries, group)
+	}
 
 	s.render(w, http.StatusOK, "log", data)
 }
@@ -216,6 +222,7 @@ func (s *Server) newLogEntryView(e store.LogEntry, tz string) logEntryView {
 // parseRoutingLogPayload extracts routing-specific view data from an enriched log entry (UI-15).
 func (s *Server) parseRoutingLogPayload(e store.LogEntry, tz string) *routingLogView {
 	var payload struct {
+		PairID        int64              `json:"pair_id"`
 		Decision      canonical.Decision `json:"decision"`
 		OutcomePhrase string             `json:"outcome_phrase"`
 		OutcomeKey    string             `json:"outcome_key"`
@@ -233,10 +240,12 @@ func (s *Server) parseRoutingLogPayload(e store.LogEntry, tz string) *routingLog
 
 	d := payload.Decision
 
-	// TODO UI-15: Pair link stubbed - would need store.GetRelationshipByInstrument
-	// to look up the pair ID from the target instrument ID
-	pairID := int64(0)
+	// Pair link from payload (UI-15)
+	pairID := payload.PairID
 	pairLink := ""
+	if pairID > 0 {
+		pairLink = fmt.Sprintf("/pairs/%d", pairID)
+	}
 
 	// Format order details
 	side := string(d.Order.Side)
@@ -256,7 +265,10 @@ func (s *Server) parseRoutingLogPayload(e store.LogEntry, tz string) *routingLog
 	if payload.HasInputs && payload.MaxQuoteAge > 0 && payload.OldestFetch != nil {
 		age := time.Duration(payload.MaxQuoteAge) * time.Second
 		freshState := FreshStateFresh
-		// TODO: Apply stale thresholds here if needed
+		// Apply stale threshold to max quote age (UI-15)
+		if age > s.cfg.StaleAfter {
+			freshState = FreshStateStale
+		}
 		maxQuoteAge = &stampView{
 			Badge: FreshBadge(freshState),
 			Time:  *payload.OldestFetch,
@@ -392,14 +404,30 @@ func (s *Server) enrichRoutingEntries(ctx context.Context, st *store.Store, entr
 		return nil, err
 	}
 
+	// Batch-fetch pair IDs for each decision's target instrument (UI-15)
+	pairIDs := make(map[int64]int64) // decision ID -> pair ID
+	for id, rd := range decisions {
+		// Look up the pair for this target instrument
+		rels, err := st.ListRelationships(ctx, store.RelationshipFilter{
+			RoundID:      rd.Decision.RoundID,
+			InstrumentID: rd.Decision.TargetID,
+			Limit:        1,
+		})
+		if err == nil && len(rels) > 0 {
+			pairIDs[id] = rels[0].ID
+		}
+	}
+
 	// Enrich entries with decision data
 	for id, idx := range routingIndices {
 		rd, ok := decisions[id]
 		if !ok {
 			continue
 		}
+		// Get pair ID for this decision (0 if not found)
+		pairID := pairIDs[id]
 		// Replace payload with enriched version that includes routing view
-		enriched, err := s.buildRoutingLogPayload(rd, currentRoundID)
+		enriched, err := s.buildRoutingLogPayload(rd, currentRoundID, pairID)
 		if err != nil {
 			continue
 		}
@@ -410,7 +438,7 @@ func (s *Server) enrichRoutingEntries(ctx context.Context, st *store.Store, entr
 }
 
 // buildRoutingLogPayload creates an enriched payload for a routing log entry (UI-15).
-func (s *Server) buildRoutingLogPayload(rd store.RoutingDecision, currentRoundID int64) (json.RawMessage, error) {
+func (s *Server) buildRoutingLogPayload(rd store.RoutingDecision, currentRoundID int64, pairID int64) (json.RawMessage, error) {
 	d := rd.Decision
 
 	// Compute outcome
@@ -494,6 +522,7 @@ func (s *Server) buildRoutingLogPayload(rd store.RoutingDecision, currentRoundID
 
 	// Build enriched payload
 	payload := struct {
+		PairID       int64              `json:"pair_id"`
 		Decision     canonical.Decision `json:"decision"`
 		OutcomePhrase string            `json:"outcome_phrase"`
 		OutcomeKey   string             `json:"outcome_key"`
@@ -504,6 +533,7 @@ func (s *Server) buildRoutingLogPayload(rd store.RoutingDecision, currentRoundID
 		MaxQuoteAge  int64              `json:"max_quote_age_seconds,omitempty"`
 		OldestFetch  *time.Time         `json:"oldest_fetch,omitempty"`
 	}{
+		PairID:       pairID,
 		Decision:     d,
 		OutcomePhrase: phrase,
 		OutcomeKey:   outcomeKey,
@@ -700,4 +730,64 @@ func countPartners(d canonical.Decision) int {
 	}
 	delete(seen, d.TargetID)
 	return len(seen)
+}
+
+// groupRoutingEntries groups routing log entries by the specified criterion (UI-15).
+func groupRoutingEntries(entries []logEntryView, groupBy string) []logEntryGroup {
+	if groupBy == "" || len(entries) == 0 {
+		return nil
+	}
+
+	// Build map of group key -> entries
+	groups := make(map[string][]logEntryView)
+	for _, e := range entries {
+		key := getGroupKey(e, groupBy)
+		groups[key] = append(groups[key], e)
+	}
+
+	// Convert to sorted slice of groups
+	var keys []string
+	for k := range groups {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	var result []logEntryGroup
+	for _, k := range keys {
+		result = append(result, logEntryGroup{
+			Label:   k,
+			Entries: groups[k],
+		})
+	}
+	return result
+}
+
+// getGroupKey returns the group key for an entry based on the grouping criterion (UI-15).
+func getGroupKey(e logEntryView, groupBy string) string {
+	if e.Routing == nil {
+		return "unknown"
+	}
+
+	switch groupBy {
+	case "venue":
+		if e.Routing.Venues == "" {
+			return "not routed"
+		}
+		return e.Routing.Venues
+	case "staleness":
+		if e.Routing.MaxQuoteAge == nil {
+			return "no input data"
+		}
+		if e.Routing.MaxQuoteAge.Badge.Class == "f-stale" {
+			return "stale inputs"
+		}
+		return "fresh inputs"
+	case "label":
+		if e.Routing.Label == "" || e.Routing.Label == "label not stored" {
+			return "label not stored"
+		}
+		return e.Routing.Label
+	default:
+		return "unknown"
+	}
 }

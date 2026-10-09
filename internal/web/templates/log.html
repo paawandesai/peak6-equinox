@@ -51,6 +51,63 @@
 {{end}}
 
 {{if eq .Kind "routing"}}
+{{if .GroupedEntries}}
+  {{range .GroupedEntries}}
+  <h3 class="group-label">{{.Label}}</h3>
+  <table class="data stack">
+    <thead>
+      <tr>
+        <th>When</th>
+        <th>About</th>
+        <th>Order</th>
+        <th>Outcome</th>
+        <th class="num">All-in</th>
+        <th class="num">Saving vs best ask</th>
+        <th>Max quote age</th>
+        <th>Label</th>
+        <th>Summary</th>
+      </tr>
+    </thead>
+    <tbody>
+    {{range .Entries}}
+      <tr>
+        <td data-label="When"><small>{{formatTime .At $.Timezone}}</small></td>
+        <td data-label="About">
+          {{if .Link}}<a href="{{.Link}}">{{.AboutTitle}}</a>{{else}}{{.AboutTitle}}{{end}}
+          {{if .Routing}}{{if .Routing.PairLink}} · <a href="{{.Routing.PairLink}}">pair</a>{{end}}{{end}}
+        </td>
+        <td data-label="Order">
+          {{if .Routing}}{{.Routing.Side}} {{.Routing.Size}} {{.Routing.Type}}{{end}}
+        </td>
+        <td data-label="Outcome">
+          {{if .Routing}}<span class="badge {{.Routing.Outcome.Class}}"><span class="g" aria-hidden="true">{{.Routing.Outcome.Glyph}}</span>{{.Routing.Outcome.Text}}</span>{{if .Routing.Venues}} · {{.Routing.Venues}}{{end}}{{end}}
+        </td>
+        <td data-label="All-in" class="num">
+          {{if .Routing}}{{.Routing.AverageAllIn}}{{end}}
+        </td>
+        <td data-label="Saving vs best ask" class="num">
+          {{if .Routing}}{{.Routing.SavingVsBest}}{{end}}
+        </td>
+        <td data-label="Max quote age">
+          {{if .Routing}}{{if .Routing.MaxQuoteAge}}<span class="badge {{.Routing.MaxQuoteAge.Badge.Class}}"><span class="g" aria-hidden="true">{{.Routing.MaxQuoteAge.Badge.Glyph}}</span>{{.Routing.MaxQuoteAge.Badge.Text}}</span> · {{formatTime .Routing.MaxQuoteAge.Time $.Timezone}}{{end}}{{end}}
+        </td>
+        <td data-label="Label">
+          {{if .Routing}}{{.Routing.Label}}{{end}}
+        </td>
+        <td data-label="Summary">
+          {{if .Summary}}
+            <details>
+              <summary title="{{.Summary}}"><span class="clamp-2">{{.Summary}}</span></summary>
+              <p>{{.Summary}}</p>
+            </details>
+          {{end}}
+        </td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{end}}
+{{else}}
 <table class="data stack">
   <thead>
     <tr>
@@ -103,6 +160,7 @@
   {{end}}
   </tbody>
 </table>
+{{end}}
 
 <p class="sign-rule">Saving vs best ask: the per-contract difference between the best ask in the decision's stored input snapshot and its average fill. Positive is favourable, otherwise parentheses. Formula: best ask − average all-in.</p>
 
