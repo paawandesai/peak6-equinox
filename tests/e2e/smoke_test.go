@@ -112,12 +112,12 @@ func TestSmoke_DemoPath(t *testing.T) {
 	pairID := firstEquivalentPair(t, body)
 	t.Logf("GET /: first equivalent pair #%d", pairID)
 
-	// 8. GET /pairs/{id} shows the diff table.
+	// 8. GET /pairs/{id} shows the diff table (UI-12: table.terms with t-match/t-differ/t-closed/t-unknown).
 	body = get(t, client, site.URL+"/pairs/"+strconv.FormatInt(pairID, 10))
-	if !strings.Contains(body, `<table class="data diff">`) {
+	if !strings.Contains(body, `<table class="data terms">`) {
 		t.Fatal("GET /pairs/{id}: no diff table")
 	}
-	if n := strings.Count(body, `<tr class="diff-`); n == 0 {
+	if n := strings.Count(body, `<tr class="t-`); n == 0 {
 		t.Fatal("GET /pairs/{id}: the diff table has no rows")
 	}
 	if !strings.Contains(body, ">equivalent<") {
