@@ -112,7 +112,7 @@ func (s *Server) handleAdminIndex(w http.ResponseWriter, r *http.Request) {
 
 	tz := timezoneFromRequest(r)
 	p := adminPage{
-		page:        s.pageBase(currentRound, "Admin", "", tz),
+		page:        s.pageBase(currentRound, "Admin", "", tz, ""),
 		Now:         s.now().Format(time.RFC3339),
 		AppEnv:      s.cfg.AppEnv,
 		IngestReady: s.deps.Ingester != nil,
