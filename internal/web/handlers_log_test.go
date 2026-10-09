@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/store"
@@ -334,11 +335,72 @@ func TestLogGrouping(t *testing.T) {
 	// Just verify that grouping is working by checking for the header
 }
 
-// TestLogOutliers verifies the outliers panel (UI-15).
+// TestLogOutliers verifies the outliers panel shows both worst saving and oldest input (UI-15).
 func TestLogOutliers(t *testing.T) {
 	s, st := newTestServer(t)
 	sd := seedPublic(t, st)
-	seedMore(t, s, st, sd)
+	ctx := context.Background()
+
+	// Create decision with loss (worst saving) and old input (oldest input)
+	// Decision 1: loss -0.10 (worst saving)
+	qty := dec("10")
+	lossDecision := canonical.Decision{
+		RoundID:    sd.round.ID,
+		TargetID:   seedKalshiA,
+		TargetType: canonical.RelEquivalent,
+		Order: canonical.Order{
+			Side:     canonical.SideBuy,
+			Type:     canonical.OrderMarket,
+			Outcome:  canonical.OutcomeYes,
+			TIF:      canonical.TIFIOC,
+			Quantity: &qty,
+		},
+		Chosen: []canonical.Leg{{
+			Venue:                   canonical.VenueKalshi,
+			InstrumentID:            seedKalshiA,
+			Side:                    canonical.SideBuy,
+			Outcome:                 canonical.OutcomeYes,
+			Quantity:                qty,
+			VWAP:                    dec("0.60"),
+			FeePerContract:          dec("0.01"),
+			BasisPenaltyPerContract: dec("0"),
+		}},
+		Inputs:      []canonical.DecisionInput{{InstrumentID: seedKalshiA, BestAsk: dec("0.50"), FetchedAt: seedNow}},
+		Explanation: "Test worst saving (loss)",
+		DecidedAt:   seedNow,
+	}
+	lossID, _ := st.InsertRoutingDecision(ctx, lossDecision)
+	st.AppendLog(ctx, store.LogRouting, fmt.Sprintf("%d", lossID), "worst saving", nil, seedNow)
+
+	// Decision 2: old input (fetched long ago)
+	oldFetchTime := seedNow.Add(-48 * time.Hour) // 48 hours ago
+	oldInputDecision := canonical.Decision{
+		RoundID:    sd.round.ID,
+		TargetID:   seedKalshiA,
+		TargetType: canonical.RelEquivalent,
+		Order: canonical.Order{
+			Side:     canonical.SideBuy,
+			Type:     canonical.OrderMarket,
+			Outcome:  canonical.OutcomeYes,
+			TIF:      canonical.TIFIOC,
+			Quantity: &qty,
+		},
+		Chosen: []canonical.Leg{{
+			Venue:                   canonical.VenueKalshi,
+			InstrumentID:            seedKalshiA,
+			Side:                    canonical.SideBuy,
+			Outcome:                 canonical.OutcomeYes,
+			Quantity:                qty,
+			VWAP:                    dec("0.50"),
+			FeePerContract:          dec("0.01"),
+			BasisPenaltyPerContract: dec("0"),
+		}},
+		Inputs:      []canonical.DecisionInput{{InstrumentID: seedKalshiA, BestAsk: dec("0.51"), FetchedAt: oldFetchTime}},
+		Explanation: "Test oldest input",
+		DecidedAt:   seedNow,
+	}
+	oldID, _ := st.InsertRoutingDecision(ctx, oldInputDecision)
+	st.AppendLog(ctx, store.LogRouting, fmt.Sprintf("%d", oldID), "oldest input", nil, seedNow)
 
 	rec := get(s.Handler(), "/log?kind=routing")
 	wantHTML(t, rec, 200)
@@ -349,8 +411,7 @@ func TestLogOutliers(t *testing.T) {
 		`<div class="outliers">`,
 		`<strong>Outliers</strong>`,
 	)
-	// At least one of worst saving or oldest input should be present
-	if !strings.Contains(body, `Worst saving:`) && !strings.Contains(body, `Oldest input:`) {
-		t.Error("outliers panel must contain at least one outlier (worst saving or oldest input)")
-	}
+	// Both worst saving and oldest input must be present (UI-15 AC)
+	wantContains(t, body, `Worst saving:`)
+	wantContains(t, body, `Oldest input:`)
 }
