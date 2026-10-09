@@ -396,7 +396,12 @@ polyline.hist-mid, polyline.hist-side { fill: none; }
    CSP: no inline styles. Bars use inline SVG width/x attributes or <meter>;
    shading uses bucket classes.
    ========================================================================== */
-:root:not([data-theme=dark]) { --eq-muted: #4f5866; --pico-muted-color: #4f5866; }
+/* Light mode override (not dark) */
+:root { --eq-muted: #4f5866; --pico-muted-color: #4f5866; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme=light]) { --eq-muted: #9aa3b0; --pico-muted-color: #9aa3b0; }
+}
+[data-theme=dark] { --eq-muted: #9aa3b0; --pico-muted-color: #9aa3b0; }
 :root { --eq-unknown: #8e96a3; --eq-closed: var(--eq-info); }
 
 /* --- badge: word + glyph, never colour alone ----------------------------- */
