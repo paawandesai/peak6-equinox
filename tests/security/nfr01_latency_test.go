@@ -94,12 +94,13 @@ func TestNFR01_PageLatencyP95(t *testing.T) {
 	t.Run("POST /route", func(t *testing.T) {
 		durations := make([]time.Duration, numRequests)
 		form := url.Values{
-			"target":     {instrumentID},
-			"side":       {"buy"},
-			"outcome":    {"yes"},
-			"quantity":   {"100"},
-			"order_type": {"market"},
-			"tif":        {"ioc"},
+			"pair":     {strconv.FormatInt(pairID, 10)},
+			"target":   {instrumentID},
+			"side":     {"buy"},
+			"outcome":  {"yes"},
+			"quantity": {"100"},
+			"type":     {"market"},
+			"tif":      {"IOC"},
 		}
 
 		for i := 0; i < numRequests; i++ {
@@ -149,7 +150,7 @@ func seedRoundForLatency(ctx context.Context, t *testing.T, st *store.Store) (st
 		Category:      canonical.CategoryCrypto,
 		Title:         "Latency Test A",
 		Status:        canonical.StatusOpen,
-		FeeSchedule:   canonical.FeeSchedule{ID: "kalshi_taker_v1", Verified: true},
+		FeeSchedule:   canonical.FeeSchedule{ID: "kalshi_taker_v1"},
 		Terms: canonical.Terms{
 			Subject:          "btc",
 			Metric:           "price",
@@ -169,7 +170,7 @@ func seedRoundForLatency(ctx context.Context, t *testing.T, st *store.Store) (st
 		Category:      canonical.CategoryCrypto,
 		Title:         "Latency Test B",
 		Status:        canonical.StatusOpen,
-		FeeSchedule:   canonical.FeeSchedule{ID: "polymarket_v1", Verified: true},
+		FeeSchedule:   canonical.FeeSchedule{ID: "polymarket_v1"},
 		Terms: canonical.Terms{
 			Subject:          "btc",
 			Metric:           "price",
