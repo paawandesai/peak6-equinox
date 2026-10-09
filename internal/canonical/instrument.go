@@ -34,7 +34,13 @@ type Instrument struct {
 	Category      Category `json:"category"`
 	Title         string   `json:"title"`
 	RulesText     string   `json:"rules_text"`
-	Terms         Terms    `json:"terms"`
+	// RulesSummary is a short summary of the resolution rules, when the venue publishes one separately.
+	RulesSummary string `json:"rules_summary"`
+	// Clarifications are additional details or clarifications published by the venue, separate from the main rules.
+	Clarifications string `json:"clarifications"`
+	// ClarificationsUpdatedAt is when the venue updated clarifications, if provided.
+	ClarificationsUpdatedAt time.Time `json:"clarifications_updated_at"`
+	Terms                   Terms     `json:"terms"`
 	// CloseTime is when trading stops (UTC). Zero means the venue did not say; flag it in Quality.
 	CloseTime time.Time `json:"close_time"`
 	// ExpirationTime is when the venue expects to settle (UTC); zero if not published.
@@ -72,6 +78,9 @@ func (i Instrument) Validate() error {
 		errs = append(errs, err)
 	}
 	if err := checkUTC("expiration_time", i.ExpirationTime, true); err != nil {
+		errs = append(errs, err)
+	}
+	if err := checkUTC("clarifications_updated_at", i.ClarificationsUpdatedAt, true); err != nil {
 		errs = append(errs, err)
 	}
 	if err := i.Terms.Validate(); err != nil {

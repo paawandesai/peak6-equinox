@@ -82,6 +82,9 @@ func TypeBadge(t canonical.RelationshipType) Badge {
 		return Badge{Class: "b-related", Glyph: "~", Text: string(t)}
 	case canonical.RelUnrelated:
 		return Badge{Class: "b-unrelated", Glyph: "∅", Text: string(t)}
+	case "self":
+		// UI-13, UI-25: target instrument in input snapshot (not a relationship)
+		return Badge{Class: "b-ok", Glyph: "○", Text: "target"}
 	default:
 		return Badge{Class: "b-unrelated", Glyph: "∅", Text: string(t)}
 	}
