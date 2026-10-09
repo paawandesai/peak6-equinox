@@ -269,3 +269,26 @@ func TestRotatePreviousSummary(t *testing.T) {
 		t.Errorf("prev file not created: %v", err)
 	}
 }
+
+// TestHashLabelsFileErrors tests error paths for coverage.
+func TestHashLabelsFileErrors(t *testing.T) {
+	_, err := HashLabelsFile("/nonexistent/file.yaml")
+	if err == nil {
+		t.Fatal("expected error for nonexistent file")
+	}
+}
+
+// TestRotatePreviousSummaryEdgeCases tests edge cases for coverage.
+func TestRotatePreviousSummaryEdgeCases(t *testing.T) {
+	// Empty path
+	result := RotatePreviousSummary("")
+	if result != "" {
+		t.Errorf("RotatePreviousSummary(\"\") = %q, want \"\"", result)
+	}
+	
+	// Nonexistent source file
+	result = RotatePreviousSummary("/nonexistent/summary.json")
+	if result != "" {
+		t.Errorf("RotatePreviousSummary(nonexistent) = %q, want \"\"", result)
+	}
+}
