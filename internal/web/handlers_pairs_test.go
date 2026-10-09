@@ -299,7 +299,7 @@ func TestPairDiffPartGroupingAndOrder(t *testing.T) {
 		{Field: "threshold", A: "4.25", B: "0.5", Status: canonical.DiffDiffer},
 		{Field: "comparator", A: "gt", B: "gte", Status: canonical.DiffDiffer},
 		{Field: "deadline", A: "2026-10-28", B: "2026-10-29", Status: canonical.DiffMatch},
-		{Field: "source", A: "federalreserve.gov", B: "federalreserve.gov", Status: canonical.DiffMatch},
+		{Field: "resolution_source", A: "federalreserve.gov", B: "federalreserve.gov", Status: canonical.DiffMatch},
 		{Field: "metric", A: "rate_upper_bound", B: "rate_change", Status: canonical.DiffDiffer},
 	}
 	if _, err := st.UpsertRelationship(ctx, rel); err != nil {

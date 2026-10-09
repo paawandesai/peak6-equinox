@@ -123,7 +123,7 @@ func fieldToPart(field string) string {
 		return "Direction"
 	case "deadline":
 		return "Timeframe / cutoff"
-	case "source":
+	case "resolution_source":
 		return "Sources"
 	case "edge_rules":
 		return "Qualifying / edge cases"
@@ -330,7 +330,7 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 			if strings.Contains(c.Name, "cutoff") || strings.Contains(c.Name, "deadline") {
 				bc.Row = "deadline"
 			} else if strings.Contains(c.Name, "source") {
-				bc.Row = "source"
+				bc.Row = "resolution_source"
 			}
 			basisComponents = append(basisComponents, bc)
 		}
@@ -458,7 +458,7 @@ func buildDiffRows(rel canonical.Relationship) []diffRowView {
 				basisByField["deadline"] = true
 			}
 			if strings.Contains(c.Name, "source") {
-				basisByField["source"] = true
+				basisByField["resolution_source"] = true
 			}
 		}
 	}
