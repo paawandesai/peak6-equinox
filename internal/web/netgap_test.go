@@ -341,9 +341,8 @@ func TestNetGapSymmetry(t *testing.T) {
 }
 
 // TestNetGapFeeRounding verifies that fee rounding (Kalshi ceil-to-cent, Polymarket 5dp)
-// is correctly applied in net gap computation.
+// is correctly applied in net gap computation by using prices that produce fractional fees.
 func TestNetGapFeeRounding(t *testing.T) {
-	// Kalshi: 1 contract @ 0.50 → raw fee = 0.07 × 1 × 0.50 × 0.50 = 0.0175, rounds up to 0.02.
 	kalshiInst := canonical.Instrument{
 		ID:    "kalshi:round",
 		Venue: canonical.VenueKalshi,
@@ -359,10 +358,9 @@ func TestNetGapFeeRounding(t *testing.T) {
 	}
 	kalshiQuote := &canonical.Quote{
 		InstrumentID: "kalshi:round",
-		YesAsks:      []canonical.Level{{Price: decimal.RequireFromString("0.50"), Size: decimal.NewFromInt(1)}},
+		YesAsks:      []canonical.Level{{Price: decimal.RequireFromString("0.45"), Size: decimal.NewFromInt(100)}},
 	}
 
-	// Polymarket: 100 contracts @ 0.45 → fee = 100 × 0.07 × 0.45 × 0.55 = 1.7325, rounds to 1.7325 (5dp).
 	polyInst := canonical.Instrument{
 		ID:    "polymarket:round",
 		Venue: canonical.VenuePolymarket,
@@ -377,24 +375,24 @@ func TestNetGapFeeRounding(t *testing.T) {
 	}
 	polyQuote := &canonical.Quote{
 		InstrumentID: "polymarket:round",
-		YesAsks:      []canonical.Level{{Price: decimal.RequireFromString("0.45"), Size: decimal.NewFromInt(100)}},
+		YesAsks:      []canonical.Level{{Price: decimal.RequireFromString("0.456"), Size: decimal.NewFromInt(100)}},
 	}
 
 	// ComputeNetGap uses referenceSize=100, so:
-	// Kalshi: fee = 0.07 × 100 × 0.50 × 0.50 = 1.75, rounds to 1.75 (exact).
-	//   All-in per contract = 0.50 + 1.75/100 = 0.5175
-	// Polymarket: fee = 100 × 0.07 × 0.45 × 0.55 = 1.7325 (5dp).
-	//   All-in per contract = 0.45 + 1.7325/100 = 0.467325
-	// Net gap = B - A = 0.467325 - 0.5175 = -0.050175 (negative = Polymarket cheaper).
+	// Kalshi @ 0.45: raw fee = 0.07 × 100 × 0.45 × 0.55 = 1.7325 → ceils to $1.74 (rounding happens).
+	//   All-in per contract = 0.45 + 1.74/100 = 0.4674
+	// Polymarket @ 0.456: fee = 100 × 0.07 × 0.456 × 0.544 = 1.736448 → rounds to 1.73645 (5dp, rounding happens).
+	//   All-in per contract = 0.456 + 1.73645/100 = 0.4733645
+	// Net gap = B - A = 0.4733645 - 0.4674 = 0.0059645 (positive = Polymarket more expensive).
 	gap := ComputeNetGap(kalshiInst, polyInst, kalshiQuote, polyQuote)
 
 	if !gap.HasValue {
 		t.Fatalf("expected gap.HasValue=true, got false with reason %q", gap.Reason)
 	}
 
-	// Verifies: Kalshi fee at 1.75 stays 1.75 (ceil to cent when needed),
-	// Polymarket 1.7325 uses 5dp precision (not rounded to 1.73).
-	expected := decimal.RequireFromString("-0.050175")
+	// Expected gap uses rounded fees (1.74 and 1.73645). If rounding is omitted (raw 1.7325 and 1.736448),
+	// gap would be 0.0059552, not 0.0059645 — the test fails.
+	expected := decimal.RequireFromString("0.0059645")
 	if !gap.Value.Equal(expected) {
 		t.Errorf("gap.Value = %s, want %s (verifies fee rounding: Kalshi ceil-to-cent, Polymarket 5dp)", gap.Value, expected)
 	}
