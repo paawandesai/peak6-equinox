@@ -299,18 +299,18 @@ func TestConfusionClassBuckets(t *testing.T) {
 		count     int
 		wantClass string
 	}{
-		{"equivalent", "equivalent", 1, "d1"},   // diagonal, light
-		{"equivalent", "equivalent", 5, "d1"},   // diagonal, light (boundary)
-		{"equivalent", "equivalent", 6, "d2"},   // diagonal, medium
-		{"equivalent", "equivalent", 15, "d2"},  // diagonal, medium (boundary)
-		{"equivalent", "equivalent", 16, "d3"},  // diagonal, dark
-		{"equivalent", "equivalent", 99, "d3"},  // diagonal, dark (high)
-		{"equivalent", "related", 1, "e1"},      // off-diagonal, light
-		{"equivalent", "related", 5, "e1"},      // off-diagonal, light (boundary)
-		{"equivalent", "related", 6, "e2"},      // off-diagonal, medium
-		{"equivalent", "related", 15, "e2"},     // off-diagonal, medium (boundary)
-		{"equivalent", "related", 16, "e3"},     // off-diagonal, dark
-		{"equivalent", "related", 99, "e3"},     // off-diagonal, dark (high)
+		{"equivalent", "equivalent", 1, "d1"},  // diagonal, light
+		{"equivalent", "equivalent", 5, "d1"},  // diagonal, light (boundary)
+		{"equivalent", "equivalent", 6, "d2"},  // diagonal, medium
+		{"equivalent", "equivalent", 15, "d2"}, // diagonal, medium (boundary)
+		{"equivalent", "equivalent", 16, "d3"}, // diagonal, dark
+		{"equivalent", "equivalent", 99, "d3"}, // diagonal, dark (high)
+		{"equivalent", "related", 1, "e1"},     // off-diagonal, light
+		{"equivalent", "related", 5, "e1"},     // off-diagonal, light (boundary)
+		{"equivalent", "related", 6, "e2"},     // off-diagonal, medium
+		{"equivalent", "related", 15, "e2"},    // off-diagonal, medium (boundary)
+		{"equivalent", "related", 16, "e3"},    // off-diagonal, dark
+		{"equivalent", "related", 99, "e3"},    // off-diagonal, dark (high)
 	}
 	funcs := templateFuncs
 	classFunc := funcs["ConfusionClass"].(func(string, string, int) string)
