@@ -259,10 +259,10 @@ func TestPublicPairPage(t *testing.T) {
 		"Why does Equinox think these two contracts are, or are not, the same bet",
 		seedTitleA, seedTitleB, seedExplainEq, "No vetoes.",
 		// UI-12: Diff rows with new format (t-match, t-differ, t-unknown classes, grouped by part)
-		`<tr class="t-match">`, `subject`, `BTC`,                     // match row with subject
-		`<tr class="t-differ">`, `resolution_source`,                 // differ row with resolution_source
-		`<tr class="t-unknown">`, `edge_rules`,                       // unknown row
-		`CF Benchmarks`, `Binance`,                                   // diff values
+		`<tr class="t-match">`, `subject`, `BTC`, // match row with subject
+		`<tr class="t-differ">`, `resolution_source`, // differ row with resolution_source
+		`<tr class="t-unknown">`, `edge_rules`, // unknown row
+		`CF Benchmarks`, `Binance`, // diff values
 		// Touch on each venue.
 		"0.4800", "0.5200", "0.5000", "0.4900", "1/2", "2026-10-06 13:03:00 EDT", // seedNow+3min in ET (M3-08)
 		// Route form.

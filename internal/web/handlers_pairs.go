@@ -16,36 +16,36 @@ import (
 // the touch on each venue and the route form (US-02).
 type pairPage struct {
 	page
-	ID             int64
-	TypeBadge      Badge  // UI-12: large badge in verdict panel
-	Type           string
-	TypeLabel      string
-	TypeChipClass  string      // UI-04: chip class for the type
-	Confidence     confView    // UI-12: structured for {{template "conf"}}
-	ConfidenceOld  string      // kept for backwards compat during transition
-	ConfidenceWord string      // UI-04: bucket word
-	Method         string
-	BasisRisk      basisView   // UI-12: structured with value, word, class
-	BasisRiskScore string      // UI-04: score as string or "not scored"
-	BasisRiskWord  string      // UI-04: bucket word
-	DiffRowCount   string      // UI-12: "N diff rows" for the link
-	Routable       bool        // UI-04: yes/no in the strip
-	VetoHeading    string      // UI-04: heading variant
-	Explanation    string
-	A, B           instrumentView
-	QuoteA         touchView
-	QuoteB         touchView
-	DiffRows       []diffRowView // UI-04, UI-12: diff with part grouping and word-level tokens
-	DiffCounts     string        // UI-12: "7 terms · 2 match · 3 differ · 2 closed · 0 unknown"
-	Vetoes         []canonical.Veto
-	Facts          []canonical.FactUse
-	BasisRiskFull  *canonical.BasisRisk // renamed for clarity
+	ID              int64
+	TypeBadge       Badge // UI-12: large badge in verdict panel
+	Type            string
+	TypeLabel       string
+	TypeChipClass   string   // UI-04: chip class for the type
+	Confidence      confView // UI-12: structured for {{template "conf"}}
+	ConfidenceOld   string   // kept for backwards compat during transition
+	ConfidenceWord  string   // UI-04: bucket word
+	Method          string
+	BasisRisk       basisView // UI-12: structured with value, word, class
+	BasisRiskScore  string    // UI-04: score as string or "not scored"
+	BasisRiskWord   string    // UI-04: bucket word
+	DiffRowCount    string    // UI-12: "N diff rows" for the link
+	Routable        bool      // UI-04: yes/no in the strip
+	VetoHeading     string    // UI-04: heading variant
+	Explanation     string
+	A, B            instrumentView
+	QuoteA          touchView
+	QuoteB          touchView
+	DiffRows        []diffRowView // UI-04, UI-12: diff with part grouping and word-level tokens
+	DiffCounts      string        // UI-12: "7 terms · 2 match · 3 differ · 2 closed · 0 unknown"
+	Vetoes          []canonical.Veto
+	Facts           []canonical.FactUse
+	BasisRiskFull   *canonical.BasisRisk // renamed for clarity
 	BasisComponents []basisComponentView // UI-12: with Row field
-	NearMiss       bool // a stored related pair: shown with the veto that fired
-	Types          []typeView
-	History        historyChart
-	LogEntries     []logEntryView
-	Form           routeFormView
+	NearMiss        bool                 // a stored related pair: shown with the veto that fired
+	Types           []typeView
+	History         historyChart
+	LogEntries      []logEntryView
+	Form            routeFormView
 }
 
 // confView is the confidence for the {{template "conf"}} define (UI-12).
@@ -132,17 +132,6 @@ func fieldToPart(field string) string {
 	}
 }
 
-// partOrder returns the display order for rule parts (UI-12, HANDOFF.md).
-var partOrder = []string{
-	"Resolution criteria",
-	"Strike / threshold",
-	"Direction",
-	"Timeframe / cutoff",
-	"Sources",
-	"Qualifying / edge cases",
-	"Other terms",
-}
-
 // wordDiff produces simple word-level diff tokens (UI-12).
 // This is a minimal implementation: split on whitespace, mark differing tokens.
 // AB-07: the template wraps these in <del>/<ins>, using auto-escaping only (no unsafe HTML types).
@@ -182,23 +171,23 @@ func wordDiff(a, b string) ([]diffToken, []diffToken) {
 
 // touchView is one venue's current touch in the round, for display only.
 type touchView struct {
-	Venue       string
-	Present     bool
-	BestBid     string
-	BestAsk     string
-	Mid         string
-	BidLevels   int
-	AskLevels   int
-	FetchedAt   time.Time  // Raw UTC time, formatted with formatTime in templates (M3-08)
-	VenueTS     *time.Time // Optional venue timestamp (M3-08)
-	VenueTSStr  string     // "not sent" when VenueTS is nil
-	Quality     []canonical.QualityIssue
-	Tz          string    // Timezone for formatTime in sub-templates (M3-08)
-	Age         string    // UI-12: age string for stamp (e.g. "14 s ago")
-	FreshBadge  Badge     // UI-12: freshness badge
-	FreshState  string    // UI-12: fresh/stale/unknown/pinned
-	StampAsOf   string    // UI-12: formatted timestamp for stamp
-	StampDT     string    // UI-12: datetime attribute
+	Venue      string
+	Present    bool
+	BestBid    string
+	BestAsk    string
+	Mid        string
+	BidLevels  int
+	AskLevels  int
+	FetchedAt  time.Time  // Raw UTC time, formatted with formatTime in templates (M3-08)
+	VenueTS    *time.Time // Optional venue timestamp (M3-08)
+	VenueTSStr string     // "not sent" when VenueTS is nil
+	Quality    []canonical.QualityIssue
+	Tz         string // Timezone for formatTime in sub-templates (M3-08)
+	Age        string // UI-12: age string for stamp (e.g. "14 s ago")
+	FreshBadge Badge  // UI-12: freshness badge
+	FreshState string // UI-12: fresh/stale/unknown/pinned
+	StampAsOf  string // UI-12: formatted timestamp for stamp
+	StampDT    string // UI-12: datetime attribute
 }
 
 func newTouchView(q store.QuoteRecord) touchView {
@@ -348,12 +337,12 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := pairPage{
-		page:           s.pageBase(round, "Pair "+r.PathValue("id"), "Why does Equinox think these two contracts are, or are not, the same bet, and where would an order fill best?", tz, "pair"),
-		ID:             rel.ID,
-		TypeBadge:      TypeBadge(rel.Type), // UI-12
-		Type:           string(rel.Type),
-		TypeLabel:      typeLabels[rel.Type],
-		TypeChipClass:  TypeChipClass(rel.Type), // UI-04
+		page:          s.pageBase(round, "Pair "+r.PathValue("id"), "Why does Equinox think these two contracts are, or are not, the same bet, and where would an order fill best?", tz, "pair"),
+		ID:            rel.ID,
+		TypeBadge:     TypeBadge(rel.Type), // UI-12
+		Type:          string(rel.Type),
+		TypeLabel:     typeLabels[rel.Type],
+		TypeChipClass: TypeChipClass(rel.Type), // UI-04
 		Confidence: confView{ // UI-12
 			Value: confValue,
 			Word:  confWord,
@@ -367,23 +356,23 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 			Word:  basisRiskWord,
 			Class: basisClass,
 		},
-		BasisRiskScore: basisRiskScore + " " + basisRiskWord, // UI-04 (kept for compat)
-		BasisRiskWord:  basisRiskWord,                        // UI-04
-		DiffRowCount:   diffRowCount,                         // UI-12
-		Routable:       rel.Type.Routable(),                  // UI-04
-		VetoHeading:    vetoHeading,                          // UI-04
-		Explanation:    rel.Explanation,
-		A:              viewA,
-		B:              viewB,
-		DiffRows:       diffRows,        // UI-04, UI-12
-		DiffCounts:     diffCounts,      // UI-12
-		Vetoes:         rel.Vetoes,
-		Facts:          rel.FactsUsed,
-		BasisRiskFull:  rel.BasisRisk,   // renamed
+		BasisRiskScore:  basisRiskScore + " " + basisRiskWord, // UI-04 (kept for compat)
+		BasisRiskWord:   basisRiskWord,                        // UI-04
+		DiffRowCount:    diffRowCount,                         // UI-12
+		Routable:        rel.Type.Routable(),                  // UI-04
+		VetoHeading:     vetoHeading,                          // UI-04
+		Explanation:     rel.Explanation,
+		A:               viewA,
+		B:               viewB,
+		DiffRows:        diffRows,   // UI-04, UI-12
+		DiffCounts:      diffCounts, // UI-12
+		Vetoes:          rel.Vetoes,
+		Facts:           rel.FactsUsed,
+		BasisRiskFull:   rel.BasisRisk,   // renamed
 		BasisComponents: basisComponents, // UI-12
-		NearMiss:       rel.Type == canonical.RelRelated,
-		Types:          allTypeViews(),
-		Form:           defaultRouteForm(rel),
+		NearMiss:        rel.Type == canonical.RelRelated,
+		Types:           allTypeViews(),
+		Form:            defaultRouteForm(rel),
 	}
 	points, err := st.QuoteHistory(ctx, []string{rel.AID, rel.BID}, maxHistoryPt)
 	if err != nil {

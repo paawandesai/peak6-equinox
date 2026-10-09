@@ -46,23 +46,23 @@ func TestPairStripFieldsEquivalentGivenFacts(t *testing.T) {
 
 	// UI-12: verdict panel fields (check key elements, not exact HTML structure)
 	wantContains(t, body,
-		`<div class="verdict-panel">`,                          // verdict panel
+		`<div class="verdict-panel">`,                           // verdict panel
 		`<span class="badge badge-l b-equivalent_given_facts">`, // large badge
-		`equivalent_given_facts`,                               // type text
-		`<dt>Confidence</dt>`,                                  // confidence
-		`0.93`,                                                 // confidence value
-		`high`,                                                 // confidence word
-		`<dt>Method</dt>`,                                      // method label
-		`rules`,                                                // method value
-		`<dt>Basis risk</dt>`,                                  // basis risk label
-		`0.38`,                                                 // basis score
-		`moderate`,                                             // basis word
-		`<dt>Routable</dt>`,                                    // routable label
-		`yes`,                                                  // routable value
-		`<dt>Round</dt>`,                                       // round label
-		"2026-10-06",                                           // as-of date
-		"EDT",                                                  // timezone
-		`<a href="#route">Route an order`,                     // route link
+		`equivalent_given_facts`,                                // type text
+		`<dt>Confidence</dt>`,                                   // confidence
+		`0.93`,                                                  // confidence value
+		`high`,                                                  // confidence word
+		`<dt>Method</dt>`,                                       // method label
+		`rules`,                                                 // method value
+		`<dt>Basis risk</dt>`,                                   // basis risk label
+		`0.38`,                                                  // basis score
+		`moderate`,                                              // basis word
+		`<dt>Routable</dt>`,                                     // routable label
+		`yes`,                                                   // routable value
+		`<dt>Round</dt>`,                                        // round label
+		"2026-10-06",                                            // as-of date
+		"EDT",                                                   // timezone
+		`<a href="#route">Route an order`,                       // route link
 	)
 }
 
@@ -77,7 +77,7 @@ func TestPairStripFieldsRelatedNearMiss(t *testing.T) {
 	// UI-12: verdict panel for a related (near miss)
 	wantContains(t, body,
 		`<span class="badge badge-l b-related">`, // large badge
-		`related`,                                 // type text
+		`related`,                                // type text
 		`<dt>Routable</dt>`,                      // routable label
 		`no`,                                     // routable value
 		"not scored",                             // basis risk: not scored
