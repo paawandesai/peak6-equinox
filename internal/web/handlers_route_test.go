@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -69,6 +70,40 @@ func TestRouteHappyPathHTMX(t *testing.T) {
 	}
 	if dec.RoundID != sd.round.ID || dec.Decision.TargetID != seedKalshiA || len(dec.Decision.Chosen) != 1 || dec.Decision.Chosen[0].Venue != canonical.VenuePolymarket {
 		t.Errorf("stored decision = %+v", dec.Decision)
+	}
+	// Verify Inputs and TargetType are stored (UI-25, D-099)
+	if dec.Decision.TargetType == "" {
+		t.Error("Decision.TargetType is empty, want non-empty relationship type")
+	}
+	if dec.Decision.TargetType != canonical.RelEquivalent {
+		t.Errorf("Decision.TargetType = %q, want %q", dec.Decision.TargetType, canonical.RelEquivalent)
+	}
+	if len(dec.Decision.Inputs) == 0 {
+		t.Error("Decision.Inputs is empty, want at least target input")
+	}
+	// Should have inputs for target + partners considered (target + 2 partners in seedPublic)
+	if len(dec.Decision.Inputs) < 2 {
+		t.Errorf("Decision.Inputs count = %d, want >= 2 (target + partners)", len(dec.Decision.Inputs))
+	}
+	// Verify target input (first one should be target with RelationshipType="self")
+	var foundTarget bool
+	for _, input := range dec.Decision.Inputs {
+		if input.RelationshipType == "self" {
+			foundTarget = true
+			if input.InstrumentID == "" {
+				t.Error("target input InstrumentID is empty")
+			}
+			if input.Venue == "" {
+				t.Error("target input Venue is empty")
+			}
+			if input.Confidence.IsZero() {
+				t.Error("target input Confidence is zero")
+			}
+			break
+		}
+	}
+	if !foundTarget {
+		t.Error("Decision.Inputs missing target input with RelationshipType=self")
 	}
 	entries, err := st.ListLog(context.Background(), store.LogFilter{Kind: store.LogRouting, Ref: "1"})
 	if err != nil || len(entries) != 1 || !strings.HasPrefix(entries[0].Summary, "route buy 100 contracts yes on "+seedKalshiA+": polymarket") {
@@ -478,5 +513,48 @@ func TestRouteResultRendering(t *testing.T) {
 	)
 	if strings.Contains(notionalBody, " of 0") {
 		t.Error("notional order totals row shows 'of 0'")
+	}
+}
+
+// TestPOSTRouteP95 measures p95 latency for POST /route HTTP endpoint (UI-25 AC ≤ 300ms).
+func TestPOSTRouteP95(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping p95 measurement in short mode")
+	}
+
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+	form := validRouteForm(sd.eqID, seedKalshiA)
+
+	const samples = 1000
+	durations := make([]time.Duration, samples)
+
+	for i := 0; i < samples; i++ {
+		start := time.Now()
+		rec := postForm(s.Handler(), "/route", form, true)
+		durations[i] = time.Since(start)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("POST /route: status %d, want 200", rec.Code)
+		}
+	}
+
+	// Calculate percentiles
+	sortFunc := func(a, b time.Duration) int {
+		if a < b {
+			return -1
+		}
+		if a > b {
+			return 1
+		}
+		return 0
+	}
+	slices.SortFunc(durations, sortFunc)
+	p50 := durations[samples*50/100]
+	p95 := durations[samples*95/100]
+	p99 := durations[samples*99/100]
+
+	t.Logf("POST /route HTTP endpoint latency over %d samples: p50=%v, p95=%v, p99=%v", samples, p50, p95, p99)
+	if p95 > 300*time.Millisecond {
+		t.Errorf("p95 latency %v > 300ms AC", p95)
 	}
 }
