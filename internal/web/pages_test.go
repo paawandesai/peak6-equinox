@@ -153,8 +153,9 @@ func TestDecisionLogPage(t *testing.T) {
 		`<details class="intro-details" open>`,
 		`<summary>About the log</summary>`,
 		`href="/pairs/`+strconv.FormatInt(sd.eqID, 10)+`">pair #`+strconv.FormatInt(sd.eqID, 10)+`: kalshi / polymarket</a>`,
-		// UI-15: chip-filter links instead of select
-		`<a href="/log" class="chip-filter" aria-current="page">everything</a>`,
+		// UI-15: chip-filter links instead of select (M5-11: default is verdicts & routing)
+		`<a href="/log" class="chip-filter" aria-current="page">verdicts &amp; routing</a>`,
+		`<a href="/log?kind=all" class="chip-filter">all</a>`,
 		`<a href="/log?kind=relationship" class="chip-filter">relationship verdicts</a>`,
 		`<a href="/log?kind=routing" class="chip-filter">routing decisions</a>`,
 		`<span class="chip chip-info">relationship</span>`, `<span class="chip chip-ok">routing</span>`,
