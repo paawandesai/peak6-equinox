@@ -63,7 +63,7 @@ func Compare(a, b canonical.Instrument, f facts.Set) canonical.Relationship {
 		br := basisRisk(a, b, v)
 		rel.BasisRisk = &br
 	}
-	// Build and attach the matcher evidence (UI-20, D-112)
+	// Build and attach the matcher evidence (UI-20, D-113)
 	evidence := buildEvidence(a, b, v, vetoes)
 	rel.Evidence = &evidence
 	return rel

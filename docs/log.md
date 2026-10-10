@@ -238,7 +238,7 @@ Stored in the same `routing_decisions.decision` jsonb; no SQL migration needed. 
 **Branch:** ao/ui-v2/ui-20-matcher-evidence (stacked on !88 ao/matcher/m4-72-fed-formats)
 **Status:** Draft MR opened, depends on !88
 
-Implemented UI-20 (D-112, Tier 2): matcher evidence recording. The matcher now stores confidence calculation components with every relationship: prior (base confidence), per-term signed contributions (e.g. unknown_unit_a −0.02, deadline_gap_hours −0.05), total (sum, equals stored confidence), and for near misses, pre-veto score (what equivalentConfidence would return before vetoes) + required score (0.90).
+Implemented UI-20 (D-113, Tier 2): matcher evidence recording. The matcher now stores confidence calculation components with every relationship: prior (base confidence), per-term signed contributions (e.g. unknown_unit_a −0.02, deadline_gap_hours −0.05), total (sum, equals stored confidence), and for near misses, pre-veto score (what equivalentConfidence would return before vetoes) + required score (0.90).
 
 **Backend changes:**
 - `canonical.MatcherEvidence` struct: `Prior`, `Contributions []ContributionTerm`, `Total`, `PreVetoScore` *decimal, `RequiredScore` *decimal
@@ -259,7 +259,7 @@ Implemented UI-20 (D-112, Tier 2): matcher evidence recording. The matcher now s
 - Relationship validation: evidence.total == confidence
 
 **Docs:**
-- D-112 entry in `docs/decisions.md`
+- D-113 entry in `docs/decisions.md`
 - "Awaiting human veto" row in `docs/status.md`
 - This log entry
 
@@ -283,3 +283,7 @@ Implemented UI-20 (D-112, Tier 2): matcher evidence recording. The matcher now s
 ## 2026-10-10 · M4-79: diagnose live routable-pair count, Phase 1 (agent `peak6-equinox-97`)
 
 **What:** issue #79 Phase 1 diagnosis, D-111. The live pinned round 735 shows 2 routable pairs because it was ingested and matched before the M4-70 nominee fix (D-108) was deployed; a fresh local live round on `integration/m4-final` gives 79 routable-type pairs (77 nominee `equivalent`, 1 `equivalent_given_facts`, 1 `complement`), and 94 with the #72 Fed matcher (!88) merged into a throwaway build. Only 12 of the 94 (all Fed) pass the router's 0.9 confidence floor and have quotes on both sides. No universe or matcher change; golden eval unchanged (equivalent precision 1.0000, zero hard negatives predicted equivalent or `equivalent_given_facts`). Phase 2 (fresh prod round, pin, verify) waits on operator sign-off. · docs/{decisions.md,status.md,log.md}
+
+## 2026-10-10
+
+- **UI-24 session 100 (AO worker)** Started UI-24 (issue #56, ao/ui-v2/ui-24-eval-llm-columns → integration/m4-final). Merged origin/integration/m4-final (fast-forward, includes UI-23 !83). Added D-112 (Tier 2 eval contract extension: optional `rules []TypeSummary` field for dual-method evaluation), status.md veto entry. Extended Summary struct, updated 4 call sites (eval.go, summary_test.go), removed hardcoded "rules+llm: not evaluated (M3)" note, updated contract test. Tests pass (go test ./internal/eval -run Summary, go build ./...). Next: implement dual-method evaluation logic in eval command, then web handler + template.
