@@ -339,10 +339,29 @@ func TestPairFromFixtures(t *testing.T) {
 	wantHTML(t, rec, http.StatusOK)
 	body := rec.Body.String()
 
-	// Basic sanity checks
-	wantContains(t, body, "Pair #")
-	wantContains(t, body, "Confidence")
-	wantContains(t, body, "Method")
+	// Assert specific values from seeded relationship (UI-20 review item 8)
+	wantContains(t, body, "Pair #"+strconv.FormatInt(rel.ID, 10))
+
+	// Verdict panel values
+	wantContains(t, body, "equivalent") // Type
+	wantContains(t, body, "0.97")       // Confidence (exact value from seedPublic)
+	wantContains(t, body, "rules")      // Method
+
+	// Basis risk (from seedPublic: score 0.1, component "source")
+	wantContains(t, body, "0.10") // Basis risk score
+	wantContains(t, body, "source")
+	wantContains(t, body, "Binance vs CF Benchmarks")
+
+	// Contract titles (from seedTitleA, seedTitleB)
+	wantContains(t, body, "BTC above $120k?")           // Kalshi title
+	wantContains(t, body, "Will Bitcoin exceed $120")   // Polymarket title (partial match)
+
+	// Diff table should exist
+	wantContains(t, body, "<table class=\"data terms\">")
+	wantContains(t, body, "Contract diff")
+
+	// Explanation should be present
+	wantContains(t, body, "equivalent:")
 }
 
 func TestPairRoundMismatchWhenPinned(t *testing.T) {
