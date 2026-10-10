@@ -134,11 +134,11 @@ type evalPage struct {
 	Summary         *evalSummary
 	Rows            []evalRow
 	Target          string
-	Equiv           *evalRow // the equivalent tier, if present
-	Notes           []string
-	Produced        time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
-	MacroAverage    *evalRow  // UI-16: macro average row
-	WeightedAverage *evalRow  // UI-16: weighted by support row
+	Equiv           *evalRow   // the equivalent tier, if present
+	Notes           []evalNote // M5-12a: structured notes for readability
+	Produced        time.Time  // Raw UTC time, formatted with formatTime in templates (M3-08)
+	MacroAverage    *evalRow   // UI-16: macro average row
+	WeightedAverage *evalRow   // UI-16: weighted by support row
 	// UI-23: confusion matrix, thresholds, versioning
 	ConfusionMatrix map[string]evalConfusionCell // key: "label:predicted"
 	AllTypes        []string                     // all relationship types for matrix axes
@@ -149,6 +149,12 @@ type evalPage struct {
 	Backtest *BacktestViewModel
 	// UI-24: dual-method evaluation
 	DualMethod bool // true when summary has both rules+llm and rules-only metrics
+}
+
+// evalNote represents a note with optional collapsed details (M5-12a).
+type evalNote struct {
+	Text    string   // the main note text
+	Details []string // optional detail items (shown in <details>)
 }
 
 // evalRow is one relationship type's metrics, formatted.
@@ -203,7 +209,8 @@ func (s *Server) handleEval(w http.ResponseWriter, r *http.Request) {
 	default:
 		data.Summary = sum
 		data.Produced = sum.GeneratedAt
-		data.Notes = sum.Notes
+		// M5-12a: process notes for readability
+		data.Notes = processEvalNotes(sum.Notes)
 		// UI-24: check if we have dual-method data
 		data.DualMethod = len(sum.Rules) > 0
 		// UI-24: prepare rules-only metrics map for method delta computation
@@ -419,13 +426,19 @@ func newEvalRow(m evalTypeMetrics, target string) evalRow {
 		TypeChipClass: TypeChipClass(relType),
 		TypeBadge:     TypeBadge(relType), // UI-16
 	}
-	// UI-16: compute F1 score (harmonic mean of precision and recall)
-	if m.Precision != nil && m.Recall != nil && !m.Precision.IsZero() && !m.Recall.IsZero() {
-		two := decimal.NewFromInt(2)
-		sum := m.Precision.Add(*m.Recall)
-		product := m.Precision.Mul(*m.Recall)
-		f1 := two.Mul(product).Div(sum)
-		row.F1 = formatPercent(&f1)
+	// M5-12a: compute F1 score = 2PR/(P+R), handling zero values
+	if m.Precision != nil && m.Recall != nil {
+		psum := m.Precision.Add(*m.Recall)
+		if psum.IsZero() {
+			// Both P and R are 0: F1 is undefined
+			row.F1 = "n/a"
+		} else {
+			// At least one is non-zero: compute F1
+			two := decimal.NewFromInt(2)
+			product := m.Precision.Mul(*m.Recall)
+			f1 := two.Mul(product).Div(psum)
+			row.F1 = formatPercent(&f1)
+		}
 	} else {
 		row.F1 = "n/a"
 	}
@@ -573,6 +586,50 @@ func computeWeightedAverage(types []evalTypeMetrics) *evalRow {
 		row.F1 = "n/a"
 	}
 	return &row
+}
+
+// processEvalNotes transforms notes for readability (M5-12a):
+// - Rewords "rules+llm: not evaluated (M3)" to plain language
+// - Collapses "not evaluated ... (instrument not found)" into one entry with details
+func processEvalNotes(notes []string) []evalNote {
+	var processed []evalNote
+	var notFoundPairs []string
+
+	for _, note := range notes {
+		switch {
+		case note == "rules+llm: not evaluated (M3)":
+			// M5-12a: reword in plain language
+			processed = append(processed, evalNote{
+				Text: "Rules + LLM verifier: not run in production yet (the LLM verifier is admin-only and budget-capped)",
+			})
+		case strings.Contains(note, "(instrument not found)"):
+			// M5-12a: collect for collapsing
+			// Extract the pair IDs from "not evaluated: <id1> / <id2> (instrument not found)"
+			if strings.HasPrefix(note, "not evaluated: ") && strings.HasSuffix(note, " (instrument not found)") {
+				pairIDs := strings.TrimPrefix(note, "not evaluated: ")
+				pairIDs = strings.TrimSuffix(pairIDs, " (instrument not found)")
+				notFoundPairs = append(notFoundPairs, pairIDs)
+			}
+		default:
+			// Keep other notes as-is
+			processed = append(processed, evalNote{Text: note})
+		}
+	}
+
+	// M5-12a: add collapsed note for "instrument not found" pairs
+	if len(notFoundPairs) > 0 {
+		summary := fmt.Sprintf("%d labelled pair", len(notFoundPairs))
+		if len(notFoundPairs) != 1 {
+			summary += "s"
+		}
+		summary += " couldn't be scored because the recorded fixtures don't include one side"
+		processed = append(processed, evalNote{
+			Text:    summary,
+			Details: notFoundPairs,
+		})
+	}
+
+	return processed
 }
 
 // readEvalSummary loads and validates the artifact. An empty path or a

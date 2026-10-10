@@ -274,7 +274,16 @@
 
 {{if .Notes}}
 <h2>Notes from the run</h2>
-<ul>{{range .Notes}}<li>{{.}}</li>{{end}}</ul>
+<ul>
+{{range .Notes}}
+  <li>
+    {{.Text}}
+    {{if .Details}}
+      <details class="inline-details"><summary>details</summary><ul class="small mt-1">{{range .Details}}<li><code>{{.}}</code></li>{{end}}</ul></details>
+    {{end}}
+  </li>
+{{end}}
+</ul>
 {{end}}
 
 {{end}}
