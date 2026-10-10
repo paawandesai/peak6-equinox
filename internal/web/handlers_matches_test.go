@@ -623,10 +623,12 @@ func TestSectionOrder(t *testing.T) {
 	wantHTML(t, rec, 200)
 	body := rec.Body.String()
 
-	// Find section positions.
-	routablePos := strings.Index(body, `<h2 id="routable">`)
-	impliesPos := strings.Index(body, `<h2 id="type-implies">`)
-	relatedPos := strings.Index(body, `<h2 id="type-related">`)
+	// Find section positions (ui/plain-language: routable cards, then the
+	// one-way summary, then the lookalikes summary; the full tables follow
+	// under "Filters and technical details").
+	routablePos := strings.Index(body, `<h2 id="pairs">`)
+	impliesPos := strings.Index(body, `<details id="type-implies">`)
+	relatedPos := strings.Index(body, `class="fold-summary related-summary"`)
 
 	if routablePos < 0 || impliesPos < 0 || relatedPos < 0 {
 		t.Fatalf("missing sections: routable=%d, implies=%d, related=%d", routablePos, impliesPos, relatedPos)
@@ -687,8 +689,8 @@ func TestStartHereCard(t *testing.T) {
 	// Start here card exists.
 	wantContains(t, body, `<div class="start-here">`, `<h2>Start here</h2>`)
 
-	// Link 1: See why two contracts are the same bet → pair diff.
-	wantContains(t, body, fmt.Sprintf(`href="/pairs/%d#diff"`, pairID), "See why two contracts are the same bet")
+	// Link 1: See why two contracts are the same bet → the pair page (ui/plain-language: its top card).
+	wantContains(t, body, fmt.Sprintf(`href="/pairs/%d"`, pairID), "See why two contracts are the same bet")
 
 	// Link 2: Route a hypothetical order on it → pair route.
 	wantContains(t, body, fmt.Sprintf(`href="/pairs/%d#route"`, pairID), "Route a hypothetical order on it")

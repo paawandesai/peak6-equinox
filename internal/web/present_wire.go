@@ -127,3 +127,43 @@ func (s *Server) handleDecisionJSON(w http.ResponseWriter, r *http.Request) {
 		s.log.Error("writing routing decision json", "err", err)
 	}
 }
+
+// liveQuoteAge is a pair page's newest quote for one contract and its age.
+type liveQuoteAge struct {
+	quote canonical.Quote
+	age   string
+}
+
+// attachPlainPair adds the pair presenter's view and the plain page title.
+// The instruments are loaded with their terms; a lookup failure only drops
+// the plain names back to the venue titles.
+func (s *Server) attachPlainPair(ctx context.Context, st *store.Store, data *pairPage, rel canonical.Relationship, quotes map[string]liveQuoteAge) {
+	recs, err := st.GetInstruments(ctx, []string{rel.AID, rel.BID})
+	if err != nil {
+		s.log.Warn("loading instruments for pair", "relationship_id", rel.ID, "err", err.Error())
+	}
+	in := pairInput{Rel: rel, MinConfidence: s.cfg.MinRouteConfidence,
+		A: instrumentOr(recs, rel.AID, data.A.Title), B: instrumentOr(recs, rel.BID, data.B.Title)}
+	if q, ok := quotes[rel.AID]; ok {
+		in.QuoteA, in.AgeA = &q.quote, q.age
+	}
+	if q, ok := quotes[rel.BID]; ok {
+		in.QuoteB, in.AgeB = &q.quote, q.age
+	}
+	data.Plain = presentPair(in)
+	data.Title = data.Plain.Title
+	data.Description = data.Plain.Meaning
+	data.TargetLabels = map[string]string{
+		rel.AID: "A · " + data.Plain.A.Venue + " · " + data.Plain.A.Name,
+		rel.BID: "B · " + data.Plain.B.Venue + " · " + data.Plain.B.Name,
+	}
+}
+
+// instrumentOr returns the stored instrument, or a stub carrying its ID,
+// venue and title so names fall back cleanly.
+func instrumentOr(recs map[string]store.InstrumentRecord, id, title string) canonical.Instrument {
+	if r, ok := recs[id]; ok {
+		return r.Instrument
+	}
+	return canonical.Instrument{ID: id, Venue: canonical.VenueOf(id), Title: title}
+}

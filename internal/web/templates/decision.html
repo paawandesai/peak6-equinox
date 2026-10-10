@@ -1,9 +1,6 @@
 {{define "content"}}
-<div class="page-head">
-  <p class="crumbs"><a href="/">Matches</a> <a href="/log?kind=routing">Decision log</a></p>
-  <h1>Routing decision #{{.DecisionID}}</h1>
-  <p class="question">What did this simulated order do, and why did the router choose that venue?</p>
-</div>
-<p class="intro">A stored simulation: the order below was routed against the books of round {{with .Round}}{{.ID}}{{else}}?{{end}} and the decision was written to the decision log at {{formatTime .CreatedAt .Timezone}}. Nothing was sent to a venue. <a href="/log?kind=routing">All routing decisions</a></p>
+<nav class="crumbs-nav" aria-label="breadcrumb"><a href="/">Matches</a> › <a href="/log?kind=routing">Decision log</a> › Decision #{{.DecisionID}}</nav>
+<h1 class="decision-h1">Routing decision #{{.DecisionID}}</h1>
 {{template "route_result" .}}
+<p class="note">A stored simulation: the order was routed against the books of round {{with .Round}}{{.ID}}{{else}}?{{end}} and written to the decision log at {{formatTime .CreatedAt .Timezone}}. Nothing was sent to a venue. <a href="/log?kind=routing">All routing decisions</a></p>
 {{end}}

@@ -11,7 +11,7 @@
     <p class="verdict-badge"><span class="badge badge-l vb-{{$p.BadgeKind}}"><span class="g" aria-hidden="true">{{if eq $p.BadgeKind "ok"}}✓{{else if eq $p.BadgeKind "warn"}}◐{{else}}✕{{end}}</span>{{$p.Badge}}</span></p>
     <p class="plain-answer">{{$p.Answer}}</p>
     {{with $p.NextStep}}<p class="next-step"><span class="next-label">What to do next:</span> {{if .Href}}<a href="{{.Href}}" class="btn-next">{{.Label}}</a>{{else}}<strong>{{.Label}}</strong>{{end}}{{if .Detail}} <span class="next-detail">({{.Detail}})</span>{{end}}</p>{{end}}
-    <p class="verdict-meta">Order: {{$p.OrderText}}{{if .InputsRecorded}} · prices {{AgeShort .MaxQuoteAge}} old{{end}} · round {{.RoundID}} · decided <time datetime="{{.DecidedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatTime .DecidedAt $.Timezone}}</time> · <a href="/decisions/{{$.DecisionID}}">decision #{{$.DecisionID}}</a></p>
+    <p class="verdict-meta">Order: {{$p.OrderText}}{{if .InputsRecorded}} · prices {{AgeShort .MaxQuoteAge}} old{{end}} · round {{.RoundID}} · decided <time datetime="{{.DecidedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatTime .DecidedAt $.Timezone}}</time> · <a href="/decisions/{{$.DecisionID}}">Decision #{{$.DecisionID}}</a></p>
   </section>
 
   {{/* B: the trader's comparison, in cents per contract and dollars per order */}}
@@ -73,9 +73,9 @@
   <details class="tech">
     <summary><span class="tech-title">Technical details</span> <small>the router's explanation, codes, instrument IDs, per-$1 math, config and raw JSON</small></summary>
     <div class="tech-body">
-      <h4>The router's explanation (unchanged)</h4>
+      <h4>Explanation (the router's own words, unchanged)</h4>
       <p class="explanation">{{.Explanation}}</p>
-      <p class="note">Router summary: <span class="outcome-summary">{{.LeadSentence}}</span>{{with .Suggestion}} Hint: {{.Order}}. {{.Why}}.{{end}}</p>
+      <p class="note">Router summary: <strong>{{.OutcomePhrase}}</strong>. <span class="outcome-summary">{{.LeadSentence}}</span>{{with .Suggestion}} <strong>Try: {{.Order}}.</strong> {{.Why}}.{{end}}</p>
       <p class="order-line"><strong>Order:</strong> {{.OrderLine}}. <strong>Partners considered:</strong> {{.Partners}}. <strong>As of</strong> {{formatTime .Snapshot $.Timezone}}{{if .InputsRecorded}} · {{template "fbadge" .MaxQuoteAgeBadge}}{{end}}</p>
       {{if .UsedNotional}}{{if .ConversionTouch.IsPositive}}
       <p class="note"><strong>Notional conversion:</strong> ${{.OriginalNotional.String}} ÷ {{money .ConversionTouch}} touch = {{.ConvertedQuantity.String}} contracts (rounded down).</p>
@@ -124,7 +124,7 @@
           <tr>
             <td><span class="venue">{{.Venue}}</span></td>
             <td>{{template "iid" .InstrumentID}}</td>
-            <td>{{if eq .Route "complement"}}complement: {{upper (printf "%s" .Outcome)}}{{else}}direct{{end}}</td>
+            <td>{{if eq .Route "complement"}}complement: {{upper (printf "%s" .Outcome)}} on {{template "iid" .InstrumentID}}{{else}}direct{{end}}</td>
             <td class="num">{{.Quantity.String}}</td>
             {{if $.Decision.InputsRecorded}}<td class="num">{{if not .Quoted.IsZero}}{{money .Quoted}}{{else}}—{{end}}</td>{{end}}
             <td class="num">{{money .VWAP}}</td>
@@ -147,7 +147,7 @@
       {{if not .BasisMultiplier.IsZero}}<p class="note">basis penalty = score × {{money .BasisMultiplier}} per contract</p>{{end}}
       {{if .InputsRecorded}}<p class="sign-rule">Sign rule (D-098): positive = saving (favourable), parentheses = loss (unfavourable).</p>{{end}}
       {{else}}
-      <p class="skipped">Skipped: no venue was eligible, so nothing was priced.</p>
+      <p class="skipped"><strong>Chosen route: none.</strong> Skipped: no venue was eligible, so nothing was priced.</p>
       {{end}}
 
       {{if .Alternatives}}
@@ -205,7 +205,7 @@
             <p class="note">Full instrument IDs, to copy:</p>
             <ul class="id-list">{{range .Inputs}}<li><code class="wrap-anywhere">{{.InstrumentID}}</code></li>{{end}}</ul>
             {{else}}
-            <p class="skipped">Not recorded: input quotes were not stored for decisions made before {{.UI25CutoffDate}}.</p>
+            <p class="skipped">Not recorded. Input quotes were not stored for decisions made before {{.UI25CutoffDate}}.</p>
             {{end}}
           </details>
         </li>
@@ -292,7 +292,7 @@
         <div><dt>Safety charge per point of safety risk (<code>BASIS_PENALTY_MULTIPLIER</code>)</dt><dd>{{.Audit.BasisMult}} per contract</dd></div>
       </dl>
       <p class="note">These are the server's settings now; the router does not store them per decision, so the explanation above is the record of what applied.</p>
-      <p class="decision-log-link">Recorded as decision #{{$.DecisionID}}: {{if .RawJSONHref}}<a href="{{.RawJSONHref}}">raw JSON</a> · {{end}}<a href="/log?kind=routing">decision log</a> · <a href="/decisions/{{$.DecisionID}}">permalink</a>.</p>
+      <p class="decision-log-link">Recorded as decision #{{$.DecisionID}}: {{if .RawJSONHref}}<a href="{{.RawJSONHref}}">raw JSON</a> · {{end}}<a href="/log?kind=routing">view in decision log</a> · <a href="/decisions/{{$.DecisionID}}">permalink</a>.</p>
     </div>
   </details>
 {{end}}{{end}}

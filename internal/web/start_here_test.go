@@ -102,11 +102,11 @@ func TestResolveStartHereSteps(t *testing.T) {
 	if len(steps) != 4 {
 		t.Fatalf("got %d steps, want 4: %+v", len(steps), steps)
 	}
-	if steps[0].Href != "/pairs/11#diff" {
+	if steps[0].Href != "/pairs/11" {
 		t.Errorf("step 1 href = %q, want the egf pair's diff", steps[0].Href)
 	}
 	wantPreset(t, steps[1].Href, 11, demoKHigh, "buy", "yes")
-	if steps[2].Href != "/pairs/13#diff" {
+	if steps[2].Href != "/pairs/13" {
 		t.Errorf("step 3 href = %q, want the near miss where the fact does not apply", steps[2].Href)
 	}
 	wantPreset(t, steps[3].Href, 14, demoKLow, "buy", "no")
@@ -160,7 +160,7 @@ func TestResolveStartHereHidesUnresolved(t *testing.T) {
 	// A different meeting: the October contracts are not that meeting's,
 	// so only the near miss resolves.
 	steps = resolveStartHere(rels, demoRecords(), "2026-12-09")
-	if len(steps) != 1 || steps[0].Href != "/pairs/13#diff" {
+	if len(steps) != 1 || steps[0].Href != "/pairs/13" {
 		t.Fatalf("December meeting: got %+v, want only the near-miss step", steps)
 	}
 
@@ -270,9 +270,9 @@ func TestStartHereGuidedDemo(t *testing.T) {
 	wantHTML(t, rec, 200)
 	body := rec.Body.String()
 	wantContains(t, body,
-		fmt.Sprintf(`href="/pairs/%d#diff"`, ids[11]),
+		fmt.Sprintf(`href="/pairs/%d"`, ids[11]),
 		fmt.Sprintf(`href="/pairs/%d?outcome=yes&amp;qty=100&amp;side=buy&amp;target=kalshi%%3AKXFED-26OCT-T4.25&amp;tif=IOC&amp;type=market#route"`, ids[11]),
-		fmt.Sprintf(`href="/pairs/%d#diff"`, ids[13]),
+		fmt.Sprintf(`href="/pairs/%d"`, ids[13]),
 		fmt.Sprintf(`href="/pairs/%d?outcome=no&amp;qty=100&amp;side=buy&amp;target=kalshi%%3AKXFED-26OCT-T3.50&amp;tif=IOC&amp;type=market#route"`, ids[14]),
 		"See a near miss the Fed fact did not close",
 	)
@@ -309,7 +309,7 @@ func TestStartHereGuidedDemoHiddenStep(t *testing.T) {
 	rels := demoRelationships()
 	ids := seedDemoRound(t, st, []canonical.Relationship{rels[1], rels[4]})
 	body := get(s.Handler(), "/").Body.String()
-	wantContains(t, body, fmt.Sprintf(`href="/pairs/%d#diff"`, ids[11]), "Route the opposite side on the complement pair")
+	wantContains(t, body, fmt.Sprintf(`href="/pairs/%d"`, ids[11]), "Route the opposite side on the complement pair")
 	if strings.Contains(body, "See a near miss the Fed fact did not close") {
 		t.Error("near-miss step shown although no pair resolves")
 	}
@@ -318,13 +318,13 @@ func TestStartHereGuidedDemoHiddenStep(t *testing.T) {
 // When the Fed demo pair does not resolve, the featured routable pair's diff
 // and route steps lead the card; other resolved steps are kept (M5-05 e2e).
 func TestWithFeaturedPair(t *testing.T) {
-	near := startStep{Text: "See a near miss the Fed fact did not close", Href: "/pairs/9#diff"}
+	near := startStep{Text: "See a near miss the Fed fact did not close", Href: "/pairs/9"}
 	got := withFeaturedPair([]startStep{near}, 4)
-	if len(got) != 3 || got[0].Href != "/pairs/4#diff" || got[1].Href != "/pairs/4#route" || got[2] != near {
+	if len(got) != 3 || got[0].Href != "/pairs/4" || got[1].Href != "/pairs/4#route" || got[2] != near {
 		t.Errorf("fallback steps = %+v", got)
 	}
-	demo := []startStep{{Text: "demo", Href: "/pairs/7#diff", Demo: true}, near}
-	if got := withFeaturedPair(demo, 4); len(got) != 2 || got[0].Href != "/pairs/7#diff" {
+	demo := []startStep{{Text: "demo", Href: "/pairs/7", Demo: true}, near}
+	if got := withFeaturedPair(demo, 4); len(got) != 2 || got[0].Href != "/pairs/7" {
 		t.Errorf("demo resolved, featured must not be added: %+v", got)
 	}
 	if got := withFeaturedPair(nil, 0); len(got) != 0 {

@@ -6,29 +6,114 @@
 {{if .NoRound}}
 <p>No completed fetch round yet, so there is nothing to compare. Run <code>equinox seed</code> (offline fixtures) or <code>equinox ingest</code>, then <code>equinox match</code>.</p>
 {{else}}
-{{/* M5-05: "Start here" card for the demo moment (NFR-16) */}}
-{{/* M6 P1: guided demo steps resolved by instrument ID; a step that does not resolve is left out */}}
+{{/* ui/plain-language: one sentence for a newcomer, then the guided path as four cards */}}
+<p class="newcomer">Equinox looks for contracts on Kalshi and Polymarket that pay out on the same thing, and shows where buying would be cheapest. It never places real orders.</p>
 {{if .StartSteps}}
 <div class="start-here">
   <h2>Start here</h2>
-  <ol>
+  <ol class="start-cards">
     {{range .StartSteps}}
-    <li><a href="{{.Href}}">{{.Text}}</a>{{if .Note}}<br><small>{{.Note}}</small>{{end}}</li>
+    <li class="start-card">
+      <h3><span class="start-num">{{.Num}}.</span> {{if .Title}}{{.Title}}{{else}}{{.Text}}{{end}}</h3>
+      {{if .Sentence}}<p>{{.Sentence}}</p>{{end}}
+      <a href="{{.Href}}" class="btn-next">{{.Text}}</a>
+    </li>
     {{end}}
-  </ol>
-</div>
-{{else if .FeaturedPair}}
-<div class="start-here">
-  <h2>Start here</h2>
-  <ol>
-    <li><a href="/pairs/{{.FeaturedPair.ID}}#diff">See why two contracts are the same bet</a></li>
-    <li><a href="/pairs/{{.FeaturedPair.ID}}#route">Route a hypothetical order on it</a></li>
   </ol>
 </div>
 {{end}}
 {{if not .FeaturedPair}}
 <p class="note-info">No routable pairs in this round. See <a href="/near-misses">near misses</a> for pairs that were close, or <a href="/eval">eval</a> for matcher performance.</p>
 {{end}}
+{{if not .Groups}}
+<p>Round {{.Round.ID}} has no stored relationships. Run <code>equinox match</code> against it.</p>
+{{end}}
+
+{{/* ui/plain-language: routable pairs as cards; checks and market details live on each pair page */}}
+{{if gt .RoutableCount 0}}
+<section>
+  <h2 id="pairs">Pairs Equinox can route ({{.RoutableCount}})</h2>
+  <ul class="pair-cards">
+    {{range .Routable}}{{range .Pairs}}
+    <li class="pair-tile{{if .IsFlagged}} flagged{{end}}">
+      {{with .Plain}}
+      <p class="tile-head"><span class="badge vb-{{.Kind}}">{{.Badge}}</span></p>
+      <p class="tile-side"><span class="venue-name">{{.A.Venue}}</span> <span{{if .A.Title}} title="{{.A.Title}}"{{end}}>{{.A.Name}}</span></p>
+      <p class="tile-side"><span class="venue-name">{{.B.Venue}}</span> <span{{if .B.Title}} title="{{.B.Title}}"{{end}}>{{.B.Name}}</span></p>
+      {{if .Specific}}<p class="tile-meaning">{{.Lead}}</p>{{end}}
+      {{else}}
+      <p class="tile-side"><span class="venue-name">{{.A.Venue}}</span> {{.A.Title}}</p>
+      <p class="tile-side"><span class="venue-name">{{.B.Venue}}</span> {{.B.Title}}</p>
+      {{end}}
+      {{if .IsFlagged}}<p class="tile-flag">⚠ Check this one: a big price gap with lower confidence.</p>{{end}}
+      <p class="tile-actions"><a href="/pairs/{{.ID}}#route" class="btn-next">Try an order</a> <a href="/pairs/{{.ID}}">Pair #{{.ID}}</a></p>
+    </li>
+    {{end}}{{end}}
+  </ul>
+</section>
+{{end}}
+
+{{/* UI-11: Implies section */}}
+{{if .Implies}}
+<section class="fold-summary">
+  <details id="type-implies">
+  <summary><strong>{{.ImpliesCount}} one-way {{if eq .ImpliesCount 1}}pair{{else}}pairs{{end}}, never routed</strong> <span class="muted">One only covers some of the other's outcomes, so it is not a substitute.</span></summary>
+  <div class="scroll-x">
+  <table class="data stack">
+    <thead>
+      <tr>
+        <th>Pair</th>
+        <th>Contracts</th>
+        <th>Relationship</th>
+        <th>Confidence</th>
+        <th>Checks</th>
+        <th>Market</th>
+      </tr>
+    </thead>
+    <tbody>
+    {{range .Implies.Pairs}}
+      <tr>
+        <td data-label="Pair">
+          <a href="/pairs/{{.ID}}">#{{.ID}}</a>
+          <div><small>round {{$.Round.ID}}</small></div>
+        </td>
+        <td data-label="Contracts">
+          <span class="venue">{{.A.Venue}}</span> <span class="clamp-2" title="{{.A.Title}}">{{.A.Title}}</span><br>
+          <span class="venue">{{.B.Venue}}</span> <span class="clamp-2" title="{{.B.Title}}">{{.B.Title}}</span>
+        </td>
+        <td data-label="Relationship">
+          {{template "badge" .TypeBadge}}
+          <div><small>method {{.Method}}{{if .BasisRisk}} · basis <strong>{{.BasisRisk}}</strong> {{.BasisWord}}{{end}}</small></div>
+        </td>
+        <td data-label="Confidence">{{template "conf" .ConfValue}}</td>
+        <td data-label="Checks">
+          <ul class="checks" aria-label="Term checks">
+            {{range .Checks}}
+            <li><span aria-hidden="true" class="{{.Class}}">{{.Glyph}}</span> {{.Word}}<span class="sr-only">: {{.SR}}</span></li>
+            {{end}}
+          </ul>
+          {{if .VetoPhrase}}<a href="/pairs/{{.ID}}#diff">{{.VetoPhrase}}</a>{{end}}
+        </td>
+        <td data-label="Market">{{template "fbadge" .FreshBadge}}</td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+  </div>
+  </details>
+</section>
+{{end}}
+
+{{/* M5-01, ui/plain-language: related pairs as one line and a link (NFR-01) */}}
+{{if .Related}}
+<section class="fold-summary related-summary">
+  <p><a href="/near-misses"><strong>{{.RelatedCount}} lookalikes we rejected</strong>, with the rule for each ▸</a> <span class="muted">Same subject, different payout; never routed.</span></p>
+</section>
+{{end}}
+
+<details class="tech matches-tech"{{if .HasFilters}} open{{end}}>
+  <summary><span class="tech-title">Filters and technical details</span> <small>counts, sort order, term-check key, fee estimates</small></summary>
+  <div class="tech-body">
 {{/* UI-11: counter strip */}}
 <dl class="strip">
   <div><dt>Round</dt><dd>{{.Round.ID}}</dd></div>
@@ -66,16 +151,13 @@
   <p>Review priority: routable pairs closest to the 0.90 route floor, then most open term differences. Never sorted by edge.</p>
 </form>
 
-{{if not .Groups}}
-<p>Round {{.Round.ID}} has no stored relationships. Run <code>equinox match</code> against it.</p>
-{{end}}
-
+<h3>Every pair in this round, with term checks and market data</h3>
 {{/* UI-11: Routable pairs with new columns */}}
 {{if gt .RoutableCount 0}}
 <section>
   <h2 id="routable">Routable pairs ({{.RoutableCount}})</h2>
   <p>{{.RoutableCount}} {{if eq .RoutableCount 1}}pair{{else}}pairs{{end}} Equinox will route an order across: same bet (equivalent), same bet once a stated fact is applied (equivalent given facts), or exact opposites (complement).</p>
-  <table class="data stack">
+  <div class="scroll-x"><table class="data stack">
     <thead>
       <tr>
         <th>Pair</th>
@@ -130,55 +212,7 @@
       {{end}}
     {{end}}
     </tbody>
-  </table>
-</section>
-{{end}}
-
-{{/* UI-11: Implies section */}}
-{{if .Implies}}
-<section>
-  <h2 id="type-implies">implies ({{.ImpliesCount}})</h2>
-  <p>{{.Implies.Label}}</p>
-  <table class="data stack">
-    <thead>
-      <tr>
-        <th>Pair</th>
-        <th>Contracts</th>
-        <th>Relationship</th>
-        <th>Confidence</th>
-        <th>Checks</th>
-        <th>Market</th>
-      </tr>
-    </thead>
-    <tbody>
-    {{range .Implies.Pairs}}
-      <tr>
-        <td data-label="Pair">
-          <a href="/pairs/{{.ID}}">#{{.ID}}</a>
-          <div><small>round {{$.Round.ID}}</small></div>
-        </td>
-        <td data-label="Contracts">
-          <span class="venue">{{.A.Venue}}</span> <span class="clamp-2" title="{{.A.Title}}">{{.A.Title}}</span><br>
-          <span class="venue">{{.B.Venue}}</span> <span class="clamp-2" title="{{.B.Title}}">{{.B.Title}}</span>
-        </td>
-        <td data-label="Relationship">
-          {{template "badge" .TypeBadge}}
-          <div><small>method {{.Method}}{{if .BasisRisk}} · basis <strong>{{.BasisRisk}}</strong> {{.BasisWord}}{{end}}</small></div>
-        </td>
-        <td data-label="Confidence">{{template "conf" .ConfValue}}</td>
-        <td data-label="Checks">
-          <ul class="checks" aria-label="Term checks">
-            {{range .Checks}}
-            <li><span aria-hidden="true" class="{{.Class}}">{{.Glyph}}</span> {{.Word}}<span class="sr-only">: {{.SR}}</span></li>
-            {{end}}
-          </ul>
-          {{if .VetoPhrase}}<a href="/pairs/{{.ID}}#diff">{{.VetoPhrase}}</a>{{end}}
-        </td>
-        <td data-label="Market">{{template "fbadge" .FreshBadge}}</td>
-      </tr>
-    {{end}}
-    </tbody>
-  </table>
+  </table></div>
 </section>
 {{end}}
 
@@ -188,7 +222,7 @@
   <h2 id="type-related">related ({{.RelatedCount}})</h2>
   <p>{{.RelatedCount}} related {{if eq .RelatedCount 1}}pair{{else}}pairs{{end}}: same event, different payout; never routed.
   {{if .RelatedCut}}{{if eq .Sort "priority"}}Top {{len .Related.Pairs}} by review priority.{{else}}First {{len .Related.Pairs}} in the chosen order.{{end}}{{end}}</p>
-  <table class="data stack">
+  <div class="scroll-x"><table class="data stack">
     <thead>
       <tr>
         <th>Pair</th>
@@ -227,7 +261,7 @@
       </tr>
     {{end}}
     </tbody>
-  </table>
+  </table></div>
   <p><a href="/near-misses">{{if .HasFilters}}See every related pair{{else}}See all {{.RelatedCount}}{{end}} with the rule that separated them →</a></p>
 </section>
 {{end}}
@@ -256,5 +290,7 @@
 {{/* UI-18: Sign rule */}}
 <p class="sign-rule"><small>Net gap sign rule: positive values favor routing via the first venue (A), values in parentheses favor the second venue (B).</small></p>
 
+  </div>
+</details>
 {{end}}
 {{end}}

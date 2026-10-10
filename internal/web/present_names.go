@@ -193,17 +193,13 @@ func venueDate(t time.Time, tz string) time.Time {
 	return t.In(loc)
 }
 
-// titleName trims a venue title into a name: no leading "Will", no trailing
-// "?", Kalshi's " — Above 4.25%" option suffix dropped when the title already
-// says it, and long titles cut at a word boundary.
+// titleName trims a venue title into a name: Kalshi's " — Above 4.25%"
+// option suffix is dropped (the title already says it) and long titles are
+// cut at a word boundary. The question form is kept, so it stays grammatical.
 func titleName(title string) string {
 	t := strings.TrimSpace(title)
 	if i := strings.Index(t, " — "); i > 0 {
 		t = strings.TrimSpace(t[:i])
-	}
-	t = strings.TrimSuffix(t, "?")
-	if strings.HasPrefix(t, "Will ") {
-		t = capitalize(strings.TrimPrefix(t, "Will "))
 	}
 	if r := []rune(t); len(r) > maxTitleName {
 		cut := string(r[:maxTitleName])

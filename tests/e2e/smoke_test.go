@@ -117,7 +117,7 @@ func TestSmoke_DemoPath(t *testing.T) {
 	if !strings.Contains(body, `<div class="start-here">`) {
 		t.Error("GET /: start-here card missing")
 	}
-	diffLink := fmt.Sprintf(`href="/pairs/%d#diff"`, pairID)
+	diffLink := fmt.Sprintf(`href="/pairs/%d"`, pairID)
 	routeLink := fmt.Sprintf(`href="/pairs/%d#route"`, pairID)
 	if !strings.Contains(body, diffLink) {
 		t.Errorf("GET /: start-here card missing diff link %s", diffLink)
@@ -272,7 +272,7 @@ func readPage(t *testing.T, what string, resp *http.Response) string {
 var (
 	pairLinkRe    = regexp.MustCompile(`href="/pairs/([0-9]+)"`)
 	explanationRe = regexp.MustCompile(`(?s)<p class="explanation">\s*(.*?)\s*</p>`)
-	chosenRe      = regexp.MustCompile(`(?s)<h3>Chosen legs</h3>\s*<table[^>]*>.*?<span class="venue">([a-z]+)</span>`)
+	chosenRe      = regexp.MustCompile(`(?s)<h[3-5]>Chosen legs</h[3-5]>\s*(?:<div class="scroll-x">\s*)?<table[^>]*>.*?<span class="venue">([a-z]+)</span>`)
 )
 
 // firstEquivalentPair finds the routable section (UI-03 markup change) and

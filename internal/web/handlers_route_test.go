@@ -938,9 +938,11 @@ func TestM508LeadSentenceNotRouted(t *testing.T) {
 		"too shallow",                              // exclusion table phrase
 	)
 
-	// Should NOT show reason codes
-	if strings.Contains(body, "insufficient_depth") {
-		t.Error("should show 'too shallow' not 'insufficient_depth' code")
+	// Reason codes appear only in the audit layer (ui/plain-language: codes
+	// are translated at the point of use and kept under Technical details).
+	plain, _, _ := strings.Cut(body, `<details class="tech">`)
+	if strings.Contains(plain, "insufficient_depth") {
+		t.Error("should show 'too shallow' not 'insufficient_depth' code outside Technical details")
 	}
 }
 
