@@ -128,7 +128,7 @@ smoke-live: ## Live smoke test against the live URL (M4-05)
 # Cloud Run deploys (M1-02, D-033). Resources come from scripts/gcp-bootstrap.sh.
 GCP_PROJECT ?= peak6-equinox-510816
 GCP_REGION  ?= us-central1
-SERVICE      := equinox
+SERVICE      := peak6-equinox
 RUN_SA       := equinox-run@$(GCP_PROJECT).iam.gserviceaccount.com
 SQL_INSTANCE := $(GCP_PROJECT):$(GCP_REGION):equinox-pg
 IMAGE        := $(GCP_REGION)-docker.pkg.dev/$(GCP_PROJECT)/equinox/$(SERVICE)
