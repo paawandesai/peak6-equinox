@@ -64,6 +64,7 @@ var templateFuncs = template.FuncMap{
 	"httpURL": httpURL,
 	// formatTime formats a time.Time in the user's chosen timezone (M3-08).
 	"formatTime": formatTime,
+	"factDate":   factDate,
 	// formatTimeCompact formats a time.Time in the user's timezone compactly (M5-11).
 	"formatTimeCompact": formatTimeCompact,
 	// Age formats a duration as a human-readable age (UI-13).

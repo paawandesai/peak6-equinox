@@ -112,9 +112,10 @@
     {{if .Facts}}
     <p>Each fact is reviewed data from <code>config/facts.yaml</code> (FR-10). For <em>equivalent_given_facts</em> the verdict rests on them; for a <em>related</em> verdict they are the facts that were tried and did not close the gap.</p>
     <table class="data facts">
-      <thead><tr><th>Fact</th><th>Value</th><th>Source</th><th>As of</th></tr></thead>
-      <tbody>{{range .Facts}}<tr><td><code>{{.Key}}</code></td><td>{{.Value}}</td><td>{{with httpURL .Source}}<a href="{{.}}" rel="noopener noreferrer">{{.}}</a>{{else}}{{.Source}}{{end}}</td><td>{{formatTime .AsOf $.Timezone}}</td></tr>{{end}}</tbody>
+      <thead><tr><th>Fact</th><th>Value</th><th>Source</th><th>As of (date)</th></tr></thead>
+      <tbody>{{range .Facts}}<tr><td><code>{{.Key}}</code></td><td>{{.Value}}</td><td>{{with httpURL .Source}}<a href="{{.}}" rel="noopener noreferrer">{{.}}</a>{{else}}{{.Source}}{{end}}</td><td><time datetime="{{factDate .AsOf}}">{{factDate .AsOf}}</time></td></tr>{{end}}</tbody>
     </table>
+    <p><small>As-of values are calendar dates, as written in <code>config/facts.yaml</code> and in the explanation below; they are not times, so they are not shifted to {{$.Timezone}}.</small></p>
     {{else}}
     <p>None: this verdict rests on the contract terms alone.</p>
     {{end}}
