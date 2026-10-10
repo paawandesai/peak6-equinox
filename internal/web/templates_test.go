@@ -36,8 +36,11 @@ func TestTemplatesHaveNoInlineScriptOrStyle(t *testing.T) {
 		}
 		src := string(raw)
 		for _, tag := range scriptTagRe.FindAllString(src, -1) {
-			if !strings.Contains(tag, `src="{{.Assets.HtmxURL}}"`) || !strings.Contains(tag, `integrity="{{.Assets.HtmxSRI}}"`) || !strings.Contains(tag, `crossorigin="anonymous"`) {
-				t.Errorf("%s: script tag is not the pinned htmx with SRI: %s", e.Name(), tag)
+			// M4-77: allow htmx (pinned with SRI) and timezone-local.js (same-origin, CSP-compliant)
+			isHtmx := strings.Contains(tag, `src="{{.Assets.HtmxURL}}"`) && strings.Contains(tag, `integrity="{{.Assets.HtmxSRI}}"`) && strings.Contains(tag, `crossorigin="anonymous"`)
+			isTimezoneLocal := strings.Contains(tag, `src="/static/timezone-local.js"`) && strings.Contains(tag, `defer`)
+			if !isHtmx && !isTimezoneLocal {
+				t.Errorf("%s: script tag is not htmx or timezone-local.js: %s", e.Name(), tag)
 			}
 		}
 		if m := inlineHandlerRe.FindString(src); m != "" {
@@ -88,7 +91,11 @@ func TestLayoutPinsCDNAssetsWithSRI(t *testing.T) {
 			t.Errorf("SRI %q is not a base64 sha384", sri)
 		}
 	}
-	if strings.Count(body, "<script") != 1 {
-		t.Errorf("page has %d script tags, want exactly the htmx one", strings.Count(body, "<script"))
+	// M4-77: 2 script tags (htmx + timezone-local.js)
+	if strings.Count(body, "<script") != 2 {
+		t.Errorf("page has %d script tags, want 2 (htmx + timezone-local.js)", strings.Count(body, "<script"))
+	}
+	if !strings.Contains(body, `<script src="/static/timezone-local.js" defer>`) {
+		t.Error("page missing timezone-local.js script")
 	}
 }

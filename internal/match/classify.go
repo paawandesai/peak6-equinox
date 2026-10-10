@@ -77,6 +77,16 @@ func classify(a, b canonical.Instrument, blocked *blockReason, vetoes []canonica
 		return verdict{typ: canonical.RelUnrelated, confidence: conf,
 			explanation: fmt.Sprintf("unrelated: blocked on %s (%s).", blocked.field, blocked.detail)}
 	case len(vetoes) == 0:
+		// D-109: try Fed same-metric pairs first, even when there are no vetoes.
+		// Exact matches on the Fed grid should report equivalent_given_facts to document
+		// that the grid constraint was checked.
+		if a.Category == canonical.CategoryFed && b.Category == canonical.CategoryFed &&
+			a.Terms.Metric == b.Terms.Metric && a.Terms.Metric != canonical.Unknown {
+			if d, _ := deriveSameMetricFed(a, b, vetoes, f); d != nil {
+				return verdict{typ: d.typ, confidence: derivedConfidence(a, b, d), explanation: derivedExplanation(a, b, vetoes, d),
+					facts: d.facts, derived: d}
+			}
+		}
 		return verdict{typ: canonical.RelEquivalent, confidence: equivalentConfidence(a, b), explanation: equivalentExplanation(a, b)}
 	}
 	d, note := derive(a, b, vetoes, f)

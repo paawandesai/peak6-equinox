@@ -178,6 +178,85 @@ func deriveWithFacts(a, b canonical.Instrument, f facts.Set) (*derivation, deriv
 	return nil, note
 }
 
+// deriveSameMetricFed handles Fed pairs where both sides have the same metric
+// (rate_change) but different buckets (D-109). This applies to KXFEDDECISION
+// markets where Kalshi and Polymarket both describe change buckets for the same
+// meeting. With the 25 bp grid, "Cut >25bps" becomes "Cut >=50bps" which matches
+// Polymarket's "decrease by 50+ bps".
+//
+// This also handles KXRATECUTCOUNT pairs (count of rate cuts in 2026) where both
+// venues count 25bp cuts the same way, given the fed_rate_step fact that every
+// 2026 move is a multiple of 25bp.
+func deriveSameMetricFed(a, b canonical.Instrument, _ []canonical.Veto, f facts.Set) (*derivation, derivationNote) {
+	// Only for Fed category with same subject.
+	if a.Category != canonical.CategoryFed || b.Category != canonical.CategoryFed ||
+		a.Terms.Subject != fedSubject || b.Terms.Subject != fedSubject {
+		return nil, derivationNote{}
+	}
+
+	// Only when both have the same metric (both rate_change, or both another metric).
+	if a.Terms.Metric != b.Terms.Metric || a.Terms.Metric == canonical.Unknown {
+		return nil, derivationNote{}
+	}
+
+	// Must be on the same meeting.
+	if !onSameFedMeetingViaFacts(a, b, f) {
+		return nil, derivationNote{}
+	}
+
+	// Get meeting dates fact for attribution.
+	meetingsFact, meetingsOK := f.Get("fed_meeting_dates")
+	used := []canonical.FactUse{}
+	if meetingsOK {
+		used = append(used, meetingsFact.Use())
+	}
+
+	// Try to derive with grid rounding.
+	step, stepOK := f.Get(FactFedRateStep)
+	if !stepOK {
+		return nil, derivationNote{facts: used, reason: fmt.Sprintf("fact %s (the rate grid) is needed to compare same-metric Fed pairs", FactFedRateStep)}
+	}
+	used = append(used, step.Use())
+
+	stepSize, err := step.Decimal()
+	if err != nil || !stepSize.IsPositive() {
+		return nil, derivationNote{facts: used, reason: fmt.Sprintf("fact %s is not a positive number (%q)", FactFedRateStep, step.Value)}
+	}
+
+	pa, okA := propositionOf(a.Terms)
+	pb, okB := propositionOf(b.Terms)
+	if !okA || !okB {
+		return nil, derivationNote{facts: used, reason: "a proposition could not be read"}
+	}
+
+	// Apply grid rounding.
+	ga := pa.onGrid(stepSize)
+	gb := pb.onGrid(stepSize)
+
+	// Try exact equality first, then on-grid equality, then derivations.
+	if pa.equal(pb) {
+		return &derivation{typ: canonical.RelEquivalentGivenFacts, facts: used, meeting: true,
+			detail: fmt.Sprintf("same %s proposition: %s and %s coincide", a.Terms.Metric, pa, pb)}, derivationNote{facts: used}
+	}
+
+	if ga.equal(gb) {
+		onGrid := fmt.Sprintf("on the %s grid (%s) %s is %s and %s is %s", step.Value, FactFedRateStep, pa, ga, pb, gb)
+		return &derivation{typ: canonical.RelEquivalentGivenFacts, facts: used, meeting: true, grid: true,
+			detail: onGrid + ": the same set"}, derivationNote{facts: used}
+	}
+
+	// Try complement and implies on grid.
+	if d := deriveFrom(ga, gb, used); d != nil {
+		d.meeting, d.grid = true, true
+		onGrid := fmt.Sprintf("on the %s grid (%s) %s is %s and %s is %s", step.Value, FactFedRateStep, pa, ga, pb, gb)
+		d.detail = onGrid + "; " + d.detail
+		return d, derivationNote{facts: used}
+	}
+
+	onGrid := fmt.Sprintf("on the %s grid (%s) %s is %s and %s is %s", step.Value, FactFedRateStep, pa, ga, pb, gb)
+	return nil, derivationNote{facts: used, reason: onGrid + ": the sets neither coincide, complement nor contain each other"}
+}
+
 // fedSides identifies which instrument states the level and which the change.
 func fedSides(a, b canonical.Instrument) (level, change canonical.Instrument, ok bool) {
 	if a.Category != canonical.CategoryFed || b.Category != canonical.CategoryFed ||
