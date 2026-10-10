@@ -248,7 +248,7 @@ func caveats(a, b canonical.Instrument) []string {
 	return c
 }
 
-// buildEvidence constructs the MatcherEvidence for a verdict (UI-20, D-114).
+// buildEvidence constructs the MatcherEvidence for a verdict (UI-20, D-115).
 // It records the prior, per-term contributions, total, and for near misses
 // (pairs with vetoes), the pre-veto score and required score.
 func buildEvidence(a, b canonical.Instrument, v verdict, vetoes []canonical.Veto) canonical.MatcherEvidence {

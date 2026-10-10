@@ -238,7 +238,7 @@ Stored in the same `routing_decisions.decision` jsonb; no SQL migration needed. 
 **Branch:** ao/ui-v2/ui-20-matcher-evidence (stacked on !88 ao/matcher/m4-72-fed-formats)
 **Status:** Draft MR opened, depends on !88
 
-Implemented UI-20 (D-114, Tier 2): matcher evidence recording. The matcher now stores confidence calculation components with every relationship: prior (base confidence), per-term signed contributions (e.g. unknown_unit_a −0.02, deadline_gap_hours −0.05), total (sum, equals stored confidence), and for near misses, pre-veto score (what equivalentConfidence would return before vetoes) + required score (0.90).
+Implemented UI-20 (D-115, Tier 2): matcher evidence recording. The matcher now stores confidence calculation components with every relationship: prior (base confidence), per-term signed contributions (e.g. unknown_unit_a −0.02, deadline_gap_hours −0.05), total (sum, equals stored confidence), and for near misses, pre-veto score (what equivalentConfidence would return before vetoes) + required score (0.90).
 
 **Backend changes:**
 - `canonical.MatcherEvidence` struct: `Prior`, `Contributions []ContributionTerm`, `Total`, `PreVetoScore` *decimal, `RequiredScore` *decimal
@@ -259,7 +259,7 @@ Implemented UI-20 (D-114, Tier 2): matcher evidence recording. The matcher now s
 - Relationship validation: evidence.total == confidence
 
 **Docs:**
-- D-114 entry in `docs/decisions.md`
+- D-115 entry in `docs/decisions.md`
 - "Awaiting human veto" row in `docs/status.md`
 - This log entry
 
@@ -289,4 +289,8 @@ Implemented UI-20 (D-114, Tier 2): matcher evidence recording. The matcher now s
 ## 2026-10-10
 
 - **UI-24 session 100 (AO worker)** Started UI-24 (issue #56, ao/ui-v2/ui-24-eval-llm-columns → integration/m4-final). Merged origin/integration/m4-final (fast-forward, includes UI-23 !83). Added D-112 (Tier 2 eval contract extension: optional `rules []TypeSummary` field for dual-method evaluation), status.md veto entry. Extended Summary struct, updated 4 call sites (eval.go, summary_test.go), removed hardcoded "rules+llm: not evaluated (M3)" note, updated contract test. Tests pass (go test ./internal/eval -run Summary, go build ./...). Next: implement dual-method evaluation logic in eval command, then web handler + template.
+
+## 2026-10-10 · M4-79: Phase 2 measurement and runbook, no deploy (agent `peak6-equinox-102`)
+
+**What:** issue #79 Phase 2 prep, D-114. The orchestrator held the production deploy, match and pin pending the D-102 timing decision. Re-measured a fresh local live round (public GETs, scratch DB): 94 routable-type pairs on `2d9c1c5` and on `8b5b0c8` (77 `equivalent` nominee, 16 `equivalent_given_facts` + 1 `complement` Fed), of which 12 are router-eligible. `equinox eval`: `equivalent` precision 1.0000, 0 FP on `equivalent`, `equivalent_given_facts` and `complement`. Found that the `equinox-match` job pins an older image digest than the service, so the runbook updates the job image after `make deploy`. Wrote docs/m4-79-phase2-runbook.md (deploy, job image, ingest, match, pin, verify, rollback). · docs/{m4-79-phase2-runbook.md,decisions.md,status.md,log.md}
 - **2026-10-09 19:48 CT (operator heartbeat):** UI-22 (#54) worker continued after integration/m4-final merge. MR !102 pushed at 5ad48e0: llm_verify_runs table (100-run retention), relationship links (llm_cache_key, llm_run_id, llm_verified_at), admin runs table (latest 20), pair rationale details (Evidence from verdict, model, run id, timestamp), D-113 Tier 2 entry (renumbered; D-112 taken by UI-24). Migration 0006, store methods tested, builds/vets cleanly. Awaiting Cursor review.
