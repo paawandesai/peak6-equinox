@@ -66,7 +66,7 @@ Follow these numbered steps to see the full classification → routing → decis
 
 The live service is deployed on Cloud Run (us-central1) with Cloud SQL Postgres. A Cloud Scheduler job runs one fetch round against Kalshi and Polymarket every 5 minutes. The demo is **read-only and simulated** — no real orders are ever placed.
 
-**Pinned demo round:** Round 537 as of 2026-10-08 17:46:04 EDT (to be updated by M4-03 after the matcher fix #39 merges and deploys). Pages serve from this stored round, so the demo is stable and makes zero venue API calls (confirmed by NFR-04 test).
+**Pinned demo round:** Round 904 as of 2026-10-10 04:40 UTC. Pages serve from this stored round, so the demo is stable and makes zero venue API calls (confirmed by NFR-04 test).
 
 Health check: [/health](https://peak6-equinox-287867547175.us-central1.run.app/health) (Cloud Run reserves `/healthz`, see D-052).
 

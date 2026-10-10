@@ -1,6 +1,6 @@
 # M4-79 Phase 2: deploy, re-match and pin a fresh live round (runbook)
 
-**Issue:** #79 · **Decision:** D-114 (plan), D-111 (Phase 1 diagnosis) · **Status:** NOT RUN. Waiting for operator / Paawan sign-off on *when* to deploy: `integration/m4-final` now, or `main` after the final cumulative CI run (M4-07, D-102). The steps are the same either way; only the deployed sha changes.
+**Issue:** #79 · **Decision:** D-114 (plan), D-111 (Phase 1 diagnosis) · **Status:** EXECUTED (2026-10-10 04:40 UTC). Deployed main 41b8202 as service `peak6-equinox`, revision `peak6-equinox-00003-rbj`; ingested, matched and pinned round 904; verified 12 routable pairs (meets >= 10 target). The old `equinox` service is deleted.
 
 ## Why a deploy is needed
 

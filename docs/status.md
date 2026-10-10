@@ -7,7 +7,7 @@ _Last updated: 2026-10-10 by M4-08 worker (integration/m4-final at merge: #72 Fe
 
 **M4 demo and submission (target freeze Sun 2026-10-11 09:00 CT, submit by 11:00 CT):** Exit criteria from plan.md § M4:
   1. Every brief deliverable present and linked from README — **MET** (M4-01 !59 merged: live URL, setup, architecture summary, 60-second walkthrough, recording placeholder pending M4-H1 #67; deliverables 2/5/6 already merged)
-  2. Live URL and pinned round both pass E2E smoke test — **done**: deployed 2026-10-10 04:36 UTC: main 41b8202 (!97 at 7ea4b21 plus /eval hotfix !108) as the NEW Cloud Run service `peak6-equinox` revision `peak6-equinox-00003-rbj`, https://peak6-equinox-287867547175.us-central1.run.app (Paawan 2026-10-09 9:15 PM CT; same image source, env, secrets, Cloud SQL, service account and settings as the old `equinox` service, which was deleted after verification). Fresh prod round 904 (collected by the new service), equinox-match run, round 904 pinned: **12 routable pairs** (11 `equivalent_given_facts` + 1 `complement`, all confidence >= 0.90). `scripts/smoke-live.sh` passed against the new URL. Measured p95: GET / 726 ms (above the NFR-01 500 ms page target; flagged), POST /route 267 ms. All public routes returned 200 (/, /near-misses, /pairs/2390, the /route POST, /eval, /log, /health, /version commit 41b8202).
+  2. Live URL and pinned round both pass E2E smoke test — **done except spend line (pending: billing page)**: deployed 2026-10-10 04:36 UTC: main 41b8202 (!97 at 7ea4b21 plus /eval hotfix !108) as the NEW Cloud Run service `peak6-equinox` revision `peak6-equinox-00003-rbj`, https://peak6-equinox-287867547175.us-central1.run.app (Paawan 2026-10-09 9:15 PM CT; same image source, env, secrets, Cloud SQL, service account and settings as the old `equinox` service, which was deleted after verification). Fresh prod round 904 (collected by the new service), equinox-match run, round 904 pinned: **12 routable pairs** (11 `equivalent_given_facts` + 1 `complement`, all confidence >= 0.90). `scripts/smoke-live.sh` passed against the new URL. Measured p95: GET / 726 ms (above the NFR-01 500 ms page target; flagged), POST /route 267 ms. All public routes returned 200 (/, /near-misses, /pairs/2390, the /route POST, /eval, /log, /health, /version commit 41b8202). Spend line (status.md:277) PENDING: requires manual GCP billing page and Anthropic console access.
   3. After freeze, only docs and demo fixes — **pending** (freeze is 2026-10-11 09:00 CT)
 
 **M2 exit verification (2026-10-07 ~18:00 UTC):** **MISS.** All M2 code tickets merged and deployed to prod (revision equinox-00010-h9v); docs/equivalence.md landed; golden/eval machinery + back-test complete. Exit criteria status:
@@ -22,18 +22,18 @@ Next operator action (Tier 2): human verification of Fed demo rendering (criteri
 
 **Previous:** M1 verification HIT WITH CAVEATS (2026-10-06 ~21:55 CT).
 
-**M4-03 pinned demo round (2026-10-09 14:28 UTC):**
-- **Round ID:** 735
-- **Finished at:** 2026-10-09 14:15:12 UTC
+**M4-03 pinned demo round (2026-10-10 04:40 UTC):**
+- **Round ID:** 904
+- **Finished at:** 2026-10-10 (exact time from round metadata)
 - **Relationship counts:**
   - equivalent: 0
-  - equivalent_given_facts: 1 (Fed demo pair: kalshi:KXFED-26OCT-T4.25 ↔ polymarket Will the Fed increase interest rates by 50+ bps after October 2026 meeting)
+  - equivalent_given_facts: 11
   - complement: 1
-  - implies: 25
-  - related: 11,223 (613 near misses stored)
-  - unrelated: 42,090
-- **Total stored:** 613 relationships
-- **Verification:** pinned round serves on / with demo banner; Scheduler continues collecting (rounds 736-738+ after pin); NFR-04 test passes in CI (zero venue calls for pinned pages)
+  - implies: (not counted in this verification)
+  - related: (near misses count not recorded)
+  - unrelated: (not counted)
+- **Total routable pairs (conf >= 0.90):** 12 (11 equivalent_given_facts + 1 complement, all Fed)
+- **Verification:** pinned round serves on https://peak6-equinox-287867547175.us-central1.run.app with 12 routable pairs; `scripts/smoke-live.sh` passed; NFR-04 test passes in CI (zero venue calls for pinned pages)
 
 
 ## Done
@@ -83,7 +83,7 @@ Next operator action (Tier 2): human verification of Fed demo rendering (criteri
 
 ## In progress
 
-- M4-07 final deploy (#65): done (D-102). deployed 2026-10-10 04:36 UTC: main 41b8202 (!97 at 7ea4b21 plus /eval hotfix !108) as the NEW Cloud Run service `peak6-equinox` revision `peak6-equinox-00003-rbj`, https://peak6-equinox-287867547175.us-central1.run.app (Paawan 2026-10-09 9:15 PM CT; same image source, env, secrets, Cloud SQL, service account and settings as the old `equinox` service, which was deleted after verification). Fresh prod round 904 (collected by the new service), equinox-match run, round 904 pinned: **12 routable pairs** (11 `equivalent_given_facts` + 1 `complement`, all confidence >= 0.90). `scripts/smoke-live.sh` passed against the new URL. Measured p95: GET / 726 ms (above the NFR-01 500 ms page target; flagged), POST /route 267 ms. All public routes returned 200 (/, /near-misses, /pairs/2390, the /route POST, /eval, /log, /health, /version commit 41b8202).
+- M4-07 final deploy (#65): done except spend line (pending: billing page). deployed 2026-10-10 04:36 UTC: main 41b8202 (!97 at 7ea4b21 plus /eval hotfix !108) as the NEW Cloud Run service `peak6-equinox` revision `peak6-equinox-00003-rbj`, https://peak6-equinox-287867547175.us-central1.run.app (Paawan 2026-10-09 9:15 PM CT; same image source, env, secrets, Cloud SQL, service account and settings as the old `equinox` service, which was deleted after verification). Fresh prod round 904 (collected by the new service), equinox-match run, round 904 pinned: **12 routable pairs** (11 `equivalent_given_facts` + 1 `complement`, all confidence >= 0.90). `scripts/smoke-live.sh` passed against the new URL. Measured p95: GET / 726 ms (above the NFR-01 500 ms page target; flagged), POST /route 267 ms. All public routes returned 200 (/, /near-misses, /pairs/2390, the /route POST, /eval, /log, /health, /version commit 41b8202). Spend line (status.md:277) PENDING: requires manual GCP billing page and Anthropic console access.
 - M4-08 final docs (#66): this MR !89, ready for integration → main
 - M4-H1 backup recording (#67): Paawan human item after M4-07
 - #74-#78 UI-v2 polish: graded-first tier (operator may merge to integration or defer)
@@ -143,7 +143,7 @@ None.
 | D-103 | UI-21: Rule layers columns (rules_summary, clarifications, clarifications_updated_at) added to instruments table. Kalshi rules_secondary captured as clarifications; Polymarket has no separate layers. Not fed to matcher/LLM in this ticket. Migration 0004. Tier 2 schema change. | 2026-10-09 |
 | D-111 | M4-79 (#79) Phase 1: live round 735 shows 2 routable pairs because it predates the deployed M4-70 nominee fix; fresh local live round gives 79 by type (94 with !88), 12 router-eligible with !88. No universe change. Phase 2 plan: after !88 merges and deploy, ingest + match + pin a new round and verify Routable ≥ 10 on `/`. Tier 2 (pin/deploy plan; needs sign-off). | 2026-10-10 |
 | D-113 | UI-22 (#54): llm_verify_runs table (last 100 runs pruned on insert) + relationship links (llm_cache_key, llm_run_id, llm_verified_at). Rationale=LLMVerdict.Evidence (already strict-decoded, length-capped). llm_verify_last_run singleton stays (not a view). Migration 0006. Tier 2 schema change. | 2026-10-09 |
-| D-114 | M4-79 (#79) Phase 2 runbook: on `2d9c1c5`/`8b5b0c8` a fresh local live round gives 94 routable-type pairs (77 eq + 16 egf + 1 complement), 12 router-eligible; golden gate holds (equivalent precision 1.0000, zero hard negatives predicted routable). The `equinox-match` job image is stale and must be updated after deploy. Deploy, match and pin NOT run: waiting on the decision between deploying integration/m4-final now and the final main deploy (D-102). Runbook: docs/m4-79-phase2-runbook.md. | 2026-10-10 |
+| D-114 | M4-79 (#79) Phase 2 runbook: on `2d9c1c5`/`8b5b0c8` a fresh local live round gives 94 routable-type pairs (77 eq + 16 egf + 1 complement), 12 router-eligible; golden gate holds (equivalent precision 1.0000, zero hard negatives predicted routable). The `equinox-match` job image is stale and must be updated after deploy. Phase 2 executed 2026-10-10 04:40 UTC: deployed main 41b8202 as service `peak6-equinox`, ingested/matched/pinned round 904, verified 12 routable pairs (meets >= 10 target). Runbook: docs/m4-79-phase2-runbook.md. | 2026-10-10 |
 
 ## Kept decisions (veto closed)
 
