@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shopspring/decimal"
+
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/store"
 )
@@ -50,6 +52,10 @@ type pairPage struct {
 	QuoteRef        time.Time // M6 P3: the time quote ages are measured against
 	EvidenceFooter  string    // UI-20: "prior + Σ = total → confidence X.XX" or "not recorded"
 	HasEvidence     bool      // UI-20: whether evidence was recorded
+	// M6 P6: "base 0.97 for equivalent_given_facts, −0.02 × 2 for unknown edge
+	// rules = 0.93", empty when no evidence was stored.
+	ConfidenceBreakdown string
+	RouteDefaults       string // M6 P6: "Defaults: buy YES 100 contracts, market IOC ..."
 	// UI-22: LLM verifier rationale (hidden when pair was never verified)
 	HasLLMRationale bool
 	LLMRationale    []string // Evidence from verdict (up to 3 entries × 200 chars)
@@ -392,6 +398,7 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 		NearMiss:        rel.Type == canonical.RelRelated,
 		Types:           allTypeViews(),
 		Form:            defaultRouteForm(rel),
+		RouteDefaults:   routeDefaultsText(defaultRouteForm(rel)),
 		// UI-22: LLM rationale
 		HasLLMRationale: hasLLM,
 		LLMRationale:    llmData.Evidence,
@@ -446,17 +453,12 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 		q.dest.Venue = string(canonical.VenueOf(q.id))
 		q.dest.Tz = tz
 	}
-	// UI-20: Build evidence footer
+	// UI-20, M6 P6: the evidence footer and the verdict panel spell out how
+	// the confidence was built, from the stored evidence.
 	if rel.Evidence != nil {
 		data.HasEvidence = true
-		// Format: "prior + Σ = total → confidence X.XX"
-		// Count non-prior contributions
-		contribCount := len(rel.Evidence.Contributions) - 1 // excluding prior
-		data.EvidenceFooter = fmt.Sprintf("%s + Σ(%d) = %s → confidence %s",
-			rel.Evidence.Prior.StringFixed(2),
-			contribCount,
-			rel.Evidence.Total.StringFixed(2),
-			rel.Confidence.StringFixed(2))
+		data.ConfidenceBreakdown = confidenceBreakdown(rel.Type, *rel.Evidence)
+		data.EvidenceFooter = data.ConfidenceBreakdown
 	} else {
 		data.HasEvidence = false
 		data.EvidenceFooter = "not recorded"
@@ -632,4 +634,82 @@ func quoteFor(ctx context.Context, st *store.Store, roundID int64, id string, no
 		return canonical.Quote{}, err
 	}
 	return q.Quote, nil
+}
+
+// contributionLabels names matcher evidence terms (internal/match buildEvidence)
+// in plain words; the _a/_b side suffix is dropped so both sides group together.
+var contributionLabels = map[string]string{
+	"unknown_unit":       "unknown unit",
+	"unknown_edge_rules": "unknown edge rules",
+	"deadline_gap_hours": "deadline gap",
+	"deadline_defaulted": "defaulted deadline",
+	"fact_applied":       "fact applied",
+}
+
+// contributionLabel is the plain-words label for an evidence term.
+func contributionLabel(term string) string {
+	base := strings.TrimSuffix(strings.TrimSuffix(term, "_a"), "_b")
+	if l, ok := contributionLabels[base]; ok {
+		return l
+	}
+	return strings.ReplaceAll(term, "_", " ")
+}
+
+// confidenceBreakdown renders stored matcher evidence as one line, e.g.
+// "base 0.97 for equivalent_given_facts, −0.02 × 2 for unknown edge rules =
+// 0.93" (M6 P6). Equal deductions with the same label are grouped. When the
+// terms do not add up to the stored total (a clamped score), both are shown.
+func confidenceBreakdown(typ canonical.RelationshipType, ev canonical.MatcherEvidence) string {
+	type group struct {
+		label string
+		value decimal.Decimal
+		n     int
+	}
+	var groups []group
+	sum := ev.Prior
+	for _, c := range ev.Contributions {
+		if c.Term == "prior" {
+			continue
+		}
+		sum = sum.Add(c.Value)
+		label := contributionLabel(c.Term)
+		found := false
+		for i := range groups {
+			if groups[i].label == label && groups[i].value.Equal(c.Value) {
+				groups[i].n++
+				found = true
+				break
+			}
+		}
+		if !found {
+			groups = append(groups, group{label: label, value: c.Value, n: 1})
+		}
+	}
+	parts := []string{fmt.Sprintf("base %s for %s", ev.Prior.StringFixed(2), typ)}
+	for _, g := range groups {
+		v := signedFixed(g.value)
+		if g.n > 1 {
+			v = fmt.Sprintf("%s × %d", v, g.n)
+		}
+		parts = append(parts, v+" for "+g.label)
+	}
+	if len(groups) == 0 {
+		parts = append(parts, "no deductions")
+	}
+	out := strings.Join(parts, ", ")
+	if sum.Equal(ev.Total) {
+		return out + " = " + ev.Total.StringFixed(2)
+	}
+	return fmt.Sprintf("%s = %s; stored confidence %s", out, sum.StringFixed(2), ev.Total.StringFixed(2))
+}
+
+// signedFixed formats a contribution with a typographic sign: −0.02, +0.01.
+func signedFixed(v decimal.Decimal) string {
+	switch {
+	case v.IsNegative():
+		return "−" + v.Abs().StringFixed(2)
+	case v.IsPositive():
+		return "+" + v.StringFixed(2)
+	}
+	return "0.00"
 }

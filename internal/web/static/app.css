@@ -684,3 +684,11 @@ details.inline-details ul {
   margin-left: 1.5em;
 }
 /* M5-12a end */
+
+/* M6 P6 start */
+/* Diff markers stated in the legend: struck through for A, underlined for B. */
+table.terms del, .diff-legend del { text-decoration: line-through; }
+table.terms ins, .diff-legend ins { text-decoration: underline; }
+.diff-legend del { background: var(--eq-danger-bg); color: var(--eq-danger); }
+.diff-legend ins { background: var(--eq-ok-bg); color: var(--eq-ok); }
+/* M6 P6 end */
