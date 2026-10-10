@@ -613,3 +613,22 @@ svg.bars .missing { fill: none; stroke: var(--eq-unknown); }
 td.log-when { white-space: nowrap; font-size: var(--eq-text-s); }
 td.log-when time { font-weight: 500; }
 /* M5-11 end */
+
+/* M5-12a start: eval page readability */
+details.inline-details {
+  display: inline;
+  margin-left: 0.5em;
+}
+details.inline-details summary {
+  display: inline;
+  cursor: pointer;
+  color: var(--pico-primary);
+}
+details.inline-details summary:hover {
+  text-decoration: underline;
+}
+details.inline-details ul {
+  margin-top: 0.5em;
+  margin-left: 1.5em;
+}
+/* M5-12a end */
