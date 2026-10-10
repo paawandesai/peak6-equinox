@@ -1,6 +1,7 @@
 package web
 
 import (
+	"sort"
 	"strconv"
 	"time"
 
@@ -191,14 +192,9 @@ func buildSpreadSeries(aID, bID string, relType canonical.RelationshipType, pts 
 	for t := range timesMap {
 		times = append(times, t)
 	}
-	// Sort in ascending order
-	for i := 0; i < len(times); i++ {
-		for j := i + 1; j < len(times); j++ {
-			if times[i].After(times[j]) {
-				times[i], times[j] = times[j], times[i]
-			}
-		}
-	}
+	sort.Slice(times, func(i, j int) bool {
+		return times[i].Before(times[j])
+	})
 	// Calculate spread for each time where both mids exist
 	var line []byte
 	var lastDot *chartPt
