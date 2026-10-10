@@ -220,14 +220,39 @@ func TestPairDiffCounts(t *testing.T) {
 
 func TestPairHistoryEmpty(t *testing.T) {
 	s, st := newTestServer(t)
-	sd := seedPublic(t, st)
-
-	rec := get(s.Handler(), "/pairs/"+strconv.FormatInt(sd.eqID, 10))
+	ctx := context.Background()
+	now := time.Date(2026, 10, 8, 0, 0, 0, 0, time.UTC)
+	r, err := st.CreateRound(ctx, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A pair whose instruments have no stored quotes in any round.
+	a := canonical.Instrument{
+		ID: canonical.InstrumentID(canonical.VenueKalshi, "EMPTY-HIST-A"), Venue: canonical.VenueKalshi, VenueMarketID: "EMPTY-HIST-A",
+		Title: "Empty history A", Category: canonical.CategoryCrypto, Terms: canonical.UnknownTerms(), Status: canonical.StatusOpen,
+		CloseTime:   now.Add(24 * time.Hour),
+		FeeSchedule: canonical.FeeSchedule{ID: canonical.FeeScheduleKalshiTakerV1, Params: map[string]decimal.Decimal{"multiplier": decimal.RequireFromString("0.07")}},
+	}
+	b := canonical.Instrument{
+		ID: canonical.InstrumentID(canonical.VenuePolymarket, "empty-hist-b"), Venue: canonical.VenuePolymarket, VenueMarketID: "empty-hist-b",
+		Title: "Empty history B", Category: canonical.CategoryCrypto, Terms: canonical.UnknownTerms(), Status: canonical.StatusOpen,
+		CloseTime: now.Add(24 * time.Hour), FeeSchedule: canonical.FeeSchedule{ID: canonical.FeeSchedulePolymarketV1},
+	}
+	for _, in := range []canonical.Instrument{a, b} {
+		if err := st.UpsertInstrument(ctx, r.ID, in); err != nil {
+			t.Fatal(err)
+		}
+	}
+	relID, err := st.UpsertRelationship(ctx, canonical.Relationship{
+		RoundID: r.ID, AID: a.ID, BID: b.ID, Type: canonical.RelRelated,
+		Confidence: dec("0.50"), Method: canonical.MethodRules, Explanation: "no quotes yet",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := get(s.Handler(), "/pairs/"+strconv.FormatInt(relID, 10))
 	wantHTML(t, rec, http.StatusOK)
-	body := rec.Body.String()
-
-	// Verify empty history message
-	wantContains(t, body, "No history")
+	wantContains(t, rec.Body.String(), "No stored quotes for either contract yet")
 }
 
 func TestPairHistoryPresent(t *testing.T) {
@@ -302,15 +327,15 @@ func TestPairFromFixtures(t *testing.T) {
 	wantContains(t, body, "Binance vs CF Benchmarks")
 
 	// Contract titles (from seedTitleA, seedTitleB)
-	wantContains(t, body, "BTC above $120k?")         // Kalshi title
-	wantContains(t, body, "Will Bitcoin exceed $120") // Polymarket title (partial match)
+	wantContains(t, body, seedTitleA) // Kalshi title
+	wantContains(t, body, seedTitleB) // Polymarket title
 
 	// Diff table should exist
 	wantContains(t, body, "<table class=\"data terms\">")
 	wantContains(t, body, "Contract diff")
 
 	// Explanation should be present
-	wantContains(t, body, "equivalent:")
+	wantContains(t, body, seedExplainEq)
 }
 
 func TestPairRoundMismatchWhenPinned(t *testing.T) {
@@ -318,6 +343,10 @@ func TestPairRoundMismatchWhenPinned(t *testing.T) {
 	sd := seedPublic(t, st)
 	ctx := context.Background()
 
+	seedRel, err := st.GetRelationship(ctx, sd.eqID)
+	if err != nil {
+		t.Fatal(err)
+	}
 	// Create a second round
 	round2, err := st.CreateRound(ctx, seedNow.Add(1*time.Hour))
 	if err != nil {
@@ -327,8 +356,8 @@ func TestPairRoundMismatchWhenPinned(t *testing.T) {
 	// Create a relationship in round2
 	rel2ID, err := st.UpsertRelationship(ctx, canonical.Relationship{
 		RoundID:     round2.ID,
-		AID:         "kalshi-btc-above-100k",
-		BID:         "poly-btc-over-100k",
+		AID:         seedRel.AID, // instruments seeded by seedPublic
+		BID:         seedRel.BID,
 		Type:        canonical.RelEquivalent,
 		Confidence:  dec("0.95"),
 		Method:      canonical.MethodRules,
@@ -365,7 +394,7 @@ func TestPairLayersDisplay(t *testing.T) {
 
 	// Create instruments with all layers populated
 	kalshi := canonical.Instrument{
-		ID:                      "kalshi-btc-above-120k",
+		ID:                      canonical.InstrumentID(canonical.VenueKalshi, "BTCUSD-120K"),
 		Venue:                   canonical.VenueKalshi,
 		VenueMarketID:           "BTCUSD-120K",
 		Title:                   "BTC above $120k?",
@@ -381,14 +410,15 @@ func TestPairLayersDisplay(t *testing.T) {
 	}
 
 	poly := canonical.Instrument{
-		ID:          "poly-btc-over-120k",
-		Venue:       canonical.VenuePolymarket,
-		Title:       "Will Bitcoin exceed $120,000?",
-		Category:    canonical.CategoryCrypto,
-		Terms:       canonical.UnknownTerms(),
-		Status:      canonical.StatusOpen,
-		CloseTime:   now.Add(24 * time.Hour),
-		FeeSchedule: canonical.FeeSchedule{ID: canonical.FeeSchedulePolymarketV1, Params: map[string]decimal.Decimal{"rate": decimal.RequireFromString("0.02")}},
+		ID:            canonical.InstrumentID(canonical.VenuePolymarket, "btc-over-120k"),
+		VenueMarketID: "btc-over-120k",
+		Venue:         canonical.VenuePolymarket,
+		Title:         "Will Bitcoin exceed $120,000?",
+		Category:      canonical.CategoryCrypto,
+		Terms:         canonical.UnknownTerms(),
+		Status:        canonical.StatusOpen,
+		CloseTime:     now.Add(24 * time.Hour),
+		FeeSchedule:   canonical.FeeSchedule{ID: canonical.FeeSchedulePolymarketV1, Params: map[string]decimal.Decimal{"rate": decimal.RequireFromString("0.02")}},
 	}
 
 	for _, in := range []canonical.Instrument{kalshi, poly} {
@@ -429,7 +459,7 @@ func TestPairLayersDisplay(t *testing.T) {
 
 	// Clarifications: should show for Kalshi with date
 	wantContains(t, body, "Additional details here.")
-	wantContains(t, body, "clarified 2026-10-08")
+	wantContains(t, body, "clarified 2026-10-07") // ClarificationsUpdatedAt = now - 1 day
 
 	// Verify "venue publishes none" appears for empty layers
 	if !strings.Contains(body, "venue publishes none") {
@@ -497,6 +527,7 @@ func TestPairEvidenceHTMLEscaping(t *testing.T) {
 		},
 		Total: dec("0.92"),
 	}
+	rel.Confidence = rel.Evidence.Total // Validate: evidence.total must equal confidence
 	if _, err := st.UpsertRelationship(ctx, rel); err != nil {
 		t.Fatal(err)
 	}
@@ -554,6 +585,7 @@ func TestPairEvidenceContributionColumn(t *testing.T) {
 		},
 		Total: dec("0.94"),
 	}
+	rel.Confidence = rel.Evidence.Total // Validate: evidence.total must equal confidence
 	if _, err := st.UpsertRelationship(ctx, rel); err != nil {
 		t.Fatal(err)
 	}
@@ -573,8 +605,8 @@ func TestPairEvidenceContributionColumn(t *testing.T) {
 	wantContains(t, body, `<span class="muted">—</span>`) // For subject row
 
 	// Verify footer shows evidence summary
-	wantContains(t, body, "prior + Σ")
-	wantContains(t, body, "0.94") // Total
+	wantContains(t, body, "0.99 &#43; Σ(3) = 0.94") // "<prior> + Σ(<n>) = <total>", + is HTML-escaped
+	wantContains(t, body, "0.94")                   // Total
 }
 
 // UI-20 D-115: Test evidence not recorded (old relationships)

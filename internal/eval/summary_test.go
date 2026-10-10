@@ -298,10 +298,15 @@ func TestRotatePreviousSummaryEdgeCases(t *testing.T) {
 func TestWriteSummaryErrors(t *testing.T) {
 	s := Summary{GeneratedAt: time.Now().UTC(), Method: "rules", Labels: 1}
 
-	// Invalid path (directory doesn't exist)
-	err := WriteSummary("/nonexistent/dir/summary.json", s)
+	// Invalid path: WriteSummary creates missing directories (MkdirAll), so use a
+	// parent that is a regular file, which no user (root in CI included) can mkdir under.
+	notDir := filepath.Join(t.TempDir(), "file")
+	if err := os.WriteFile(notDir, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	err := WriteSummary(filepath.Join(notDir, "dir", "summary.json"), s)
 	if err == nil {
-		t.Fatal("expected error for nonexistent directory")
+		t.Fatal("expected error when the parent path is a file")
 	}
 
 	// Read-only directory (if we can create one)

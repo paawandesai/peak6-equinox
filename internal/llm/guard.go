@@ -238,11 +238,7 @@ func Guard(ctx context.Context, log *slog.Logger, r canonical.Relationship, v ca
 	out := r
 	out.Method = canonical.MethodRulesLLM
 	out.Confidence = decimal.Min(r.Confidence, v.Confidence)
-	// Rules MatcherEvidence.Total is tied to the rules confidence (UI-20).
-	// After Guard lowers confidence (or changes type), that invariant no longer
-	// holds, so drop Evidence rather than carry a stale breakdown under a
-	// post-LLM confidence. Reject-upgrade / error paths leave Evidence alone.
-	out.Evidence = nil
+	out.Evidence = adjustEvidence(r.Evidence, out.Confidence)
 	outcome := OutcomeConfirmed
 	reason := fmt.Sprintf("LLM confirmed %s (confidence %s)", r.Type, v.Confidence)
 	if v.Relationship != r.Type {
@@ -295,4 +291,22 @@ func withNote(r canonical.Relationship, note string) canonical.Relationship {
 		r.Explanation = strings.TrimRight(r.Explanation, " ") + " " + note
 	}
 	return r
+}
+
+// adjustEvidence returns a copy of the matcher evidence whose total equals the
+// guarded confidence. When the LLM lowers the confidence it appends an
+// llm_adjustment contribution (negative) so the per-term sum still equals the
+// stored confidence (canonical.Relationship.Validate). The rules evidence is
+// never mutated in place: Relationship values share the pointer.
+func adjustEvidence(e *canonical.MatcherEvidence, conf decimal.Decimal) *canonical.MatcherEvidence {
+	if e == nil {
+		return nil
+	}
+	cp := *e
+	cp.Contributions = append([]canonical.ContributionTerm(nil), e.Contributions...)
+	if delta := conf.Sub(e.Total); !delta.IsZero() {
+		cp.Contributions = append(cp.Contributions, canonical.ContributionTerm{Term: "llm_adjustment", Value: delta})
+	}
+	cp.Total = conf
+	return &cp
 }

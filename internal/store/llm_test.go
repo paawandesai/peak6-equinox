@@ -436,7 +436,15 @@ func newTestInstrument(id string) canonical.Instrument {
 		Terms:         canonical.UnknownTerms(),
 		CloseTime:     t0.Add(time.Hour),
 		Status:        canonical.StatusOpen,
-		FeeSchedule:   canonical.FeeSchedule{},
+		FeeSchedule:   feeFor(v),
 		Quality:       canonical.Quality{},
 	}
+}
+
+// feeFor returns a valid per-venue fee schedule (Instrument.Validate rejects an empty id).
+func feeFor(v canonical.Venue) canonical.FeeSchedule {
+	if v == canonical.VenuePolymarket {
+		return canonical.FeeSchedule{ID: canonical.FeeSchedulePolymarketV1}
+	}
+	return canonical.FeeSchedule{ID: canonical.FeeScheduleKalshiTakerV1, Params: map[string]decimal.Decimal{"multiplier": decimal.RequireFromString("0.07")}}
 }

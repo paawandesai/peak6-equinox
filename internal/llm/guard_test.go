@@ -301,12 +301,12 @@ func TestVerifierPipeline(t *testing.T) {
 	}
 }
 
-// TestGuardClearsMatcherEvidenceOnApply covers the UI-20 × Guard invariant that
+// TestGuardAdjustsMatcherEvidenceOnApply covers the UI-20 × Guard invariant that
 // blocked final MR !97 (note 143743): after Guard adjusts Confidence on a
-// confirm/downgrade, rules MatcherEvidence must not ride along under a
-// post-LLM confidence (Relationship.Validate requires evidence.total ==
-// confidence when Evidence != nil). Reject-upgrade leaves Evidence intact.
-func TestGuardClearsMatcherEvidenceOnApply(t *testing.T) {
+// confirm/downgrade, the evidence is a copy whose trailing llm_adjustment
+// term makes total == the guarded confidence (Relationship.Validate), and the
+// rules evidence is untouched. Reject-upgrade leaves Evidence intact.
+func TestGuardAdjustsMatcherEvidenceOnApply(t *testing.T) {
 	log := slog.New(slog.DiscardHandler)
 	rulesConf := d("0.95")
 	ev := &canonical.MatcherEvidence{
@@ -329,8 +329,15 @@ func TestGuardClearsMatcherEvidenceOnApply(t *testing.T) {
 		if got.Outcome != OutcomeConfirmed {
 			t.Fatalf("outcome = %s (%s)", got.Outcome, got.Reason)
 		}
-		if got.Relationship.Evidence != nil {
-			t.Fatalf("Evidence must be cleared on apply, got %+v", got.Relationship.Evidence)
+		e := got.Relationship.Evidence
+		if e == nil || !e.Total.Equal(got.Relationship.Confidence) {
+			t.Fatalf("Evidence must be kept with total = guarded confidence, got %+v", e)
+		}
+		if last := e.Contributions[len(e.Contributions)-1]; last.Term != "llm_adjustment" || !last.Value.Equal(got.Relationship.Confidence.Sub(rulesConf)) {
+			t.Fatalf("want a trailing llm_adjustment contribution, got %+v", last)
+		}
+		if !ev.Total.Equal(rulesConf) || len(ev.Contributions) != 1 {
+			t.Fatalf("Guard mutated the rules evidence: %+v", ev)
 		}
 		wantConf := decimal.Min(rulesConf, v.Confidence)
 		if !got.Relationship.Confidence.Equal(wantConf) {
@@ -347,8 +354,15 @@ func TestGuardClearsMatcherEvidenceOnApply(t *testing.T) {
 		if got.Outcome != OutcomeDowngraded {
 			t.Fatalf("outcome = %s (%s)", got.Outcome, got.Reason)
 		}
-		if got.Relationship.Evidence != nil {
-			t.Fatalf("Evidence must be cleared on downgrade, got %+v", got.Relationship.Evidence)
+		e := got.Relationship.Evidence
+		if e == nil || !e.Total.Equal(got.Relationship.Confidence) {
+			t.Fatalf("Evidence must be kept with total = guarded confidence, got %+v", e)
+		}
+		if last := e.Contributions[len(e.Contributions)-1]; last.Term != "llm_adjustment" || !last.Value.Equal(got.Relationship.Confidence.Sub(rulesConf)) {
+			t.Fatalf("want a trailing llm_adjustment contribution, got %+v", last)
+		}
+		if !ev.Total.Equal(rulesConf) || len(ev.Contributions) != 1 {
+			t.Fatalf("Guard mutated the rules evidence: %+v", ev)
 		}
 		wantConf := decimal.Min(rulesConf, v.Confidence)
 		if !got.Relationship.Confidence.Equal(wantConf) {
