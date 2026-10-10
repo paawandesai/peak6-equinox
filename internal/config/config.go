@@ -20,30 +20,30 @@ import (
 
 // Defaults for optional variables, as documented in docs/environment.md.
 const (
-	DefaultPort                   = 8080
-	DefaultKalshiBaseURL          = "https://api.elections.kalshi.com/trade-api/v2"
-	DefaultPolymarketGammaURL     = "https://gamma-api.polymarket.com"
-	DefaultPolymarketClobURL      = "https://clob.polymarket.com"
-	DefaultUniverseDir            = "config/universe"
-	DefaultFactsFile              = "config/facts.yaml"
-	DefaultEvalSummaryFile        = "config/eval_summary.json"
-	DefaultHTTPTimeoutSeconds     = 10
-	DefaultMaxBodyBytes           = 10485760
-	DefaultStaleAfterSeconds      = 120
-	DefaultKalshiWarnAfterSeconds = 60
+	DefaultPort                       = 8080
+	DefaultKalshiBaseURL              = "https://api.elections.kalshi.com/trade-api/v2"
+	DefaultPolymarketGammaURL         = "https://gamma-api.polymarket.com"
+	DefaultPolymarketClobURL          = "https://clob.polymarket.com"
+	DefaultUniverseDir                = "config/universe"
+	DefaultFactsFile                  = "config/facts.yaml"
+	DefaultEvalSummaryFile            = "config/eval_summary.json"
+	DefaultHTTPTimeoutSeconds         = 10
+	DefaultMaxBodyBytes               = 10485760
+	DefaultStaleAfterSeconds          = 120
+	DefaultKalshiWarnAfterSeconds     = 60
 	DefaultPolymarketWarnAfterSeconds = 60
-	DefaultSkewWarnSeconds        = 5
-	DefaultSkewMaxSeconds         = 30
-	DefaultMinRouteConfidence     = "0.9"
-	DefaultMinBookDepth           = "1"
-	DefaultBasisPenaltyMult       = "0.01"
-	DefaultReviewEdgeMin          = "0.02"
-	DefaultPublicRateLimitPerMin  = 60
-	DefaultStaleRoundWarnMinutes  = 10
-	DefaultRoundWarnMinutes       = 5
-	DefaultLLMModel               = "claude-haiku-4-5-20251001"
-	DefaultLLMDailyCallCap        = 200
-	DefaultLLMMaxOutputTokens     = 400
+	DefaultSkewWarnSeconds            = 5
+	DefaultSkewMaxSeconds             = 30
+	DefaultMinRouteConfidence         = "0.9"
+	DefaultMinBookDepth               = "1"
+	DefaultBasisPenaltyMult           = "0.01"
+	DefaultReviewEdgeMin              = "0.02"
+	DefaultPublicRateLimitPerMin      = 60
+	DefaultStaleRoundWarnMinutes      = 10
+	DefaultRoundWarnMinutes           = 5
+	DefaultLLMModel                   = "claude-haiku-4-5-20251001"
+	DefaultLLMDailyCallCap            = 200
+	DefaultLLMMaxOutputTokens         = 400
 
 	// MinAdminPasswordLen is the shortest ADMIN_PASSWORD accepted.
 	MinAdminPasswordLen = 24
