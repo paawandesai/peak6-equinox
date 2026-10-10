@@ -39,11 +39,11 @@
 <p>No decision-log entries{{if .Kind}} of kind <code>{{.Kind}}</code>{{end}} yet.</p>
 {{else}}
 
-<p>Latest {{len .Entries}} entr{{if eq (len .Entries) 1}}y{{else}}ies{{end}} (at most {{.Limit}}).{{if .Newest}} Newest: {{formatTime .Newest $.Timezone}}.{{end}}</p>
+<p>Latest {{.Listed}} entr{{if eq .Listed 1}}y{{else}}ies{{end}} (at most {{.Limit}}), newest first.{{if .Newest}} Newest: {{formatTime .Newest $.Timezone}}.{{end}}{{if .Folded}} {{.Folded}} repeated routing decision{{if ne .Folded 1}}s are{{else}} is{{end}} folded into the newest identical row (×N); each is still stored and linked from its row's decision.{{end}}</p>
 
 {{if .Outliers}}
 <div class="outliers">
-  <strong>Outliers</strong>
+  <strong>Latest decisions</strong>
   {{if .Outliers.WorstSaving}}
   <p>Worst saving: <a href="{{.Outliers.WorstSaving.Link}}">{{.Outliers.WorstSaving.About}}</a> · {{.Outliers.WorstSaving.Value}}</p>
   {{end}}
@@ -76,7 +76,7 @@
       <tr>
         <td data-label="When" class="log-when"><time datetime="{{.At.Format "2006-01-02T15:04:05Z07:00"}}">{{formatTimeCompact .At $.Timezone}}</time></td>
         <td data-label="About">
-          {{if .Link}}<a href="{{.Link}}">{{.AboutTitle}}</a>{{else}}{{.AboutTitle}}{{end}}
+          {{if .Link}}<a href="{{.Link}}">{{.AboutTitle}}</a>{{else}}{{.AboutTitle}}{{end}}{{template "log_repeat" .}}
           {{if .Routing}}{{if .Routing.PairLink}} · <a href="{{.Routing.PairLink}}">pair</a>{{end}}{{end}}
         </td>
         <td data-label="Order">
@@ -125,7 +125,7 @@
     <tr>
       <td data-label="When" class="log-when"><time datetime="{{.At.Format "2006-01-02T15:04:05Z07:00"}}">{{formatTimeCompact .At $.Timezone}}</time></td>
       <td data-label="About">
-        {{if .Link}}<a href="{{.Link}}">{{.AboutTitle}}</a>{{else}}{{.AboutTitle}}{{end}}
+        {{if .Link}}<a href="{{.Link}}">{{.AboutTitle}}</a>{{else}}{{.AboutTitle}}{{end}}{{template "log_repeat" .}}
         {{if .Routing}}{{if .Routing.PairLink}} · <a href="{{.Routing.PairLink}}">pair</a>{{end}}{{end}}
       </td>
       <td data-label="Order">
@@ -167,7 +167,7 @@
       <td data-label="When" class="log-when"><time datetime="{{.At.Format "2006-01-02T15:04:05Z07:00"}}">{{formatTimeCompact .At $.Timezone}}</time></td>
       <td data-label="Kind"><span class="chip {{.KindChipClass}}">{{.Kind}}</span></td>
       <td data-label="About">
-        {{if .Link}}<a href="{{.Link}}">{{.About}}</a>{{else if .About}}{{.About}}{{else}}<small>{{.Ref}}</small>{{end}}
+        {{if .Link}}<a href="{{.Link}}">{{.About}}</a>{{else if .About}}{{.About}}{{else}}<small>{{.Ref}}</small>{{end}}{{template "log_repeat" .}}
         {{if .AboutTitle}}{{if ne .About .AboutTitle}} · {{.AboutTitle}}{{end}}{{end}}
       </td>
       <td data-label="Summary">
@@ -183,3 +183,4 @@
 {{end}}
 
 {{define "log_summary"}}{{if .SummaryTail}}<details class="log-summary"><summary>{{.SummaryHead}} …</summary><p>… {{.SummaryTail}}</p></details>{{else}}{{.SummaryHead}}{{end}}{{end}}
+{{define "log_repeat"}}{{if gt .Repeat 1}} <a href="{{.Link}}" class="chip chip-muted" title="{{.Repeat}} identical decisions in a row; this links to the newest">×{{.Repeat}}</a>{{end}}{{end}}

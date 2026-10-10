@@ -33,6 +33,8 @@ type logPage struct {
 	Newest         time.Time // Raw UTC time of the newest entry
 	HiddenIngestCt int       // Count of hidden ingest entries (M5-11)
 	ShowIngestLink string    // Link to show ingest entries (M5-11)
+	Listed         int       // M6 P7: entries listed before identical routing rows were folded
+	Folded         int       // M6 P7: rows folded into a newer identical routing row
 }
 
 type logEntryGroup struct {
@@ -78,6 +80,7 @@ type logEntryView struct {
 	Summary       string
 	SummaryHead   string // M6 P2: the summary, or its first words when long
 	SummaryTail   string // M6 P2: the rest of a long summary, shown on expand; "" when short
+	Repeat        int    // M6 P7: identical consecutive routing decisions this row stands for (1 = itself)
 	// Routing-specific fields (UI-15), empty for other kinds
 	Routing *routingLogView
 }
@@ -203,9 +206,12 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 			}
 			entries = append(entries, kindEntries...)
 		}
-		// Sort by created_at DESC (newest first)
-		sort.Slice(entries, func(i, j int) bool {
-			return entries[i].CreatedAt.After(entries[j].CreatedAt)
+		// Sort by created_at DESC, then id DESC (newest first, as ListLog orders one kind)
+		sort.SliceStable(entries, func(i, j int) bool {
+			if !entries[i].CreatedAt.Equal(entries[j].CreatedAt) {
+				return entries[i].CreatedAt.After(entries[j].CreatedAt)
+			}
+			return entries[i].ID > entries[j].ID
 		})
 		// Limit to maxLogRows
 		if len(entries) > maxLogRows {
@@ -257,6 +263,12 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 	if (kind == store.LogRouting || reviewerView || showAll) && len(data.Entries) > 0 {
 		data.Outliers = s.computeOutliers(data.Entries, tz)
 	}
+
+	// M6 P7: fold runs of identical routing decisions into their newest row
+	// (display only; every decision stays in the insert-only log).
+	data.Listed = len(data.Entries)
+	data.Entries = foldRepeatedRouting(data.Entries)
+	data.Folded = data.Listed - len(data.Entries)
 
 	// Group entries if requested (UI-15)
 	if group != "" && kind == store.LogRouting && len(data.Entries) > 0 {
@@ -979,4 +991,37 @@ func splitSummary(s string, n int) (head, tail string) {
 		}
 	}
 	return strings.TrimSpace(string(r[:cut])), strings.TrimSpace(string(r[cut:]))
+}
+
+// foldRepeatedRouting collapses consecutive routing rows for the same pair,
+// target, order and outcome (the same stored summary) into the first, which
+// is the newest because the log lists newest first. The kept row links to
+// that newest decision and carries the run length in Repeat.
+func foldRepeatedRouting(entries []logEntryView) []logEntryView {
+	out := make([]logEntryView, 0, len(entries))
+	for _, e := range entries {
+		e.Repeat = 1
+		if n := len(out); n > 0 && sameRoutingRow(out[n-1], e) {
+			out[n-1].Repeat++
+			continue
+		}
+		out = append(out, e)
+	}
+	return out
+}
+
+// sameRoutingRow reports whether two log rows are the same routing decision
+// as far as the reader can tell: kind routing, same summary (which names the
+// order, the target and the result), same pair and same outcome.
+func sameRoutingRow(a, b logEntryView) bool {
+	if a.Kind != string(store.LogRouting) || b.Kind != string(store.LogRouting) || a.Summary != b.Summary {
+		return false
+	}
+	if (a.Routing == nil) != (b.Routing == nil) {
+		return false
+	}
+	if a.Routing == nil {
+		return true
+	}
+	return a.Routing.PairID == b.Routing.PairID && a.Routing.Outcome.Text == b.Routing.Outcome.Text
 }
