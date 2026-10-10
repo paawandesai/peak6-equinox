@@ -238,6 +238,11 @@ func Guard(ctx context.Context, log *slog.Logger, r canonical.Relationship, v ca
 	out := r
 	out.Method = canonical.MethodRulesLLM
 	out.Confidence = decimal.Min(r.Confidence, v.Confidence)
+	// Rules MatcherEvidence.Total is tied to the rules confidence (UI-20).
+	// After Guard lowers confidence (or changes type), that invariant no longer
+	// holds, so drop Evidence rather than carry a stale breakdown under a
+	// post-LLM confidence. Reject-upgrade / error paths leave Evidence alone.
+	out.Evidence = nil
 	outcome := OutcomeConfirmed
 	reason := fmt.Sprintf("LLM confirmed %s (confidence %s)", r.Type, v.Confidence)
 	if v.Relationship != r.Type {
