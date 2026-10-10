@@ -378,6 +378,7 @@ func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
 		data.Routable = []pairGroup{{Type: "routable", Label: "Routable pairs", Pairs: routablePairs}}
 		// M5-05: featured pair for "Start here" card is the first routable pair in priority order.
 		data.FeaturedPair = &routablePairs[0]
+		data.StartSteps = withFeaturedPair(data.StartSteps, data.FeaturedPair.ID)
 	}
 	// Sort implies and related by the chosen order too.
 	if data.Implies != nil {

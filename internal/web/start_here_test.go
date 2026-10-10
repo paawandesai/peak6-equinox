@@ -314,3 +314,20 @@ func TestStartHereGuidedDemoHiddenStep(t *testing.T) {
 		t.Error("near-miss step shown although no pair resolves")
 	}
 }
+
+// When the Fed demo pair does not resolve, the featured routable pair's diff
+// and route steps lead the card; other resolved steps are kept (M5-05 e2e).
+func TestWithFeaturedPair(t *testing.T) {
+	near := startStep{Text: "See a near miss the Fed fact did not close", Href: "/pairs/9#diff"}
+	got := withFeaturedPair([]startStep{near}, 4)
+	if len(got) != 3 || got[0].Href != "/pairs/4#diff" || got[1].Href != "/pairs/4#route" || got[2] != near {
+		t.Errorf("fallback steps = %+v", got)
+	}
+	demo := []startStep{{Text: "demo", Href: "/pairs/7#diff", Demo: true}, near}
+	if got := withFeaturedPair(demo, 4); len(got) != 2 || got[0].Href != "/pairs/7#diff" {
+		t.Errorf("demo resolved, featured must not be added: %+v", got)
+	}
+	if got := withFeaturedPair(nil, 0); len(got) != 0 {
+		t.Errorf("no featured pair: %+v", got)
+	}
+}

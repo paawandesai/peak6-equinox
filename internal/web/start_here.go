@@ -39,6 +39,26 @@ type startStep struct {
 	Text string // the link text
 	Href string // a pair page URL, with preset query params and an anchor
 	Note string // one line of context under the link
+	Demo bool   // true for the two demo-pair steps (diff and route)
+}
+
+// withFeaturedPair puts the featured routable pair's diff and route steps
+// first when the Fed demo pair did not resolve, so the card always opens on a
+// routable pair while keeping the other steps that did resolve (M5-05).
+func withFeaturedPair(steps []startStep, featuredID int64) []startStep {
+	if featuredID == 0 {
+		return steps
+	}
+	for _, st := range steps {
+		if st.Demo {
+			return steps
+		}
+	}
+	featured := []startStep{
+		{Text: "See why two contracts are the same bet", Href: fmt.Sprintf("/pairs/%d#diff", featuredID), Demo: true},
+		{Text: "Route a hypothetical order on it", Href: fmt.Sprintf("/pairs/%d#route", featuredID), Demo: true},
+	}
+	return append(featured, steps...)
 }
 
 // fedMeetingCode turns a meeting date (YYYY-MM-DD, the fed_next_meeting fact)
@@ -184,11 +204,13 @@ func resolveStartHere(rels []canonical.Relationship, insts map[string]store.Inst
 					Text: "See why two contracts are the same bet",
 					Href: fmt.Sprintf("/pairs/%d#diff", p.rel.ID),
 					Note: fmt.Sprintf("Kalshi %s vs Polymarket %q (%s)", p.kalshi.VenueMarketID, p.poly.Title, p.rel.Type),
+					Demo: true,
 				},
 				startStep{
 					Text: "Route a hypothetical order on it",
 					Href: demoPresetHref(p.rel.ID, p.kalshi.ID, string(canonical.SideBuy), string(canonical.OutcomeYes)),
 					Note: fmt.Sprintf("Pre-filled: buy YES %s on Kalshi %s, market IOC. Nothing is routed until you press Route it.", demoQty, p.kalshi.VenueMarketID),
+					Demo: true,
 				})
 		}
 	}
