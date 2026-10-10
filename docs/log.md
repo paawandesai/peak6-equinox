@@ -238,7 +238,7 @@ Stored in the same `routing_decisions.decision` jsonb; no SQL migration needed. 
 **Branch:** ao/ui-v2/ui-20-matcher-evidence (stacked on !88 ao/matcher/m4-72-fed-formats)
 **Status:** Draft MR opened, depends on !88
 
-Implemented UI-20 (D-113, Tier 2): matcher evidence recording. The matcher now stores confidence calculation components with every relationship: prior (base confidence), per-term signed contributions (e.g. unknown_unit_a −0.02, deadline_gap_hours −0.05), total (sum, equals stored confidence), and for near misses, pre-veto score (what equivalentConfidence would return before vetoes) + required score (0.90).
+Implemented UI-20 (D-114, Tier 2): matcher evidence recording. The matcher now stores confidence calculation components with every relationship: prior (base confidence), per-term signed contributions (e.g. unknown_unit_a −0.02, deadline_gap_hours −0.05), total (sum, equals stored confidence), and for near misses, pre-veto score (what equivalentConfidence would return before vetoes) + required score (0.90).
 
 **Backend changes:**
 - `canonical.MatcherEvidence` struct: `Prior`, `Contributions []ContributionTerm`, `Total`, `PreVetoScore` *decimal, `RequiredScore` *decimal
@@ -259,7 +259,7 @@ Implemented UI-20 (D-113, Tier 2): matcher evidence recording. The matcher now s
 - Relationship validation: evidence.total == confidence
 
 **Docs:**
-- D-113 entry in `docs/decisions.md`
+- D-114 entry in `docs/decisions.md`
 - "Awaiting human veto" row in `docs/status.md`
 - This log entry
 
@@ -283,7 +283,10 @@ Implemented UI-20 (D-113, Tier 2): matcher evidence recording. The matcher now s
 ## 2026-10-10 · M4-79: diagnose live routable-pair count, Phase 1 (agent `peak6-equinox-97`)
 
 **What:** issue #79 Phase 1 diagnosis, D-111. The live pinned round 735 shows 2 routable pairs because it was ingested and matched before the M4-70 nominee fix (D-108) was deployed; a fresh local live round on `integration/m4-final` gives 79 routable-type pairs (77 nominee `equivalent`, 1 `equivalent_given_facts`, 1 `complement`), and 94 with the #72 Fed matcher (!88) merged into a throwaway build. Only 12 of the 94 (all Fed) pass the router's 0.9 confidence floor and have quotes on both sides. No universe or matcher change; golden eval unchanged (equivalent precision 1.0000, zero hard negatives predicted equivalent or `equivalent_given_facts`). Phase 2 (fresh prod round, pin, verify) waits on operator sign-off. · docs/{decisions.md,status.md,log.md}
+2026-10-10 00:42 UTC · M4-76 worker · M4-76 (partial): backtest summary structure and CLI --out flag; equinox backtest now writes config/backtest_summary.json artifact; template partial and handler prepared; waiting for UI-23 !83 to merge before touching handlers_eval.go/eval.html. · internal/eval/backtest_summary.go, cmd/equinox/backtest.go, internal/web/backtest.go, templates/backtest_results.html
+2026-10-10 00:52 UTC · M4-76 worker · M4-76 complete: settlement back-test results on /eval page. BacktestSummary artifact written by equinox backtest --out; LoadBacktestResults() loads it; eval.html includes backtest_results.html partial; shows pairs checked, mismatches, allowlisted exceptions, NFR-07 gate status; read-only per D-069. Config: BACKTEST_SUMMARY_FILE (default config/backtest_summary.json). Tests pass: go test ./internal/{eval,web}/... ./cmd/equinox/... -run Backtest; go build/vet clean. · internal/{eval/backtest_summary.go,web/{backtest.go,templates/{eval.html,backtest_results.html}}}, cmd/equinox/{backtest.go,serve.go}, internal/config/config.go, docs/log.md
 
 ## 2026-10-10
 
 - **UI-24 session 100 (AO worker)** Started UI-24 (issue #56, ao/ui-v2/ui-24-eval-llm-columns → integration/m4-final). Merged origin/integration/m4-final (fast-forward, includes UI-23 !83). Added D-112 (Tier 2 eval contract extension: optional `rules []TypeSummary` field for dual-method evaluation), status.md veto entry. Extended Summary struct, updated 4 call sites (eval.go, summary_test.go), removed hardcoded "rules+llm: not evaluated (M3)" note, updated contract test. Tests pass (go test ./internal/eval -run Summary, go build ./...). Next: implement dual-method evaluation logic in eval command, then web handler + template.
+- **2026-10-09 19:48 CT (operator heartbeat):** UI-22 (#54) worker continued after integration/m4-final merge. MR !102 pushed at 5ad48e0: llm_verify_runs table (100-run retention), relationship links (llm_cache_key, llm_run_id, llm_verified_at), admin runs table (latest 20), pair rationale details (Evidence from verdict, model, run id, timestamp), D-113 Tier 2 entry (renumbered; D-112 taken by UI-24). Migration 0006, store methods tested, builds/vets cleanly. Awaiting Cursor review.

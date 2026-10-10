@@ -165,3 +165,195 @@ func (s *Store) PutLLMVerifyLastRun(ctx context.Context, run LLMVerifyLastRun) e
 	}
 	return nil
 }
+
+// LLMVerifyRun holds one verification run record.
+type LLMVerifyRun struct {
+	ID            int64
+	StartedAt     time.Time
+	FinishedAt    *time.Time
+	Model         string
+	PromptVersion string
+	Verified      int
+	Downgraded    int
+	CacheHits     int
+	CallsMade     int
+	InputTokens   int64
+	OutputTokens  int64
+	Outcome       string // "ok", "cap_reached", "error"
+}
+
+// InsertLLMVerifyRun creates a new verification run record and prunes old runs
+// to keep at most maxRuns (e.g. 100). Returns the new run's ID.
+func (s *Store) InsertLLMVerifyRun(ctx context.Context, model, promptVersion string, maxRuns int) (int64, error) {
+	var id int64
+	err := s.pool.QueryRow(ctx, `
+		INSERT INTO llm_verify_runs (started_at, model, prompt_version, outcome)
+		VALUES (now(), $1, $2, 'ok')
+		RETURNING id
+	`, model, promptVersion).Scan(&id)
+	if err != nil {
+		return 0, fmt.Errorf("inserting llm_verify_run: %w", err)
+	}
+
+	// Prune old runs in the same transaction context
+	if err := s.PruneOldLLMVerifyRuns(ctx, maxRuns); err != nil {
+		return 0, fmt.Errorf("pruning old llm_verify_runs: %w", err)
+	}
+
+	return id, nil
+}
+
+// FinishLLMVerifyRun updates a run with its final statistics and outcome.
+func (s *Store) FinishLLMVerifyRun(ctx context.Context, id int64, verified, downgraded, cacheHits, calls int, inputTokens, outputTokens int64, outcome string) error {
+	_, err := s.pool.Exec(ctx, `
+		UPDATE llm_verify_runs
+		SET finished_at = now(),
+		    verified = $2,
+		    downgraded = $3,
+		    cache_hits = $4,
+		    calls_made = $5,
+		    input_tokens = $6,
+		    output_tokens = $7,
+		    outcome = $8
+		WHERE id = $1
+	`, id, verified, downgraded, cacheHits, calls, inputTokens, outputTokens, outcome)
+	if err != nil {
+		return fmt.Errorf("finishing llm_verify_run %d: %w", id, err)
+	}
+	return nil
+}
+
+// GetLLMVerifyRuns returns the latest N verification runs, newest first.
+func (s *Store) GetLLMVerifyRuns(ctx context.Context, limit int) ([]LLMVerifyRun, error) {
+	rows, err := s.pool.Query(ctx, `
+		SELECT id, started_at, finished_at, model, prompt_version,
+		       verified, downgraded, cache_hits, calls_made,
+		       input_tokens, output_tokens, outcome
+		FROM llm_verify_runs
+		ORDER BY started_at DESC, id DESC
+		LIMIT $1
+	`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("querying llm_verify_runs: %w", err)
+	}
+	defer rows.Close()
+
+	var runs []LLMVerifyRun
+	for rows.Next() {
+		var r LLMVerifyRun
+		var finishedAt *time.Time
+		if err := rows.Scan(&r.ID, &r.StartedAt, &finishedAt, &r.Model, &r.PromptVersion,
+			&r.Verified, &r.Downgraded, &r.CacheHits, &r.CallsMade,
+			&r.InputTokens, &r.OutputTokens, &r.Outcome); err != nil {
+			return nil, fmt.Errorf("scanning llm_verify_run: %w", err)
+		}
+		r.StartedAt = r.StartedAt.UTC()
+		if finishedAt != nil {
+			t := finishedAt.UTC()
+			r.FinishedAt = &t
+		}
+		runs = append(runs, r)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating llm_verify_runs: %w", err)
+	}
+	return runs, nil
+}
+
+// PruneOldLLMVerifyRuns deletes all but the latest maxRuns verification runs.
+func (s *Store) PruneOldLLMVerifyRuns(ctx context.Context, maxRuns int) error {
+	_, err := s.pool.Exec(ctx, `
+		DELETE FROM llm_verify_runs
+		WHERE id NOT IN (
+			SELECT id FROM llm_verify_runs
+			ORDER BY started_at DESC, id DESC
+			LIMIT $1
+		)
+	`, maxRuns)
+	if err != nil {
+		return fmt.Errorf("pruning llm_verify_runs: %w", err)
+	}
+	return nil
+}
+
+// LinkRelationshipToVerdict updates a relationship to link it to an LLM verdict.
+func (s *Store) LinkRelationshipToVerdict(ctx context.Context, relationshipID int64, cacheKey string, runID int64) error {
+	_, err := s.pool.Exec(ctx, `
+		UPDATE relationships
+		SET llm_cache_key = $2,
+		    llm_run_id = $3,
+		    llm_verified_at = now()
+		WHERE id = $1
+	`, relationshipID, cacheKey, runID)
+	if err != nil {
+		return fmt.Errorf("linking relationship %d to verdict %q: %w", relationshipID, cacheKey, err)
+	}
+	return nil
+}
+
+// RelationshipLLMData holds LLM verification data for a relationship (UI-22).
+type RelationshipLLMData struct {
+	CacheKey   string
+	RunID      int64
+	VerifiedAt time.Time
+	Model      string
+	Evidence   []string // Rationale from the verdict
+}
+
+// GetRelationshipLLMData fetches LLM verification data for a relationship, if it was verified.
+// Returns (data, false, nil) if the relationship was never verified.
+func (s *Store) GetRelationshipLLMData(ctx context.Context, relationshipID int64) (RelationshipLLMData, bool, error) {
+	var cacheKey *string
+	var runID *int64
+	var verifiedAt *time.Time
+	err := s.pool.QueryRow(ctx, `
+		SELECT llm_cache_key, llm_run_id, llm_verified_at
+		FROM relationships
+		WHERE id = $1
+	`, relationshipID).Scan(&cacheKey, &runID, &verifiedAt)
+	if err != nil {
+		return RelationshipLLMData{}, false, fmt.Errorf("reading LLM data for relationship %d: %w", relationshipID, err)
+	}
+
+	// Not verified if any field is null
+	if cacheKey == nil || runID == nil || verifiedAt == nil {
+		return RelationshipLLMData{}, false, nil
+	}
+
+	// Fetch the verdict to get the model and evidence (rationale)
+	verdict, found, err := s.GetLLMVerdict(ctx, *cacheKey)
+	if err != nil {
+		return RelationshipLLMData{}, false, fmt.Errorf("reading LLM verdict for relationship %d: %w", relationshipID, err)
+	}
+	if !found {
+		// Cache may have been pruned; return what we have without evidence
+		return RelationshipLLMData{
+			CacheKey:   *cacheKey,
+			RunID:      *runID,
+			VerifiedAt: verifiedAt.UTC(),
+			Evidence:   []string{},
+		}, true, nil
+	}
+
+	// Fetch the run to get the model
+	runs, err := s.GetLLMVerifyRuns(ctx, 1000) // Get enough runs to find this one
+	if err != nil {
+		return RelationshipLLMData{}, false, fmt.Errorf("reading LLM runs for relationship %d: %w", relationshipID, err)
+	}
+
+	model := "unknown"
+	for _, run := range runs {
+		if run.ID == *runID {
+			model = run.Model
+			break
+		}
+	}
+
+	return RelationshipLLMData{
+		CacheKey:   *cacheKey,
+		RunID:      *runID,
+		VerifiedAt: verifiedAt.UTC(),
+		Model:      model,
+		Evidence:   verdict.Evidence,
+	}, true, nil
+}
