@@ -550,7 +550,10 @@ table.confusion a.e1 { background: color-mix(in srgb, var(--eq-danger) 22%, tran
 table.confusion a.e2 { background: color-mix(in srgb, var(--eq-danger) 45%, transparent); }
 table.confusion a.e3 { background: var(--eq-danger); color: var(--eq-on-solid); }
 .confusion-wrap { overflow-x: auto; }
-td.meter-cell meter { width: 100%; height: 6px; }
+/* P11: a td must stay a table cell; display:flex on it (rule above) split
+   each row so Recall showed the F1 value. Lay the meter and number inline. */
+td.meter-cell { display: table-cell; white-space: nowrap; }
+td.meter-cell meter { width: 4rem; height: 6px; margin: 0 0.5rem 0 0; vertical-align: middle; }
 .headline-panel .headline-number { font-size: 2.75rem; font-weight: 700; line-height: 1; }
 
 /* --- admin health -------------------------------------------------------- */
