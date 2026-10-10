@@ -1,0 +1,138 @@
+{{/* Backtest results section for the eval page (UI-76, FR-19, NFR-07).
+     Renders a BacktestSummary loaded from config/backtest_summary.json.
+     Missing file shows "no backtest results yet".
+     The page is read-only per D-069. */}}
+
+{{if .Backtest}}
+<section id="backtest">
+  <h2>Settlement Back-Test</h2>
+  <p class="question">Did equivalent pairs settle the same way? (NFR-07)</p>
+
+  <dl class="strip">
+    <div>
+      <dt>As of</dt>
+      <dd><time datetime="{{.Backtest.AsOf.Format "2006-01-02T15:04:05Z07:00"}}">{{.Backtest.AsOf.Format "2006-01-02 15:04 UTC"}}</time></dd>
+    </div>
+    <div>
+      <dt>Source</dt>
+      <dd>{{.Backtest.Source}}</dd>
+    </div>
+    <div>
+      <dt>Pairs compared</dt>
+      <dd>{{.Backtest.Pairs}}</dd>
+    </div>
+    <div>
+      <dt>Checked</dt>
+      <dd>{{.Backtest.Checked}}</dd>
+    </div>
+    <div>
+      <dt>Agreed</dt>
+      <dd>{{.Backtest.Agreed}}</dd>
+    </div>
+    <div>
+      <dt>Disagreed</dt>
+      <dd>{{.Backtest.Disagreed}}</dd>
+    </div>
+    <div>
+      <dt class="strip-key">Gate (NFR-07)</dt>
+      <dd>
+        {{if .Backtest.Passed}}
+          <span class="b-success">✓ PASS</span>
+        {{else}}
+          <span class="b-danger">✕ FAIL</span>
+        {{end}}
+      </dd>
+    </div>
+  </dl>
+
+  {{if .Backtest.Mismatches}}
+  <h3>Mismatches ({{len .Backtest.Mismatches}})</h3>
+  <p>Equivalent-tier pairs that settled differently and are not allowlisted. Each one is a matcher error and must be investigated.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Pair</th>
+        <th>Type</th>
+        <th>Confidence</th>
+        <th>Expected</th>
+        <th>A settled</th>
+        <th>B settled</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Backtest.Mismatches}}
+      <tr>
+        <td>
+          <div><a href="/pairs/{{.AID}}/{{.BID}}">{{.AID}}</a></div>
+          <div class="small">{{.ATitle}}</div>
+          <div class="mt-1"><a href="/pairs/{{.AID}}/{{.BID}}">{{.BID}}</a></div>
+          <div class="small">{{.BTitle}}</div>
+        </td>
+        <td>{{template "badge" (TypeBadge .Type)}}</td>
+        <td>{{.Confidence}}</td>
+        <td>{{.Expectation}}</td>
+        <td>{{.AOutcome}}</td>
+        <td>{{.BOutcome}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{end}}
+
+  {{if .Backtest.Exceptions}}
+  <h3>Allowlisted Exceptions ({{len .Backtest.Exceptions}})</h3>
+  <p>Disagreements that are allowlisted with an investigated reason and a logged decision.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Pair</th>
+        <th>Type</th>
+        <th>Expected</th>
+        <th>A settled</th>
+        <th>B settled</th>
+        <th>Reason</th>
+        <th>Decision</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Backtest.Exceptions}}
+      <tr>
+        <td>
+          <div><a href="/pairs/{{.AID}}/{{.BID}}">{{.AID}}</a></div>
+          <div class="small">{{.ATitle}}</div>
+          <div class="mt-1"><a href="/pairs/{{.AID}}/{{.BID}}">{{.BID}}</a></div>
+          <div class="small">{{.BTitle}}</div>
+        </td>
+        <td>{{template "badge" (TypeBadge .Type)}}</td>
+        <td>{{.Expectation}}</td>
+        <td>{{.AOutcome}}</td>
+        <td>{{.BOutcome}}</td>
+        <td>{{.Reason}}</td>
+        <td>{{.Decision}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{end}}
+
+  {{if not .Backtest.Mismatches}}{{if not .Backtest.Exceptions}}
+  <p>No disagreements: all checked pairs agreed.</p>
+  {{end}}{{end}}
+
+  {{if .Backtest.FactIDs}}
+  <p class="small mt-2">Facts available: {{range $i, $id := .Backtest.FactIDs}}{{if $i}}, {{end}}{{$id}}{{end}}</p>
+  {{else}}
+  <p class="small mt-2">Facts available: none</p>
+  {{end}}
+
+  <p class="small">Command: <code>{{.Backtest.Command}}</code></p>
+  <p class="small">Generated: <time datetime="{{.Backtest.GeneratedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{.Backtest.GeneratedAt.Format "2006-01-02 15:04 UTC"}}</time></p>
+</section>
+{{else}}
+<section id="backtest">
+  <h2>Settlement Back-Test</h2>
+  <p>No backtest results yet. Run <code>equinox backtest --fixtures --out config/backtest_summary.json</code> to generate them.</p>
+</section>
+{{end}}
