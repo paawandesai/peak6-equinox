@@ -471,12 +471,17 @@ func TestFormatPercentAndHTTPURL(t *testing.T) {
 func TestLayoutNavLinksNewPages(t *testing.T) {
 	body := get(New(Config{}, Deps{}).Handler(), "/eval").Body.String()
 	// UI-10: nav links now include aria-current on the active page
+	// M5-09: nav includes Glossary after Eval
 	wantContains(t, body,
+		`<a href="/"`,
+		`>Matches</a>`,
 		`<a href="/near-misses"`,
 		`>Near misses</a>`,
 		`<a href="/log"`,
 		`>Decision log</a>`,
 		`<a href="/eval"`,
 		`aria-current="page"`,
-		`>Eval</a>`)
+		`>Eval</a>`,
+		`<a href="/glossary"`,
+		`>Glossary</a>`)
 }
