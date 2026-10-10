@@ -45,7 +45,7 @@ func (s *Server) pageBase(r store.Round, title, question, timezone, pageName str
 			freshState = FreshStateUnknown
 		}
 		stamp = &stampInfo{
-			Badge:    FreshBadge(freshState),
+			Badge:    FreshBadgeAged(freshState, age, time.Duration(s.cfg.StaleRoundWarnMinutes)*time.Minute, FreshKindRound),
 			AsOf:     formatTime(asOf, timezone),
 			DateTime: asOf.UTC().Format(time.RFC3339),
 			Age:      Age(age),

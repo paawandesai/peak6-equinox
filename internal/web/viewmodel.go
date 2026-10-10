@@ -14,6 +14,8 @@ type Badge struct {
 	Class string // CSS class (b-equivalent, f-fresh, h-healthy, v-match, o-routed, etc.)
 	Glyph string // Unicode glyph (≡, ✓, ✕, ◐, ?, etc.)
 	Text  string // Human-readable text
+	Title string // Optional tooltip (title attribute), e.g. why a freshness badge is stale
+	Aged  bool   // True when Text already carries the data age (templates skip a duplicate age)
 }
 
 // ConfidenceWord maps a confidence score to its bucket word per design.md § 4.
@@ -119,6 +121,44 @@ func FreshBadge(state FreshState) Badge {
 	}
 }
 
+// FreshKind selects the wording of an aged freshness badge's tooltip.
+type FreshKind string
+
+// Freshness subjects for FreshBadgeAged.
+const (
+	FreshKindQuote FreshKind = "quote" // venue price/quote data
+	FreshKindRound FreshKind = "round" // match round snapshot
+)
+
+// FreshBadgeAged returns a freshness badge that shows the data's actual age
+// instead of a bare "Stale"/"Warn" label, with the reason in the tooltip.
+// freshUnder is the window under which data counts as fresh (0 = omit it).
+func FreshBadgeAged(state FreshState, age, freshUnder time.Duration, kind FreshKind) Badge {
+	b := FreshBadge(state)
+	subject := "Last price update"
+	if kind == FreshKindRound {
+		subject = "Last match round"
+	}
+	reason := fmt.Sprintf("%s %s ago", subject, AgeShort(age))
+	if freshUnder > 0 {
+		reason += fmt.Sprintf("; fresh means under %s", AgeShort(freshUnder))
+	}
+	switch state {
+	case FreshStateStale:
+		b.Text = fmt.Sprintf("Stale · %s old", AgeShort(age))
+		b.Aged = true
+	case FreshStateWarn:
+		b.Text = fmt.Sprintf("%s old", AgeShort(age))
+		b.Aged = true
+	case FreshStateFresh, FreshStatePinned:
+		// Keep the short label; the age is in the tooltip.
+	default:
+		return b
+	}
+	b.Title = reason
+	return b
+}
+
 // HealthState represents admin health states (UI-10, HANDOFF.md).
 type HealthState string
 
@@ -215,21 +255,29 @@ func OutcomePhrase(chosen bool, partial bool, isComplement bool, venueCount int)
 
 // Age computes a human-readable age string from a duration (UI-10, stamp define).
 func Age(d time.Duration) string {
+	return AgeShort(d) + " ago"
+}
+
+// AgeShort renders a duration in human units without a suffix: "45 s", "5 min", "3 h", "2 days".
+func AgeShort(d time.Duration) string {
 	if d < 0 {
 		d = 0
 	}
 	s := int(d.Seconds())
 	if s < 60 {
-		return fmt.Sprintf("%d s ago", s)
+		return fmt.Sprintf("%d s", s)
 	}
 	m := s / 60
 	if m < 60 {
-		return fmt.Sprintf("%d min ago", m)
+		return fmt.Sprintf("%d min", m)
 	}
 	h := m / 60
 	if h < 24 {
-		return fmt.Sprintf("%d h ago", h)
+		return fmt.Sprintf("%d h", h)
 	}
 	days := h / 24
-	return fmt.Sprintf("%d days ago", days)
+	if days == 1 {
+		return "1 day"
+	}
+	return fmt.Sprintf("%d days", days)
 }

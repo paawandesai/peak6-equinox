@@ -1011,7 +1011,7 @@ func buildInputSnapshots(d canonical.Decision, snapshot time.Time) ([]inputSnaps
 	if maxAge >= 120*time.Second {
 		oldestState = FreshStateStale
 	}
-	maxAgeBadge := FreshBadge(oldestState)
+	maxAgeBadge := FreshBadgeAged(oldestState, maxAge, 120*time.Second, FreshKindQuote)
 
 	return views, maxAge, maxAgeBadge
 }

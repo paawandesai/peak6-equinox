@@ -25,13 +25,13 @@ func TestStaleRoundWarning(t *testing.T) {
 			name:        "exactly at threshold: warn",
 			warnMinutes: 10,
 			roundAge:    10 * time.Minute,
-			wantWarning: "Data is 10 minutes old.",
+			wantWarning: "Data is 10 min old: the last match round ran 10 min ago (fresh means under 10 min).",
 		},
 		{
 			name:        "stale round: show minutes",
 			warnMinutes: 10,
 			roundAge:    25 * time.Minute,
-			wantWarning: "Data is 25 minutes old.",
+			wantWarning: "Data is 25 min old: the last match round ran 25 min ago (fresh means under 10 min).",
 		},
 		{
 			name:        "zero threshold: no warning",

@@ -64,6 +64,10 @@
 <span class="badge {{.Class}}"><span class="g" aria-hidden="true">{{.Glyph}}</span>{{.Text}}</span>
 {{end}}
 
+{{define "fbadge"}}{{/* freshness Badge: .Class, .Glyph, .Text, .Title (tooltip with the age reason) */}}
+<span class="badge {{.Class}}"{{if .Title}} title="{{.Title}}"{{end}}><span class="g" aria-hidden="true">{{.Glyph}}</span>{{.Text}}</span>
+{{end}}
+
 {{define "conf"}}{{/* .Value (float), .Word (high/medium/low), .Class (w-high/w-medium/w-low) */}}
 <span class="conf">
   <strong>{{printf "%.2f" .Value}}</strong>
@@ -74,7 +78,7 @@
 
 {{define "stamp"}}{{/* .Badge (Badge struct), .AsOf (time string), .Age (e.g. "14 s ago") */}}
 <span class="stamp">
-  {{template "badge" .Badge}}
-  as of <time datetime="{{.DateTime}}">{{.AsOf}}</time>{{if .Age}} · {{.Age}}{{end}}
+  {{template "fbadge" .Badge}}
+  as of <time datetime="{{.DateTime}}">{{.AsOf}}</time>{{if and .Age (not .Badge.Aged)}} · {{.Age}}{{end}}
 </span>
 {{end}}

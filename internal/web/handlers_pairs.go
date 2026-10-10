@@ -437,7 +437,7 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 			staleThreshold := s.cfg.StaleAfter
 			freshState := quoteFreshState(venue, quote.FetchedAt, now, currentRound.Pinned, warnThreshold, staleThreshold)
 			q.dest.FreshState = string(freshState)
-			q.dest.FreshBadge = FreshBadge(freshState)
+			q.dest.FreshBadge = FreshBadgeAged(freshState, age, staleThreshold, FreshKindQuote)
 		}
 		q.dest.Venue = string(canonical.VenueOf(q.id))
 		q.dest.Tz = tz

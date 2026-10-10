@@ -9,7 +9,7 @@
   <header>
     <strong>Decision #{{$.DecisionID}}</strong> · round {{.RoundID}} · as of {{formatTime .Snapshot $.Timezone}} · decided {{formatTime .DecidedAt $.Timezone}}
     {{if .InputsRecorded}}
-      · {{template "badge" .MaxQuoteAgeBadge}}
+      · {{template "fbadge" .MaxQuoteAgeBadge}}
     {{end}}
     · <a href="/decisions/{{$.DecisionID}}">permalink</a>
   </header>
@@ -150,7 +150,7 @@
                   <td data-label="Relationship">{{template "badge" .TypeBadge}}</td>
                   <td class="num" data-label="Best ask">{{money .BestAsk}}</td>
                   <td class="num" data-label="Depth">{{.Depth}}</td>
-                  <td data-label="Fetched"><span class="badge {{if eq .FreshState "fresh"}}f-fresh{{else if eq .FreshState "stale"}}f-stale{{else}}f-unknown{{end}}"><span class="g" aria-hidden="true">{{if eq .FreshState "fresh"}}✓{{else if eq .FreshState "stale"}}✕{{else}}?{{end}}</span>{{if eq .FreshState "fresh"}}Fresh{{else if eq .FreshState "stale"}}Stale{{else}}Unknown{{end}}</span> as of <time datetime="{{.FetchedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatTime .FetchedAt $.Timezone}}</time> · {{Age .Age}}</td>
+                  <td data-label="Fetched"><span class="badge {{if eq .FreshState "fresh"}}f-fresh{{else if eq .FreshState "stale"}}f-stale{{else}}f-unknown{{end}}"><span class="g" aria-hidden="true">{{if eq .FreshState "fresh"}}✓{{else if eq .FreshState "stale"}}✕{{else}}?{{end}}</span>{{if eq .FreshState "fresh"}}Fresh{{else if eq .FreshState "stale"}}Stale · {{AgeShort .Age}} old{{else}}Unknown{{end}}</span> as of <time datetime="{{.FetchedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatTime .FetchedAt $.Timezone}}</time> · {{Age .Age}}</td>
                 </tr>
                 {{end}}
               </tbody>

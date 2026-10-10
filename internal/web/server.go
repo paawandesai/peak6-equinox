@@ -143,7 +143,7 @@ func (s *Server) staleRoundWarning(r store.Round) string {
 	ageMinutes := int(age.Minutes())
 	threshold := s.cfg.StaleRoundWarnMinutes
 	if ageMinutes >= threshold {
-		return fmt.Sprintf("Data is %d minutes old.", ageMinutes)
+		return fmt.Sprintf("Data is %s old: the last match round ran %s ago (fresh means under %s).", AgeShort(age), AgeShort(age), AgeShort(time.Duration(threshold)*time.Minute))
 	}
 	return ""
 }

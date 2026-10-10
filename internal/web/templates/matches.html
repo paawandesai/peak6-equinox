@@ -103,7 +103,7 @@
           {{if .VetoPhrase}}<a href="/pairs/{{.ID}}#diff">{{.VetoPhrase}}</a>{{end}}
         </td>
         <td data-label="Market">
-          {{template "badge" .FreshBadge}}
+          {{template "fbadge" .FreshBadge}}
           {{if .NetGap.HasValue}}
           <div><small>net gap {{.NetGapText}}</small></div>
           {{else if .NetGap.Reason}}
@@ -163,7 +163,7 @@
           </ul>
           {{if .VetoPhrase}}<a href="/pairs/{{.ID}}#diff">{{.VetoPhrase}}</a>{{end}}
         </td>
-        <td data-label="Market">{{template "badge" .FreshBadge}}</td>
+        <td data-label="Market">{{template "fbadge" .FreshBadge}}</td>
       </tr>
     {{end}}
     </tbody>
@@ -212,7 +212,7 @@
           </ul>
           {{if .VetoPhrase}}<a href="/pairs/{{.ID}}#diff">{{.VetoPhrase}}</a>{{end}}
         </td>
-        <td data-label="Market">{{template "badge" .FreshBadge}}</td>
+        <td data-label="Market">{{template "fbadge" .FreshBadge}}</td>
       </tr>
     {{end}}
     </tbody>

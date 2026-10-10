@@ -298,7 +298,7 @@
   {{if .Present}}
   <td>{{.BestBid}}</td><td>{{.BestAsk}}</td><td>{{.Mid}}</td><td>{{.BidLevels}}/{{.AskLevels}}</td>
   <td>
-    {{if .FreshBadge.Glyph}}{{template "badge" .FreshBadge}} {{end}}as of <time datetime="{{.StampDT}}">{{.StampAsOf}}</time>{{if .Age}} · {{.Age}}{{end}}
+    {{if .FreshBadge.Glyph}}{{template "fbadge" .FreshBadge}} {{end}}as of <time datetime="{{.StampDT}}">{{.StampAsOf}}</time>{{if and .Age (not .FreshBadge.Aged)}} · {{.Age}}{{end}}
   </td>
   <td>{{if .VenueTS}}{{formatTime .VenueTS .Tz}}{{else}}{{.VenueTSStr}}{{end}}</td>
   <td>{{if .Quality}}{{range .Quality}}<code>{{.Flag}}</code> {{end}}{{else}}ok{{end}}</td>
