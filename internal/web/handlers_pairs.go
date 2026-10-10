@@ -46,9 +46,10 @@ type pairPage struct {
 	History         historyChart
 	LogEntries      []logEntryView
 	Form            routeFormView
-	FormPreset      bool   // M6 P1: the route form was pre-filled from query params
-	EvidenceFooter  string // UI-20: "prior + Σ = total → confidence X.XX" or "not recorded"
-	HasEvidence     bool   // UI-20: whether evidence was recorded
+	FormPreset      bool      // M6 P1: the route form was pre-filled from query params
+	QuoteRef        time.Time // M6 P3: the time quote ages are measured against
+	EvidenceFooter  string    // UI-20: "prior + Σ = total → confidence X.XX" or "not recorded"
+	HasEvidence     bool      // UI-20: whether evidence was recorded
 	// UI-22: LLM verifier rationale (hidden when pair was never verified)
 	HasLLMRationale bool
 	LLMRationale    []string // Evidence from verdict (up to 3 entries × 200 chars)
@@ -198,6 +199,7 @@ type touchView struct {
 	FreshState string // UI-12: fresh/stale/unknown/pinned
 	StampAsOf  string // UI-12: formatted timestamp for stamp
 	StampDT    string // UI-12: datetime attribute
+	OneSided   string // M6 P3: "one-sided: no YES bid" etc., empty for a two-sided book
 }
 
 func newTouchView(q store.QuoteRecord) touchView {
@@ -415,8 +417,11 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 	}
 	// UI-12: load quotes with freshness. Prices come from the newest round that
 	// has them (liveQuote), so a pinned pair still shows live, aging prices.
-	now := s.now().UTC()
-
+	// M6 P3: ages are measured against the reference routing uses
+	// (quoteSnapshot) with the router's stale rule, so this badge, the matches
+	// list and the route trace agree.
+	ref := quoteSnapshot(ctx, st, round)
+	data.QuoteRef = ref
 	for _, q := range []struct {
 		id   string
 		dest *touchView
@@ -430,19 +435,13 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 			return
 		default:
 			*q.dest = newTouchView(quote)
-			// UI-12: compute age and freshness
-			age := now.Sub(quote.FetchedAt)
+			age, freshState := quoteAgeAt(ref, quote.FetchedAt, s.cfg.StaleAfter)
 			q.dest.Age = Age(age)
 			q.dest.StampAsOf = formatTime(quote.FetchedAt, tz)
 			q.dest.StampDT = quote.FetchedAt.Format(time.RFC3339)
-
-			// Determine freshness state (UI-19: venue-specific warn windows)
-			venue := canonical.VenueOf(q.id)
-			warnThreshold := s.warnThresholdForVenue(venue)
-			staleThreshold := s.cfg.StaleAfter
-			freshState := quoteFreshState(venue, quote.FetchedAt, now, currentRound.Pinned && quote.RoundID == rel.RoundID, warnThreshold, staleThreshold)
 			q.dest.FreshState = string(freshState)
-			q.dest.FreshBadge = FreshBadgeAged(freshState, age, staleThreshold, FreshKindQuote)
+			q.dest.FreshBadge = FreshBadgeAged(freshState, age, s.cfg.StaleAfter, FreshKindQuote)
+			q.dest.OneSided = oneSidedNote(&quote.Quote)
 		}
 		q.dest.Venue = string(canonical.VenueOf(q.id))
 		q.dest.Tz = tz

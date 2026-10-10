@@ -167,7 +167,7 @@
 {{/* UI-12: Current touch with freshness badge in Fetched column */}}
 <section>
   <h2>Current touch</h2>
-  <p>Best YES bid and ask on each venue from the newest collected round (pairs come from round {{.Round.ID}}). Mid is for display only; routing walks this same book.</p>
+  <p>Best YES bid and ask on each venue from the newest collected round (pairs come from round {{.Round.ID}}). Mid is for display only; routing walks this same book.{{if not .QuoteRef.IsZero}} Ages are measured against that round ({{formatTime .QuoteRef $.Timezone}}), the reference routing uses.{{end}}</p>
   <table>
     <thead><tr><th>Venue</th><th>Best bid</th><th>Best ask</th><th>Mid</th><th>Levels (bid/ask)</th><th>Fetched</th><th>Venue time</th><th>Quality</th></tr></thead>
     <tbody>
@@ -302,7 +302,7 @@
     {{if .FreshBadge.Glyph}}{{template "fbadge" .FreshBadge}} {{end}}as of <time datetime="{{.StampDT}}">{{.StampAsOf}}</time>{{if and .Age (not .FreshBadge.Aged)}} · {{.Age}}{{end}}
   </td>
   <td>{{if .VenueTS}}{{formatTime .VenueTS .Tz}}{{else}}{{.VenueTSStr}}{{end}}</td>
-  <td>{{if .Quality}}{{range .Quality}}<code>{{.Flag}}</code> {{end}}{{else}}ok{{end}}</td>
+  <td>{{if .Quality}}{{range .Quality}}<code>{{.Flag}}</code> {{end}}{{else}}ok{{end}}{{if .OneSided}} <small>{{.OneSided}}</small>{{end}}</td>
   {{else}}
   <td colspan="7">No quote for this instrument in the round.</td>
   {{end}}

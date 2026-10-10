@@ -251,7 +251,7 @@ type inputSnapshotView struct {
 	FetchedAt    time.Time // Raw UTC time for formatTime
 }
 
-func newDecisionView(d canonical.Decision, partners int, snapshot time.Time, instrumentTitles map[string]string, basisMult decimal.Decimal) *decisionView {
+func newDecisionView(d canonical.Decision, partners int, snapshot time.Time, instrumentTitles map[string]string, basisMult decimal.Decimal, staleAfter time.Duration) *decisionView {
 	chosen := len(d.Chosen) > 0
 	partial := chosen && d.Order.Quantity != nil && totalFilled(d.Chosen).LessThan(*d.Order.Quantity)
 	isComplement := hasComplement(d.Chosen)
@@ -367,7 +367,7 @@ func newDecisionView(d canonical.Decision, partners int, snapshot time.Time, ins
 	}
 
 	// Build input snapshots (UI-13, step 1)
-	inputViews, maxAge, maxAgeBadge := buildInputSnapshots(d, snapshot)
+	inputViews, maxAge, maxAgeBadge := buildInputSnapshots(d, snapshot, staleAfter)
 	inputsRecorded := len(d.Inputs) > 0
 
 	// Kept vs total candidates (UI-13, step 2)
@@ -819,7 +819,7 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 		page:          p,
 		PairID:        in.PairID,
 		DecisionID:    id,
-		Decision:      newDecisionView(dec, len(partners), decisionSnapshot(dec, round.SnapshotAt()), titles, s.cfg.BasisPenaltyMult),
+		Decision:      newDecisionView(dec, len(partners), decisionSnapshot(dec, cfg.Eligibility.Snapshot), titles, s.cfg.BasisPenaltyMult, s.cfg.StaleAfter),
 		RenderContext: "route",
 	}
 	s.renderRoute(w, r, http.StatusOK, data)
@@ -963,35 +963,26 @@ func buildInputMap(inputs []canonical.DecisionInput) map[string]canonical.Decisi
 
 // buildInputSnapshots creates the input snapshot views for the trace step 1 (UI-13).
 // Returns the snapshot views, the oldest quote age, and its freshness badge.
-func buildInputSnapshots(d canonical.Decision, snapshot time.Time) ([]inputSnapshotView, time.Duration, Badge) {
+// Ages and states use the one freshness rule (quoteAgeAt, M6 P3) against
+// snapshot, so the trace agrees with the matches list and the pair page.
+func buildInputSnapshots(d canonical.Decision, snapshot time.Time, staleAfter time.Duration) ([]inputSnapshotView, time.Duration, Badge) {
 	if len(d.Inputs) == 0 {
 		return nil, 0, Badge{}
 	}
 
 	views := make([]inputSnapshotView, len(d.Inputs))
 	var maxAge time.Duration
+	oldestState := FreshStateUnknown
 
 	for i, input := range d.Inputs {
-		age := snapshot.Sub(input.FetchedAt)
-		if age < 0 {
-			age = 0
-		}
-		if age > maxAge {
-			maxAge = age
-		}
+		age, freshState := quoteAgeAt(snapshot, input.FetchedAt, staleAfter)
+		maxAge = max(maxAge, age)
+		oldestState = worseFresh(oldestState, freshState)
 
 		// Compute depth (sum of ask levels)
 		depth := 0
 		for _, level := range input.AskDepth {
 			depth += int(level.Size.IntPart())
-		}
-
-		// Determine fresh state using existing staleAfter threshold
-		// UI-19 will add warn state; for now only Fresh/Stale/Unknown
-		freshState := FreshStateFresh
-		staleThreshold := 120 * time.Second // D-077 default
-		if age >= staleThreshold {
-			freshState = FreshStateStale
 		}
 
 		views[i] = inputSnapshotView{
@@ -1006,12 +997,5 @@ func buildInputSnapshots(d canonical.Decision, snapshot time.Time) ([]inputSnaps
 		}
 	}
 
-	// Badge for the oldest input
-	oldestState := FreshStateFresh
-	if maxAge >= 120*time.Second {
-		oldestState = FreshStateStale
-	}
-	maxAgeBadge := FreshBadgeAged(oldestState, maxAge, 120*time.Second, FreshKindQuote)
-
-	return views, maxAge, maxAgeBadge
+	return views, maxAge, FreshBadgeAged(oldestState, maxAge, staleAfter, FreshKindQuote)
 }

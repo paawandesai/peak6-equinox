@@ -119,6 +119,7 @@
           {{else if .NetGap.Reason}}
           <div><small>no gap: {{.NetGap.Reason}}</small></div>
           {{end}}
+          {{range .BookNotes}}<div><small>{{.}}</small></div>{{end}}
           {{if .IsFlagged}}
           <div><small class="b-review">⚠ review: large edge, low confidence</small></div>
           <div><small>{{.FlaggedReason}}</small></div>
@@ -250,6 +251,8 @@
 </div>
 {{end}}
 
+{{/* M6 P3: the freshness reference */}}
+{{if not .QuoteRef.IsZero}}<p class="sign-rule"><small>Quote ages are measured against the newest collected round ({{formatTime .QuoteRef $.Timezone}}), the same reference routing uses; a quote is stale when it is more than {{AgeShort .StaleAfter}} older.</small></p>{{end}}
 {{/* UI-18: Sign rule */}}
 <p class="sign-rule"><small>Net gap sign rule: positive values favor routing via the first venue (A), values in parentheses favor the second venue (B).</small></p>
 

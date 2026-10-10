@@ -123,7 +123,7 @@ func TestDecisionSnapshotNeverBeforeInputs(t *testing.T) {
 	if got := decisionSnapshot(d, pinned); !got.Equal(pinned) {
 		t.Errorf("pinned inputs: got %v, want %v", got, pinned)
 	}
-	_, maxAge, _ := buildInputSnapshots(canonical.Decision{Inputs: []canonical.DecisionInput{{FetchedAt: live.Add(-5 * time.Minute)}, {FetchedAt: live}}}, decisionSnapshot(canonical.Decision{Inputs: []canonical.DecisionInput{{FetchedAt: live}}}, pinned))
+	_, maxAge, _ := buildInputSnapshots(canonical.Decision{Inputs: []canonical.DecisionInput{{FetchedAt: live.Add(-5 * time.Minute)}, {FetchedAt: live}}}, decisionSnapshot(canonical.Decision{Inputs: []canonical.DecisionInput{{FetchedAt: live}}}, pinned), 120*time.Second)
 	if maxAge != 5*time.Minute {
 		t.Errorf("max input age = %v, want 5m", maxAge)
 	}
