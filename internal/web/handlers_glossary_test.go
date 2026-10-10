@@ -97,3 +97,20 @@ func TestGlossaryReadOnly(t *testing.T) {
 		}
 	}
 }
+
+// TestGlossaryLeadsWithPlainWords: each entry starts with the phrase the UI
+// uses and gives the technical name after it, with an anchor per UI term.
+func TestGlossaryLeadsWithPlainWords(t *testing.T) {
+	body := get(New(Config{}, Deps{}).Handler(), "/glossary").Body.String()
+	wantContains(t, body,
+		`<dt id="term-safety-charge">Safety charge <span class="gloss-tech">(basis-risk penalty)</span></dt>`,
+		`<span id="term-safety-risk">Safety risk</span> <span class="gloss-tech">(basis-risk score)</span>`,
+		`<span id="term-total-per-contract">Total per contract</span>`,
+		`id="term-stale">Too old to trust`, `id="term-skew">Taken too far apart`,
+		`id="term-depth">Nobody is selling / Only N on offer`, `id="term-sure-loss">Guaranteed loss`,
+		`id="term-technical-details">Technical details`,
+	)
+	for typ, plain := range glossaryPlainType {
+		wantContains(t, body, `<tr id="`+glossaryTypeAnchor(typ)+`">`+"\n        "+`<td data-label="Type"><strong>`+plain+`</strong>`)
+	}
+}

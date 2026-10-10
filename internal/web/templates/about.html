@@ -4,6 +4,37 @@
   <p class="intro">Equinox is a prototype built for PEAK6 Labs. It reads contracts and order books from Kalshi and Polymarket, decides which contracts are the same bet, explains every verdict, and simulates where an order would fill best. It is read-only and never places orders.</p>
 </div>
 
+<section class="read-decision" aria-labelledby="read-decision">
+  <h2 id="read-decision">How to read a decision</h2>
+  <ol>
+    <li><strong>Verdict card:</strong> the answer first, in plain words, and what to do next.</li>
+    <li><strong>Comparison table:</strong> each venue's total per contract in cents, and the order total in dollars.</li>
+    <li><strong>The bar beside it:</strong> price, fee and safety charge stacked, with the winner highlighted.</li>
+    <li><strong>Why not the others?:</strong> one line per group of contracts that were set aside, and why.</li>
+    <li><strong>Technical details:</strong> collapsed; codes, instrument IDs, settings, the router's own words and the raw JSON.</li>
+  </ol>
+  <svg class="read-diagram" viewBox="0 0 640 300" role="img" aria-labelledby="read-diagram-title read-diagram-desc" xmlns="http://www.w3.org/2000/svg">
+    <title id="read-diagram-title">The three layers of a decision page</title>
+    <desc id="read-diagram-desc">Three stacked blocks, top to bottom: the verdict card with the answer and next step; the comparison table showing where it is cheapest in cents and dollars; and the collapsed technical details with codes, IDs and raw JSON.</desc>
+    <rect class="rd-box rd-box-key" x="8" y="8" width="624" height="84" rx="10"></rect>
+    <circle class="rd-dot" cx="40" cy="50" r="16"></circle>
+    <text class="rd-num" x="40" y="55" text-anchor="middle">1</text>
+    <text class="rd-title" x="70" y="44">Verdict card</text>
+    <text class="rd-text" x="70" y="70">The answer and the next step. Read this first.</text>
+    <rect class="rd-box" x="8" y="108" width="624" height="84" rx="10"></rect>
+    <circle class="rd-dot" cx="40" cy="150" r="16"></circle>
+    <text class="rd-num" x="40" y="155" text-anchor="middle">2</text>
+    <text class="rd-title" x="70" y="144">Comparison table</text>
+    <text class="rd-text" x="70" y="170">Where it is cheapest, in cents and dollars.</text>
+    <rect class="rd-box rd-box-audit" x="8" y="208" width="624" height="84" rx="10"></rect>
+    <circle class="rd-dot" cx="40" cy="250" r="16"></circle>
+    <text class="rd-num" x="40" y="255" text-anchor="middle">3</text>
+    <text class="rd-title" x="70" y="244">Technical details ▸</text>
+    <text class="rd-text" x="70" y="270">Collapsed: codes, instrument IDs, raw JSON.</text>
+  </svg>
+  <p class="note">Every word on those pages is defined on the <a href="/glossary">Glossary</a>, plain phrase first.</p>
+</section>
+
 <section>
   <h2 id="questions">The two questions</h2>
   <p>The brief's problem statement: "Nobody can say programmatically 'these two contracts are the same bet' or compare their prices on a like-for-like basis, which means no one can route an order intelligently between venues." Equinox tests whether both can be done.</p>
@@ -22,6 +53,7 @@
 <section>
   <h2 id="ladder">The relationship ladder</h2>
   <p>Strongest first. Only routable types with confidence {{.MinConfidence}} or more are offered to the router; the LLM verifier may only move a pair down this list.</p>
+  <div class="scroll-x">
   <table class="data stack">
     <thead><tr><th>Type</th><th>Meaning</th><th>Routable</th></tr></thead>
     <tbody>
@@ -34,6 +66,7 @@
     {{end}}
     </tbody>
   </table>
+  </div>
   <p class="note">Veto codes and other terms are defined on the <a href="/glossary">Glossary</a>.</p>
 </section>
 

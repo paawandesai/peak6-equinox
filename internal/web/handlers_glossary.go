@@ -16,6 +16,7 @@ type glossaryPage struct {
 // glossaryType is one relationship type as the glossary defines it.
 type glossaryType struct {
 	Anchor   string
+	Plain    string // the phrase the rest of the UI uses for this type
 	Badge    Badge
 	Meaning  string
 	Routable bool
@@ -37,6 +38,17 @@ var typeMeanings = map[canonical.RelationshipType]string{
 	canonical.RelImplies:              "One contract resolving YES guarantees the other resolves YES, but not the reverse. Never routed.",
 	canonical.RelRelated:              "Same event, different payout: a term differs or a veto applies. Never routed.",
 	canonical.RelUnrelated:            "Compared and found to be about different things.",
+}
+
+// glossaryPlainType is the plain phrase each relationship type goes by in the
+// UI; the glossary leads with it and gives the technical name after.
+var glossaryPlainType = map[canonical.RelationshipType]string{
+	canonical.RelEquivalent:           "Same bet",
+	canonical.RelEquivalentGivenFacts: "Same bet, given facts",
+	canonical.RelComplement:           "Opposite contract",
+	canonical.RelImplies:              "One-way",
+	canonical.RelRelated:              "Lookalike",
+	canonical.RelUnrelated:            "Unrelated",
 }
 
 // glossaryVetoCodes copies the veto codes from internal/match/veto.go, in its
@@ -78,7 +90,7 @@ func glossaryTypes() []glossaryType {
 	types := canonical.RelationshipTypes()
 	out := make([]glossaryType, 0, len(types))
 	for _, t := range types {
-		out = append(out, glossaryType{Anchor: glossaryTypeAnchor(t), Badge: TypeBadge(t), Meaning: typeMeanings[t], Routable: t.Routable()})
+		out = append(out, glossaryType{Anchor: glossaryTypeAnchor(t), Plain: glossaryPlainType[t], Badge: TypeBadge(t), Meaning: typeMeanings[t], Routable: t.Routable()})
 	}
 	return out
 }
