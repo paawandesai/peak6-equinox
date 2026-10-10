@@ -51,6 +51,10 @@ type Config struct {
 	ReviewEdgeMin decimal.Decimal
 	// StaleRoundWarnMinutes is the stale-round warning threshold (STALE_ROUND_WARN_MINUTES).
 	StaleRoundWarnMinutes int
+	// FedNextMeeting is the fed_next_meeting fact (YYYY-MM-DD) from FACTS_FILE.
+	// The guided demo on / uses it to find the meeting's Kalshi KXFED contracts.
+	// Empty means use the value the matcher stored on the round's pairs.
+	FedNextMeeting string
 }
 
 // Deps holds the collaborators the web layer uses. Store and Ingester may be

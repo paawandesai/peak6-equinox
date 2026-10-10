@@ -331,7 +331,7 @@ func TestGroupPairsOrdering(t *testing.T) {
 	quoteMap := make(map[string]*canonical.Quote)
 	instMap := make(map[string]canonical.Instrument)
 	reviewEdgeMin := decimal.RequireFromString("0.02")
-	groups := groupPairs(rels, views, now, "confidence", "", quoteTimes, now, quoteMap, instMap, reviewEdgeMin)
+	groups := groupPairs(rels, views, now, "confidence", "", quoteTimes, now, quoteMap, instMap, reviewEdgeMin, 120*time.Second)
 	if len(groups) != 2 || groups[0].Type != "equivalent" || groups[1].Type != "related" {
 		t.Fatalf("groups = %+v", groups)
 	}

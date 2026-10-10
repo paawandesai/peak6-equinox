@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/config"
+	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/facts"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/store"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/web"
 )
@@ -143,7 +144,24 @@ func newServerWith(cfg config.Config, logger *slog.Logger, deps web.Deps) *web.S
 		ReviewEdgeMin:         cfg.ReviewEdgeMin,
 		StaleRoundWarnMinutes: cfg.StaleRoundWarnMinutes,
 		RoundWarnMinutes:      cfg.RoundWarnMinutes,
+		FedNextMeeting:        fedNextMeeting(cfg.FactsFile, logger),
 	}, deps)
+}
+
+// fedNextMeeting reads the fed_next_meeting fact from the facts file for the
+// guided demo on / (M6 P1). The server runs without it: a missing or invalid
+// file is logged and the page falls back to the facts stored on the round.
+func fedNextMeeting(path string, logger *slog.Logger) string {
+	fs, err := facts.Load(path)
+	if err != nil {
+		logger.Warn("facts file not loaded; guided demo uses stored facts", "facts_file", path, "err", err)
+		return ""
+	}
+	f, ok := fs.Get("fed_next_meeting")
+	if !ok {
+		return ""
+	}
+	return f.Value
 }
 
 // serve runs the HTTP server on ln until ctx is cancelled, then shuts down gracefully.

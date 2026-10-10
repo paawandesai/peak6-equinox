@@ -43,6 +43,12 @@ type historyChart struct {
 	Empty          bool
 	Rows           []historyRow
 	Tz             string // Timezone for formatTime in templates (M3-08 Cursor round 2)
+	// M6 P5: when the pairs were matched, and how many points came after it
+	// (live collection, D-117). PinX is the chart x of MatchedAt, empty when
+	// it falls outside the plotted span.
+	MatchedAt   time.Time
+	LaterPoints int
+	PinX        string
 }
 
 // historySeries is one instrument's line. Mid is the polyline of mids;
@@ -148,6 +154,9 @@ func buildHistoryChart(aID, bID string, relType canonical.RelationshipType, pts 
 		sr.Mid, sr.Bid, sr.Ask = string(mid), string(bid), string(ask)
 		c.Series = append(c.Series, sr)
 	}
+	// M6 P5: one table for both venues, newest first, so the 50-row cap
+	// (D-116) keeps the most recent points of both.
+	sortHistoryRows(c.Rows)
 	// M4-75: spread series (mid A − mid B, or mid A − (1 − mid B) for complements)
 	c.Spread = buildSpreadSeries(aID, bID, relType, pts, xOf)
 	for _, v := range []string{"0", "0.25", "0.5", "0.75", "1"} {
@@ -275,3 +284,35 @@ func appendPoint(b []byte, x float64, d decimal.NullDecimal) []byte {
 func px(n int) string          { return strconv.Itoa(n) }
 func fpx(f float64) string     { return strconv.FormatFloat(f, 'f', 1, 64) }
 func venueOf(id string) string { return string(canonical.VenueOf(id)) }
+
+// sortHistoryRows orders the data table newest first, both venues
+// interleaved; equal times keep a stable venue order.
+func sortHistoryRows(rows []historyRow) {
+	sort.SliceStable(rows, func(i, j int) bool {
+		if !rows[i].At.Equal(rows[j].At) {
+			return rows[i].At.After(rows[j].At)
+		}
+		return rows[i].Venue < rows[j].Venue
+	})
+}
+
+// markMatched records when the pairs were matched (the round snapshot) so the
+// page can say which points are live collection (M6 P5, D-117), and places a
+// marker on the chart when that time falls inside the plotted span.
+func (c *historyChart) markMatched(at time.Time) {
+	if c.Empty || at.IsZero() {
+		return
+	}
+	c.MatchedAt = at
+	for _, r := range c.Rows {
+		if r.At.After(at) {
+			c.LaterPoints++
+		}
+	}
+	span := c.To.Sub(c.From)
+	if span <= 0 || at.Before(c.From) || at.After(c.To) {
+		return
+	}
+	w := float64(chartWidth - chartLeft - chartRight)
+	c.PinX = fpx(chartLeft + w*float64(at.Sub(c.From))/float64(span))
+}
