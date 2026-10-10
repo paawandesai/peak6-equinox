@@ -431,7 +431,7 @@ func TestLogOutliers(t *testing.T) {
 	// Outliers panel structure: div.outliers with strong heading and p elements
 	wantContains(t, body,
 		`<div class="outliers">`,
-		`<strong>Outliers</strong>`,
+		`<strong>Latest decisions</strong>`, // M6 P7: renamed from "Outliers"
 	)
 	// Both worst saving and oldest input must be present (UI-15 AC)
 	wantContains(t, body, `Worst saving:`)
