@@ -755,7 +755,7 @@ func (s *Server) handleDecision(w http.ResponseWriter, r *http.Request) {
 	}
 	snapshot := time.Time{}
 	if err == nil {
-		snapshot = decisionSnapshot(rd.Decision, round.SnapshotAt())
+		snapshot = storedDecisionSnapshot(ctx, st, rd.Decision, round.SnapshotAt())
 	}
 
 	// Use current round from context for the page banner (not the decision's own round)
@@ -765,7 +765,7 @@ func (s *Server) handleDecision(w http.ResponseWriter, r *http.Request) {
 		routePage: routePage{
 			page:          s.pageBase(currentRound, "Decision "+r.PathValue("id"), "What did this simulated order do, and why did the router choose that venue?", tz, "decision"),
 			DecisionID:    rd.ID,
-			Decision:      newDecisionView(rd.Decision, countPartners(rd.Decision), snapshot, s.loadDecisionInstrumentTitles(ctx, st, rd.Decision), s.cfg.BasisPenaltyMult),
+			Decision:      newDecisionView(rd.Decision, countPartners(rd.Decision), snapshot, s.loadDecisionInstrumentTitles(ctx, st, rd.Decision), s.cfg.BasisPenaltyMult, s.cfg.StaleAfter),
 			RenderContext: "decision",
 		},
 		CreatedAt: rd.CreatedAt,

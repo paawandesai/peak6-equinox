@@ -16,7 +16,7 @@ var referenceSize = decimal.NewFromInt(100)
 type NetGap struct {
 	Value    decimal.Decimal // net gap in dollars per contract (positive = A is cheaper)
 	HasValue bool            // false when quotes are missing or stale
-	Reason   string          // "no quote: A" / "stale: B" / "" when HasValue
+	Reason   string          // "no kalshi quote" / "kalshi one-sided: no YES ask" / "" when HasValue
 }
 
 // FeeEstimate holds one venue's fee assumption for display (UI-18 ◆ 3).
@@ -34,18 +34,18 @@ type FeeEstimate struct {
 func ComputeNetGap(aInst, bInst canonical.Instrument, aQuote, bQuote *canonical.Quote) NetGap {
 	// Check quotes exist.
 	if aQuote == nil {
-		return NetGap{HasValue: false, Reason: fmt.Sprintf("no quote: %s", aInst.Venue)}
+		return NetGap{HasValue: false, Reason: fmt.Sprintf("no %s quote", aInst.Venue)}
 	}
 	if bQuote == nil {
-		return NetGap{HasValue: false, Reason: fmt.Sprintf("no quote: %s", bInst.Venue)}
+		return NetGap{HasValue: false, Reason: fmt.Sprintf("no %s quote", bInst.Venue)}
 	}
 
-	// Check quotes have asks.
+	// Check quotes have asks. A book with bids only is one-sided, not missing (M6 P3).
 	if len(aQuote.YesAsks) == 0 {
-		return NetGap{HasValue: false, Reason: fmt.Sprintf("no ask: %s", aInst.Venue)}
+		return NetGap{HasValue: false, Reason: fmt.Sprintf("%s %s", aInst.Venue, oneSidedNote(aQuote))}
 	}
 	if len(bQuote.YesAsks) == 0 {
-		return NetGap{HasValue: false, Reason: fmt.Sprintf("no ask: %s", bInst.Venue)}
+		return NetGap{HasValue: false, Reason: fmt.Sprintf("%s %s", bInst.Venue, oneSidedNote(bQuote))}
 	}
 
 	// Best ask prices.
