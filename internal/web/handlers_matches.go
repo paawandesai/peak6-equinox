@@ -51,6 +51,9 @@ type matchesPage struct {
 	FeeEstimates []FeeEstimate
 	// M5-05: featured pair for the "Start here" card (nil if no routable pairs)
 	FeaturedPair *pairRow
+	// M6 P1: the guided demo steps, resolved by instrument ID in this round.
+	// Empty means fall back to the featured pair.
+	StartSteps []startStep
 }
 
 // pairGroup is every pair of one relationship type, strongest type first.
@@ -293,6 +296,8 @@ func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	views := instrumentViewsFrom(allIDs, instrumentRecs)
+	// M6 P1: the guided demo path, from the whole round (before filters).
+	data.StartSteps = resolveStartHere(rels, instrumentRecs, s.cfg.FedNextMeeting)
 
 	// UI-11 Cursor round 1: apply filters (including q on titles) before setting Total.
 	rels = filterRelationships(rels, views, minConf, hasMinFilter, qParam, hasQFilter)

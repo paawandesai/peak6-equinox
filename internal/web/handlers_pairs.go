@@ -46,6 +46,7 @@ type pairPage struct {
 	History         historyChart
 	LogEntries      []logEntryView
 	Form            routeFormView
+	FormPreset      bool   // M6 P1: the route form was pre-filled from query params
 	EvidenceFooter  string // UI-20: "prior + Σ = total → confidence X.XX" or "not recorded"
 	HasEvidence     bool   // UI-20: whether evidence was recorded
 	// UI-22: LLM verifier rationale (hidden when pair was never verified)
@@ -396,6 +397,8 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 		LLMRunID:        llmData.RunID,
 		LLMVerifiedAt:   formatTime(llmData.VerifiedAt, tz),
 	}
+	// M6 P1: guided-demo presets pre-fill the form; they never submit it.
+	data.Form, data.FormPreset = applyRoutePreset(data.Form, r.URL.Query())
 	points, err := st.QuoteHistory(ctx, []string{rel.AID, rel.BID}, maxHistoryPt)
 	if err != nil {
 		s.dbError(w, "loading the pair's price history", err)
