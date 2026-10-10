@@ -282,30 +282,39 @@ func buildEvidence(a, b canonical.Instrument, v verdict, vetoes []canonical.Veto
 		{Term: "prior", Value: prior},
 	}
 
-	// Add minor deductions (unknown unit, unknown edge rules)
-	if a.Terms.Unit == canonical.Unknown {
-		contributions = append(contributions, canonical.ContributionTerm{
-			Term:  "unknown_unit_a",
-			Value: confUnknownMinor.Neg(),
-		})
-	}
-	if b.Terms.Unit == canonical.Unknown {
-		contributions = append(contributions, canonical.ContributionTerm{
-			Term:  "unknown_unit_b",
-			Value: confUnknownMinor.Neg(),
-		})
-	}
-	if a.Terms.EdgeRules == canonical.Unknown {
-		contributions = append(contributions, canonical.ContributionTerm{
-			Term:  "unknown_edge_rules_a",
-			Value: confUnknownMinor.Neg(),
-		})
-	}
-	if b.Terms.EdgeRules == canonical.Unknown {
-		contributions = append(contributions, canonical.ContributionTerm{
-			Term:  "unknown_edge_rules_b",
-			Value: confUnknownMinor.Neg(),
-		})
+	// Only add deductions for types that use the additive confidence model.
+	// Related and unrelated use fixed confidence values, not additive.
+	usesAdditiveModel := v.typ == canonical.RelEquivalent ||
+		v.typ == canonical.RelEquivalentGivenFacts ||
+		v.typ == canonical.RelComplement ||
+		v.typ == canonical.RelImplies
+
+	if usesAdditiveModel {
+		// Add minor deductions (unknown unit, unknown edge rules)
+		if a.Terms.Unit == canonical.Unknown {
+			contributions = append(contributions, canonical.ContributionTerm{
+				Term:  "unknown_unit_a",
+				Value: confUnknownMinor.Neg(),
+			})
+		}
+		if b.Terms.Unit == canonical.Unknown {
+			contributions = append(contributions, canonical.ContributionTerm{
+				Term:  "unknown_unit_b",
+				Value: confUnknownMinor.Neg(),
+			})
+		}
+		if a.Terms.EdgeRules == canonical.Unknown {
+			contributions = append(contributions, canonical.ContributionTerm{
+				Term:  "unknown_edge_rules_a",
+				Value: confUnknownMinor.Neg(),
+			})
+		}
+		if b.Terms.EdgeRules == canonical.Unknown {
+			contributions = append(contributions, canonical.ContributionTerm{
+				Term:  "unknown_edge_rules_b",
+				Value: confUnknownMinor.Neg(),
+			})
+		}
 	}
 
 	// Add deadline deductions (only for equivalent and derived types where meeting=false)
