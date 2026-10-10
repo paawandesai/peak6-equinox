@@ -1,15 +1,10 @@
 package web
 
 import (
-	"bytes"
 	"net/http"
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
 )
-
-// glossaryTmpl is the /glossary page (M5-06). It is parsed here rather than
-// in the pages map so the route can be added without editing public.go.
-var glossaryTmpl = parsePage("glossary.html")
 
 // glossaryPage is the data for glossary.html.
 type glossaryPage struct {
@@ -66,31 +61,16 @@ var glossaryVetoCodes = []struct{ code, field string }{
 	{"fact_did_not_close", "facts"},
 }
 
-// glossaryRoutes registers GET /glossary: public, read-only, static content
-// plus the usual round banner and rate limit (M5-06).
-func (s *Server) glossaryRoutes(mux *http.ServeMux) {
-	mux.Handle("GET /glossary", s.roundMiddleware(s.rateLimitMiddleware(http.HandlerFunc(s.handleGlossary))))
-}
-
 // handleGlossary answers GET /glossary: what every relationship type, veto
-// code and on-screen term means.
+// code and on-screen term means (M5-06). The content is static; the round
+// is only read for the banner.
 func (s *Server) handleGlossary(w http.ResponseWriter, r *http.Request) {
 	data := glossaryPage{
 		page:   s.pageBase(roundFromContext(r.Context()), "Glossary", "What do Equinox's terms mean?", timezoneFromRequest(r), "glossary"),
 		Types:  glossaryTypes(),
 		Vetoes: glossaryVetoes(),
 	}
-	var buf bytes.Buffer
-	if err := glossaryTmpl.ExecuteTemplate(&buf, "layout", data); err != nil {
-		s.log.Error("rendering template", "page", "glossary", "err", err)
-		http.Error(w, "internal error rendering the page", http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-store")
-	if _, err := buf.WriteTo(w); err != nil {
-		s.log.Error("writing page", "page", "glossary", "err", err)
-	}
+	s.render(w, http.StatusOK, "glossary", data)
 }
 
 // glossaryTypes lists every relationship type, strongest first.

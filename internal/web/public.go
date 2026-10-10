@@ -125,6 +125,7 @@ var pages = map[string]*template.Template{
 	"eval":        parsePage("eval.html", "backtest_results.html"), // M4-76: backtest results partial
 	"eval_cell":   parsePage("eval_cell.html"),                     // UI-23
 	"error":       parsePage("error.html"),
+	"glossary":    parsePage("glossary.html"), // M5-06
 }
 
 func parsePage(files ...string) *template.Template {
@@ -152,6 +153,7 @@ func (s *Server) publicRoutes(mux *http.ServeMux) {
 	mux.Handle("GET /log", wrap(s.handleLog))
 	mux.Handle("GET /eval", wrap(s.handleEval))
 	mux.Handle("GET /eval/cell", wrap(s.handleEvalCell)) // UI-23
+	mux.Handle("GET /glossary", wrap(s.handleGlossary))  // M5-06
 	// POST /timezone sets the user's timezone preference cookie (M3-08, no round middleware needed)
 	mux.Handle("POST /timezone", s.rateLimitMiddleware(http.HandlerFunc(s.handleTimezone)))
 	mux.HandleFunc("GET /static/app.css", s.handleAppCSS)
