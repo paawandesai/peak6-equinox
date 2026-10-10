@@ -1021,3 +1021,22 @@ details.matches-tech { margin-top: 1.5rem; }
 .show-cue { margin-left: 0.25rem; font-size: 0.875rem; font-weight: 600; color: var(--pico-primary); white-space: nowrap; }
 details[open] > summary .show-cue { display: none; }
 .crumbs-nav span { margin: 0 0.25rem; }
+/* Phones: compact banner, context line and crumbs so the verdict and the
+   next step reach the first screen even with the demo banner showing. */
+@media (max-width: 768px) {
+  .banner { padding: 0.375rem 0; font-size: 0.75rem; font-weight: 500; line-height: 1.35; }
+  .context-bar > .container { font-size: 0.75rem; line-height: 1.5; padding-block: 0.25rem; }
+  .context-bar .stamp .badge { font-size: 0.75rem; }
+  .page-decision .crumbs-nav { display: none; }
+  .site-header nav { min-height: 3.25rem; }
+}
+@media (max-width: 480px) {
+  .verdict-card { display: flex; flex-direction: column; }
+  .verdict-card > .verdict-badge { order: 1; }
+  .verdict-card > .next-step { order: 2; }
+  .verdict-card > .plain-answer { order: 3; }
+  .verdict-card > .verdict-meta { order: 4; margin-bottom: 0; }
+  .verdict-card > .verdict-meta, .verdict-card > .plain-answer { margin-bottom: 0.625rem; }
+  .next-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  a.btn-next { font-size: 0.9375rem; }
+}
