@@ -58,7 +58,9 @@ var templateFuncs = template.FuncMap{
 	"price": nullPrice,
 	"utc":   formatUTC,
 	"upper": strings.ToUpper,
-	"pct":   formatPercent,
+	// shortID truncates an instrument ID for visible text (ui/plain-language).
+	"shortID": truncateID,
+	"pct":     formatPercent,
 	// httpURL returns s only when it is an absolute http(s) URL, else "", so
 	// a template can decide whether a source is safe to turn into a link.
 	"httpURL": httpURL,
@@ -153,6 +155,7 @@ func (s *Server) publicRoutes(mux *http.ServeMux) {
 	mux.Handle("GET /pairs/{id}", wrap(s.handlePair))
 	mux.Handle("POST /route", wrap(s.handleRoute))
 	mux.Handle("GET /decisions/{id}", wrap(s.handleDecision))
+	mux.Handle("GET /decisions/{id}/json", wrap(s.handleDecisionJSON)) // ui/plain-language: audit layer's raw JSON
 	mux.Handle("GET /log", wrap(s.handleLog))
 	mux.Handle("GET /eval", wrap(s.handleEval))
 	mux.Handle("GET /eval/cell", wrap(s.handleEvalCell)) // UI-23

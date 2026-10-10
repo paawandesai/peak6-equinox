@@ -5,193 +5,240 @@
   <div class="panel panel-danger" role="alert">
     <ul>{{range .Errors}}<li>{{.}}</li>{{end}}</ul>
   </div>
-{{else}}{{with .Decision}}
-  <header>
-    <strong>Decision #{{$.DecisionID}}</strong> · round {{.RoundID}} · as of {{formatTime .Snapshot $.Timezone}} · decided {{formatTime .DecidedAt $.Timezone}}
-    {{if .InputsRecorded}}
-      · {{template "fbadge" .MaxQuoteAgeBadge}}
-    {{end}}
-    · <a href="/decisions/{{$.DecisionID}}">permalink</a>
-  </header>
+{{else}}{{with .Decision}}{{$p := .Plain}}
+  {{/* ui/plain-language A: the verdict card (answer first) */}}
+  <section class="verdict-card verdict-card-{{$p.BadgeKind}}" aria-label="Verdict">
+    <p class="verdict-badge"><span class="badge badge-l vb-{{$p.BadgeKind}}"><span class="g" aria-hidden="true">{{if eq $p.BadgeKind "ok"}}✓{{else if eq $p.BadgeKind "warn"}}◐{{else}}✕{{end}}</span>{{$p.Badge}}</span></p>
+    <p class="plain-answer">{{$p.Answer}}</p>
+    {{with $p.NextStep}}<p class="next-step"><span class="next-label">What to do next:</span> {{if .Href}}<a href="{{.Href}}" class="btn-next">{{.Label}}</a>{{else}}<strong>{{.Label}}</strong>{{end}}{{if .Detail}} <span class="next-detail">({{.Detail}})</span>{{end}}</p>{{end}}
+    <p class="verdict-meta">Order: {{$p.OrderText}}{{if .InputsRecorded}} · prices {{AgeShort .MaxQuoteAge}} old{{end}} · round {{.RoundID}} · decided <time datetime="{{.DecidedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatTime .DecidedAt $.Timezone}}</time> · <a href="/decisions/{{$.DecisionID}}">decision #{{$.DecisionID}}</a></p>
+  </section>
 
-  <div class="trace-body">
-    <div class="verdict verdict-{{if .Chosen}}ok{{else}}danger{{end}}">
-      <div class="verdict-head">
-        <span class="badge badge-l {{.OutcomeChipClass}}"><span class="g" aria-hidden="true">{{if .Chosen}}✓{{else}}✕{{end}}</span>{{.OutcomePhrase}}</span>
-        <p class="outcome-summary">{{.LeadSentence}}</p>
-      </div>
-      {{with .Suggestion}}<p class="route-suggestion"><strong>Try: {{.Order}}.</strong> {{.Why}}.{{if .Link}} <a href="{{.Link}}">Open the pair with {{.Order}} preset →</a>{{end}}</p>{{end}}
-      <p class="order-line"><strong>Order:</strong> {{.OrderLine}}. <strong>Partners considered:</strong> {{.Partners}}.</p>
-      <p class="decision-log-link">Recorded as decision #{{$.DecisionID}} → <a href="/log?kind=routing">view in decision log</a> or <a href="/decisions/{{$.DecisionID}}">permalink</a>.</p>
+  {{/* B: the trader's comparison, in cents per contract and dollars per order */}}
+  <section class="compare" aria-label="Price comparison">
+    <h3>{{$p.CompareTitle}}</h3>
+    {{if $p.Compare}}
+    <div class="compare-grid">
+      <table class="compare-table">
+        <thead><tr><th>Where</th><th>Contract</th><th class="num">Price</th><th class="num">Fee</th><th class="num"><a href="/glossary#term-safety-charge">Safety charge</a></th><th class="num">Total per contract</th><th class="num">{{$p.CompareQty}}</th><th>Verdict</th></tr></thead>
+        <tbody>
+          {{range $p.Compare}}
+          <tr class="{{if .Winner}}is-winner{{end}}{{if .Excluded}} is-excluded{{end}}">
+            <td class="c-where" data-label="Where"><strong>{{.Where}}</strong></td>
+            <td class="c-contract" data-label="Contract"><span{{if .Title}} title="{{.Title}}"{{end}}>{{.Contract}}</span>{{if .Opposite}} <small class="muted">(opposite contract)</small>{{end}}</td>
+            <td class="num c-part" data-label="Price">{{.Price}}</td>
+            <td class="num c-part" data-label="Fee">{{.Fee}}</td>
+            <td class="num c-part" data-label="Safety charge">{{.Safety}}</td>
+            <td class="num c-total" data-label="Total per contract"><strong>{{.Total}}</strong></td>
+            <td class="num c-order" data-label="{{$p.CompareQty}}">{{.OrderTotal}}</td>
+            <td class="c-verdict" data-label="Verdict">{{if .Winner}}<span class="badge b-chosen"><span class="g" aria-hidden="true">✓</span>{{.Verdict}}</span>{{else if .Excluded}}<span class="reason">✕ {{.Verdict}}</span>{{else}}{{.Verdict}}{{end}}</td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+      {{with $p.Bars}}
+      <figure class="cost-bars">
+        <svg role="img" aria-label="Cost per contract by venue, split into price, fee and safety charge" width="100%" height="{{.Height}}">
+          {{range .Rows}}{{$r := .}}
+          <g class="{{if .Winner}}bar-winner{{end}}">
+            <text class="bar-label" x="0" y="{{.TextY}}">{{if .Winner}}✓ {{end}}{{.Label}}</text>
+            {{range .Segs}}<rect class="{{.Class}}" x="{{.X}}%" y="{{$r.BarY}}" width="{{.W}}%" height="16"><title>{{.Name}}</title></rect>{{end}}
+          </g>
+          {{end}}
+        </svg>
+        <figcaption class="bar-legend"><span class="key key-price" aria-hidden="true"></span>price <span class="key key-fee" aria-hidden="true"></span>fee <span class="key key-safety" aria-hidden="true"></span>safety charge</figcaption>
+      </figure>
+      {{end}}
+    </div>
+    {{else}}
+    <p class="skipped">{{$p.CompareSkip}}</p>
+    {{end}}
+  </section>
+
+  {{/* C: why not the others, one line per group */}}
+  {{if $p.WhyNot}}
+  <section class="why-not" aria-label="Why not the others">
+    <h3>Why not the others?</h3>
+    <ul class="why-not-list">
+      {{range $p.WhyNot}}
+      <li><details><summary>{{.Summary}}</summary>
+        <ul>{{range .Items}}<li>{{.Name}}: <span class="reason">{{.Reason}}</span></li>{{end}}</ul>
+      </details></li>
+      {{end}}
+    </ul>
+  </section>
+  {{end}}
+
+  {{/* D: the audit layer, collapsed: the original trace, codes and IDs */}}
+  <details class="tech">
+    <summary><span class="tech-title">Technical details</span> <small>the router's explanation, codes, instrument IDs, per-$1 math, config and raw JSON</small></summary>
+    <div class="tech-body">
+      <h4>The router's explanation (unchanged)</h4>
+      <p class="explanation">{{.Explanation}}</p>
+      <p class="note">Router summary: <span class="outcome-summary">{{.LeadSentence}}</span>{{with .Suggestion}} Hint: {{.Order}}. {{.Why}}.{{end}}</p>
+      <p class="order-line"><strong>Order:</strong> {{.OrderLine}}. <strong>Partners considered:</strong> {{.Partners}}. <strong>As of</strong> {{formatTime .Snapshot $.Timezone}}{{if .InputsRecorded}} · {{template "fbadge" .MaxQuoteAgeBadge}}{{end}}</p>
       {{if .UsedNotional}}{{if .ConversionTouch.IsPositive}}
       <p class="note"><strong>Notional conversion:</strong> ${{.OriginalNotional.String}} ÷ {{money .ConversionTouch}} touch = {{.ConvertedQuantity.String}} contracts (rounded down).</p>
       {{end}}{{end}}
-    </div>
 
-    {{if .Chosen}}
-    <dl class="tiles">
-      <div><dt>Filled</dt><dd>{{.TotalFilled.String}}{{if not .TotalRequested.IsZero}} of {{.TotalRequested.String}}{{end}}</dd></div>
-      <div class="key"><dt>Avg all-in</dt><dd>{{money .AverageAllIn}}</dd></div>
-      <div><dt>Total cost</dt><dd>{{money .TotalCost}}</dd></div>
-      <div><dt>Fees</dt><dd>{{money .TotalFees}}</dd></div>
-      <div><dt>Basis penalty</dt><dd>{{money .TotalBasis}}</dd></div>
-      {{if .InputsRecorded}}
-      <div><dt>Slippage vs quoted</dt><dd class="{{if .SlippageTotalBps.IsNegative}}word-ok{{else}}neg{{end}}">{{if .SlippageTotalBps.IsNegative}}{{.SlippageTotalBps.Abs.StringFixed 1}}{{else}}({{.SlippageTotalBps.StringFixed 1}}){{end}} <a href="/glossary#term-bps">bps</a></dd></div>
-      {{end}}
-    </dl>
-    {{if .InputsRecorded}}<p class="note">Basis points: 1 bp = 0.01 ¢ per $1. See <a href="/glossary#term-bps">glossary</a>.</p>{{end}}
-
-    {{if .Chosen}}
-    <svg class="split" role="img" aria-label="Split: {{range $i, $leg := .Chosen}}{{if $i}}, {{end}}{{$leg.Quantity.String}} on {{$leg.Venue}}{{end}}{{if not .UnfilledPct.IsZero}}, {{.UnfilledPct.StringFixed 0}}% unfilled{{end}}">
-      {{range $i, $leg := .Chosen}}
-      <rect class="seg-{{$i}}" x="{{$leg.X.StringFixed 2}}%" width="{{$leg.SharePct.StringFixed 2}}%" height="34" />
-      {{end}}
-      {{if not .UnfilledPct.IsZero}}
-      <rect class="seg-unfilled" x="{{.UnfilledX.StringFixed 2}}%" width="{{.UnfilledPct.StringFixed 2}}%" height="34" />
-      {{end}}
-    </svg>
-    {{end}}
-
-    <h3>Chosen legs</h3>
-    <table class="data cost stack">
-      <thead><tr>
-        <th>Venue</th>
-        <th>Instrument</th>
-        <th>Route</th>
-        <th class="num">Filled</th>
-        {{if .InputsRecorded}}<th class="num">Quoted</th>{{end}}
-        <th class="num">VWAP</th>
-        {{if .InputsRecorded}}<th class="num">Slippage</th>{{end}}
-        <th class="num">+ Fee</th>
-        <th class="num">+ Basis</th>
-        <th class="num allin">= All-in</th>
-      </tr></thead>
-      <tbody>
-        {{range .Chosen}}
-        <tr>
-          <td data-label="Venue"><span class="venue">{{.Venue}}</span></td>
-          <td data-label="Instrument">
-            <span class="venue">{{.Venue}}</span>
-            {{$title := index $.Decision.InstrumentTitles .InstrumentID}}
-            {{if $title}}<span class="clamp-2" title="{{$title}}">{{$title}}</span>{{end}}
-            <code>{{.InstrumentID}}</code>
-          </td>
-          <td data-label="Route">{{if eq .Route "complement"}}complement: {{upper (printf "%s" .Outcome)}} on {{.InstrumentID}}{{else}}direct{{end}}</td>
-          <td class="num" data-label="Filled">{{.Quantity.String}}</td>
-          {{if $.Decision.InputsRecorded}}<td class="num" data-label="Quoted">{{if not .Quoted.IsZero}}{{money .Quoted}}{{else}}—{{end}}</td>{{end}}
-          <td class="num" data-label="VWAP">{{money .VWAP}}</td>
-          {{if $.Decision.InputsRecorded}}<td class="num {{if .SlippageBps.IsNegative}}word-ok{{else}}neg{{end}}" data-label="Slippage">{{if not .Quoted.IsZero}}{{if .SlippageBps.IsNegative}}{{.SlippageBps.Abs.StringFixed 1}}{{else}}({{.SlippageBps.StringFixed 1}}){{end}} bps{{else}}—{{end}}</td>{{end}}
-          <td class="num" data-label="+ Fee">{{money .FeePerContract}}</td>
-          <td class="num" data-label="+ Basis">{{money .BasisPenaltyPerContract}}</td>
-          <td class="num allin" data-label="= All-in"><strong>{{money .AllInPerContract}}</strong></td>
-        </tr>
+      <h4>Cost breakdown, per $1 payout</h4>
+      {{if .Chosen}}
+      <dl class="tiles">
+        <div><dt>Filled</dt><dd>{{.TotalFilled.String}}{{if not .TotalRequested.IsZero}} of {{.TotalRequested.String}}{{end}}</dd></div>
+        <div class="key"><dt>Avg all-in</dt><dd>{{money .AverageAllIn}}</dd></div>
+        <div><dt>Total cost</dt><dd>{{money .TotalCost}}</dd></div>
+        <div><dt>Fees</dt><dd>{{money .TotalFees}}</dd></div>
+        <div><dt>Basis penalty</dt><dd>{{money .TotalBasis}}</dd></div>
+        {{if .InputsRecorded}}
+        <div><dt>Slippage vs quoted</dt><dd class="{{if .SlippageTotalBps.IsNegative}}word-ok{{else}}neg{{end}}">{{if .SlippageTotalBps.IsNegative}}{{.SlippageTotalBps.Abs.StringFixed 1}}{{else}}({{.SlippageTotalBps.StringFixed 1}}){{end}} <a href="/glossary#term-bps">bps</a></dd></div>
         {{end}}
-        <tr class="totals">
-          <td colspan="3"><strong>Total</strong></td>
-          <td class="num" data-label="Filled"><strong>{{.TotalFilled.String}}{{if not .TotalRequested.IsZero}} of {{.TotalRequested.String}}{{end}}</strong></td>
-          {{if .InputsRecorded}}<td colspan="1"></td>{{end}}
-          <td class="num" colspan="{{if .InputsRecorded}}3{{else}}2{{end}}" data-label="Average"></td>
-          <td class="num allin" data-label="= All-in"><strong>{{money .AverageAllIn}}</strong></td>
-        </tr>
-      </tbody>
-    </table>
-    {{if not .BasisMultiplier.IsZero}}<p class="note">basis penalty = score × {{money .BasisMultiplier}} per contract</p>{{end}}
-    {{if .InputsRecorded}}<p class="sign-rule">Sign rule (D-098): positive = saving (favourable), parentheses = loss (unfavourable).</p>{{end}}
-    {{else}}
-    <h3>Chosen route</h3>
-    <p><strong class="reason">No venue can fill this order.</strong> Every candidate was excluded; see below.</p>
-    {{end}}
+      </dl>
+      {{if .InputsRecorded}}<p class="note">Basis points: 1 bp = 0.01 ¢ per $1. See <a href="/glossary#term-bps">glossary</a>.</p>{{end}}
 
-    {{if .Alternatives}}
-    <h3>Ranked alternatives</h3>
-    <table class="data stack">
-      <thead><tr><th>#</th><th>Venue</th><th>Instrument</th><th class="num">Filled</th><th class="num">VWAP</th><th class="num">Fee</th><th class="num">Basis</th><th class="num allin">All-in</th><th class="num">Gap</th><th>Note</th></tr></thead>
-      <tbody>
-        {{range .Alternatives}}{{$alt := .}}
-        {{range $i, $leg := .Legs}}
-        <tr{{if and (eq $alt.Rank 1) (eq $i 0)}} class="chosen"{{end}}>
-          {{if eq $i 0}}<td rowspan="{{len $alt.Legs}}" data-label="#">{{if eq $alt.Rank 1}}<span class="badge b-chosen"><span class="g" aria-hidden="true">✓</span>chosen</span>{{else}}{{$alt.Rank}}{{end}}</td>{{end}}
-          <td data-label="Venue"><span class="venue">{{$leg.Venue}}</span></td>
-          <td data-label="Instrument">
-            <span class="venue">{{$leg.Venue}}</span>
-            {{$title := index $.Decision.InstrumentTitles $leg.InstrumentID}}
-            {{if $title}}<span class="clamp-2" title="{{$title}}">{{$title}}</span>{{end}}
-            <code>{{$leg.InstrumentID}}</code>
-          </td>
-          <td class="num" data-label="Filled">{{$leg.Quantity.String}}</td>
-          <td class="num" data-label="VWAP">{{money $leg.VWAP}}</td>
-          <td class="num" data-label="Fee">{{money $leg.FeePerContract}}</td>
-          <td class="num" data-label="Basis">{{money $leg.BasisPenaltyPerContract}}</td>
-          {{if eq $i 0}}
-          <td class="num allin" rowspan="{{len $alt.Legs}}" data-label="All-in">{{money $alt.AllInPerContract}}</td>
-          <td class="num gap" rowspan="{{len $alt.Legs}}" data-label="Gap">{{if $alt.GapToChosen.IsNegative}}{{cents $alt.GapToChosen.Abs}}¢{{else}}({{cents $alt.GapToChosen}}¢){{end}} · {{if $alt.GapBps.IsNegative}}{{$alt.GapBps.Abs.StringFixed 0}}{{else}}({{$alt.GapBps.StringFixed 0}}){{end}} bps</td>
-          <td rowspan="{{len $alt.Legs}}" data-label="Note">{{$alt.Note}}</td>
+      <svg class="split" role="img" aria-label="Split: {{range $i, $leg := .Chosen}}{{if $i}}, {{end}}{{$leg.Quantity.String}} on {{$leg.Venue}}{{end}}{{if not .UnfilledPct.IsZero}}, {{.UnfilledPct.StringFixed 0}}% unfilled{{end}}">
+        {{range $i, $leg := .Chosen}}
+        <rect class="seg-{{$i}}" x="{{$leg.X.StringFixed 2}}%" width="{{$leg.SharePct.StringFixed 2}}%" height="34" />
+        {{end}}
+        {{if not .UnfilledPct.IsZero}}
+        <rect class="seg-unfilled" x="{{.UnfilledX.StringFixed 2}}%" width="{{.UnfilledPct.StringFixed 2}}%" height="34" />
+        {{end}}
+      </svg>
+
+      <h5>Chosen legs</h5>
+      <div class="scroll-x">
+      <table class="data cost">
+        <thead><tr>
+          <th>Venue</th>
+          <th>Instrument</th>
+          <th>Route</th>
+          <th class="num">Filled</th>
+          {{if .InputsRecorded}}<th class="num">Quoted</th>{{end}}
+          <th class="num">VWAP</th>
+          {{if .InputsRecorded}}<th class="num">Slippage</th>{{end}}
+          <th class="num">+ Fee</th>
+          <th class="num">+ Basis</th>
+          <th class="num allin">= All-in</th>
+        </tr></thead>
+        <tbody>
+          {{range .Chosen}}
+          <tr>
+            <td><span class="venue">{{.Venue}}</span></td>
+            <td>{{template "iid" .InstrumentID}}</td>
+            <td>{{if eq .Route "complement"}}complement: {{upper (printf "%s" .Outcome)}}{{else}}direct{{end}}</td>
+            <td class="num">{{.Quantity.String}}</td>
+            {{if $.Decision.InputsRecorded}}<td class="num">{{if not .Quoted.IsZero}}{{money .Quoted}}{{else}}—{{end}}</td>{{end}}
+            <td class="num">{{money .VWAP}}</td>
+            {{if $.Decision.InputsRecorded}}<td class="num {{if .SlippageBps.IsNegative}}word-ok{{else}}neg{{end}}">{{if not .Quoted.IsZero}}{{if .SlippageBps.IsNegative}}{{.SlippageBps.Abs.StringFixed 1}}{{else}}({{.SlippageBps.StringFixed 1}}){{end}} bps{{else}}—{{end}}</td>{{end}}
+            <td class="num">{{money .FeePerContract}}</td>
+            <td class="num">{{money .BasisPenaltyPerContract}}</td>
+            <td class="num allin"><strong>{{money .AllInPerContract}}</strong></td>
+          </tr>
           {{end}}
-        </tr>
-        {{end}}
-        {{end}}
-      </tbody>
-    </table>
-    {{end}}
+          <tr class="totals">
+            <td colspan="3"><strong>Total</strong></td>
+            <td class="num"><strong>{{.TotalFilled.String}}{{if not .TotalRequested.IsZero}} of {{.TotalRequested.String}}{{end}}</strong></td>
+            {{if .InputsRecorded}}<td colspan="1"></td>{{end}}
+            <td class="num" colspan="{{if .InputsRecorded}}3{{else}}2{{end}}"></td>
+            <td class="num allin"><strong>{{money .AverageAllIn}}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+      {{if not .BasisMultiplier.IsZero}}<p class="note">basis penalty = score × {{money .BasisMultiplier}} per contract</p>{{end}}
+      {{if .InputsRecorded}}<p class="sign-rule">Sign rule (D-098): positive = saving (favourable), parentheses = loss (unfavourable).</p>{{end}}
+      {{else}}
+      <p class="skipped">Skipped: no venue was eligible, so nothing was priced.</p>
+      {{end}}
 
-    <details{{if not .Chosen}} open{{end}}>
-      <summary><h3>How it was decided…</h3></summary>
+      {{if .Alternatives}}
+      <h5>Ranked alternatives</h5>
+      <div class="scroll-x">
+      <table class="data">
+        <thead><tr><th>#</th><th>Venue</th><th>Instrument</th><th class="num">Filled</th><th class="num">VWAP</th><th class="num">Fee</th><th class="num">Basis</th><th class="num allin">All-in</th><th class="num">Gap</th><th>Note</th></tr></thead>
+        <tbody>
+          {{range .Alternatives}}{{$alt := .}}
+          {{range $i, $leg := .Legs}}
+          <tr{{if and (eq $alt.Rank 1) (eq $i 0)}} class="chosen"{{end}}>
+            {{if eq $i 0}}<td rowspan="{{len $alt.Legs}}">{{if eq $alt.Rank 1}}<span class="badge b-chosen"><span class="g" aria-hidden="true">✓</span>chosen</span>{{else}}{{$alt.Rank}}{{end}}</td>{{end}}
+            <td><span class="venue">{{$leg.Venue}}</span></td>
+            <td>{{template "iid" $leg.InstrumentID}}</td>
+            <td class="num">{{$leg.Quantity.String}}</td>
+            <td class="num">{{money $leg.VWAP}}</td>
+            <td class="num">{{money $leg.FeePerContract}}</td>
+            <td class="num">{{money $leg.BasisPenaltyPerContract}}</td>
+            {{if eq $i 0}}
+            <td class="num allin" rowspan="{{len $alt.Legs}}">{{money $alt.AllInPerContract}}</td>
+            <td class="num gap" rowspan="{{len $alt.Legs}}">{{if $alt.GapToChosen.IsNegative}}{{cents $alt.GapToChosen.Abs}}¢{{else}}({{cents $alt.GapToChosen}}¢){{end}} · {{if $alt.GapBps.IsNegative}}{{$alt.GapBps.Abs.StringFixed 0}}{{else}}({{$alt.GapBps.StringFixed 0}}){{end}} bps</td>
+            <td rowspan="{{len $alt.Legs}}">{{$alt.Note}}</td>
+            {{end}}
+          </tr>
+          {{end}}
+          {{end}}
+        </tbody>
+      </table>
+      </div>
+      {{end}}
+
+      <h4>How it was decided</h4>
       <ol class="trace-steps">
         <li>
           <details{{if eq $.RenderContext "decision"}} open{{end}}>
             <summary>Order and input snapshot</summary>
             {{if .InputsRecorded}}
-            <table class="data stack">
+            <div class="scroll-x">
+            <table class="data">
               <thead><tr><th>Venue</th><th>Instrument</th><th>Relationship</th><th class="num">Best ask</th><th class="num">Depth</th><th>Fetched</th></tr></thead>
               <tbody>
                 {{range .Inputs}}
                 <tr>
-                  <td data-label="Venue"><span class="venue">{{.Venue}}</span></td>
-                  <td data-label="Instrument"><code>{{.InstrumentID}}</code></td>
-                  <td data-label="Relationship">{{template "badge" .TypeBadge}}</td>
-                  <td class="num" data-label="Best ask">{{money .BestAsk}}</td>
-                  <td class="num" data-label="Depth">{{.Depth}}</td>
-                  <td data-label="Fetched"><span class="badge {{if eq .FreshState "fresh"}}f-fresh{{else if eq .FreshState "stale"}}f-stale{{else}}f-unknown{{end}}"><span class="g" aria-hidden="true">{{if eq .FreshState "fresh"}}✓{{else if eq .FreshState "stale"}}✕{{else}}?{{end}}</span>{{if eq .FreshState "fresh"}}Fresh{{else if eq .FreshState "stale"}}Stale · {{AgeShort .Age}} old{{else}}Unknown{{end}}</span> as of <time datetime="{{.FetchedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatTime .FetchedAt $.Timezone}}</time>{{if ne .FreshState "stale"}} · {{Age .Age}}{{end}}</td>
+                  <td><span class="venue">{{.Venue}}</span></td>
+                  <td>{{template "iid" .InstrumentID}}</td>
+                  <td>{{template "badge" .TypeBadge}}</td>
+                  <td class="num">{{money .BestAsk}}</td>
+                  <td class="num">{{.Depth}}</td>
+                  <td><span class="badge {{if eq .FreshState "fresh"}}f-fresh{{else if eq .FreshState "stale"}}f-stale{{else}}f-unknown{{end}}"><span class="g" aria-hidden="true">{{if eq .FreshState "fresh"}}✓{{else if eq .FreshState "stale"}}✕{{else}}?{{end}}</span>{{if eq .FreshState "fresh"}}Fresh{{else if eq .FreshState "stale"}}Stale · {{AgeShort .Age}} old{{else}}Unknown{{end}}</span> as of <time datetime="{{.FetchedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{formatTime .FetchedAt $.Timezone}}</time>{{if ne .FreshState "stale"}} · {{Age .Age}}{{end}}</td>
                 </tr>
                 {{end}}
               </tbody>
             </table>
+            </div>
+            <p class="note">Full instrument IDs, to copy:</p>
+            <ul class="id-list">{{range .Inputs}}<li><code class="wrap-anywhere">{{.InstrumentID}}</code></li>{{end}}</ul>
             {{else}}
-            <p class="note-info">Input quotes were not stored for decisions made before {{.UI25CutoffDate}}.</p>
-            {{end}}
-          </details>
-        </li>
-        <li>
-          <details{{if not .Chosen}} open{{end}}>
-            <summary>Eligibility</summary>
-            <p><strong>{{.KeptCount}} of {{.CandidateCount}} candidates kept</strong> ({{len .Exclusions}} excluded).</p>
-            {{if .Exclusions}}
-            <table class="data stack">
-              <thead><tr><th>Venue</th><th>Instrument</th><th>Reason</th></tr></thead>
-              <tbody>
-                {{range .Exclusions}}
-                <tr>
-                  <td data-label="Venue"><span class="venue">{{.Venue}}</span></td>
-                  <td data-label="Instrument">
-                    <span class="venue">{{.Venue}}</span>
-                    {{$title := index $.Decision.InstrumentTitles .InstrumentID}}
-                    {{if $title}}<s class="excluded clamp-2" title="{{$title}}">{{$title}}</s>{{end}}
-                    <code>{{.InstrumentID}}</code>
-                  </td>
-                  <td data-label="Reason"><strong class="reason">✕ {{.ReasonPhrase}}</strong>{{if .Detail}}: {{.Detail}}{{end}}</td>
-                </tr>
-                {{end}}
-              </tbody>
-            </table>
+            <p class="skipped">Not recorded: input quotes were not stored for decisions made before {{.UI25CutoffDate}}.</p>
             {{end}}
           </details>
         </li>
         <li>
           <details{{if eq $.RenderContext "decision"}} open{{end}}>
+            <summary>Eligibility</summary>
+            <p><strong>{{.KeptCount}} of {{.CandidateCount}} candidates kept</strong> ({{len .Exclusions}} excluded).</p>
+            {{if .Exclusions}}
+            <div class="scroll-x">
+            <table class="data eligibility">
+              <thead><tr><th>Venue</th><th>Contract</th><th>Code</th><th>Reason</th></tr></thead>
+              <tbody>
+                {{range .Exclusions}}
+                <tr class="is-muted">
+                  <td><span class="venue">{{.Venue}}</span></td>
+                  <td>{{with index $.Decision.Names .InstrumentID}}<span class="contract-name">{{.}}</span><br>{{end}}{{template "iid" .InstrumentID}}</td>
+                  <td><code>{{.Reason}}</code></td>
+                  <td><strong class="reason">✕ {{.ReasonPhrase}}</strong>{{if .Detail}}: {{.Detail}}{{end}}</td>
+                </tr>
+                {{end}}
+              </tbody>
+            </table>
+            </div>
+            {{end}}
+          </details>
+        </li>
+        <li>
+          {{if .Chosen}}
+          <details{{if eq $.RenderContext "decision"}} open{{end}}>
             <summary>Fill simulation and fee math</summary>
             {{range .Chosen}}
             <dl class="math">
-              <dt><span class="venue">{{.Venue}}</span> {{$title := index $.Decision.InstrumentTitles .InstrumentID}}{{if $title}}{{$title}}{{else}}{{.InstrumentID}}{{end}}</dt><dd></dd>
+              <dt><span class="venue">{{.Venue}}</span> {{template "iid" .InstrumentID}}</dt><dd></dd>
               <dt>VWAP over {{.Levels}} levels</dt><dd>{{money .VWAP}}</dd>
               <dt>+ fee</dt><dd>{{money .FeePerContract}}</dd>
               <dt>+ basis ({{.BasisScore.StringFixed 2}} × {{money $.Decision.BasisMultiplier}})</dt><dd>{{money .BasisPenaltyPerContract}}</dd>
@@ -199,11 +246,14 @@
             </dl>
             {{end}}
           </details>
+          {{else}}
+          <p class="skipped">Fill simulation and fee math. Skipped: no venue was eligible, so nothing was priced.</p>
+          {{end}}
         </li>
         <li>
+          {{if .Alternatives}}
           <details{{if eq $.RenderContext "decision"}} open{{end}}>
             <summary>Ranked alternatives</summary>
-            {{if .Alternatives}}
             <p>Alternatives ranked by all-in cost (lower is better):</p>
             <svg class="alternatives-bars" role="img" aria-label="Cost comparison of {{len .Alternatives}} alternatives" width="100%" height="{{mul (len .Alternatives) 32}}">
               {{range $i, $alt := .Alternatives}}
@@ -213,28 +263,40 @@
               </g>
               {{end}}
             </svg>
-            <p>See the alternatives table above for the full breakdown.</p>
-            {{else}}
-            <p>No alternatives were generated.</p>
-            {{end}}
           </details>
+          {{else}}
+          <p class="skipped">Ranked alternatives. Skipped: nothing was priced, so there was nothing to rank.</p>
+          {{end}}
         </li>
         <li>
           <details{{if eq $.RenderContext "decision"}} open{{end}}>
             <summary>Decision</summary>
             {{if .Warnings}}
             <div class="warnings">
-              <h4>Warnings</h4>
+              <h5>Warnings</h5>
               <ul>{{range .Warnings}}<li>{{.}}</li>{{end}}</ul>
             </div>
+            {{else}}
+            <p class="skipped">No warnings.</p>
             {{end}}
-            <h4>Explanation</h4>
-            <p class="explanation">{{.Explanation}}</p>
+            <p>The router's explanation is shown verbatim at the top of these details.</p>
           </details>
         </li>
       </ol>
-    </details>
-  </div>
+
+      <h4>Config used</h4>
+      <dl class="audit-config">
+        <div><dt>Too old to trust after (<code>STALE_AFTER_SECONDS</code>)</dt><dd>{{.Audit.StaleAfter}}</dd></div>
+        <div><dt>Most time between prices (<code>SKEW_MAX_SECONDS</code>)</dt><dd>{{.Audit.SkewMax}}</dd></div>
+        <div><dt>Confidence floor (<code>MIN_ROUTE_CONFIDENCE</code>)</dt><dd>{{.Audit.MinConfidence}}</dd></div>
+        <div><dt>Safety charge per point of safety risk (<code>BASIS_PENALTY_MULTIPLIER</code>)</dt><dd>{{.Audit.BasisMult}} per contract</dd></div>
+      </dl>
+      <p class="note">These are the server's settings now; the router does not store them per decision, so the explanation above is the record of what applied.</p>
+      <p class="decision-log-link">Recorded as decision #{{$.DecisionID}}: {{if .RawJSONHref}}<a href="{{.RawJSONHref}}">raw JSON</a> · {{end}}<a href="/log?kind=routing">decision log</a> · <a href="/decisions/{{$.DecisionID}}">permalink</a>.</p>
+    </div>
+  </details>
 {{end}}{{end}}
 </article>
 {{end}}
+
+{{define "iid"}}<code class="iid" title="{{.}}">{{shortID .}}</code>{{end}}
