@@ -462,6 +462,27 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 
 // buildDiffRows maps vetoes and facts onto diff rows by term name (UI-04, UI-12).
 // UI-12 adds: Part grouping, CSS class, badge, word-level tokens, basis link.
+// evidenceKeyToField maps a matcher evidence contribution term to a diff field
+// name (UI-20, D-115). Returns the field name and whether it should be shown
+// per-row (true) or only in the footer (false). Footer-only terms: "prior",
+// "fact_applied". Unknown terms return ("", false).
+func evidenceKeyToField(term string) (field string, perRow bool) {
+	switch {
+	case term == "prior":
+		return "", false // Footer only
+	case strings.HasPrefix(term, "unknown_unit"):
+		return "unit", true
+	case strings.HasPrefix(term, "unknown_edge_rules"):
+		return "edge_rules", true
+	case strings.HasPrefix(term, "deadline_gap") || strings.HasPrefix(term, "deadline_defaulted"):
+		return "deadline", true
+	case term == "fact_applied":
+		return "", false // Footer only (global deduction)
+	default:
+		return "", false // Unknown term
+	}
+}
+
 func buildDiffRows(rel canonical.Relationship) []diffRowView {
 	rows := make([]diffRowView, 0, len(rel.Diff))
 
@@ -500,26 +521,9 @@ func buildDiffRows(rel canonical.Relationship) []diffRowView {
 	contributionByField := make(map[string]string)
 	if rel.Evidence != nil {
 		for _, contrib := range rel.Evidence.Contributions {
-			// Skip the prior (shown in footer, not per-row)
-			if contrib.Term == "prior" {
-				continue
-			}
-			// Map contribution terms to diff field names
-			// Examples: unknown_unit_a/b → unit, deadline_gap_hours → deadline, etc.
-			var field string
-			switch {
-			case strings.HasPrefix(contrib.Term, "unknown_unit"):
-				field = "unit"
-			case strings.HasPrefix(contrib.Term, "unknown_edge_rules"):
-				field = "edge_rules"
-			case strings.HasPrefix(contrib.Term, "deadline_gap") || strings.HasPrefix(contrib.Term, "deadline_defaulted"):
-				field = "deadline"
-			case contrib.Term == "fact_applied":
-				// Fact-applied is a global deduction, could show on multiple rows or in footer only
-				continue
-			default:
-				// Unknown contribution term, skip
-				continue
+			field, perRow := evidenceKeyToField(contrib.Term)
+			if !perRow {
+				continue // Skip footer-only and unknown terms
 			}
 
 			// Format contribution value with sign
