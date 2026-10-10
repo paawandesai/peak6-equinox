@@ -7,6 +7,19 @@
 {{if .NoRound}}
 <p>No completed fetch round yet, so there is nothing to compare. Run <code>equinox seed</code> (offline fixtures) or <code>equinox ingest</code>, then <code>equinox match</code>.</p>
 {{else}}
+{{/* M5-05: "Start here" card for the demo moment (NFR-16) */}}
+{{if .FeaturedPair}}
+<div class="start-here">
+  <h2>Start here</h2>
+  <ol>
+    <li><a href="/pairs/{{.FeaturedPair.ID}}#diff">See why two contracts are the same bet</a></li>
+    <li><a href="/pairs/{{.FeaturedPair.ID}}#route">Route a hypothetical order on it</a></li>
+    <li><a href="/near-misses#metric_unknown">See the near-miss that was rejected, and why</a></li>
+  </ol>
+</div>
+{{else}}
+<p class="note-info">No routable pairs in this round. See <a href="/near-misses">near misses</a> for pairs that were close, or <a href="/eval">eval</a> for matcher performance.</p>
+{{end}}
 {{/* UI-11: counter strip */}}
 <dl class="strip">
   <div><dt>Round</dt><dd>{{.Round.ID}}</dd></div>
@@ -52,7 +65,7 @@
 {{if gt .RoutableCount 0}}
 <section>
   <h2 id="routable">Routable pairs ({{.RoutableCount}})</h2>
-  <p>equivalent, equivalent_given_facts and complement. The router may use these.</p>
+  <p>{{.RoutableCount}} pairs Equinox will route an order across: same bet (equivalent), same bet once a stated fact is applied (equivalent given facts), or exact opposites (complement).</p>
   <table class="data stack">
     <thead>
       <tr>

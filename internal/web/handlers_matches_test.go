@@ -637,3 +637,97 @@ func TestSectionOrder(t *testing.T) {
 		t.Errorf("sections out of order: routable at %d, implies at %d, related at %d", routablePos, impliesPos, relatedPos)
 	}
 }
+
+// TestStartHereCard verifies the "Start here" card with links to the featured pair and near-misses (M5-05 AC 1, 2).
+func TestStartHereCard(t *testing.T) {
+	s, st := newTestServer(t)
+	ctx := context.Background()
+	round, err := st.CreateRound(ctx, seedNow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.FinishRound(ctx, round.ID, store.RoundOK, nil, seedNow.Add(60*time.Second)); err != nil {
+		t.Fatal(err)
+	}
+
+	a := seedInstrument("kalshi:A", canonical.VenueKalshi, "A title", "rules", "BTC", "source", kalshiFee)
+	b := seedInstrument("polymarket:B", canonical.VenuePolymarket, "B title", "rules", "BTC", "source", polyFee)
+	for _, in := range []canonical.Instrument{a, b} {
+		if err := st.UpsertInstrument(ctx, round.ID, in); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Insert routable pair (will be featured).
+	pairID, err := st.UpsertRelationship(ctx, canonical.Relationship{
+		RoundID: round.ID, AID: "kalshi:A", BID: "polymarket:B", Type: canonical.RelEquivalent, Confidence: dec("0.90"),
+		Method: canonical.MethodRules, Diff: match.Diff(a.Terms, b.Terms), Explanation: "Equivalent",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rec := get(s.Handler(), "/")
+	wantHTML(t, rec, 200)
+	body := rec.Body.String()
+
+	// Start here card exists.
+	wantContains(t, body, `<div class="start-here">`, `<h2>Start here</h2>`)
+
+	// Link 1: See why two contracts are the same bet → pair diff.
+	wantContains(t, body, fmt.Sprintf(`href="/pairs/%d#diff"`, pairID), "See why two contracts are the same bet")
+
+	// Link 2: Route a hypothetical order on it → pair route.
+	wantContains(t, body, fmt.Sprintf(`href="/pairs/%d#route"`, pairID), "Route a hypothetical order on it")
+
+	// Link 3: See the near-miss → near-misses page.
+	wantContains(t, body, `href="/near-misses#metric_unknown"`, "See the near-miss that was rejected, and why")
+
+	// Routable section intro sentence (M5-05).
+	wantContains(t, body, "1 pairs Equinox will route an order across: same bet (equivalent), same bet once a stated fact is applied (equivalent given facts), or exact opposites (complement).")
+}
+
+// TestStartHereEmptyState verifies the empty state when no routable pairs exist (M5-05 AC 3).
+func TestStartHereEmptyState(t *testing.T) {
+	s, st := newTestServer(t)
+	ctx := context.Background()
+	round, err := st.CreateRound(ctx, seedNow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.FinishRound(ctx, round.ID, store.RoundOK, nil, seedNow.Add(60*time.Second)); err != nil {
+		t.Fatal(err)
+	}
+
+	// No routable pairs, only a related pair.
+	a := seedInstrument("kalshi:A", canonical.VenueKalshi, "A", "rules", "BTC", "source", kalshiFee)
+	b := seedInstrument("polymarket:B", canonical.VenuePolymarket, "B", "rules", "BTC", "source", polyFee)
+	for _, in := range []canonical.Instrument{a, b} {
+		if err := st.UpsertInstrument(ctx, round.ID, in); err != nil {
+			t.Fatal(err)
+		}
+	}
+	_, err = st.UpsertRelationship(ctx, canonical.Relationship{
+		RoundID: round.ID, AID: "kalshi:A", BID: "polymarket:B", Type: canonical.RelRelated, Confidence: dec("0.80"),
+		Method: canonical.MethodRules, Diff: match.Diff(a.Terms, b.Terms), Explanation: "Related",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rec := get(s.Handler(), "/")
+	wantHTML(t, rec, 200)
+	body := rec.Body.String()
+
+	// No start-here card.
+	if strings.Contains(body, `<div class="start-here">`) {
+		t.Error("empty state should not show start-here card when no routable pairs")
+	}
+
+	// Empty state message with links to near-misses and eval.
+	wantContains(t, body,
+		"No routable pairs in this round",
+		`href="/near-misses"`,
+		`href="/eval"`,
+	)
+}
