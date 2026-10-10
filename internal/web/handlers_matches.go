@@ -300,7 +300,7 @@ func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
 
 	// UI-11: load quotes for MaxQuoteAge calculation (freshness badge).
 	// UI-18: also used for net gap computation.
-	quotes, err := st.ListQuotes(ctx, round.ID)
+	quotes, err := liveQuotes(ctx, st, round.ID)
 	if err != nil {
 		s.dbError(w, "loading quotes for matches", err)
 		return

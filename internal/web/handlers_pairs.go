@@ -410,19 +410,28 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 	for _, e := range entries {
 		data.LogEntries = append(data.LogEntries, s.newLogEntryView(e, tz))
 	}
-	// UI-12: load quotes with freshness
+	// UI-12: load quotes with freshness. Prices come from the newest round that
+	// has them (liveQuotes), so a pinned pair still shows live, aging prices.
 	now := time.Now().UTC()
+	pairQuotes, err := liveQuotes(r.Context(), st, rel.RoundID)
+	if err != nil {
+		s.dbError(w, "loading the pair's quotes", err)
+		return
+	}
+	quoteByID := make(map[string]store.QuoteRecord, 2)
+	for _, pq := range pairQuotes {
+		if pq.InstrumentID == rel.AID || pq.InstrumentID == rel.BID {
+			quoteByID[pq.InstrumentID] = pq
+		}
+	}
 	for _, q := range []struct {
 		id   string
 		dest *touchView
 	}{{rel.AID, &data.QuoteA}, {rel.BID, &data.QuoteB}} {
-		quote, err := st.GetQuote(ctx, rel.RoundID, q.id)
+		quote, found := quoteByID[q.id]
 		switch {
-		case isNotFound(err):
+		case !found:
 			*q.dest = touchView{}
-		case err != nil:
-			s.dbError(w, "loading the pair's quotes", err)
-			return
 		default:
 			*q.dest = newTouchView(quote)
 			// UI-12: compute age and freshness
@@ -435,7 +444,7 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 			venue := canonical.VenueOf(q.id)
 			warnThreshold := s.warnThresholdForVenue(venue)
 			staleThreshold := s.cfg.StaleAfter
-			freshState := quoteFreshState(venue, quote.FetchedAt, now, currentRound.Pinned, warnThreshold, staleThreshold)
+			freshState := quoteFreshState(venue, quote.FetchedAt, now, currentRound.Pinned && quote.RoundID == rel.RoundID, warnThreshold, staleThreshold)
 			q.dest.FreshState = string(freshState)
 			q.dest.FreshBadge = FreshBadgeAged(freshState, age, staleThreshold, FreshKindQuote)
 		}
