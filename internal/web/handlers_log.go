@@ -336,7 +336,7 @@ func (s *Server) parseRoutingLogPayload(e store.LogEntry, _ string) *routingLogV
 			freshState = FreshStateStale
 		}
 		maxQuoteAge = &stampView{
-			Badge: FreshBadge(freshState),
+			Badge: FreshBadgeAged(freshState, age, s.cfg.StaleAfter, FreshKindQuote),
 			Time:  *payload.OldestFetch,
 			Age:   age,
 		}
@@ -755,7 +755,7 @@ func (s *Server) handleDecision(w http.ResponseWriter, r *http.Request) {
 	}
 	snapshot := time.Time{}
 	if err == nil {
-		snapshot = round.SnapshotAt()
+		snapshot = decisionSnapshot(rd.Decision, round.SnapshotAt())
 	}
 
 	// Use current round from context for the page banner (not the decision's own round)

@@ -92,7 +92,7 @@
           {{if .Routing}}{{.Routing.SavingVsBest}}{{end}}
         </td>
         <td data-label="Max quote age">
-          {{if .Routing}}{{if .Routing.MaxQuoteAge}}<span class="badge {{.Routing.MaxQuoteAge.Badge.Class}}"><span class="g" aria-hidden="true">{{.Routing.MaxQuoteAge.Badge.Glyph}}</span>{{.Routing.MaxQuoteAge.Badge.Text}}</span> · {{formatTime .Routing.MaxQuoteAge.Time $.Timezone}}{{end}}{{end}}
+          {{if .Routing}}{{if .Routing.MaxQuoteAge}}<span class="badge {{.Routing.MaxQuoteAge.Badge.Class}}"{{if .Routing.MaxQuoteAge.Badge.Title}} title="{{.Routing.MaxQuoteAge.Badge.Title}}"{{end}}><span class="g" aria-hidden="true">{{.Routing.MaxQuoteAge.Badge.Glyph}}</span>{{.Routing.MaxQuoteAge.Badge.Text}}</span> · {{formatTime .Routing.MaxQuoteAge.Time $.Timezone}}{{end}}{{end}}
         </td>
         <td data-label="Label">
           {{if .Routing}}{{.Routing.Label}}{{end}}
@@ -146,7 +146,7 @@
         {{if .Routing}}{{.Routing.SavingVsBest}}{{end}}
       </td>
       <td data-label="Max quote age">
-        {{if .Routing}}{{if .Routing.MaxQuoteAge}}<span class="badge {{.Routing.MaxQuoteAge.Badge.Class}}"><span class="g" aria-hidden="true">{{.Routing.MaxQuoteAge.Badge.Glyph}}</span>{{.Routing.MaxQuoteAge.Badge.Text}}</span> · {{formatTime .Routing.MaxQuoteAge.Time $.Timezone}}{{end}}{{end}}
+        {{if .Routing}}{{if .Routing.MaxQuoteAge}}<span class="badge {{.Routing.MaxQuoteAge.Badge.Class}}"{{if .Routing.MaxQuoteAge.Badge.Title}} title="{{.Routing.MaxQuoteAge.Badge.Title}}"{{end}}><span class="g" aria-hidden="true">{{.Routing.MaxQuoteAge.Badge.Glyph}}</span>{{.Routing.MaxQuoteAge.Badge.Text}}</span> · {{formatTime .Routing.MaxQuoteAge.Time $.Timezone}}{{end}}{{end}}
       </td>
       <td data-label="Label">
         {{if .Routing}}{{.Routing.Label}}{{end}}

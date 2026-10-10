@@ -67,7 +67,8 @@ var templateFuncs = template.FuncMap{
 	// formatTimeCompact formats a time.Time in the user's timezone compactly (M5-11).
 	"formatTimeCompact": formatTimeCompact,
 	// Age formats a duration as a human-readable age (UI-13).
-	"Age": Age,
+	"Age":      Age,
+	"AgeShort": AgeShort,
 	// UI-12: partOrder returns the ordered list of rule parts for diff grouping.
 	"partOrder": func() []string {
 		return []string{

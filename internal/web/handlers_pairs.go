@@ -410,13 +410,15 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 	for _, e := range entries {
 		data.LogEntries = append(data.LogEntries, s.newLogEntryView(e, tz))
 	}
-	// UI-12: load quotes with freshness
-	now := time.Now().UTC()
+	// UI-12: load quotes with freshness. Prices come from the newest round that
+	// has them (liveQuote), so a pinned pair still shows live, aging prices.
+	now := s.now().UTC()
+
 	for _, q := range []struct {
 		id   string
 		dest *touchView
 	}{{rel.AID, &data.QuoteA}, {rel.BID, &data.QuoteB}} {
-		quote, err := st.GetQuote(ctx, rel.RoundID, q.id)
+		quote, err := liveQuote(ctx, st, rel.RoundID, q.id)
 		switch {
 		case isNotFound(err):
 			*q.dest = touchView{}
@@ -435,9 +437,9 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 			venue := canonical.VenueOf(q.id)
 			warnThreshold := s.warnThresholdForVenue(venue)
 			staleThreshold := s.cfg.StaleAfter
-			freshState := quoteFreshState(venue, quote.FetchedAt, now, currentRound.Pinned, warnThreshold, staleThreshold)
+			freshState := quoteFreshState(venue, quote.FetchedAt, now, currentRound.Pinned && quote.RoundID == rel.RoundID, warnThreshold, staleThreshold)
 			q.dest.FreshState = string(freshState)
-			q.dest.FreshBadge = FreshBadge(freshState)
+			q.dest.FreshBadge = FreshBadgeAged(freshState, age, staleThreshold, FreshKindQuote)
 		}
 		q.dest.Venue = string(canonical.VenueOf(q.id))
 		q.dest.Tz = tz
@@ -613,15 +615,16 @@ func buildDiffRows(rel canonical.Relationship) []diffRowView {
 	return rows
 }
 
-// quoteFor builds the router's view of an instrument's book in a round. A
+// quoteFor builds the router's view of an instrument's book: the newest quote
+// from the round or the latest finished round (liveQuote). A
 // missing quote becomes an empty book flagged no_book so the router can
 // explain the exclusion instead of failing (as `equinox route` does).
 func quoteFor(ctx context.Context, st *store.Store, roundID int64, id string, now time.Time) (canonical.Quote, error) {
-	q, err := st.GetQuote(ctx, roundID, id)
+	q, err := liveQuote(ctx, st, roundID, id)
 	switch {
 	case isNotFound(err):
 		empty := canonical.Quote{InstrumentID: id, FetchedAt: now}
-		empty.Quality.Add(canonical.QualityNoBook, "", "no quote in this round")
+		empty.Quality.Add(canonical.QualityNoBook, "", "no quote in this round or the latest one")
 		return empty, nil
 	case err != nil:
 		return canonical.Quote{}, err

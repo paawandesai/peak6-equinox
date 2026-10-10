@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -303,5 +304,40 @@ func TestMatchRunRecorded(t *testing.T) {
 	}
 	if run.DurationMS <= 0 {
 		t.Errorf("run.DurationMS = %d, want > 0", run.DurationMS)
+	}
+}
+
+func TestMatchLatestAutoPin(t *testing.T) {
+	st := store.New(tdb.Pool(t))
+	tdb.Reset(t)
+	round := seedMatchRound(t, st, store.RoundOK)
+	setAppEnv(t, tdb.DSN(t))
+	t.Setenv("FACTS_FILE", "../../config/facts.yaml")
+	ctx := context.Background()
+
+	// Too few routable pairs: the current pin (none) is kept.
+	var out, errOut bytes.Buffer
+	if code := run(ctx, []string{"match", "--latest", "--pin-min-routable", "2"}, &out, &errOut); code != 0 {
+		t.Fatalf("exit %d, stderr %q", code, errOut.String())
+	}
+	if !strings.Contains(out.String(), "kept current pin") {
+		t.Errorf("stdout = %q", out.String())
+	}
+	if _, err := st.PinnedRound(ctx); !errors.Is(err, store.ErrNotFound) {
+		t.Errorf("round pinned despite too few routable pairs: %v", err)
+	}
+	// Enough routable pairs: the matched round is pinned.
+	out.Reset()
+	if code := run(ctx, []string{"match", "--latest", "--pin-min-routable", "1"}, &out, &errOut); code != 0 {
+		t.Fatalf("exit %d, stderr %q", code, errOut.String())
+	}
+	if p, err := st.PinnedRound(ctx); err != nil || p.ID != round.ID {
+		t.Errorf("pinned = %+v, %v; want round %d (stdout %q)", p, err, round.ID, out.String())
+	}
+	for _, args := range [][]string{{"match", "--latest", "--round", "1"}, {"match", "--pin-min-routable", "-1"}} {
+		errOut.Reset()
+		if code := run(ctx, args, io.Discard, &errOut); code != 2 {
+			t.Errorf("%v: exit %d, stderr %q", args, code, errOut.String())
+		}
 	}
 }

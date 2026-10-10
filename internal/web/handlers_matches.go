@@ -300,7 +300,7 @@ func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
 
 	// UI-11: load quotes for MaxQuoteAge calculation (freshness badge).
 	// UI-18: also used for net gap computation.
-	quotes, err := st.ListQuotes(ctx, round.ID)
+	quotes, err := liveQuotes(ctx, st, round.ID)
 	if err != nil {
 		s.dbError(w, "loading quotes for matches", err)
 		return
@@ -476,7 +476,7 @@ func groupPairs(rels []canonical.Relationship, views map[string]instrumentView, 
 		var freshState FreshState
 		if maxQuoteAge == 0 {
 			freshState = FreshStateUnknown
-		} else if maxQuoteAge < 120 {
+		} else if time.Duration(maxQuoteAge)*time.Second < matchesStaleAfter {
 			freshState = FreshStateFresh
 		} else {
 			freshState = FreshStateStale
@@ -530,7 +530,7 @@ func groupPairs(rels []canonical.Relationship, views map[string]instrumentView, 
 			MaxQuoteAge:    maxQuoteAge,
 			ReviewPriority: reviewPriority,
 			TypeBadge:      TypeBadge(r.Type),
-			FreshBadge:     FreshBadge(freshState),
+			FreshBadge:     FreshBadgeAged(freshState, time.Duration(maxQuoteAge)*time.Second, matchesStaleAfter, FreshKindQuote),
 			NetGap:         netGap,
 			NetGapText:     netGapText,
 			IsFlagged:      isFlagged,
@@ -558,3 +558,6 @@ func groupPairs(rels []canonical.Relationship, views map[string]instrumentView, 
 	}
 	return groups
 }
+
+// matchesStaleAfter is the quote freshness window used by the pairs list (D-077 default).
+const matchesStaleAfter = 120 * time.Second
