@@ -7,7 +7,7 @@
 <div class="verdict-panel">
   <div class="verdict-head">
     {{template "badge-l" .TypeBadge}}
-    <span class="type-label">{{.TypeLabel}}</span>
+    <span class="type-label"><a href="/glossary#type-{{.Type}}">{{.TypeLabel}}</a></span>
   </div>
   <dl class="verdict-meta">
     <div>
@@ -35,7 +35,8 @@
     </div>
   </dl>
   <p class="type-explain">{{.TypeLabel}}{{if .NearMiss}} This pair is a <a href="/near-misses">near miss</a>: {{if .Vetoes}}a hard veto fired{{else}}no veto fired, but the external fact consulted did not close the gap{{end}}.{{end}}</p>
-  <p class="route-link"><a href="#route">Route an order ↓</a></p>
+  {{if .Routable}}<p class="route-link"><a href="#route" class="route-button">Route this pair →</a></p>{{end}}
+  <p class="jump-links">Jump to: <a href="#diff">Diff</a> · <a href="#route">Route this pair</a> · <a href="#history">History</a> · <a href="#log">Decision log</a></p>
 </div>
 
 {{/* UI-12: types legend as details */}}
@@ -95,7 +96,7 @@
   {{if eq .Type "equivalent_given_facts"}}<p>These term differences exist, but documented external facts close them.</p>{{else}}<p>Each veto on its own blocks <em>equivalent</em>.</p>{{end}}
   <table class="data">
     <thead><tr><th>Code</th><th>Term</th><th>Detail</th></tr></thead>
-    <tbody>{{range .Vetoes}}<tr><td><code>{{.Code}}</code></td><td>{{.Field}}</td><td>{{.Detail}}</td></tr>{{end}}</tbody>
+    <tbody>{{range .Vetoes}}<tr><td><a href="/glossary#veto-{{.Code}}"><code>{{.Code}}</code></a></td><td>{{.Field}}</td><td>{{.Detail}}</td></tr>{{end}}</tbody>
   </table>
   {{else}}
   <p>No vetoes.</p>
@@ -184,7 +185,7 @@
 
 {{/* UI-12: Decision-log entries with kind as badge */}}
 {{if .LogEntries}}
-<section>
+<section id="log">
   <h3>Decision-log entries for this pair</h3>
   <table class="data log">
     <thead><tr><th>When</th><th>Kind</th><th>Summary</th></tr></thead>
@@ -269,7 +270,7 @@
       <p class="rules">venue publishes none</p>
     </details>
     {{end}}
-    <details name="layers-{{.Venue}}" open>
+    <details name="layers-{{.Venue}}">
       <summary>Full rules</summary>
       <p class="rules">{{.Rules}}</p>
     </details>
