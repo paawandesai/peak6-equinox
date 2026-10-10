@@ -14,8 +14,8 @@ func (s *Server) handleTimezone(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tz := r.FormValue("tz")
-	// Validate timezone: must be one of the supported values
-	if tz != TzET && tz != TzCT && tz != TzUTC {
+	// Validate timezone: must be one of the supported values (M4-77 added Local)
+	if tz != TzET && tz != TzCT && tz != TzUTC && tz != TzLocal {
 		http.Error(w, "invalid timezone", http.StatusBadRequest)
 		return
 	}

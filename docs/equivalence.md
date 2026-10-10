@@ -59,7 +59,7 @@ The pipeline is D-018's: normalise → block → hard vetoes → classify (with 
 normalise   each instrument's title+rules  ->  Terms (+ quality flags)        internal/normalize
 block       is the pair a candidate at all?                                   internal/match/block.go
 veto        which of the vetoed fields differ or are unknown?                 internal/match/veto.go
-classify    no veto -> equivalent; else try derivations; else related         internal/match/classify.go
+classify    no veto -> equivalent (Fed same-metric checked first, D-109); else try derivations; else related   internal/match/classify.go
   derive    set algebra on one shared measurement -> complement / implies     internal/match/derive.go
   facts     metric gap closed by config/facts.yaml -> equivalent_given_facts  internal/match/facts.go
 diff        every term field: match / differ / unknown                        internal/match/diff.go
@@ -78,6 +78,7 @@ explain     one human-readable sentence naming the deciding fields and facts  cl
 - a proposition is an interval of the metric plus a polarity: "above x" is (x, +∞), "between lo and hi" is [lo, hi], "eq x" is [x, x]; negative polarity is the complement of the interval;
 - `complement` when the two YES sets are exact complements; `implies` when one is a strict subset of the other;
 - when the only shared-field veto is the **metric** and the category is Fed, the facts rule (§4) places the change bucket on the level ladder and the same set algebra runs on the result, giving `equivalent_given_facts`, `complement` or `implies`;
+- when the category is Fed and both have the **same metric** (both rate_change), the facts rule (D-109, §4) applies fed_rate_step grid rounding to both propositions and runs the same set algebra, giving `equivalent_given_facts`, `complement` or `implies` even when there were zero vetoes (to document the grid constraint was checked);
 - otherwise `related`, with confidence 0.80 when every veto is a known difference and 0.50 when any came from an unknown. A `related` verdict also lists every fact it consulted, so the diff shows why a fact did **not** apply.
 
 There is no tolerance anywhere: one cent is a difference, and a double negation (`gt x` positive versus `lte x` negative) is logically the same set but stays `related` by business rule 1.

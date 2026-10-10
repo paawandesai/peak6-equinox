@@ -105,6 +105,8 @@ func buildDeps(ctx context.Context, cfg config.Config, logger *slog.Logger) (web
 		LLMModel:           cfg.LLMModel,
 		LLMDailyCallCap:    cfg.LLMDailyCallCap,
 		LLMMaxOutputTokens: cfg.LLMMaxOutputTokens,
+		AppVersion:         cfg.AppVersion,
+		AppBuildTime:       cfg.AppBuildTime,
 	}, pool.Close, nil
 }
 

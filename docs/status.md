@@ -123,8 +123,10 @@ None.
 | D-101 | M4-04: Cloud Run `min-instances=1` for the review window Sun 2026-10-11 09:00–12:00 CT (3 h) and revert (`make review-window-on|off`); estimated cost $0.27 within $50 headroom; `scripts/review-window.sh` with status verification. Tier 2 (prod config, cost). | 2026-10-08 |
 | D-102 | M4-07: final production deploy of `main` for submission; sha, revision and smoke output filled in by the M4-07 MR. Tier 2 (prod deploy). Number reserved by the M4 tickets MR. | 2026-10-08 |
 | D-108 | M4-70: Extract settlement_sources for KXPRESNOMD/R nomination markets. Tier 2 (touches equivalence rules); achieves 9/9 equivalent for 2028 nominee pairs (eval 55/90, up from 46/90), 9 TP + 0 FP among nomination labels. Scope: nomination markets only (9/27 labels). KXFEDDECISION (15 labels) and KXRATECUTCOUNT (3 labels) remain out of scope; require matcher same-metric equivalence logic. | 2026-10-09 |
+| D-109 | M4-72: Same-metric Fed decision pairs use fed_rate_step grid rounding; zero-veto Fed pairs report equivalent_given_facts (not equivalent) to document grid check. KXFEDDECISION/KXRATECUTCOUNT default to resolution_source=federalreserve_gov when rules lack source. Kalshi's "Therefore, if the Fed hikes by 50bps, the 50bps market resolves Yes" sentence is read as an illustration, not the bucket (fixes back-test DISAGREED on KXFEDDECISION-26SEP-H25, CI #45765). Tier 2 (touches equivalence rules, classify.go + facts.go + fed.go); achieves 15/15 KXFEDDECISION equivalent_given_facts (eval 16/19 EGF, up from 1/19), 15 TP + 0 FP among KXFEDDECISION labels. Scope: KXFEDDECISION same-metric rate_change pairs (15/27 Fed labels). KXRATECUTCOUNT (3 labels) remain related; require rate-cut-count extraction. | 2026-10-09 |
 
 | D-103 | UI-21: Rule layers columns (rules_summary, clarifications, clarifications_updated_at) added to instruments table. Kalshi rules_secondary captured as clarifications; Polymarket has no separate layers. Not fed to matcher/LLM in this ticket. Migration 0004. Tier 2 schema change. | 2026-10-09 |
+| D-111 | M4-79 (#79) Phase 1: live round 735 shows 2 routable pairs because it predates the deployed M4-70 nominee fix; fresh local live round gives 79 by type (94 with !88), 12 router-eligible with !88. No universe change. Phase 2 plan: after !88 merges and deploy, ingest + match + pin a new round and verify Routable ≥ 10 on `/`. Tier 2 (pin/deploy plan; needs sign-off). | 2026-10-10 |
 
 ## Kept decisions (veto closed)
 
@@ -160,7 +162,7 @@ Paawan kept these four in the operator chat on 2026-10-07 at 8:38 PM CT, after t
 
 | ID | Status | | ID | Status |
 |---|---|---|---|---|
-| FR-01 | done (M1) | | NFR-01 | done (M4-05 measured) |
+| FR-01 | done (M1) | | NFR-01 | done (M4-05; #80 TestNFR01 local: GET / p95=2.33ms, GET /pairs/{id} p95=2.26ms, POST /route p95=3.25ms) |
 | FR-02 | done (M1) | | NFR-02 | partial (observed <60s; accepted per sweep) |
 | FR-03 | done (M1) | | NFR-03 | done (M1) |
 | FR-04 | done (M1) | | NFR-04 | done (M3-07 demo mode) |
@@ -221,7 +223,7 @@ Paawan kept these four in the operator chat on 2026-10-07 at 8:38 PM CT, after t
 
 | Criterion | Evidence | Status | Note |
 |---|---|---|---|
-| **NFR-01: Performance** (p95 <500ms pages, <300ms route) | CI test suite, scripts/smoke-live.sh (M4-05 #63 merged), internal/web response times | met | M4-05 smoke script merged; p95 measured on live URL (pinned round 735); targets met per M4-05 output |
+| **NFR-01: Performance** (p95 <500ms pages, <300ms route) | CI test suite, scripts/smoke-live.sh (M4-05 #63), #80 TestNFR01_PageLatencyP95 (N=20, seeded test DB): GET / p95=2.33ms (p50=580µs), GET /pairs/{id} p95=2.26ms (p50=933µs), POST /route p95=3.25ms (p50=1.32ms); live smoke M4-05 pinned round 735 | met | M4-05 live smoke + #80 TestNFR01 local figures recorded; all under NFR-01 targets (<500ms pages, <300ms route / within 500ms general) |
 | **NFR-02: Fetch performance** (<60s round) | [docs/architecture.md § External services](architecture.md#external-services) (10s timeout, pacing), https://equinox-o5hdimw5rq-uc.a.run.app/admin (round times) | partial | Fetch completes <60s observed on /admin; not formally measured in M4-05 (pages only); pacing and caps in place. Gap accepted: measurement optional (visually confirmed on /admin rounds table) |
 | **NFR-03: Reliability** (one venue fails, other succeeds) | internal/collector/collector.go (concurrent fetch, per-venue error handling), tests/security/ab03_* (venue failure tests) | met | Collector continues on one venue's failure; failure logged; other venue's data stored |
 | **NFR-04: Demo reliability** (0 outbound calls when pinned) | AB-04 test `TestNFR04PinnedRoundZeroOutbound`, M3-07 (closes #27), `equinox pin` | met | Test exists (M1); demo mode (M3-07 merged): zero venue calls when pinned, verified by AB-04 test |
