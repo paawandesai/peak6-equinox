@@ -62,6 +62,10 @@ type pairPage struct {
 	LLMModel        string   // Model used for verification
 	LLMRunID        int64    // Run ID
 	LLMVerifiedAt   string   // Formatted timestamp
+	// ui/plain-language: the top card, meaning and reasons in words, and the
+	// route form's target options by plain name.
+	Plain        *plainPair
+	TargetLabels map[string]string
 }
 
 // confView is the confidence for the {{template "conf"}} define (UI-12).
@@ -430,6 +434,7 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 	// list and the route trace agree.
 	ref := quoteSnapshot(ctx, st, round)
 	data.QuoteRef = ref
+	liveQuotes := map[string]liveQuoteAge{}
 	for _, q := range []struct {
 		id   string
 		dest *touchView
@@ -450,10 +455,12 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 			q.dest.FreshState = string(freshState)
 			q.dest.FreshBadge = FreshBadgeAged(freshState, age, s.cfg.StaleAfter, FreshKindQuote)
 			q.dest.OneSided = oneSidedNote(&quote.Quote)
+			liveQuotes[q.id] = liveQuoteAge{quote: quote.Quote, age: AgeShort(age)}
 		}
 		q.dest.Venue = string(canonical.VenueOf(q.id))
 		q.dest.Tz = tz
 	}
+	s.attachPlainPair(ctx, st, &data, rel, liveQuotes)
 	// UI-20, M6 P6: the evidence footer and the verdict panel spell out how
 	// the confidence was built, from the stored evidence.
 	if rel.Evidence != nil {

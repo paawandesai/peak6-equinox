@@ -1,8 +1,74 @@
 {{define "content"}}
-{{/* UI-12: Pair detail v2, section order per HANDOFF.md */}}
-<nav aria-label="breadcrumb"><a href="/">Matches</a> &gt; Pair #{{.ID}}</nav>
-<h1>Pair #{{.ID}}</h1>
+{{/* ui/plain-language: answer first. The top card says what the pair means in
+     words; the route form sits beside it; every technical layer follows,
+     collapsed, unchanged. */}}
+{{$p := .Plain}}
+<nav class="crumbs-nav" aria-label="breadcrumb"><a href="/">Matches</a> <span aria-hidden="true">›</span> Pair #{{.ID}}</nav>
+<div class="pair-top">
+  <section class="pair-card" aria-label="What this pair means">
+    <h1 class="pair-h1">{{$p.Title}}</h1>
+    <p class="pair-badge"><span class="badge badge-l vb-{{$p.Kind}}">{{$p.Badge}}</span></p>
+    <div class="pair-sides">
+      {{template "pairSide" $p.A}}
+      {{template "pairSide" $p.B}}
+    </div>
+    <p class="pair-meaning">{{$p.Meaning}}</p>
+    <ul class="pair-chips">
+      {{range $p.Chips}}<li class="pc-{{.Kind}}"><a href="{{.Href}}" class="pair-chip">{{.Text}}</a><small>{{.Caption}}</small></li>{{end}}
+    </ul>
+    {{if .NearMiss}}<p class="note">This pair is a <a href="/near-misses">near miss</a>: {{if .Vetoes}}a hard veto fired{{else}}no veto fired, but the external fact consulted did not close the gap{{end}}.</p>{{end}}
+  </section>
 
+  {{/* UI-12 route form, now beside the top card; presets pre-fill, never submit */}}
+  <section id="route" class="pair-route" aria-label="Route a hypothetical order">
+    <h2>Try an order</h2>
+    <p class="route-intro">Simulates the order against both books. Nothing is sent to a venue.</p>
+    {{if $p.Presets}}<p class="presets">{{range $p.Presets}}<a href="{{.Href}}" class="btn-preset">{{.Label}}</a>{{end}}</p>{{end}}
+    {{if .FormPreset}}<p class="note-info">Pre-filled from the guided demo or a preset. Nothing is routed until you press <strong>Route it</strong>.</p>{{end}}
+    <form method="post" action="/route" hx-post="/route" hx-target="#route-result" hx-swap="outerHTML" class="route-form">
+      <input type="hidden" name="pair" value="{{.Form.PairID}}">
+      <label class="rf-wide">Contract
+        <select name="target">{{range .Form.Targets}}<option value="{{.}}"{{if eq . $.Form.Target}} selected{{end}}>{{with index $.TargetLabels .}}{{.}}{{else}}{{shortID .}}{{end}}</option>{{end}}</select>
+      </label>
+      <label>Side
+        <select name="side"><option value="buy"{{if eq .Form.Side "buy"}} selected{{end}}>buy</option><option value="sell"{{if eq .Form.Side "sell"}} selected{{end}}>sell</option></select>
+      </label>
+      <label>Outcome
+        <select name="outcome"><option value="yes"{{if eq .Form.Outcome "yes"}} selected{{end}}>yes</option><option value="no"{{if eq .Form.Outcome "no"}} selected{{end}}>no</option></select>
+      </label>
+      <fieldset class="rf-qty">
+        <legend>Quantity</legend>
+        <label><input type="radio" name="quantity_mode" value="contracts"{{if ne .Form.QuantityMode "usd"}} checked{{end}}> Contracts</label>
+        <label><input type="radio" name="quantity_mode" value="usd"{{if eq .Form.QuantityMode "usd"}} checked{{end}}> USD notional</label>
+        <input type="number" name="quantity" min="0.01" max="100000" step="0.01" value="{{.Form.Quantity}}" placeholder="100" required aria-label="Quantity">
+      </fieldset>
+      <label>Order type
+        <select name="type"><option value="market"{{if eq .Form.Type "market"}} selected{{end}}>market</option><option value="limit"{{if eq .Form.Type "limit"}} selected{{end}}>limit</option></select>
+      </label>
+      <label>Limit price <small>0 to 1, limit only</small>
+        <input type="number" name="limit" min="0" max="1" step="0.0001" value="{{.Form.Limit}}" placeholder="0.50">
+      </label>
+      <label class="rf-wide">Time in force
+        <select name="tif"><option value="IOC"{{if eq .Form.TIF "IOC"}} selected{{end}}>IOC (fill what you can)</option><option value="FOK"{{if eq .Form.TIF "FOK"}} selected{{end}}>FOK (all or nothing)</option></select>
+      </label>
+      <button type="submit" class="rf-wide">Route it</button>
+    </form>
+    <p class="route-defaults"><small>{{.RouteDefaults}}</small></p>
+    <p class="route-defaults"><small>Contracts: 1 to 100,000 (whole numbers). USD: $0.01 to $100,000. Fractional contracts round down.</small></p>
+  </section>
+</div>
+<div id="route-result"></div>
+
+{{if $p.Why}}
+<section class="why-same">
+  <h2>{{$p.WhyTitle}}</h2>
+  <ul>{{range $p.Why}}<li>{{.}}</li>{{end}}</ul>
+</section>
+{{end}}
+
+<details class="tech pair-tech">
+  <summary><span class="tech-title">Technical details</span> <small>type code, the 11-term contract diff, facts, safety-risk components, confidence arithmetic, full rules, price history, quotes and log</small></summary>
+  <div class="tech-body">
 {{/* UI-12: verdict panel with large badge, confidence, method, basis risk, routable, round */}}
 <div class="verdict-panel">
   <div class="verdict-head">
@@ -35,9 +101,7 @@
     </div>
   </dl>
   <p class="type-explain">{{.TypeLabel}}{{if .NearMiss}} This pair is a <a href="/near-misses">near miss</a>: {{if .Vetoes}}a hard veto fired{{else}}no veto fired, but the external fact consulted did not close the gap{{end}}.{{end}}</p>
-  {{if .Routable}}<p class="route-link"><a href="#route" class="route-button">Route this pair →</a></p>{{end}}
-  <p class="jump-links">Jump to: <a href="#diff">Diff</a> · <a href="#route">Route this pair</a> · <a href="#history">History</a> · <a href="#log">Decision log</a></p>
-</div>
+  </div>
 
 {{/* UI-12: types legend as details */}}
 <details class="types">
@@ -60,7 +124,7 @@
   <h2>Contract diff</h2>
   <p>Every term the normaliser extracted, side by side. <em>unknown</em> means a term could not be parsed on at least one side; it is never guessed.</p>
   <p class="diff-legend"><small>How to read it: where the two sides' wording differs, A's words are <del>struck through</del> and B's are <ins>underlined</ins>. The bar on each row's left and its Verdict badge give the result: ✓ match (green), ✕ differs, the veto stands (red), ◇ closed by fact (blue: a documented fact closes the difference), ? unknown (grey, italic: not parsed on at least one side).</small></p>
-  <table class="data terms">
+  <div class="scroll-x"><table class="data terms">
     <thead><tr><th>Term</th><th>A: {{.A.Venue}}</th><th>B: {{.B.Venue}}</th><th>Verdict</th>{{if .HasEvidence}}<th>Contribution</th>{{end}}</tr></thead>
     {{/* UI-12: group diff rows by rule part */}}
     {{range $part := partOrder}}
@@ -87,7 +151,7 @@
     {{if not .DiffRows}}<tbody><tr><td colspan="{{if .HasEvidence}}5{{else}}4{{end}}">No diff was stored for this pair.</td></tr></tbody>{{end}}
     {{/* UI-20: Evidence footer */}}
     <tfoot><tr><td colspan="{{if .HasEvidence}}5{{else}}4{{end}}"><small>Matcher evidence: {{.EvidenceFooter}}</small></td></tr></tfoot>
-  </table>
+  </table></div>
   <p class="diff-counts">{{.DiffCounts}}</p>
 </section>
 
@@ -96,10 +160,10 @@
   {{if .Vetoes}}
   <h3>{{.VetoHeading}}</h3>
   {{if eq .Type "equivalent_given_facts"}}<p>These term differences exist, but documented external facts close them.</p>{{else}}<p>Each veto on its own blocks <em>equivalent</em>.</p>{{end}}
-  <table class="data">
+  <div class="scroll-x"><table class="data">
     <thead><tr><th>Code</th><th>Term</th><th>Detail</th></tr></thead>
     <tbody>{{range .Vetoes}}<tr><td><a href="/glossary#veto-{{.Code}}"><code>{{.Code}}</code></a></td><td>{{.Field}}</td><td>{{.Detail}}</td></tr>{{end}}</tbody>
-  </table>
+  </table></div>
   {{else}}
   <p>No vetoes.</p>
   {{end}}
@@ -111,10 +175,10 @@
     <h3>External facts {{if .Facts}}consulted ({{len .Facts}}){{else}}consulted{{end}}</h3>
     {{if .Facts}}
     <p>Each fact is reviewed data from <code>config/facts.yaml</code> (FR-10). For <em>equivalent_given_facts</em> the verdict rests on them; for a <em>related</em> verdict they are the facts that were tried and did not close the gap.</p>
-    <table class="data facts">
+    <div class="scroll-x"><table class="data facts">
       <thead><tr><th>Fact</th><th>Value</th><th>Source</th><th>As of (date)</th></tr></thead>
       <tbody>{{range .Facts}}<tr><td><code>{{.Key}}</code></td><td>{{.Value}}</td><td>{{with httpURL .Source}}<a href="{{.}}" rel="noopener noreferrer">{{.}}</a>{{else}}{{.Source}}{{end}}</td><td><time datetime="{{factDate .AsOf}}">{{factDate .AsOf}}</time></td></tr>{{end}}</tbody>
-    </table>
+    </table></div>
     <p><small>As-of values are calendar dates, as written in <code>config/facts.yaml</code> and in the explanation below; they are not times, so they are not shifted to {{$.Timezone}}.</small></p>
     {{else}}
     <p>None: this verdict rests on the contract terms alone.</p>
@@ -124,10 +188,10 @@
     <h3>Basis risk{{if .BasisRiskFull}}: {{.BasisRisk.Score}} {{.BasisRisk.Word}}{{end}}</h3>
     {{if .BasisRiskFull}}
     <p>The residual chance that the two contracts settle differently even though they are matched, as a score in [0,1] built from documented components (FR-11). The router charges it as a per-contract penalty.</p>
-    <table class="data basis">
+    <div class="scroll-x"><table class="data basis">
       <thead><tr><th>Component</th><th>Score</th><th>Detail</th><th>Diff row</th></tr></thead>
       <tbody>{{range .BasisComponents}}<tr><td><code>{{.Name}}</code></td><td>{{.Score}}</td><td>{{.Detail}}</td><td>{{if .Row}}<a href="#diff">{{.Row}}</a>{{else}}—{{end}}</td></tr>{{end}}</tbody>
-    </table>
+    </table></div>
     {{else}}
     <p>Not scored for this pair. Basis risk is computed for routable and implication verdicts by matcher v1 (pairs matched earlier have none stored); <em>related</em> and <em>unrelated</em> pairs are never scored.</p>
     {{end}}
@@ -171,13 +235,13 @@
 <section>
   <h2>Current touch</h2>
   <p>Best YES bid and ask on each venue from the newest collected round (pairs come from round {{.Round.ID}}). Mid is for display only; routing walks this same book.{{if not .QuoteRef.IsZero}} Ages are measured against that round ({{formatTime .QuoteRef $.Timezone}}), the reference routing uses.{{end}}</p>
-  <table>
+  <div class="scroll-x"><table>
     <thead><tr><th>Venue</th><th>Best bid</th><th>Best ask</th><th>Mid</th><th>Levels (bid/ask)</th><th>Fetched</th><th>Venue time</th><th>Quality</th></tr></thead>
     <tbody>
       {{template "touch" .QuoteA}}
       {{template "touch" .QuoteB}}
     </tbody>
-  </table>
+  </table></div>
 </section>
 
 {{/* UI-12: Price history (history.html unchanged) */}}
@@ -190,61 +254,24 @@
 {{if .LogEntries}}
 <section id="log">
   <h3>Decision-log entries for this pair</h3>
-  <table class="data log">
+  <div class="scroll-x"><table class="data log">
     <thead><tr><th>When</th><th>Kind</th><th>Summary</th></tr></thead>
     <tbody>{{range .LogEntries}}<tr><td><small>{{formatTime .At $.Timezone}}</small></td><td><span class="badge b-{{.Kind}}">{{.Kind}}</span></td><td class="summary">{{.Summary}}</td></tr>{{end}}</tbody>
-  </table>
+  </table></div>
   <p><a href="/log">Full decision log</a></p>
 </section>
 {{end}}
 
-{{/* UI-12: Route form - 7 fields, one row at 1280px, stacked at 390px, hints in small */}}
-<section id="route">
-  <h2>Route a hypothetical order</h2>
-  <p>Simulates the order against the target's book and every routable partner in this round, then explains the choice. Nothing is sent to a venue.</p>
-  <p class="route-defaults"><small>{{.RouteDefaults}}</small></p>
-  {{if .FormPreset}}<p class="note-info">Pre-filled from the guided demo. Nothing is routed until you press <strong>Route it</strong>.</p>{{end}}
-  <form method="post" action="/route" hx-post="/route" hx-target="#route-result" hx-swap="outerHTML">
-    <input type="hidden" name="pair" value="{{.Form.PairID}}">
-    <div class="grid">
-      <label>Target
-        <small>A or B</small>
-        <select name="target">{{range .Form.Targets}}<option value="{{.}}"{{if eq . $.Form.Target}} selected{{end}}>{{.}}</option>{{end}}</select>
-      </label>
-      <label>Side
-        <small>buy or sell</small>
-        <select name="side"><option value="buy"{{if eq .Form.Side "buy"}} selected{{end}}>buy</option><option value="sell"{{if eq .Form.Side "sell"}} selected{{end}}>sell</option></select>
-      </label>
-      <label>Outcome
-        <small>yes or no</small>
-        <select name="outcome"><option value="yes"{{if eq .Form.Outcome "yes"}} selected{{end}}>yes</option><option value="no"{{if eq .Form.Outcome "no"}} selected{{end}}>no</option></select>
-      </label>
-      <label>Quantity
-        <small>contracts or USD notional</small>
-        <fieldset>
-          <label><input type="radio" name="quantity_mode" value="contracts"{{if ne .Form.QuantityMode "usd"}} checked{{end}}> Contracts</label>
-          <label><input type="radio" name="quantity_mode" value="usd"{{if eq .Form.QuantityMode "usd"}} checked{{end}}> USD notional</label>
-        </fieldset>
-        <input type="number" name="quantity" min="0.01" max="100000" step="0.01" value="{{.Form.Quantity}}" placeholder="100" required>
-        <small>Contracts: 1 to 100,000 (whole numbers). USD: $0.01 to $100,000. Fractional contracts round down.</small>
-      </label>
-      <label>Order type
-        <small>market or limit</small>
-        <select name="type"><option value="market"{{if eq .Form.Type "market"}} selected{{end}}>market</option><option value="limit"{{if eq .Form.Type "limit"}} selected{{end}}>limit</option></select>
-      </label>
-      <label>Limit price
-        <small>0 to 1, limit orders only</small>
-        <input type="number" name="limit" min="0" max="1" step="0.0001" value="{{.Form.Limit}}" placeholder="0.50">
-      </label>
-      <label>Time in force
-        <small>fill strategy</small>
-        <select name="tif"><option value="IOC"{{if eq .Form.TIF "IOC"}} selected{{end}}>IOC (fill what you can)</option><option value="FOK"{{if eq .Form.TIF "FOK"}} selected{{end}}>FOK (all or nothing)</option></select>
-      </label>
-    </div>
-    <button type="submit">Route it</button>
-  </form>
-  <div id="route-result"></div>
-</section>
+  </div>
+</details>
+{{end}}
+
+{{define "pairSide"}}
+<div class="pair-side">
+  <span class="venue-name">{{.Venue}}</span>
+  <strong{{if .Title}} title="{{.Title}}"{{end}}>{{.Name}}</strong>
+  <span class="side-price">{{.Price}}{{if .Age}} <small>· {{.Age}}</small>{{end}}</span>
+</div>
 {{end}}
 
 {{define "instrument"}}

@@ -5,36 +5,57 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="htmx-config" content='{"includeIndicatorStyles":false,"allowEval":false,"selfRequestsOnly":true,"responseHandling":[{"code":"204","swap":false},{"code":"[23]..","swap":true},{"code":"400","swap":true},{"code":"[45]..","swap":false,"error":true}]}'>
   <title>{{.Title}} · Equinox</title>
+  <meta name="description" content="{{template "page-description" .}}">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon.ico" sizes="32x32">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#13171f" media="(prefers-color-scheme: dark)">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Equinox">
+  <meta property="og:title" content="{{.Title}} · Equinox">
+  <meta property="og:description" content="{{template "page-description" .}}">
+  <meta property="og:image" content="/static/og-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Equinox: the same bet on Kalshi and Polymarket, and where buying it would be cheapest.">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="{{.Assets.PicoURL}}" integrity="{{.Assets.PicoSRI}}" crossorigin="anonymous">
   <link rel="stylesheet" href="/static/app.css">
   <script src="{{.Assets.HtmxURL}}" integrity="{{.Assets.HtmxSRI}}" crossorigin="anonymous" defer></script>
   <script src="/static/timezone-local.js" defer></script>
 </head>
-<body>
+<body class="page-{{.Page}}">
   {{/* Banners (D-098): demo (info), no-data (warn), stale (danger) with glyphs */}}
   {{if .Banner.Show}}<div class="banner {{if .Banner.Pinned}}banner-info{{else}}banner-warn{{end}}" {{if .Banner.Pinned}}role="status"{{else}}role="alert"{{end}}><div class="container"><span class="g" aria-hidden="true">{{if .Banner.Pinned}}◆{{else}}?{{end}}</span>{{if .Banner.Pinned}}Demo mode: pairs matched in round {{.Banner.RoundID}} as of {{.Banner.AsOf}}, pinned by the operator. Prices and routing use the newest collected quotes; each price shows its age.{{if .Banner.ShowUnpinLink}} <a href="/admin">Unpin</a>{{end}}{{else}}No data available yet. Run ingest from <a href="/admin">/admin</a>.{{end}}</div></div>{{end}}
   {{if .StaleWarning}}<div class="banner banner-danger" role="alert"><div class="container"><span class="g" aria-hidden="true">✕</span>{{.StaleWarning}}</div></div>{{end}}
   <header class="site-header">
-    <nav class="container">
-      <ul>
-        <li>
-          <a href="/" class="brand">Equinox</a>
-          <span class="tagline">Finds the same bet on Kalshi and Polymarket, explains why, and simulates where an order would execute best. Read-only; never places orders.</span>
-        </li>
-      </ul>
-      <ul>
-        <li><a href="/" {{if eq .Page "matches"}}aria-current="page"{{end}}>Matches</a></li>
-        <li><a href="/near-misses" {{if eq .Page "near_misses"}}aria-current="page"{{end}}>Near misses</a></li>
-        <li><a href="/log" {{if eq .Page "log"}}aria-current="page"{{end}}>Decision log</a></li>
-        <li><a href="/eval" {{if eq .Page "eval"}}aria-current="page"{{end}}>Eval</a></li>
-        <li><a href="/glossary" {{if eq .Page "glossary"}}aria-current="page"{{end}}>Glossary</a></li>
-        <li><a href="/about" {{if eq .Page "about"}}aria-current="page"{{end}}>About</a></li>
-      </ul>
+    <nav class="container site-nav" aria-label="Site">
+      <div class="brand-row">
+        <a href="/" class="brand"><span class="brand-mark" aria-hidden="true"></span>Equinox</a>
+        <span class="tagline">Finds the same bet on Kalshi and Polymarket, explains why, and simulates where an order would execute best. Read-only; never places orders.</span>
+      </div>
+      {{/* One copy of the links: on wide screens the menu is always shown and
+           its summary hidden (app.css); on phones it collapses (no JS). */}}
+      <details class="nav-menu">
+        <summary>Menu</summary>
+        <ul>
+          <li><a href="/" {{if eq .Page "matches"}}aria-current="page"{{end}}>Matches</a></li>
+          <li><a href="/near-misses" {{if eq .Page "near_misses"}}aria-current="page"{{end}}>Near misses</a></li>
+          <li><a href="/log" {{if eq .Page "log"}}aria-current="page"{{end}}>Decision log</a></li>
+          <li><a href="/eval" {{if eq .Page "eval"}}aria-current="page"{{end}}>Eval</a></li>
+          <li><a href="/glossary" {{if eq .Page "glossary"}}aria-current="page"{{end}}>Glossary</a></li>
+          <li><a href="/about" {{if eq .Page "about"}}aria-current="page"{{end}}>About</a></li>
+        </ul>
+      </details>
     </nav>
     {{if .Round}}<div class="context-bar">
       <div class="container">
         {{/* Freshness stamp (UI-10 AC: static, no GET /stamp route) */}}
         {{if .Stamp}}{{template "stamp" .Stamp}} · {{end}}round {{.Round.ID}}{{if .Round.Pinned}}, pinned{{end}}
+        {{/* Phones: the selector folds behind "Timezone: ET" (app.css); wide screens show it inline. */}}
+        <details class="tz-menu">
+        <summary>Timezone: {{if .Timezone}}{{.Timezone}}{{else}}ET{{end}}</summary>
         <form method="post" action="/timezone" class="timezone-selector">
           <label>Timezone:
             <select name="tz">
@@ -46,6 +67,7 @@
           </label>
           <button type="submit">Change</button>
         </form>
+        </details>
       </div>
     </div>{{end}}
   </header>
@@ -60,6 +82,8 @@
 {{end}}
 
 {{/* Shared template defines (UI-10, design.md § 0, HANDOFF.md) */}}
+
+{{define "page-description"}}{{if .Description}}{{.Description}}{{else}}Equinox finds contracts on Kalshi and Polymarket that pay out on the same thing, explains why, and shows where buying would be cheapest. It never places real orders.{{end}}{{end}}
 
 {{define "badge"}}{{/* .Class (b-*), .Glyph, .Text */}}
 <span class="badge {{.Class}}"><span class="g" aria-hidden="true">{{.Glyph}}</span>{{.Text}}</span>

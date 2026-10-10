@@ -51,6 +51,7 @@
   <h3>Mismatches ({{len .Backtest.Mismatches}})</h3>
   <p>Equivalent-tier pairs that settled differently and are not allowlisted. Each one is a matcher error and must be investigated.</p>
 
+  <div class="scroll-x">
   <table>
     <thead>
       <tr>
@@ -80,12 +81,14 @@
       {{end}}
     </tbody>
   </table>
+  </div>
   {{end}}
 
   {{if .Backtest.Exceptions}}
   <h3>Allowlisted Exceptions ({{len .Backtest.Exceptions}})</h3>
   <p>Disagreements that are allowlisted with an investigated reason and a logged decision.</p>
 
+  <div class="scroll-x">
   <table>
     <thead>
       <tr>
@@ -117,6 +120,7 @@
       {{end}}
     </tbody>
   </table>
+  </div>
   {{end}}
 
   {{if not .Backtest.Mismatches}}{{if not .Backtest.Exceptions}}

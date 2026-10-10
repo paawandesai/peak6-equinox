@@ -5,7 +5,7 @@
 {{if not .MatchedAt.IsZero}}<p class="hist-pin-note">Pairs matched at {{formatTime .MatchedAt .Tz}}{{if gt .LaterPoints 0}}; later points ({{.LaterPoints}}) are live collection{{end}}.{{if .PinX}} The dotted vertical line marks the match time.{{end}}</p>{{end}}
 <p>{{.Points}} touch{{if ne .Points 1}}es{{end}} across {{.Rounds}} round{{if ne .Rounds 1}}s{{end}}, from {{formatTime .From .Tz}} to {{formatTime .To .Tz}}. Solid line: mid of the best YES bid and ask; thin lines: best bid and best ask. Prices are per $1 payout on a fixed 0 to 1 axis so both venues share one scale. Dashed line: cross-venue spread (mid A − mid B), on a −1 to 1 axis with 0 at the centre.</p>
 <figure class="history">
-<svg class="hist" viewBox="0 0 {{.Width}} {{.Height}}" width="{{.Width}}" height="{{.Height}}" role="img" aria-labelledby="hist-title">
+<svg class="hist" viewBox="0 0 {{.Width}} {{.Height}}" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="hist-title">
   <title id="hist-title">Price history of the two contracts across fetch rounds</title>
   <rect class="hist-plot" x="{{.X0}}" y="{{.Y0}}" width="{{.PlotW}}" height="{{.PlotH}}"></rect>
   {{range .YTicks}}<line class="hist-grid" x1="{{$.X0}}" y1="{{.Y}}" x2="{{$.X1}}" y2="{{.Y}}"></line><text class="hist-label" x="{{.X}}" y="{{.Y}}" text-anchor="{{.Anchor}}" dominant-baseline="middle">{{.Label}}</text>{{end}}
@@ -34,10 +34,12 @@
   {{else}}
   <p>Both venues, newest first.</p>
   {{end}}
+  <div class="scroll-x">
   <table>
     <thead><tr><th>Fetched</th><th>Round</th><th>Venue</th><th>Best bid</th><th>Best ask</th><th>Mid</th></tr></thead>
     <tbody>{{range $i, $row := .Rows}}{{if lt $i 50}}<tr><td>{{formatTime $row.At $.Tz}}</td><td>{{$row.RoundID}}</td><td><span class="venue">{{$row.Venue}}</span></td><td>{{$row.Bid}}</td><td>{{$row.Ask}}</td><td>{{$row.Mid}}</td></tr>{{end}}{{end}}</tbody>
   </table>
+  </div>
 </details>
 {{end}}
 {{end}}

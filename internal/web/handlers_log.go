@@ -776,16 +776,25 @@ func (s *Server) handleDecision(w http.ResponseWriter, r *http.Request) {
 	// Use current round from context for the page banner (not the decision's own round)
 	currentRound := roundFromContext(r.Context())
 	tz := timezoneFromRequest(r)
+	instruments := s.loadDecisionInstruments(ctx, st, rd.Decision)
 	data := decisionPage{
 		routePage: routePage{
 			page:          s.pageBase(currentRound, "Decision "+r.PathValue("id"), "What did this simulated order do, and why did the router choose that venue?", tz, "decision"),
 			DecisionID:    rd.ID,
-			Decision:      newDecisionView(rd.Decision, countPartners(rd.Decision), snapshot, s.loadDecisionInstrumentTitles(ctx, st, rd.Decision), s.cfg.BasisPenaltyMult, s.cfg.StaleAfter),
+			Decision:      newDecisionView(rd.Decision, countPartners(rd.Decision), snapshot, titlesOf(instruments), s.cfg.BasisPenaltyMult, s.cfg.StaleAfter),
 			RenderContext: "decision",
 		},
 		CreatedAt: rd.CreatedAt,
 	}
-	data.Decision.Suggestion = s.decisionSuggestion(ctx, st, rd.Decision, currentRound.ID)
+	quotes := s.decisionQuotes(ctx, st, rd.Decision)
+	data.Decision.Suggestion = s.decisionSuggestion(ctx, st, rd.Decision, quotes, currentRound.ID)
+	dc := decisionContext{Instruments: instruments, Suggestion: data.Decision.Suggestion}
+	if q, ok := quotes[rd.Decision.TargetID]; ok {
+		dc.TargetQuote = &q
+	}
+	s.attachPlain(data.Decision, rd.Decision, dc, rd.ID)
+	data.Title = decisionTitle(rd.ID, data.Decision)
+	describeDecision(&data.page, data.Decision)
 	s.render(w, http.StatusOK, "decision", data)
 }
 
@@ -795,11 +804,21 @@ func (s *Server) handleDecision(w http.ResponseWriter, r *http.Request) {
 // target, resolved by instrument ID in the current round first (pair IDs are
 // per round), preferring one of the decision's target type. Lookup failures
 // only drop the hint or its link.
-func (s *Server) decisionSuggestion(ctx context.Context, st *store.Store, d canonical.Decision, currentRoundID int64) *routeSuggestion {
+func (s *Server) decisionSuggestion(ctx context.Context, st *store.Store, d canonical.Decision, quotes map[string]canonical.Quote, currentRoundID int64) *routeSuggestion {
 	if len(d.Chosen) > 0 {
 		return nil
 	}
+	return suggestOpposite(d, quotes, s.pairForTarget(ctx, st, d, currentRoundID))
+}
+
+// decisionQuotes loads the stored quotes of a not-routed decision's target and
+// of its routable partners (for the suggestion and the market price). A
+// routed decision needs none. Lookup failures only drop that quote.
+func (s *Server) decisionQuotes(ctx context.Context, st *store.Store, d canonical.Decision) map[string]canonical.Quote {
 	quotes := map[string]canonical.Quote{}
+	if len(d.Chosen) > 0 {
+		return quotes
+	}
 	ids := []string{d.TargetID}
 	for _, in := range d.Inputs {
 		if in.InstrumentID != d.TargetID && in.RelationshipType.Routable() {
@@ -814,7 +833,7 @@ func (s *Server) decisionSuggestion(ctx context.Context, st *store.Store, d cano
 		}
 		quotes[id] = q
 	}
-	return suggestOpposite(d, quotes, s.pairForTarget(ctx, st, d, currentRoundID))
+	return quotes
 }
 
 // pairForTarget finds a pair containing the decision's target, in the current

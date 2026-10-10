@@ -297,6 +297,12 @@ type routeSuggestion struct {
 	Order string // e.g. "buy NO"
 	Why   string // the stored book that shows a candidate
 	Link  string // the pair page with the order preset; "" when no pair is known
+	// Structured fields for the plain-language next step (ui/plain-language).
+	Venue      canonical.Venue
+	Outcome    canonical.Outcome // the opposite outcome to order
+	Price      decimal.Decimal   // best price on the book that shows it
+	Size       decimal.Decimal   // contracts at that price
+	Complement bool              // the book is a complement's, not the target's
 }
 
 // suggestOpposite returns a hint to try the opposite outcome when the stored
@@ -337,7 +343,9 @@ func suggestOpposite(d canonical.Decision, quotes map[string]canonical.Quote, pa
 		order := string(d.Order.Side) + " " + strings.ToUpper(string(alt))
 		why := fmt.Sprintf("%s has %s %s (best %s, %s contracts)", who, strings.ToUpper(string(check)), sideWord(d.Order.Side),
 			levels[0].Price.StringFixed(4), levels[0].Size.String())
-		return &routeSuggestion{Order: order, Why: why, Link: suggestionLink(pairID, d, alt)}
+		return &routeSuggestion{Order: order, Why: why, Link: suggestionLink(pairID, d, alt),
+			Venue: canonical.VenueOf(id), Outcome: alt, Price: levels[0].Price, Size: levels[0].Size,
+			Complement: types[id] == canonical.RelComplement}
 	}
 	return nil
 }

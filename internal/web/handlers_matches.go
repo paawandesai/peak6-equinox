@@ -106,6 +106,8 @@ type pairRow struct {
 	FlaggedReason string // "⚠ review: large edge, low confidence" when IsFlagged
 	// M6 P3: one-sided books, e.g. "kalshi one-sided: no YES bid"
 	BookNotes []string
+	// ui/plain-language: names, relationship and meaning in words (routable rows).
+	Plain *plainPair
 }
 
 // typeLabels say what each relationship type means (domain.md), in one line.
@@ -379,6 +381,18 @@ func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
 		// M5-05: featured pair for "Start here" card is the first routable pair in priority order.
 		data.FeaturedPair = &routablePairs[0]
 		data.StartSteps = withFeaturedPair(data.StartSteps, data.FeaturedPair.ID)
+	}
+	data.StartSteps = numberSteps(data.StartSteps)
+	// ui/plain-language: routable pairs as cards, by plain name and meaning.
+	relByID := make(map[int64]canonical.Relationship, len(rels))
+	for _, r := range rels {
+		relByID[r.ID] = r
+	}
+	for i := range routablePairs {
+		if rel, ok := relByID[routablePairs[i].ID]; ok {
+			routablePairs[i].Plain = presentPair(pairInput{Rel: rel, MinConfidence: s.cfg.MinRouteConfidence,
+				A: instrumentOr(instrumentRecs, rel.AID, routablePairs[i].A.Title), B: instrumentOr(instrumentRecs, rel.BID, routablePairs[i].B.Title)})
+		}
 	}
 	// Sort implies and related by the chosen order too.
 	if data.Implies != nil {

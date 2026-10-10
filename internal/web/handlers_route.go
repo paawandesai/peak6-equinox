@@ -224,6 +224,12 @@ type decisionView struct {
 	OriginalNotional  decimal.Decimal // Original USD notional amount
 	ConversionTouch   decimal.Decimal // Touch price used to convert notional to contracts
 	ConvertedQuantity decimal.Decimal // Contracts after conversion (rounded down)
+	// ui/plain-language: the answer and trader layers, the audit extras, and
+	// each instrument's plain name ("Kalshi · Fed rate above 3.50% after Oct 28").
+	Plain       *plainDecision
+	Audit       auditConfig
+	RawJSONHref string
+	Names       map[string]string
 }
 
 // legView extends Leg with fields for the v2 cost report (UI-13).
@@ -843,6 +849,14 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 
 	view := newDecisionView(dec, len(partners), decisionSnapshot(dec, cfg.Eligibility.Snapshot), titles, s.cfg.BasisPenaltyMult, s.cfg.StaleAfter)
 	view.Suggestion = suggestOpposite(dec, candidateQuotes(target, partners), in.PairID)
+	instruments := map[string]canonical.Instrument{target.Instrument.ID: target.Instrument}
+	for _, c := range partners {
+		instruments[c.Instrument.ID] = c.Instrument
+	}
+	targetQuote := target.Quote
+	s.attachPlain(view, dec, decisionContext{Instruments: instruments, TargetQuote: &targetQuote, Suggestion: view.Suggestion}, id)
+	p.Title = decisionTitle(id, view)
+	describeDecision(&p, view)
 	data := routePage{
 		page:          p,
 		PairID:        in.PairID,
@@ -937,29 +951,6 @@ func routeLogSummary(dec canonical.Decision) string {
 	l := dec.Chosen[0]
 	return fmt.Sprintf("route %s %s %s on %s: %s %s at %s per contract", dec.Order.Side, size, dec.Order.Outcome, dec.TargetID,
 		l.Venue, l.InstrumentID, l.AllInPerContract.StringFixed(4))
-}
-
-// loadDecisionInstrumentTitles loads the titles for all instruments mentioned in a decision
-// using batch GetInstruments to avoid N+1 queries. If an instrument is not found, its title is empty.
-func (s *Server) loadDecisionInstrumentTitles(ctx context.Context, st *store.Store, d canonical.Decision) map[string]string {
-	ids := collectInstrumentIDs(d)
-	if len(ids) == 0 {
-		return nil
-	}
-	idList := make([]string, 0, len(ids))
-	for id := range ids {
-		idList = append(idList, id)
-	}
-	recs, err := st.GetInstruments(ctx, idList)
-	if err != nil {
-		s.log.Warn("loading instrument titles for decision", "count", len(idList), "err", err.Error())
-		return nil
-	}
-	titles := make(map[string]string, len(recs))
-	for _, rec := range recs {
-		titles[rec.ID] = rec.Title
-	}
-	return titles
 }
 
 // collectInstrumentIDs returns all instrument IDs mentioned in a decision.

@@ -58,6 +58,7 @@
 <h2>Quality by type</h2>
 {{if .DualMethod}}
 <p class="note">The columns show rules-only and rules+llm methods side by side, with Δ (rules → rules+llm).</p>
+<div class="scroll-x">
 <table class="data">
   <thead>
     <tr>
@@ -119,8 +120,10 @@
   {{end}}
   </tbody>
 </table>
+</div>
 <p class="note sign-rule">Favourable deltas (LLM improved over rules) read positive (+X%); unfavourable ones (LLM regressed) appear in parentheses ((X%)).</p>
 {{else}}
+<div class="scroll-x">
 <table class="data">
   <thead>
     <tr>
@@ -206,6 +209,7 @@
   {{end}}
   </tbody>
 </table>
+</div>
 {{end}}
 
 <p class="note">There is no calibration plot because confidence is a rules score, not a probability.</p>
@@ -260,6 +264,7 @@
 {{if $.Thresholds}}
 <h2>P/R at confidence thresholds</h2>
 <p class="note">Precision and recall for <code>equivalent</code> predictions at various confidence cut-offs.</p>
+<div class="scroll-x">
 <table class="data">
   <thead>
     <tr>
@@ -282,6 +287,7 @@
   {{end}}
   </tbody>
 </table>
+</div>
 {{end}}
 
 {{if .Notes}}

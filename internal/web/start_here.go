@@ -38,8 +38,20 @@ const (
 type startStep struct {
 	Text string // the link text
 	Href string // a pair page URL, with preset query params and an anchor
-	Note string // one line of context under the link
+	Note string // one line of context under the link (codes; not rendered on /)
 	Demo bool   // true for the two demo-pair steps (diff and route)
+	// ui/plain-language: the card title and one plain sentence, no codes.
+	Title    string // "See a match"
+	Sentence string // "Kalshi's 'Fed above 4.25%' and Polymarket's 'Fed +50 bps' pay out on the same thing."
+	Num      int    // 1-based card number
+}
+
+// numberSteps numbers the cards in display order.
+func numberSteps(steps []startStep) []startStep {
+	for i := range steps {
+		steps[i].Num = i + 1
+	}
+	return steps
 }
 
 // withFeaturedPair puts the featured routable pair's diff and route steps
@@ -55,8 +67,10 @@ func withFeaturedPair(steps []startStep, featuredID int64) []startStep {
 		}
 	}
 	featured := []startStep{
-		{Text: "See why two contracts are the same bet", Href: fmt.Sprintf("/pairs/%d#diff", featuredID), Demo: true},
-		{Text: "Route a hypothetical order on it", Href: fmt.Sprintf("/pairs/%d#route", featuredID), Demo: true},
+		{Text: "See why two contracts are the same bet", Href: fmt.Sprintf("/pairs/%d", featuredID), Demo: true,
+			Title: "See a match", Sentence: "Two contracts that pay out on the same thing, side by side."},
+		{Text: "Route a hypothetical order on it", Href: fmt.Sprintf("/pairs/%d#route", featuredID), Demo: true,
+			Title: "Route an order", Sentence: "Buy 100 YES and see which venue is cheaper, with the numbers."},
 	}
 	return append(featured, steps...)
 }
@@ -201,23 +215,31 @@ func resolveStartHere(rels []canonical.Relationship, insts map[string]store.Inst
 		if p, ok := findRoutableFedPair(rels, insts, high, true); ok {
 			steps = append(steps,
 				startStep{
-					Text: "See why two contracts are the same bet",
-					Href: fmt.Sprintf("/pairs/%d#diff", p.rel.ID),
-					Note: fmt.Sprintf("Kalshi %s vs Polymarket %q (%s)", p.kalshi.VenueMarketID, p.poly.Title, p.rel.Type),
-					Demo: true,
+					Text:  "See why two contracts are the same bet",
+					Href:  fmt.Sprintf("/pairs/%d", p.rel.ID),
+					Note:  fmt.Sprintf("Kalshi %s vs Polymarket %q (%s)", p.kalshi.VenueMarketID, p.poly.Title, p.rel.Type),
+					Demo:  true,
+					Title: "See a match",
+					Sentence: fmt.Sprintf("Kalshi's '%s' and Polymarket's '%s' pay out on the same thing.",
+						nameContract(p.kalshi).Short, nameContract(p.poly).Short),
 				},
 				startStep{
-					Text: "Route a hypothetical order on it",
-					Href: demoPresetHref(p.rel.ID, p.kalshi.ID, string(canonical.SideBuy), string(canonical.OutcomeYes)),
-					Note: fmt.Sprintf("Pre-filled: buy YES %s on Kalshi %s, market IOC. Nothing is routed until you press Route it.", demoQty, p.kalshi.VenueMarketID),
-					Demo: true,
+					Text:     "Route a hypothetical order on it",
+					Href:     demoPresetHref(p.rel.ID, p.kalshi.ID, string(canonical.SideBuy), string(canonical.OutcomeYes)),
+					Note:     fmt.Sprintf("Pre-filled: buy YES %s on Kalshi %s, market IOC. Nothing is routed until you press Route it.", demoQty, p.kalshi.VenueMarketID),
+					Demo:     true,
+					Title:    "Route an order",
+					Sentence: fmt.Sprintf("Buy %s YES and see which venue is cheaper. Nothing is sent anywhere.", demoQty),
 				})
 		}
 	}
 	if p, ok := findFactDidNotApply(rels, insts); ok {
 		steps = append(steps, startStep{
-			Text: "See a near miss the Fed fact did not close",
-			Href: fmt.Sprintf("/pairs/%d#diff", p.rel.ID),
+			Text:  "See a near miss the Fed fact did not close",
+			Href:  fmt.Sprintf("/pairs/%d", p.rel.ID),
+			Title: "See a rejection",
+			Sentence: fmt.Sprintf("Kalshi's '%s' and Polymarket's '%s' look alike, but they are not the same bet.",
+				nameContract(p.kalshi).Short, nameContract(p.poly).Short),
 			Note: fmt.Sprintf("Kalshi %s vs Polymarket %q: %s is the level before the next meeting only, so it does not apply here.",
 				p.kalshi.VenueMarketID, p.poly.Title, factFedUpperBound),
 		})
@@ -226,8 +248,11 @@ func resolveStartHere(rels []canonical.Relationship, insts map[string]store.Inst
 		low := kalshiFedPrefix + code + "-" + demoStrikeLow
 		if p, ok := findRoutableFedPair(rels, insts, low, false); ok {
 			steps = append(steps, startStep{
-				Text: "Route the opposite side on the complement pair",
-				Href: demoPresetHref(p.rel.ID, p.kalshi.ID, string(canonical.SideBuy), string(canonical.OutcomeNo)),
+				Text:  "Route the opposite side on the complement pair",
+				Href:  demoPresetHref(p.rel.ID, p.kalshi.ID, string(canonical.SideBuy), string(canonical.OutcomeNo)),
+				Title: "Trade the opposite",
+				Sentence: fmt.Sprintf("Buy NO on '%s' by buying YES on its opposite, '%s'.",
+					nameContract(p.kalshi).Short, nameContract(p.poly).Short),
 				Note: fmt.Sprintf("Kalshi %s vs Polymarket %q (%s). Pre-filled: buy NO %s on Kalshi, market IOC.",
 					p.kalshi.VenueMarketID, p.poly.Title, p.rel.Type, demoQty),
 			})
