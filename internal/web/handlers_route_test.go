@@ -861,12 +861,12 @@ func TestM508LeadSentenceInResult(t *testing.T) {
 
 	// Should show lead sentence in design.md § 4 format
 	wantContains(t, body,
-		"Routed:",           // Lead sentence prefix
-		"buy",               // Side from order
-		"YES",               // Outcome from order
-		"at",                // Preposition before all-in
-		"all-in",            // All-in mention
-		"outcome-summary",   // CSS class for lead sentence
+		"Routed:",         // Lead sentence prefix
+		"buy",             // Side from order
+		"YES",             // Outcome from order
+		"at",              // Preposition before all-in
+		"all-in",          // All-in mention
+		"outcome-summary", // CSS class for lead sentence
 	)
 }
 
@@ -977,8 +977,8 @@ func TestM508LeadSentenceSplit(t *testing.T) {
 
 	wantContains(t, body,
 		"Routed across 2 venues", // Lead sentence for split
-		"+ ",                      // Contract split uses + separator
-		"contracts",               // Unit
+		"+ ",                     // Contract split uses + separator
+		"contracts",              // Unit
 	)
 }
 
