@@ -192,6 +192,8 @@ Changes: an outcome strip in words; the leg table shows all four cost terms (M3-
 
 ## 7. Designing for in-flight and upcoming M3 work
 
+_The State column is a snapshot from when this spec was written (2026-10-08). Every M3 ticket below has since merged (status.md § Done), and the pages were later redesigned twice: UI-v2 (D-098) and the plain-language pass (D-128)._
+
 | Work | State | What the design does with it |
 |---|---|---|
 | M3-01 stale-round warning and snapshot "as of" (merged, D-077) | `StaleWarning` already rendered as `<mark>` in the layout | Becomes the `--eq-warn` banner with the phrasing in section 4; the snapshot line moves into `.asof`. |

@@ -184,7 +184,7 @@ Nothing goes below 0.5, so a long list of caveats never reads as "no confidence"
 
 ## 7. How to read eval and back-test output
 
-Three commands produce the accuracy evidence. Two of them are M2-05 and M2-06 deliverables and are **not merged at the time of writing** (see §8); their output format below is the ticket's contract and will be replaced by pasted output once they land.
+Three commands produce the accuracy evidence: `equinox match`, `equinox eval` (M2-05) and `equinox backtest` (M2-06). All three are merged; §8 has the current numbers.
 
 **`equinox match --round N`** (shipped, M1-07/M2-04) prints one summary per run:
 
@@ -200,7 +200,7 @@ Read it as: the first line is the universe size; the second is the type histogra
 
 **`equinox backtest`** (M2-06, FR-19, NFR-07) fetches settled markets from both venues (fixture-recorded for tests; live only behind an explicit flag), runs the matcher on settled cross-venue pairs, and lists every `equivalent` or `equivalent_given_facts` pair whose settlements disagree. The gate is **0 mismatches, or each one investigated and logged** as a decision. A mismatch on a pair the matcher called equivalent is the strongest possible evidence that a rule is wrong; an exception can be allowlisted only with a logged reason.
 
-The fixture run of 2026-10-07 (M2-06, `go run ./cmd/equinox backtest --fixtures`; the full per-pair list follows the table on the terminal):
+The first fixture run, of 2026-10-07 (M2-06, `go run ./cmd/equinox backtest --fixtures`; the full per-pair list follows the table on the terminal), is kept below as a worked example. The current run, after the Fed decision rules of D-109, compares 208,064 pairs and checks 29 verdicts, all agreed (`config/backtest_summary.json`, §8):
 
 ```
 Settlement back-test: 1031 settled instruments (kalshi 411, polymarket 620), 207544 cross-venue pairs compared, 0 rejected records; facts available: fed_next_meeting, fed_rate_step, fed_upper_bound
@@ -227,17 +227,29 @@ Read it as: the first line is the sample (every settled market both adapters ret
 
 ## 8. Current results
 
-_As of 2026-10-07, main at the M2-04 merge (`638daf9`)._
+_As of 2026-10-10, main at `5ed9ea8`. The numbers come from two committed artifacts, which `/eval` renders as stored (it never runs the matcher on a request, D-069): `config/eval_summary.json` (written by `equinox eval --out`, generated 2026-10-09 22:36 UTC) and `config/backtest_summary.json` (written by `equinox backtest --fixtures --out`, generated 2026-10-10 00:41 UTC). Both are scored on recorded fixture data, not on the pinned live round 904._
 
-| Gate (plan M2 exit) | Status | Evidence |
+| Gate | Status | Evidence |
 |---|---|---|
-| 0 veto-suite false positives | **met** | 37 `V-` cases (29 crypto, 8 Fed), 0 `equivalent`-tier verdicts; `TestPairsFromFixtures`, `TestPairSuiteSymmetric`, `TestPairSuiteWithoutFacts` pass on `internal/match` |
-| Fixture positives | **met** | 4 `EQ-` crypto equivalents, 1 Fed `EQ-F1` equivalent; `FACT-01` equivalent_given_facts at confidence 0.93; `CMP-01`, `CMP-F1`, `V-13`, `V-F5` complements; `IMP-01/02`, `IMP-F1/F2/F3`, `V-01/02/08/19/21`, `V-F7` implications |
-| Precision ≥ 0.95 at `equivalent` on human-confirmed labels | **pending human labels** | `equinox eval` and `testdata/golden/` are M2-05, not yet merged; no labels have been confirmed. **TODO (M2-05 worker, then human):** paste the `equinox eval` table here once `labels.yaml` is confirmed, and record the label count and date. |
-| 0 back-test mismatches | **met on the fixture set** | `equinox backtest --fixtures` on the 2026-10-06 recording: 1,031 settled instruments (411 Kalshi, 620 Polymarket), 207,544 cross-venue pairs; 0 `equivalent`, 1 `equivalent_given_facts`, 1 `complement`, 22 `implies`, and every one of the 24 checked verdicts agreed with the settlements; 0 allowlisted exceptions. `TestBacktestFixtures` (internal/eval) and `TestBacktestCommandFixtures` (cmd/equinox) pin it; the pasted output is in §7. A `--live` run is operator-only and not yet recorded (D-072). |
-| ≥ 10 true `equivalent` or `complement` pairs across ≥ 2 categories in a live round | **not yet measured** | Live round 3 (D-065): 1,881 instruments, 768 `related`, 0 `equivalent`, matched before M2-04 landed. Needs a Fed-inclusive round re-matched with the M2-04 matcher and the politics normaliser (M2-02). |
+| 0 veto-suite false positives (NFR-06) | **met** | Every `V-` case in `testdata/match/{crypto,fed}_pairs.yaml` is non-equivalent; `TestPairsFromFixtures`, `TestPairSuiteSymmetric`, `TestPairSuiteWithoutFacts` pass on `internal/match` |
+| Precision ≥ 0.95 at `equivalent` on human-confirmed labels (NFR-06) | **met: 1.0000** | `equinox eval` (rules only) on the 95 labels in `testdata/golden/labels.yaml` (human-confirmed, Q-7 and Q-9/D-083): 9 `equivalent` predictions, 9 correct, 0 false positives. Table below |
+| 0 back-test mismatches (NFR-07) | **met on the fixture set** | `equinox backtest --fixtures`: 208,064 cross-venue pairs compared, 29 payout-claiming verdicts checked against the settlements, 29 agreed, 0 disagreed, 0 allowlisted. A `--live` run against the venues has **not** been run (D-072) |
+| ≥ 10 true `equivalent` or `complement` pairs in a live round | **met in one category** | Pinned live round 904: 12 routable pairs (11 `equivalent_given_facts`, 1 `complement`), all Fed (D-114). The live round has no politics or crypto routable pairs (§9) |
 
-Fixture crypto equivalents are necessarily **synthetic in one venue's phrasing** (Polymarket wording on CF Benchmarks, Kalshi wording on Binance), because no recorded cross-venue crypto pair shares a source (D-061 §6; §9 below). The Fed fixtures are recorded text from both venues; `FACT-01`, `CMP-F1` and `IMP-F1` are real pairs.
+**Golden-set eval, rules only** (`config/eval_summary.json`; 95 labels, 90 scored):
+
+| Type | Labels | Correct | False positives | Missed | Precision | Recall |
+|---|---|---|---|---|---|---|
+| equivalent | 9 | 9 | 0 | 0 | 1.0000 | 1.0000 |
+| equivalent_given_facts | 19 | 16 | 0 | 3 | 1.0000 | 0.8421 |
+| complement | 1 | 1 | 0 | 0 | 1.0000 | 1.0000 |
+| implies | 23 | 17 | 0 | 6 | 1.0000 | 0.7391 |
+| related | 36 | 25 | 7 | 11 | 0.7813 | 0.6944 |
+| unrelated | 2 | 2 | 13 | 0 | 0.1333 | 1.0000 |
+
+70 of the 90 scored labels match. The 5 unscored labels are `KXBTCD-26OCT0812` crypto pairs whose instruments are not in the fixture round, so the eval cannot find them; the summary's notes name each one. Every error is an under-claim: the three routable types have no false positives, so no error makes a non-routable pair routable. The 3 missed `equivalent_given_facts` are `KXRATECUTCOUNT` pairs, which D-109 left out of scope. Both `unrelated` labels are scored correctly, so each `related` or `unrelated` false positive is a pair the human labelled with a stronger type than the matcher gave. The rules+LLM column is not evaluated: the verifier has not run against the golden set (§9, [ai-usage.md](ai-usage.md)). The committed summary also has no confusion matrix, so `/eval` shows none (status.md Q-12).
+
+Fixture crypto equivalents in the veto suite are necessarily **synthetic in one venue's phrasing** (Polymarket wording on CF Benchmarks, Kalshi wording on Binance), because no recorded cross-venue crypto pair shares a source (D-061 §6; §9 below). The Fed fixtures are recorded text from both venues; `FACT-01`, `CMP-F1` and `IMP-F1` are real pairs.
 
 ## 9. Known failure modes
 
@@ -260,7 +272,9 @@ Three independent vetoes fire. Two of them are real payout differences, not conv
 
 **Metric unknown on path-dependent and count markets.** "Reach 5.0 % at any point", "2 rate cuts in 2026", "Hike–Pause–Hike", dominance, volatility and ETF titles all get an `unknown` metric (D-060 §3, D-067 §4). They can never be matched; `V-F8` pins the behaviour. This is deliberate: a guessed metric is the kind of error the back-test would catch only after money moved.
 
-**Edge rules are not extracted.** `edge_rules` is `unknown` on nearly every market, so early-close, tie and void handling is never compared. It costs 0.02 confidence per side and 0.05 basis, and the explanation says "edge rules not compared". A pair that differs only in void handling would today be called `equivalent` with those caveats; this is the one place where the definition's fourth clause is scored rather than enforced.
+**Edge rules are scored, not vetoed.** `edge_rules` is `unknown` on nearly every market, so early-close, tie and void handling is never compared. It costs 0.02 confidence per side and 0.05 basis, and the explanation says "edge rules not compared". A pair that differs only in void handling would today be called `equivalent` with those caveats; this is the one place where the definition's fourth clause is scored rather than enforced.
+
+**There is no mutually-exclusive type.** "Vance wins" and "Harris wins" cannot both pay YES, so their prices are linked, but the subjects differ, so blocking classifies the pair `unrelated` and it is never routed. A mutually-exclusive relationship would need its own type and routing rule; none exists (see the limits on `/about`).
 
 **The December bucket is `related`, by design.** Polymarket's "Fed Decision in December?" buckets measure the change versus the level before the December meeting, which is October's decision. `fed_upper_bound` is the level before October, so applying it to December would place the bucket on a stale base. The rule refuses when either deadline is outside the `fed_next_meeting` window, lists the facts it consulted, and `match.NearMiss` stores the pair so it appears as a near miss (`V-F1`, §10). Once October's decision is published and the facts are updated, December becomes matchable and October becomes history.
 
@@ -268,9 +282,9 @@ Three independent vetoes fire. Two of them are real payout differences, not conv
 
 **Deadline tolerance outside crypto hides nothing but costs confidence.** The Fed demo pair's deadlines are 9 h 54 min apart (Kalshi states 2:05 PM ET; Polymarket's rules state no time so its close time is used). The generic 24 h rule accepts that; `fed_next_meeting` confirms both sit on one decision. The diff still shows `deadline: differ`.
 
-**Politics is thin.** The politics normaliser (M2-02, MR !22) is in review at the time of writing. Until it merges, politics instruments carry `UnknownTerms` and never pass blocking.
+**Politics is thin in live data.** The politics normaliser (M2-02, MR !22) and the nominee settlement-source rule (D-108) are merged, and the recorded fixture round yields `equivalent` nominee pairs (9 of 9 golden nominee labels correct). The pinned live round 904 has no politics routable pairs; widening the live politics universe and re-pinning was deferred (docs/tickets/M6.md, P8).
 
-**The LLM has not run.** Every stored relationship today has method `rules`. The verifier (D-022) is wired but disabled in production until the human adds the key (status.md Q-3); when it runs it can only downgrade.
+**The LLM has not run in production.** The verifier (D-022) is wired, but the production service has no `ANTHROPIC_API_KEY` mounted (the `equinox-anthropic-key` secret has no version), so it cannot run there and every live relationship has method `rules`. When it runs it can only downgrade. Note that `LLM_ENABLED` does not gate it today; the presence of the key does (status.md Q-11, [ai-usage.md](ai-usage.md)).
 
 ## 10. The Fed demo pair walkthrough
 
