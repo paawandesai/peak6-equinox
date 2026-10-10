@@ -18,10 +18,10 @@
 <div class="toolbar-chips">
   {{range .Groups}}<a href="#{{.Anchor}}" class="chip-filter">{{.Code}} ({{.Count}})</a> {{end}}
 </div>
+<p class="near-miss-legend"><strong>Legend:</strong> How close: the gap between the two thresholds; Score: rule confidence vs the 0.90 needed for equivalent.</p>
 {{range .Groups}}
 <section id="{{.Anchor}}">
-  <h2><code>{{.Code}}</code> <small>({{.Count}})</small></h2>
-  <p>{{.Description}}</p>
+  <h2>{{.Description}} (<code>{{.Code}}</code>, {{.Count}})</h2>
   <table class="data stack">
     <thead>
       <tr><th>Veto that fired</th><th>How close</th><th>Score</th><th>Contracts</th><th>Explanation</th></tr>
@@ -31,7 +31,7 @@
       <tr>
         <td data-label="Veto that fired">
           {{if .VetoBadge.Text}}
-            {{template "badge" .VetoBadge}} <strong>{{.VetoField}}</strong>: {{.VetoDetail}}
+            {{template "badge" .VetoBadge}} <strong>{{.VetoField}}</strong>: {{if .VetoDetailWords}}{{.VetoDetailWords}}{{else}}{{.VetoDetail}}{{end}}
           {{else}}
             <span class="badge b-info"><span class="g" aria-hidden="true">◇</span>no veto</span>: {{if .Facts}}a fact was consulted but did not apply{{else}}a term differs{{end}}
           {{end}}
@@ -54,6 +54,9 @@
     {{end}}
     </tbody>
   </table>
+  {{if .Truncated}}
+  <p class="show-all-link"><a href="{{.ShowAllLink}}">Show all {{.Count}} →</a></p>
+  {{end}}
 </section>
 {{end}}
 {{end}}
