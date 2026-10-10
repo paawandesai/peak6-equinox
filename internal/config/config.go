@@ -27,6 +27,7 @@ const (
 	DefaultUniverseDir                = "config/universe"
 	DefaultFactsFile                  = "config/facts.yaml"
 	DefaultEvalSummaryFile            = "config/eval_summary.json"
+	DefaultBacktestSummaryFile        = "config/backtest_summary.json"
 	DefaultHTTPTimeoutSeconds         = 10
 	DefaultMaxBodyBytes               = 10485760
 	DefaultStaleAfterSeconds          = 120
@@ -70,12 +71,13 @@ type Config struct {
 	AppVersion      string // Git commit SHA for /version endpoint (issue #80)
 	AppBuildTime    string // Build timestamp RFC 3339 for /version endpoint (issue #80)
 
-	KalshiBaseURL      string
-	PolymarketGammaURL string
-	PolymarketClobURL  string
-	UniverseDir        string
-	FactsFile          string
-	EvalSummaryFile    string
+	KalshiBaseURL       string
+	PolymarketGammaURL  string
+	PolymarketClobURL   string
+	UniverseDir         string
+	FactsFile           string
+	EvalSummaryFile     string
+	BacktestSummaryFile string
 
 	HTTPTimeout         time.Duration
 	MaxBodyBytes        int64
@@ -124,12 +126,13 @@ func Load(lookup LookupFunc) (Config, error) {
 		AppVersion:      l.optional("APP_VERSION", "dev"),
 		AppBuildTime:    l.optional("APP_BUILD_TIME", ""),
 
-		KalshiBaseURL:      l.httpURL("KALSHI_BASE_URL", DefaultKalshiBaseURL),
-		PolymarketGammaURL: l.httpURL("POLYMARKET_GAMMA_URL", DefaultPolymarketGammaURL),
-		PolymarketClobURL:  l.httpURL("POLYMARKET_CLOB_URL", DefaultPolymarketClobURL),
-		UniverseDir:        l.optional("UNIVERSE_DIR", DefaultUniverseDir),
-		FactsFile:          l.optional("FACTS_FILE", DefaultFactsFile),
-		EvalSummaryFile:    l.optional("EVAL_SUMMARY_FILE", DefaultEvalSummaryFile),
+		KalshiBaseURL:       l.httpURL("KALSHI_BASE_URL", DefaultKalshiBaseURL),
+		PolymarketGammaURL:  l.httpURL("POLYMARKET_GAMMA_URL", DefaultPolymarketGammaURL),
+		PolymarketClobURL:   l.httpURL("POLYMARKET_CLOB_URL", DefaultPolymarketClobURL),
+		UniverseDir:         l.optional("UNIVERSE_DIR", DefaultUniverseDir),
+		FactsFile:           l.optional("FACTS_FILE", DefaultFactsFile),
+		EvalSummaryFile:     l.optional("EVAL_SUMMARY_FILE", DefaultEvalSummaryFile),
+		BacktestSummaryFile: l.optional("BACKTEST_SUMMARY_FILE", DefaultBacktestSummaryFile),
 
 		HTTPTimeout:         l.seconds("HTTP_TIMEOUT_SECONDS", DefaultHTTPTimeoutSeconds),
 		MaxBodyBytes:        int64(l.integer("MAX_BODY_BYTES", DefaultMaxBodyBytes, 1, 1<<31-1)),

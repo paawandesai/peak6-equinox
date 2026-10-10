@@ -109,8 +109,8 @@ func TestLoadBacktestResults_Valid(t *testing.T) {
 	if m.AID != "kalshi:KXTEST-001" {
 		t.Errorf("Mismatch AID = %q", m.AID)
 	}
-	if m.Type != canonical.RelEquivalent {
-		t.Errorf("Mismatch Type = %q", m.Type)
+	if m.TypeBadge.Text != "equivalent" {
+		t.Errorf("Mismatch TypeBadge.Text = %q, want 'equivalent'", m.TypeBadge.Text)
 	}
 	if m.Expectation != "same outcome" {
 		t.Errorf("Mismatch Expectation = %q", m.Expectation)

@@ -1,4 +1,5 @@
-{{/* Backtest results section for the eval page (UI-76, FR-19, NFR-07).
+{{define "backtest_results"}}
+{{/* Backtest results section for the eval page (M4-76, FR-19, NFR-07).
      Renders a BacktestSummary loaded from config/backtest_summary.json.
      Missing file shows "no backtest results yet".
      The page is read-only per D-069. */}}
@@ -69,7 +70,7 @@
           <div class="mt-1"><a href="/pairs/{{.AID}}/{{.BID}}">{{.BID}}</a></div>
           <div class="small">{{.BTitle}}</div>
         </td>
-        <td>{{template "badge" (TypeBadge .Type)}}</td>
+        <td>{{template "badge" .TypeBadge}}</td>
         <td>{{.Confidence}}</td>
         <td>{{.Expectation}}</td>
         <td>{{.AOutcome}}</td>
@@ -105,7 +106,7 @@
           <div class="mt-1"><a href="/pairs/{{.AID}}/{{.BID}}">{{.BID}}</a></div>
           <div class="small">{{.BTitle}}</div>
         </td>
-        <td>{{template "badge" (TypeBadge .Type)}}</td>
+        <td>{{template "badge" .TypeBadge}}</td>
         <td>{{.Expectation}}</td>
         <td>{{.AOutcome}}</td>
         <td>{{.BOutcome}}</td>
@@ -135,4 +136,5 @@
   <h2>Settlement Back-Test</h2>
   <p>No backtest results yet. Run <code>equinox backtest --fixtures --out config/backtest_summary.json</code> to generate them.</p>
 </section>
+{{end}}
 {{end}}

@@ -5,7 +5,6 @@ import (
 	"io/fs"
 	"log/slog"
 
-	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/eval"
 )
 
@@ -33,7 +32,7 @@ type BacktestMismatchRow struct {
 	BTitle      string
 	AOutcome    string
 	BOutcome    string
-	Type        canonical.RelationshipType
+	TypeBadge   Badge
 	Confidence  string
 	Expectation string
 	Forcing     string
@@ -81,7 +80,7 @@ func LoadBacktestResults(path string, logger *slog.Logger) (*BacktestViewModel, 
 			BTitle:      m.BTitle,
 			AOutcome:    m.AOutcome,
 			BOutcome:    m.BOutcome,
-			Type:        m.Type,
+			TypeBadge:   TypeBadge(m.Type),
 			Confidence:  m.Confidence,
 			Expectation: m.Expectation,
 			Forcing:     m.Forcing,
@@ -98,7 +97,7 @@ func LoadBacktestResults(path string, logger *slog.Logger) (*BacktestViewModel, 
 				BTitle:      e.BTitle,
 				AOutcome:    e.AOutcome,
 				BOutcome:    e.BOutcome,
-				Type:        e.Type,
+				TypeBadge:   TypeBadge(e.Type),
 				Confidence:  e.Confidence,
 				Expectation: e.Expectation,
 				Forcing:     e.Forcing,
