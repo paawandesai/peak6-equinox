@@ -76,6 +76,8 @@ type logEntryView struct {
 	About         string // Human-readable "about" text (UI-06)
 	AboutTitle    string // Short title for the About link (UI-15)
 	Summary       string
+	SummaryHead   string // M6 P2: the summary, or its first words when long
+	SummaryTail   string // M6 P2: the rest of a long summary, shown on expand; "" when short
 	// Routing-specific fields (UI-15), empty for other kinds
 	Routing *routingLogView
 }
@@ -273,6 +275,7 @@ func (s *Server) newLogEntryView(e store.LogEntry, tz string) logEntryView {
 		Ref:           e.Ref,
 		Summary:       e.Summary,
 	}
+	v.SummaryHead, v.SummaryTail = splitSummary(e.Summary, summaryHeadLen)
 	v.Link, v.LinkLabel = logEntryLink(e.Kind, e.Ref)
 	v.About = logEntryAbout(e) // Build from payload per UI-06
 	v.AboutTitle = logEntryAboutTitle(e)
@@ -770,7 +773,60 @@ func (s *Server) handleDecision(w http.ResponseWriter, r *http.Request) {
 		},
 		CreatedAt: rd.CreatedAt,
 	}
+	data.Decision.Suggestion = s.decisionSuggestion(ctx, st, rd.Decision, currentRound.ID)
 	s.render(w, http.StatusOK, "decision", data)
+}
+
+// decisionSuggestion builds the "Try: <opposite order>" hint for a stored
+// not-routed decision (M6 P2): the stored quotes of the target and of the
+// partners not ruled out by their relationship, and a pair holding the
+// target, resolved by instrument ID in the current round first (pair IDs are
+// per round), preferring one of the decision's target type. Lookup failures
+// only drop the hint or its link.
+func (s *Server) decisionSuggestion(ctx context.Context, st *store.Store, d canonical.Decision, currentRoundID int64) *routeSuggestion {
+	if len(d.Chosen) > 0 {
+		return nil
+	}
+	quotes := map[string]canonical.Quote{}
+	ids := []string{d.TargetID}
+	for _, in := range d.Inputs {
+		if in.InstrumentID != d.TargetID && in.RelationshipType.Routable() {
+			ids = append(ids, in.InstrumentID)
+		}
+	}
+	for _, id := range ids {
+		q, err := quoteFor(ctx, st, d.RoundID, id, s.now())
+		if err != nil {
+			s.log.Warn("loading quote for route suggestion", "instrument", id, "err", err.Error())
+			continue
+		}
+		quotes[id] = q
+	}
+	return suggestOpposite(d, quotes, s.pairForTarget(ctx, st, d, currentRoundID))
+}
+
+// pairForTarget finds a pair containing the decision's target, in the current
+// round and then the decision's round, preferring the decision's target type.
+func (s *Server) pairForTarget(ctx context.Context, st *store.Store, d canonical.Decision, currentRoundID int64) int64 {
+	for _, roundID := range []int64{currentRoundID, d.RoundID} {
+		if roundID <= 0 {
+			continue
+		}
+		rels, err := st.ListRelationships(ctx, store.RelationshipFilter{RoundID: roundID, InstrumentID: d.TargetID, Limit: maxRoutePartners})
+		if err != nil {
+			s.log.Warn("finding pair for route suggestion", "target", d.TargetID, "err", err.Error())
+			return 0
+		}
+		for _, r := range rels {
+			if r.Type == d.TargetType {
+				return r.ID
+			}
+		}
+		if len(rels) > 0 {
+			return rels[0].ID
+		}
+	}
+	return 0
 }
 
 // formatDuration returns a human-readable duration string (UI-15).
@@ -902,4 +958,25 @@ func getGroupKey(e logEntryView, groupBy string) string {
 	default:
 		return "unknown"
 	}
+}
+
+// summaryHeadLen is how much of a log summary shows before "more".
+const summaryHeadLen = 140
+
+// splitSummary splits a summary at a word boundary near n characters so the
+// log shows it once: the head inline and, when long, the rest on expand
+// (M6 P2; the cell used to show the whole summary twice).
+func splitSummary(s string, n int) (head, tail string) {
+	r := []rune(s)
+	if len(r) <= n {
+		return s, ""
+	}
+	cut := n
+	for i := n; i > n/2; i-- {
+		if r[i] == ' ' {
+			cut = i
+			break
+		}
+	}
+	return strings.TrimSpace(string(r[:cut])), strings.TrimSpace(string(r[cut:]))
 }

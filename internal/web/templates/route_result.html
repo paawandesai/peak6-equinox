@@ -20,6 +20,7 @@
         <span class="badge badge-l {{.OutcomeChipClass}}"><span class="g" aria-hidden="true">{{if .Chosen}}✓{{else}}✕{{end}}</span>{{.OutcomePhrase}}</span>
         <p class="outcome-summary">{{.LeadSentence}}</p>
       </div>
+      {{with .Suggestion}}<p class="route-suggestion"><strong>Try: {{.Order}}.</strong> {{.Why}}.{{if .Link}} <a href="{{.Link}}">Open the pair with {{.Order}} preset →</a>{{end}}</p>{{end}}
       <p class="order-line"><strong>Order:</strong> {{.OrderLine}}. <strong>Partners considered:</strong> {{.Partners}}.</p>
       <p class="decision-log-link">Recorded as decision #{{$.DecisionID}} → <a href="/log?kind=routing">view in decision log</a> or <a href="/decisions/{{$.DecisionID}}">permalink</a>.</p>
       {{if .UsedNotional}}{{if .ConversionTouch.IsPositive}}

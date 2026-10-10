@@ -160,7 +160,8 @@ func TestDecisionLogPage(t *testing.T) {
 		`<a href="/log?kind=routing" class="chip-filter">routing decisions</a>`,
 		`<span class="chip chip-info">relationship</span>`, `<span class="chip chip-ok">routing</span>`,
 		"route buy 100 contracts yes on "+seedKalshiA,
-		seedExplainEq, "Latest 3 entries",
+		// M6 P2: a long summary shows once, split into a head and the rest on expand.
+		"Same subject, threshold", "differ in name only.", `<details class="log-summary">`, "Latest 3 entries",
 	)
 	// Newest first: the routing decision (now = seedNow+1h) precedes the verdicts.
 	if strings.Index(body, `chip-ok">routing`) > strings.Index(body, `chip-info">relationship`) {
