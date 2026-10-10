@@ -296,17 +296,17 @@ func TestRotatePreviousSummaryEdgeCases(t *testing.T) {
 // TestWriteSummaryErrors tests error paths for coverage.
 func TestWriteSummaryErrors(t *testing.T) {
 	s := Summary{GeneratedAt: time.Now().UTC(), Method: "rules", Labels: 1}
-	
+
 	// Invalid path (directory doesn't exist)
 	err := WriteSummary("/nonexistent/dir/summary.json", s)
 	if err == nil {
 		t.Fatal("expected error for nonexistent directory")
 	}
-	
+
 	// Read-only directory (if we can create one)
 	dir := t.TempDir()
 	readOnlyPath := filepath.Join(dir, "readonly", "summary.json")
-	if err := os.Mkdir(filepath.Join(dir, "readonly"), 0o444); err == nil {
+	if err := os.Mkdir(filepath.Join(dir, "readonly"), 0o400); err == nil {
 		err = WriteSummary(readOnlyPath, s)
 		if err == nil {
 			t.Error("expected error for read-only directory")
