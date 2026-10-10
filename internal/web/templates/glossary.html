@@ -1,0 +1,76 @@
+{{define "content"}}
+<div class="page-head">
+  <h1>Glossary</h1>
+</div>
+
+<p>Equinox compares Kalshi and Polymarket contracts, decides how each pair is related, and simulates where an order would fill best. Every code you see on the other pages is defined here. Prices are per $1 payout, so they lie between 0 and 1.</p>
+
+<section>
+  <h2 id="relationship-types">Relationship types</h2>
+  <p>Two contracts are the same bet only if buying YES on both pays out identically in every possible outcome. Types are listed strongest first. Only routable types are ever used to route an order.</p>
+  <table class="data stack">
+    <thead><tr><th>Type</th><th>Meaning</th><th>Routable</th></tr></thead>
+    <tbody>
+    {{range .Types}}
+      <tr id="{{.Anchor}}">
+        <td data-label="Type">{{template "badge" .Badge}}</td>
+        <td data-label="Meaning">{{.Meaning}}</td>
+        <td data-label="Routable">{{if .Routable}}yes{{else}}no{{end}}</td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2 id="veto-codes">Veto codes</h2>
+  <p>A veto is a hard rule that stops a pair from being called the same bet. A <code>*_mismatch</code> code means both contracts state the term and they differ. A <code>*_unknown</code> code means at least one contract's term could not be read. Equinox never guesses: an unknown term is a veto too.</p>
+  <table class="data stack">
+    <thead><tr><th>Code</th><th>Term checked</th><th>What it means</th></tr></thead>
+    <tbody>
+    {{range .Vetoes}}
+      <tr id="{{.Anchor}}">
+        <td data-label="Code"><code>{{.Code}}</code></td>
+        <td data-label="Term checked">{{.Field}}</td>
+        <td data-label="What it means">{{.Description}}</td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2 id="terms">Other terms</h2>
+  <dl class="glossary">
+    <dt id="term-round">Round</dt>
+    <dd>One fetch of both venues' contracts and order books, taken at one moment. Every page reads from one round, named with its "as of" time.</dd>
+
+    <dt id="term-pinned">Pinned</dt>
+    <dd>The operator has fixed the round the public pages show, for the demo. While a round is pinned, no page calls the venues.</dd>
+
+    <dt id="term-confidence">Confidence buckets</dt>
+    <dd>How sure the matcher is that a pair has the stated type, from 0 to 1. "High" is 0.90 or more, which is also the minimum to route; "medium" is 0.70 to 0.89; "low" is below 0.70.</dd>
+
+    <dt id="term-basis-risk">Basis risk</dt>
+    <dd>How much two "same bet" contracts could still settle differently, for example because of edge-case rules. Scored from 0 to 1: "low" below 0.20, "moderate" 0.20 to 0.49, "high" 0.50 or more. "Not scored" means no score was computed.</dd>
+
+    <dt id="term-near-miss">Near miss</dt>
+    <dd>A <code>related</code> pair that came close: the same subject with one term off, or a pair an external fact was consulted for but did not close. Near misses are listed on <a href="/near-misses">Near misses</a> with the rule that separated them.</dd>
+
+    <dt id="term-fact-closed">Fact closed</dt>
+    <dd>A term difference that a documented external fact explains, such as the current Fed upper bound, which lets a "rate rises 25 bps" contract be compared with a "rate above X%" contract. The pair becomes <code>equivalent_given_facts</code>. A fact never overrides a veto on subject, deadline or source.</dd>
+
+    <dt id="term-vwap">VWAP</dt>
+    <dd>Volume-weighted average price: the average price paid when an order fills by consuming the order book from the best price to worse ones, weighted by size.</dd>
+
+    <dt id="term-all-in">All-in cost</dt>
+    <dd>What one contract costs per $1 payout once everything is counted: VWAP plus the venue fee plus a basis-risk penalty. The router picks the lowest all-in cost; ties go to the deeper book.</dd>
+
+    <dt id="term-bps">bps (basis points)</dt>
+    <dd>1 bp is 0.0001 of the $1 payout, which is 0.01 ¢ per $1 payout. 100 bps is 1 ¢.</dd>
+
+    <dt id="term-slippage">Slippage</dt>
+    <dd>How much worse the VWAP is than the best quoted price, in bps, because a large order eats into deeper, more expensive levels of the book.</dd>
+  </dl>
+</section>
+{{end}}

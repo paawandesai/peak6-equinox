@@ -219,21 +219,44 @@ func pluralS(n int) string {
 	return "s"
 }
 
-// vetoDescription returns a one-line description for each veto code.
+// vetoDescription returns a one-sentence plain description for each veto
+// code in internal/match/veto.go, plus "fact_did_not_close" (M5-06). The
+// /glossary page lists the same text; TestVetoDescriptionCoverage fails if a
+// code in veto.go has no entry here.
 func vetoDescription(code string) string {
 	switch code {
 	case "subject_mismatch":
-		return "Different underlying subject"
+		return "Different underlying subject: the two contracts are about different things, such as BTC and ETH."
+	case "subject_unknown":
+		return "The subject could not be read from at least one contract, so the pair cannot be the same bet."
+	case "metric_mismatch":
+		return "The contracts measure different things, such as a closing price and an intraday high, or a rate level and a rate change."
+	case "metric_unknown":
+		return "What is being measured could not be read from at least one contract."
+	case "comparator_mismatch":
+		return "The comparison differs, such as above versus below, or strictly above versus at or above."
+	case "comparator_unknown":
+		return "The comparison could not be read from at least one contract, or it states two."
 	case "threshold_mismatch":
-		return "Strike or threshold differs"
+		return "Strike or threshold differs: any difference in the number counts, with no tick-size tolerance."
+	case "threshold_unknown":
+		return "The strike or threshold could not be read from at least one contract."
+	case "deadline_gap":
+		return "The resolution deadlines are 24 hours or more apart."
 	case "deadline_mismatch":
-		return "Resolution deadline differs"
-	case "direction_mismatch":
-		return "Comparison direction differs (over vs under)"
+		return "Resolution deadline differs: in categories with an exact measurement time, such as crypto, any gap at all counts."
+	case "deadline_unknown":
+		return "The resolution deadline could not be read from at least one contract."
 	case "source_mismatch":
-		return "Data source differs"
+		return "Data source differs: the contracts settle on different authorities or indexes."
+	case "source_unknown":
+		return "No single resolution source could be read from at least one contract."
+	case "polarity_mismatch":
+		return "One contract asks whether something happens and the other whether it does not."
+	case "polarity_unresolved":
+		return "Whether the contract asks for the event or its negation could not be read."
 	case "fact_did_not_close":
-		return "A fact was consulted but did not close the difference"
+		return "A fact was consulted but did not close the difference, so the pair stays related."
 	default:
 		return strings.ReplaceAll(code, "_", " ")
 	}

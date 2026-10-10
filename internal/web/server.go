@@ -163,6 +163,7 @@ func (s *Server) routes() *http.ServeMux {
 	mux.HandleFunc("GET /version", s.handleVersion)
 
 	s.publicRoutes(mux)
+	s.glossaryRoutes(mux) // M5-06
 	s.adminRoutes(mux)
 	return mux
 }
