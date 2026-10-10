@@ -53,6 +53,7 @@ type evalSummary struct {
 	Thresholds   []evalThresholdJSON  `json:"thresholds,omitempty"`    // UI-23
 	LabelsSHA256 string               `json:"labels_sha256,omitempty"` // UI-23
 	Previous     *evalPreviousJSON    `json:"previous,omitempty"`      // UI-23
+	Rules        []evalTypeMetrics    `json:"rules,omitempty"`         // UI-24: rules-only metrics when method=rules+llm
 }
 
 // evalThresholdJSON mirrors the JSON structure. UI-23.

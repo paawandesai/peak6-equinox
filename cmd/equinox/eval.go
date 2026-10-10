@@ -104,9 +104,12 @@ func runEval(ctx context.Context, args []string, stdout io.Writer) error {
 		// UI-23: hash labels file and rotate previous summary
 		labelsHash, _ := eval.HashLabelsFile(*labelsPath)
 		prevPath := eval.RotatePreviousSummary(*outPath)
-		return writeSummary(stdout, *outPath, empty.Summary(time.Now(), command, labels.RoundID, *labelsPath, 0, labelsHash, prevPath))
+		return writeSummary(stdout, *outPath, empty.Summary(time.Now(), command, labels.RoundID, *labelsPath, 0, labelsHash, prevPath, nil, ""))
 	}
 	var predict eval.Predictor
+	var rulesReport *eval.Report // UI-24: for dual-method evaluation
+	var verifierNote string      // UI-24: explains why LLM wasn't run
+
 	if *candidatesPath != "" {
 		cands, err := eval.LoadCandidates(*candidatesPath)
 		if err != nil {
@@ -127,9 +130,35 @@ func runEval(ctx context.Context, args []string, stdout io.Writer) error {
 			return err
 		}
 		defer st.Close()
-		predict, err = storePredictor(ctx, st, labels, factSet, evalMethod)
-		if err != nil {
-			return err
+
+		// UI-24: when method is rules+llm, evaluate both methods for comparison
+		if evalMethod == canonical.MethodRulesLLM {
+			// First, evaluate with rules only
+			rulesPredict, err := storePredictor(ctx, st, labels, factSet, canonical.MethodRules)
+			if err != nil {
+				return err
+			}
+			r := eval.Evaluate(labels, rulesPredict, canonical.MethodRules)
+			rulesReport = &r
+
+			// Check if LLM verifier is available
+			if cfg.AnthropicAPIKey == "" {
+				// No API key: fall back to rules-only
+				verifierNote = "LLM verifier disabled: ANTHROPIC_API_KEY not set"
+				predict = rulesPredict
+			} else {
+				// LLM enabled: storePredictor reads pre-verified relationships
+				// (actual verification via /admin/llm-verify)
+				predict, err = storePredictor(ctx, st, labels, factSet, canonical.MethodRulesLLM)
+				if err != nil {
+					return err
+				}
+			}
+		} else {
+			predict, err = storePredictor(ctx, st, labels, factSet, evalMethod)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	report := eval.Evaluate(labels, predict, evalMethod)
@@ -144,7 +173,7 @@ func runEval(ctx context.Context, args []string, stdout io.Writer) error {
 	// UI-23: hash labels file and rotate previous summary
 	labelsHash, _ := eval.HashLabelsFile(*labelsPath)
 	prevPath := eval.RotatePreviousSummary(*outPath)
-	return writeSummary(stdout, *outPath, report.Summary(time.Now(), command, labels.RoundID, *labelsPath, len(labels.Labels), labelsHash, prevPath))
+	return writeSummary(stdout, *outPath, report.Summary(time.Now(), command, labels.RoundID, *labelsPath, len(labels.Labels), labelsHash, prevPath, rulesReport, verifierNote))
 }
 
 // writeSummary writes the artifact unless path is empty, and says where.
