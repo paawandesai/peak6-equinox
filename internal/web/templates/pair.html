@@ -64,7 +64,7 @@
       {{$rows := filterByPart $.DiffRows $part}}
       {{if $rows}}
       <tbody>
-        <tr><th class="part" colspan="4">{{$part}}</th></tr>
+        <tr><th class="part" colspan="{{if $.HasEvidence}}5{{else}}4{{end}}">{{$part}}</th></tr>
         {{range $rows}}
         <tr class="{{.Class}}">
           <td>{{.Field}}</td>
