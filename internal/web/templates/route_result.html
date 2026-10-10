@@ -21,7 +21,7 @@
         <p class="outcome-summary">{{.OutcomeSummary}}</p>
       </div>
       <p class="order-line"><strong>Order:</strong> {{.OrderLine}}. <strong>Partners considered:</strong> {{.Partners}}.</p>
-      {{if .UsedNotional}}
+      {{if and .UsedNotional (not .ConversionTouch.IsZero)}}
       <p class="note"><strong>Notional conversion:</strong> ${{.OriginalNotional.String}} ÷ {{money .ConversionTouch}} touch = {{.ConvertedQuantity.String}} contracts (rounded down).</p>
       {{end}}
     </div>
