@@ -74,18 +74,19 @@ type basisComponentView struct {
 
 // diffRowView is one diff row with annotations for vetoes and facts (UI-04, UI-12).
 type diffRowView struct {
-	Field      string
-	A          string
-	B          string
-	ATokens    []diffToken // UI-12: word-level diff tokens for template wrapping
-	BTokens    []diffToken // UI-12: word-level diff tokens for template wrapping
-	Status     string      // "match", "differ", "unknown"
-	StatusText string      // status word with color token
-	Annotation string      // veto or fact annotation, or empty
-	Part       string      // UI-12: rule part (resolution criteria, strike, direction, etc.)
-	Class      string      // UI-12: CSS class (t-match, t-differ, t-closed, t-unknown)
-	Badge      Badge       // UI-12: verdict badge
-	BasisLink  string      // UI-12: link to basis component, or empty
+	Field        string
+	A            string
+	B            string
+	ATokens      []diffToken // UI-12: word-level diff tokens for template wrapping
+	BTokens      []diffToken // UI-12: word-level diff tokens for template wrapping
+	Status       string      // "match", "differ", "unknown"
+	StatusText   string      // status word with color token
+	Annotation   string      // veto or fact annotation, or empty
+	Part         string      // UI-12: rule part (resolution criteria, strike, direction, etc.)
+	Class        string      // UI-12: CSS class (t-match, t-differ, t-closed, t-unknown)
+	Badge        Badge       // UI-12: verdict badge
+	BasisLink    string      // UI-12: link to basis component, or empty
+	Contribution string      // UI-20: signed contribution for this term, or empty
 }
 
 // diffToken is one word/space token with its operation for word-level diffs (UI-12).
@@ -476,6 +477,52 @@ func buildDiffRows(rel canonical.Relationship) []diffRowView {
 		}
 	}
 
+	// UI-20: Build contribution map by field (maps diff field names to contributions)
+	contributionByField := make(map[string]string)
+	if rel.Evidence != nil {
+		for _, contrib := range rel.Evidence.Contributions {
+			// Skip the prior (shown in footer, not per-row)
+			if contrib.Term == "prior" {
+				continue
+			}
+			// Map contribution terms to diff field names
+			// Examples: unknown_unit_a/b → unit, deadline_gap_hours → deadline, etc.
+			var field string
+			switch {
+			case strings.HasPrefix(contrib.Term, "unknown_unit"):
+				field = "unit"
+			case strings.HasPrefix(contrib.Term, "unknown_edge_rules"):
+				field = "edge_rules"
+			case strings.HasPrefix(contrib.Term, "deadline_gap") || strings.HasPrefix(contrib.Term, "deadline_defaulted"):
+				field = "deadline"
+			case contrib.Term == "fact_applied":
+				// Fact-applied is a global deduction, could show on multiple rows or in footer only
+				continue
+			default:
+				// Unknown contribution term, skip
+				continue
+			}
+
+			// Format contribution value with sign
+			val := contrib.Value
+			var formatted string
+			if val.IsNegative() {
+				formatted = fmt.Sprintf("−%s", val.Abs().StringFixed(2))
+			} else if val.IsPositive() {
+				formatted = fmt.Sprintf("+%s", val.StringFixed(2))
+			} else {
+				formatted = "0.00"
+			}
+
+			// Accumulate if field already has a contribution (e.g. both unknown_unit_a and unknown_unit_b)
+			if existing, ok := contributionByField[field]; ok {
+				contributionByField[field] = existing + ", " + formatted
+			} else {
+				contributionByField[field] = formatted
+			}
+		}
+	}
+
 	for _, d := range rel.Diff {
 		row := diffRowView{
 			Field:      d.Field,
@@ -530,6 +577,11 @@ func buildDiffRows(rel canonical.Relationship) []diffRowView {
 		// UI-12: basis link if this field contributes to basis risk
 		if basisByField[d.Field] {
 			row.BasisLink = "#basis"
+		}
+
+		// UI-20: set contribution if available for this field
+		if contrib, ok := contributionByField[d.Field]; ok {
+			row.Contribution = contrib
 		}
 
 		rows = append(rows, row)

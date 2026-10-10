@@ -58,7 +58,7 @@
   <h2>Contract diff</h2>
   <p>Every term the normaliser extracted, side by side. <em>unknown</em> means a term could not be parsed on at least one side; it is never guessed.</p>
   <table class="data terms">
-    <thead><tr><th>Term</th><th>A: {{.A.Venue}}</th><th>B: {{.B.Venue}}</th><th>Verdict</th></tr></thead>
+    <thead><tr><th>Term</th><th>A: {{.A.Venue}}</th><th>B: {{.B.Venue}}</th><th>Verdict</th>{{if .HasEvidence}}<th>Contribution</th>{{end}}</tr></thead>
     {{/* UI-12: group diff rows by rule part */}}
     {{range $part := partOrder}}
       {{$rows := filterByPart $.DiffRows $part}}
@@ -75,16 +75,15 @@
             {{if .Annotation}}<small>{{.Annotation}}</small>{{end}}
             {{if .BasisLink}}<a href="{{.BasisLink}}" class="basis-link">basis →</a>{{end}}
           </td>
+          {{if $.HasEvidence}}<td>{{.Contribution}}</td>{{end}}
         </tr>
         {{end}}
       </tbody>
       {{end}}
     {{end}}
-    {{if not .DiffRows}}<tbody><tr><td colspan="4">No diff was stored for this pair.</td></tr></tbody>{{end}}
+    {{if not .DiffRows}}<tbody><tr><td colspan="{{if .HasEvidence}}5{{else}}4{{end}}">No diff was stored for this pair.</td></tr></tbody>{{end}}
     {{/* UI-20: Evidence footer */}}
-    {{if .HasEvidence}}
-    <tfoot><tr><td colspan="4"><small>Matcher evidence: {{.EvidenceFooter}}</small></td></tr></tfoot>
-    {{end}}
+    <tfoot><tr><td colspan="{{if .HasEvidence}}5{{else}}4{{end}}"><small>Matcher evidence: {{.EvidenceFooter}}</small></td></tr></tfoot>
   </table>
   <p class="diff-counts">{{.DiffCounts}}</p>
 </section>
