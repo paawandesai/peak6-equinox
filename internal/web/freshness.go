@@ -6,10 +6,10 @@ import (
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
 )
 
-// quoteFreshState determines the freshness state for a quote based on its age and venue (UI-19).
+// quoteFreshState determines the freshness state for a quote based on its age (UI-19; venue reserved for callers).
 // Pinned overrides the age-based state while a round is pinned.
 // Between the warn and stale windows (inclusive of warn), returns FreshStateWarn.
-func quoteFreshState(venue canonical.Venue, fetchedAt, now time.Time, isPinned bool, warnAfter, staleAfter time.Duration) FreshState {
+func quoteFreshState(_ canonical.Venue, fetchedAt, now time.Time, isPinned bool, warnAfter, staleAfter time.Duration) FreshState {
 	if isPinned {
 		return FreshStatePinned
 	}
