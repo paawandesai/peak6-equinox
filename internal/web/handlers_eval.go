@@ -147,6 +147,8 @@ type evalPage struct {
 	Previous        *evalPreviousRun
 	// M4-76: settlement back-test results
 	Backtest *BacktestViewModel
+	// UI-24: dual-method evaluation
+	DualMethod bool // true when summary has both rules+llm and rules-only metrics
 }
 
 // evalRow is one relationship type's metrics, formatted.
@@ -170,6 +172,15 @@ type evalRow struct {
 	// UI-23: delta vs previous
 	PrecisionDelta string // formatted delta with sign rule, or empty if no previous
 	RecallDelta    string // formatted delta with sign rule, or empty if no previous
+	// UI-24: rules-only method metrics for comparison
+	RulesPrecision      string // rules-only precision, or empty if no Rules data
+	RulesRecall         string // rules-only recall, or empty if no Rules data
+	RulesF1             string // rules-only F1 score, or empty if no Rules data
+	RulesPrecisionFloat float64
+	RulesRecallFloat    float64
+	// UI-24: deltas between rules+llm and rules-only (D-098 sign rule)
+	PrecisionMethodDelta string // delta from rules to rules+llm, or empty if single method
+	RecallMethodDelta    string // delta from rules to rules+llm, or empty if single method
 }
 
 // handleEval answers GET /eval: the latest `equinox eval` summary from the
@@ -193,6 +204,16 @@ func (s *Server) handleEval(w http.ResponseWriter, r *http.Request) {
 		data.Summary = sum
 		data.Produced = sum.GeneratedAt
 		data.Notes = sum.Notes
+		// UI-24: check if we have dual-method data
+		data.DualMethod = len(sum.Rules) > 0
+		// UI-24: prepare rules-only metrics map for method delta computation
+		var rulesMetrics map[string]evalTypeMetrics
+		if data.DualMethod {
+			rulesMetrics = make(map[string]evalTypeMetrics)
+			for _, m := range sum.Rules {
+				rulesMetrics[m.Type] = m
+			}
+		}
 		// UI-23: prepare previous metrics map for delta computation
 		var prevMetrics map[string]evalPreviousType
 		if sum.Previous != nil && sum.LabelsSHA256 == sum.Previous.LabelsSHA256 {
@@ -210,6 +231,31 @@ func (s *Server) handleEval(w http.ResponseWriter, r *http.Request) {
 			if prev, ok := prevMetrics[m.Type]; ok {
 				row.PrecisionDelta = computeDelta(row.Precision, prev.Precision)
 				row.RecallDelta = computeDelta(row.Recall, prev.Recall)
+			}
+			// UI-24: add rules-only metrics and compute method deltas
+			if rulesOnly, ok := rulesMetrics[m.Type]; ok {
+				row.RulesPrecision = formatPercent(rulesOnly.Precision)
+				row.RulesRecall = formatPercent(rulesOnly.Recall)
+				// Compute F1 for rules-only
+				if rulesOnly.Precision != nil && rulesOnly.Recall != nil && !rulesOnly.Precision.IsZero() && !rulesOnly.Recall.IsZero() {
+					two := decimal.NewFromInt(2)
+					psum := rulesOnly.Precision.Add(*rulesOnly.Recall)
+					product := rulesOnly.Precision.Mul(*rulesOnly.Recall)
+					f1 := two.Mul(product).Div(psum)
+					row.RulesF1 = formatPercent(&f1)
+				} else {
+					row.RulesF1 = "n/a"
+				}
+				// Float values for meter bars
+				if rulesOnly.Precision != nil {
+					row.RulesPrecisionFloat, _ = rulesOnly.Precision.Float64()
+				}
+				if rulesOnly.Recall != nil {
+					row.RulesRecallFloat, _ = rulesOnly.Recall.Float64()
+				}
+				// Compute deltas from rules to rules+llm (D-098 sign rule)
+				row.PrecisionMethodDelta = computeDelta(row.Precision, row.RulesPrecision)
+				row.RecallMethodDelta = computeDelta(row.Recall, row.RulesRecall)
 			}
 			data.Rows = append(data.Rows, row)
 			if m.Type == string(canonical.RelEquivalent) {

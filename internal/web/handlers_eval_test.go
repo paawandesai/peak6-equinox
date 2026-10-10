@@ -347,3 +347,167 @@ func TestEvalCellWithoutStore(t *testing.T) {
 	// Should show canonical IDs as code blocks (fallback when no store)
 	wantContains(t, body, "kalshi:A / polymarket:1", "kalshi:B / polymarket:2")
 }
+
+// UI-24 tests: dual-method evaluation
+
+// TestEvalDualMethodRendering tests that both rules and rules+llm columns render with deltas (UI-24).
+func TestEvalDualMethodRendering(t *testing.T) {
+	summary := `{
+		"generated_at": "2026-10-10T12:00:00Z",
+		"method": "rules+llm",
+		"labels": 10,
+		"round_id": 1,
+		"labels_file": "labels.yaml",
+		"command": "equinox eval --method rules+llm",
+		"types": [
+			{"type": "equivalent", "support": 5, "tp": 5, "fp": 0, "fn": 0, "precision": "1.00", "recall": "1.00"}
+		],
+		"notes": [],
+		"rules": [
+			{"type": "equivalent", "support": 5, "tp": 4, "fp": 1, "fn": 1, "precision": "0.80", "recall": "0.80"}
+		]
+	}`
+	s := New(Config{EvalSummaryFile: writeEval(t, summary)}, Deps{})
+	rec := get(s.Handler(), "/eval")
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+	// UI-24: dual-method table with both columns (headers are colspan)
+	wantContains(t, body,
+		"rules-only and rules+llm methods side by side",
+		"colspan=\"2\">Rules<",
+		"colspan=\"2\">Rules+LLM<",
+		"colspan=\"2\">Δ<",
+		"100.00%",     // rules+llm precision
+		"80.00%",      // rules precision
+		"&#43;20.00%", // delta (improvement, HTML-escaped +)
+		"Favourable deltas (LLM improved over rules) read positive",
+		"unfavourable ones (LLM regressed) appear in parentheses",
+	)
+}
+
+// TestEvalDualMethodDeltaSign tests the D-098 sign rule for deltas (UI-24).
+func TestEvalDualMethodDeltaSign(t *testing.T) {
+	tests := []struct {
+		name           string
+		rulesPrecision string
+		llmPrecision   string
+		wantDelta      string
+	}{
+		{
+			name:           "improvement",
+			rulesPrecision: "0.80",
+			llmPrecision:   "0.95",
+			wantDelta:      "&#43;15.00%", // HTML-escaped +
+		},
+		{
+			name:           "regression",
+			rulesPrecision: "0.95",
+			llmPrecision:   "0.80",
+			wantDelta:      "(15.00%)",
+		},
+		{
+			name:           "no change",
+			rulesPrecision: "0.90",
+			llmPrecision:   "0.90",
+			wantDelta:      "—", // em dash for zero delta
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			summary := `{
+				"generated_at": "2026-10-10T12:00:00Z",
+				"method": "rules+llm",
+				"labels": 1,
+				"round_id": 1,
+				"labels_file": "labels.yaml",
+				"command": "equinox eval --method rules+llm",
+				"types": [
+					{"type": "equivalent", "support": 1, "tp": 1, "fp": 0, "fn": 0, "precision": "` + tt.llmPrecision + `", "recall": "1.00"}
+				],
+				"notes": [],
+				"rules": [
+					{"type": "equivalent", "support": 1, "tp": 1, "fp": 0, "fn": 0, "precision": "` + tt.rulesPrecision + `", "recall": "1.00"}
+				]
+			}`
+			s := New(Config{EvalSummaryFile: writeEval(t, summary)}, Deps{})
+			rec := get(s.Handler(), "/eval")
+			wantHTML(t, rec, http.StatusOK)
+			body := rec.Body.String()
+			wantContains(t, body, tt.wantDelta)
+		})
+	}
+}
+
+// TestEvalSingleMethodStillRenders tests that old summaries without Rules field still render (UI-24).
+func TestEvalSingleMethodStillRenders(t *testing.T) {
+	// Old summary (UI-23) without Rules field
+	summary := `{
+		"generated_at": "2026-10-09T12:00:00Z",
+		"method": "rules",
+		"labels": 5,
+		"round_id": 1,
+		"labels_file": "labels.yaml",
+		"command": "equinox eval",
+		"types": [
+			{"type": "equivalent", "support": 2, "tp": 2, "fp": 0, "fn": 0, "precision": "1.0", "recall": "1.0"}
+		],
+		"notes": ["test note"]
+	}`
+	s := New(Config{EvalSummaryFile: writeEval(t, summary)}, Deps{})
+	rec := get(s.Handler(), "/eval")
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+	// Should render single-method table (not dual-method)
+	wantContains(t, body,
+		"<th>Precision</th>",
+		"<th>Recall</th>",
+		"<th>F1</th>",
+		"100.00%",
+	)
+	// Should NOT show dual-method headers
+	if strings.Contains(body, "Rules+LLM") {
+		t.Error("old summary should not show dual-method table")
+	}
+}
+
+// TestEvalVerifierNote tests that verifier notes are shown when LLM disabled or cap reached (UI-24).
+func TestEvalVerifierNote(t *testing.T) {
+	tests := []struct {
+		name     string
+		note     string
+		wantText string
+	}{
+		{
+			name:     "LLM disabled",
+			note:     "LLM verifier disabled",
+			wantText: "LLM verifier disabled",
+		},
+		{
+			name:     "daily cap reached",
+			note:     "LLM daily cap reached: 100 of 100 calls used",
+			wantText: "LLM daily cap reached",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			summary := `{
+				"generated_at": "2026-10-10T12:00:00Z",
+				"method": "rules+llm",
+				"labels": 1,
+				"round_id": 1,
+				"labels_file": "labels.yaml",
+				"command": "equinox eval --method rules+llm",
+				"types": [
+					{"type": "equivalent", "support": 1, "tp": 1, "fp": 0, "fn": 0, "precision": "1.00", "recall": "1.00"}
+				],
+				"notes": ["` + tt.note + `"]
+			}`
+			s := New(Config{EvalSummaryFile: writeEval(t, summary)}, Deps{})
+			rec := get(s.Handler(), "/eval")
+			wantHTML(t, rec, http.StatusOK)
+			body := rec.Body.String()
+			// Verifier note should appear in Notes section
+			wantContains(t, body, tt.wantText)
+		})
+	}
+}
