@@ -238,7 +238,7 @@ Stored in the same `routing_decisions.decision` jsonb; no SQL migration needed. 
 **Branch:** ao/ui-v2/ui-20-matcher-evidence (stacked on !88 ao/matcher/m4-72-fed-formats)
 **Status:** Draft MR opened, depends on !88
 
-Implemented UI-20 (D-110, Tier 2): matcher evidence recording. The matcher now stores confidence calculation components with every relationship: prior (base confidence), per-term signed contributions (e.g. unknown_unit_a −0.02, deadline_gap_hours −0.05), total (sum, equals stored confidence), and for near misses, pre-veto score (what equivalentConfidence would return before vetoes) + required score (0.90).
+Implemented UI-20 (D-112, Tier 2): matcher evidence recording. The matcher now stores confidence calculation components with every relationship: prior (base confidence), per-term signed contributions (e.g. unknown_unit_a −0.02, deadline_gap_hours −0.05), total (sum, equals stored confidence), and for near misses, pre-veto score (what equivalentConfidence would return before vetoes) + required score (0.90).
 
 **Backend changes:**
 - `canonical.MatcherEvidence` struct: `Prior`, `Contributions []ContributionTerm`, `Total`, `PreVetoScore` *decimal, `RequiredScore` *decimal
@@ -259,7 +259,7 @@ Implemented UI-20 (D-110, Tier 2): matcher evidence recording. The matcher now s
 - Relationship validation: evidence.total == confidence
 
 **Docs:**
-- D-110 entry in `docs/decisions.md`
+- D-112 entry in `docs/decisions.md`
 - "Awaiting human veto" row in `docs/status.md`
 - This log entry
 
