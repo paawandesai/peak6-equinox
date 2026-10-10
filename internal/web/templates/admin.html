@@ -140,6 +140,45 @@
   {{end}}
 </section>
 
+{{/* UI-22: LLM Verifier runs table (latest 20, newest first) */}}
+<h2>LLM verifier runs</h2>
+{{if not .LLMVerifyRuns}}
+  <p>No LLM verification runs recorded yet.</p>
+{{else}}
+<table class="data stack">
+  <thead>
+    <tr>
+      <th>Run</th>
+      <th>Started</th>
+      <th>Duration</th>
+      <th>Model</th>
+      <th>Verified</th>
+      <th>Downgraded</th>
+      <th>Cache hits</th>
+      <th>Calls</th>
+      <th>Tokens (in/out)</th>
+      <th>Outcome</th>
+    </tr>
+  </thead>
+  <tbody>
+  {{range .LLMVerifyRuns}}
+    <tr>
+      <td data-label="Run">{{.ID}}</td>
+      <td data-label="Started">{{.StartedAt}}</td>
+      <td data-label="Duration">{{if .Duration}}{{.Duration}}{{else}}—{{end}}</td>
+      <td data-label="Model">{{.Model}}</td>
+      <td data-label="Verified">{{.Verified}}</td>
+      <td data-label="Downgraded">{{.Downgraded}}</td>
+      <td data-label="Cache hits">{{.CacheHits}}</td>
+      <td data-label="Calls">{{.CallsMade}}</td>
+      <td data-label="Tokens (in/out)">{{.InputTokens}} / {{.OutputTokens}}</td>
+      <td data-label="Outcome">{{template "badge" .OutcomeBadge}}</td>
+    </tr>
+  {{end}}
+  </tbody>
+</table>
+{{end}}
+
 {{/* Data notes (UI-17, HANDOFF.md) */}}
 <aside class="data-notes">
   <h3>Data notes</h3>

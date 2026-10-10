@@ -77,6 +77,23 @@ type Signal struct {
 	Text  string // screen-reader text
 }
 
+// llmVerifyRunView represents one LLM verify run for the admin runs table (UI-22).
+type llmVerifyRunView struct {
+	ID           int64
+	StartedAt    string
+	Duration     string
+	Model        string
+	Verified     int
+	Downgraded   int
+	CacheHits    int
+	CallsMade    int
+	InputTokens  int64
+	OutputTokens int64
+	Outcome      string     // "ok", "cap_reached", "error"
+	OutcomeBadge Badge      // badge for the outcome
+	FinishedAt   *time.Time // nil if still running
+}
+
 // HealthRow represents one row in the admin health table (UI-17, HANDOFF.md).
 type HealthRow struct {
 	Name      string
@@ -117,6 +134,8 @@ type adminPage struct {
 	// UI-17: health rollup
 	Health           []HealthRow // health table rows (Collectors, Database, Matcher, Pinned, LLM)
 	FreshnessWindows string      // freshness windows line under health table
+	// UI-22: LLM verify runs table
+	LLMVerifyRuns []llmVerifyRunView // latest N runs, newest first
 }
 
 // worstHealth returns the worst health state from a set of signals (UI-17, HANDOFF.md).
@@ -527,6 +546,46 @@ func (s *Server) handleAdminIndex(w http.ResponseWriter, r *http.Request) {
 		s.cfg.RoundWarnMinutes,
 		s.cfg.StaleRoundWarnMinutes,
 	)
+
+	// UI-22: fetch LLM verify runs (latest 20, newest first)
+	tz = timezoneFromRequest(r)
+	if s.deps.Store != nil {
+		if runs, err := s.deps.Store.GetLLMVerifyRuns(ctx, 20); err != nil {
+			s.log.Error("getting LLM verify runs for admin page", "error", err)
+		} else {
+			p.LLMVerifyRuns = make([]llmVerifyRunView, 0, len(runs))
+			for _, r := range runs {
+				v := llmVerifyRunView{
+					ID:           r.ID,
+					StartedAt:    formatTime(r.StartedAt, tz),
+					Model:        r.Model,
+					Verified:     r.Verified,
+					Downgraded:   r.Downgraded,
+					CacheHits:    r.CacheHits,
+					CallsMade:    r.CallsMade,
+					InputTokens:  r.InputTokens,
+					OutputTokens: r.OutputTokens,
+					Outcome:      r.Outcome,
+					FinishedAt:   r.FinishedAt,
+				}
+				if r.FinishedAt != nil {
+					v.Duration = r.FinishedAt.Sub(r.StartedAt).Round(time.Second).String()
+				}
+				// Outcome badge
+				switch r.Outcome {
+				case "ok":
+					v.OutcomeBadge = Badge{Class: "b-ok", Glyph: "✓", Text: "ok"}
+				case "cap_reached":
+					v.OutcomeBadge = Badge{Class: "b-warn", Glyph: "!", Text: "cap reached"}
+				case "error":
+					v.OutcomeBadge = Badge{Class: "b-danger", Glyph: "✕", Text: "error"}
+				default:
+					v.OutcomeBadge = Badge{Class: "b-unknown", Glyph: "?", Text: r.Outcome}
+				}
+				p.LLMVerifyRuns = append(p.LLMVerifyRuns, v)
+			}
+		}
+	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("X-Robots-Tag", "noindex") // UI-08: noindex via header, not meta tag

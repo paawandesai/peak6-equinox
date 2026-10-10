@@ -127,10 +127,37 @@
   </div>
 </section>
 
-{{/* UI-12: Why (explanation only; LLM rationale comes in UI-22) */}}
+{{/* UI-12: Why (explanation); UI-22: LLM rationale */}}
 <section>
   <h2>Why: the explanation</h2>
   <p class="explanation">{{.Explanation}}</p>
+
+  {{/* UI-22: LLM verifier rationale (hidden when pair was never verified) */}}
+  {{if .HasLLMRationale}}
+  <details>
+    <summary>LLM verifier rationale (model output)</summary>
+    <dl>
+      <dt>Model</dt>
+      <dd>{{.LLMModel}}</dd>
+      <dt>Run ID</dt>
+      <dd>{{.LLMRunID}}</dd>
+      <dt>Verified at</dt>
+      <dd>{{.LLMVerifiedAt}}</dd>
+      <dt>Rationale</dt>
+      <dd>
+        {{if .LLMRationale}}
+        <ul>
+          {{range .LLMRationale}}
+          <li>{{.}}</li>
+          {{end}}
+        </ul>
+        {{else}}
+        <p>(no rationale recorded)</p>
+        {{end}}
+      </dd>
+    </dl>
+  </details>
+  {{end}}
 </section>
 
 {{/* UI-12: Current touch with freshness badge in Fetched column */}}

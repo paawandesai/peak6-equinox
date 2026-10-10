@@ -46,6 +46,12 @@ type pairPage struct {
 	History         historyChart
 	LogEntries      []logEntryView
 	Form            routeFormView
+	// UI-22: LLM verifier rationale (hidden when pair was never verified)
+	HasLLMRationale bool
+	LLMRationale    []string // Evidence from verdict (up to 3 entries × 200 chars)
+	LLMModel        string   // Model used for verification
+	LLMRunID        int64    // Run ID
+	LLMVerifiedAt   string   // Formatted timestamp
 }
 
 // confView is the confidence for the {{template "conf"}} define (UI-12).
@@ -336,6 +342,13 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// UI-22: fetch LLM rationale if the pair was verified
+	llmData, hasLLM, err := st.GetRelationshipLLMData(ctx, rel.ID)
+	if err != nil {
+		s.log.Error("loading LLM data for pair", "relationship_id", rel.ID, "error", err)
+		// Continue without LLM data; non-fatal
+	}
+
 	data := pairPage{
 		page:          s.pageBase(round, "Pair "+r.PathValue("id"), "Why does Equinox think these two contracts are, or are not, the same bet, and where would an order fill best?", tz, "pair"),
 		ID:            rel.ID,
@@ -373,6 +386,12 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 		NearMiss:        rel.Type == canonical.RelRelated,
 		Types:           allTypeViews(),
 		Form:            defaultRouteForm(rel),
+		// UI-22: LLM rationale
+		HasLLMRationale: hasLLM,
+		LLMRationale:    llmData.Evidence,
+		LLMModel:        llmData.Model,
+		LLMRunID:        llmData.RunID,
+		LLMVerifiedAt:   formatTime(llmData.VerifiedAt, tz),
 	}
 	points, err := st.QuoteHistory(ctx, []string{rel.AID, rel.BID}, maxHistoryPt)
 	if err != nil {
