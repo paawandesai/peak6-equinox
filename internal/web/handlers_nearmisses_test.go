@@ -77,6 +77,7 @@ func TestNearMissTermGapThreshold(t *testing.T) {
 		Confidence: dec("0.5"),
 		Diff: []canonical.FieldDiff{
 			{Field: "threshold", A: "4.25", B: "0.5", Status: canonical.DiffDiffer},
+			{Field: "unit", A: "percent", B: "percent", Status: canonical.DiffMatch},
 		},
 		Vetoes: []canonical.Veto{{Code: "threshold_mismatch", Field: "threshold", Detail: "4.25 vs 0.5"}},
 	}}
@@ -84,8 +85,8 @@ func TestNearMissTermGapThreshold(t *testing.T) {
 	if len(rows) != 1 {
 		t.Fatalf("want 1 row, got %d", len(rows))
 	}
-	if rows[0].TermGap != "3.75" {
-		t.Errorf("TermGap = %q, want 3.75", rows[0].TermGap)
+	if rows[0].TermGap != "3.75 pp" {
+		t.Errorf("TermGap = %q, want 3.75 pp", rows[0].TermGap)
 	}
 }
 
@@ -106,8 +107,8 @@ func TestNearMissTermGapDeadline(t *testing.T) {
 	if len(rows) != 1 {
 		t.Fatalf("want 1 row, got %d", len(rows))
 	}
-	if rows[0].TermGap != "2 days" {
-		t.Errorf("TermGap = %q, want \"2 days\"", rows[0].TermGap)
+	if rows[0].TermGap != "deadlines 2 days apart" {
+		t.Errorf("TermGap = %q, want \"deadlines 2 days apart\"", rows[0].TermGap)
 	}
 }
 
@@ -149,23 +150,24 @@ func TestNearMissLogLink(t *testing.T) {
 		`href="/pairs/`+strconv.FormatInt(factMissID, 10)+`">Not-a-match record →</a>`)
 }
 
-// TestFormatDurationCoverage tests all branches of formatDurationDistance.
-func TestFormatDurationCoverage(t *testing.T) {
+// TestHumanSpan covers every branch of humanSpan (M6 P4: readable durations).
+func TestHumanSpan(t *testing.T) {
 	tests := []struct {
 		dur  time.Duration
 		want string
 	}{
+		{526*time.Hour + 54*time.Minute, "21 days 22 h"},
 		{48 * time.Hour, "2 days"},
 		{24 * time.Hour, "1 day"},
-		{2 * time.Hour, "2 hours"},
-		{1 * time.Hour, "1 hour"},
-		{30 * time.Minute, "30 minutes"},
-		{1 * time.Minute, "1 minute"},
+		{-25 * time.Hour, "1 day 1 h"},
+		{5*time.Hour + 30*time.Minute, "5 h 30 min"},
+		{1 * time.Hour, "1 h"},
+		{45 * time.Minute, "45 min"},
+		{0, "0 min"},
 	}
 	for _, tt := range tests {
-		got := formatDurationDistance(tt.dur)
-		if got != tt.want {
-			t.Errorf("formatDurationDistance(%v) = %q, want %q", tt.dur, got, tt.want)
+		if got := humanSpan(tt.dur); got != tt.want {
+			t.Errorf("humanSpan(%v) = %q, want %q", tt.dur, got, tt.want)
 		}
 	}
 }
@@ -292,9 +294,10 @@ func TestNearMissGroupCapLogic(t *testing.T) {
 	rows := nearMissRows(rels, views)
 
 	// Default view (showAll=false) should cap at 25
+	// The threshold group plus the always-present (empty) fact_did_not_close group (M6 P4).
 	groups := groupNearMisses(rows, "", false)
-	if len(groups) != 1 {
-		t.Fatalf("expected 1 group, got %d", len(groups))
+	if len(groups) != 2 || groups[1].Code != factDidNotCloseCode || groups[1].Count != 0 {
+		t.Fatalf("expected threshold group and empty fact group, got %+v", groups)
 	}
 	g := groups[0]
 	if g.Code != "threshold_mismatch" {
@@ -315,8 +318,8 @@ func TestNearMissGroupCapLogic(t *testing.T) {
 
 	// showAll=true should show all 30
 	groupsAll := groupNearMisses(rows, "", true)
-	if len(groupsAll) != 1 {
-		t.Fatalf("expected 1 group with all=true, got %d", len(groupsAll))
+	if len(groupsAll) != 2 {
+		t.Fatalf("expected 2 groups with all=true, got %d", len(groupsAll))
 	}
 	gAll := groupsAll[0]
 	if len(gAll.Rows) != 30 {
