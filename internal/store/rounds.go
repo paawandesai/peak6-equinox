@@ -200,8 +200,8 @@ const dailyRoundHistorySQL = `
 	WITH day_series AS (
 		SELECT date::date AS day
 		FROM generate_series(
-			(CURRENT_DATE - $1::integer + 1),
-			CURRENT_DATE,
+			((now() AT TIME ZONE 'UTC')::date - $1::integer + 1),
+			(now() AT TIME ZONE 'UTC')::date,
 			'1 day'::interval
 		) AS date
 	)
@@ -212,7 +212,7 @@ const dailyRoundHistorySQL = `
 		COALESCE(SUM(CASE WHEN fr.status = 'failed' THEN 1 ELSE 0 END), 0) AS failed_count,
 		COUNT(fr.id) = 0 AS missing
 	FROM day_series
-	LEFT JOIN fetch_rounds fr ON DATE(fr.started_at) = day_series.day
+	LEFT JOIN fetch_rounds fr ON (fr.started_at AT TIME ZONE 'UTC')::date = day_series.day
 	GROUP BY day_series.day
 	ORDER BY day_series.day DESC
 `

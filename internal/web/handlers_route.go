@@ -32,22 +32,24 @@ const (
 // routeFormView is the route form as the pair page renders it: the pair,
 // both targets, and the values to pre-fill.
 type routeFormView struct {
-	PairID   int64
-	Targets  []string
-	Target   string
-	Side     string
-	Outcome  string
-	Quantity string
-	Type     string
-	Limit    string
-	TIF      string
+	PairID       int64
+	Targets      []string
+	Target       string
+	Side         string
+	Outcome      string
+	Quantity     string
+	QuantityMode string // "contracts" or "usd"
+	Type         string
+	Limit        string
+	TIF          string
 }
 
 func defaultRouteForm(rel canonical.Relationship) routeFormView {
 	return routeFormView{
 		PairID: rel.ID, Targets: []string{rel.AID, rel.BID}, Target: rel.AID,
 		Side: string(canonical.SideBuy), Outcome: string(canonical.OutcomeYes), Quantity: "100",
-		Type: string(canonical.OrderMarket), TIF: string(canonical.TIFIOC),
+		QuantityMode: "contracts",
+		Type:         string(canonical.OrderMarket), TIF: string(canonical.TIFIOC),
 	}
 }
 
@@ -103,14 +105,38 @@ func parseRouteForm(get func(string) string) (routeInput, []string) {
 	if !o.TIF.Valid() {
 		errs = append(errs, "tif must be IOC or FOK")
 	}
-	qty, err := decimal.NewFromString(field("quantity"))
+
+	// Parse quantity mode and value (issue #74: contracts or USD notional)
+	qtyMode := strings.ToLower(field("quantity_mode"))
+	if qtyMode != "contracts" && qtyMode != "usd" {
+		qtyMode = "contracts" // default to contracts for backward compatibility
+	}
+
+	qtyStr := field("quantity")
+	qty, err := decimal.NewFromString(qtyStr)
 	switch {
 	case err != nil:
-		errs = append(errs, fmt.Sprintf("quantity must be a number of contracts between %d and %d", minQuantity, maxQuantity))
-	case qty.LessThan(decimal.NewFromInt(minQuantity)) || qty.GreaterThan(decimal.NewFromInt(maxQuantity)):
-		errs = append(errs, fmt.Sprintf("quantity must be between %d and %d contracts", minQuantity, maxQuantity))
+		if qtyMode == "usd" {
+			errs = append(errs, "notional must be a USD amount between $0.01 and $100,000")
+		} else {
+			errs = append(errs, fmt.Sprintf("quantity must be a number of contracts between %d and %d", minQuantity, maxQuantity))
+		}
+	case qtyMode == "usd":
+		// USD notional mode: validate notional bounds (AB-08: reject zero, negative, out-of-range)
+		minNotional := decimal.NewFromFloat(0.01)
+		maxNotional := decimal.NewFromInt(maxQuantity)
+		if qty.LessThan(minNotional) || qty.GreaterThan(maxNotional) {
+			errs = append(errs, "notional must be between $0.01 and $100,000")
+		} else {
+			o.Notional = &qty
+		}
 	default:
-		o.Quantity = &qty
+		// Contracts mode: validate contracts bounds (AB-08: reject zero, negative, out-of-range)
+		if qty.LessThan(decimal.NewFromInt(minQuantity)) || qty.GreaterThan(decimal.NewFromInt(maxQuantity)) {
+			errs = append(errs, fmt.Sprintf("quantity must be between %d and %d contracts", minQuantity, maxQuantity))
+		} else {
+			o.Quantity = &qty
+		}
 	}
 	limit := field("limit")
 	switch {
@@ -180,6 +206,11 @@ type decisionView struct {
 	UI25CutoffDate   string              // The date before which inputs were not stored
 	UnfilledPct      decimal.Decimal     // Unfilled percentage for partial fills (split bar)
 	UnfilledX        decimal.Decimal     // X position of unfilled segment (split bar)
+	// Issue #74: Notional conversion
+	UsedNotional      bool            // True if order was specified as notional
+	OriginalNotional  decimal.Decimal // Original USD notional amount
+	ConversionTouch   decimal.Decimal // Touch price used to convert notional to contracts
+	ConvertedQuantity decimal.Decimal // Contracts after conversion (rounded down)
 }
 
 // legView extends Leg with fields for the v2 cost report (UI-13).
@@ -343,6 +374,48 @@ func newDecisionView(d canonical.Decision, partners int, snapshot time.Time, ins
 	keptCount := len(d.Alternatives)
 	candidateCount := keptCount + len(d.Exclusions)
 
+	// Issue #74: Extract notional conversion details from the decision
+	usedNotional := d.Order.Notional != nil
+	var originalNotional, conversionTouch, convertedQuantity decimal.Decimal
+	if usedNotional {
+		originalNotional = *d.Order.Notional
+		// The router stores a warning when converting notional to contracts
+		// Format: "quantity X derived from notional $Y at the Z touch"
+		// First try to extract from the warning
+		for _, w := range d.Warnings {
+			if strings.Contains(w, "derived from notional") {
+				// Try to parse: find numbers after key words
+				// Split and scan for the pattern
+				parts := strings.Fields(w)
+				for i, part := range parts {
+					if part == "quantity" && i+1 < len(parts) {
+						if qty, err := decimal.NewFromString(parts[i+1]); err == nil {
+							convertedQuantity = qty
+						}
+					}
+					if part == "touch" && i > 0 {
+						// Touch value is before the word "touch"
+						if touch, err := decimal.NewFromString(parts[i-1]); err == nil {
+							conversionTouch = touch
+						}
+					}
+				}
+				break
+			}
+		}
+		// If warning parsing didn't work, compute from inputs
+		if conversionTouch.IsZero() && len(d.Inputs) > 0 {
+			// The router uses the first available touch (UI-25 inputs are in evaluation order)
+			for _, input := range d.Inputs {
+				if input.BestAsk.IsPositive() {
+					conversionTouch = input.BestAsk
+					convertedQuantity = originalNotional.Div(conversionTouch).Floor()
+					break
+				}
+			}
+		}
+	}
+
 	return &decisionView{
 		RoundID: d.RoundID, TargetID: d.TargetID, DecidedAt: d.DecidedAt,
 		Snapshot: snapshot, OrderLine: orderLine(d.Order),
@@ -366,6 +439,11 @@ func newDecisionView(d canonical.Decision, partners int, snapshot time.Time, ins
 		UI25CutoffDate:   "2026-10-08", // UI-25 was merged on this date
 		UnfilledPct:      unfilledPct,
 		UnfilledX:        unfilledX,
+		// Issue #74: Notional conversion
+		UsedNotional:      usedNotional,
+		OriginalNotional:  originalNotional,
+		ConversionTouch:   conversionTouch,
+		ConvertedQuantity: convertedQuantity,
 	}
 }
 

@@ -105,6 +105,8 @@ func buildDeps(ctx context.Context, cfg config.Config, logger *slog.Logger) (web
 		LLMModel:           cfg.LLMModel,
 		LLMDailyCallCap:    cfg.LLMDailyCallCap,
 		LLMMaxOutputTokens: cfg.LLMMaxOutputTokens,
+		AppVersion:         cfg.AppVersion,
+		AppBuildTime:       cfg.AppBuildTime,
 	}, pool.Close, nil
 }
 
@@ -130,13 +132,17 @@ func newServerWith(cfg config.Config, logger *slog.Logger, deps web.Deps) *web.S
 		PublicRateLimitPerMin: cfg.PublicRateLimitPerMin,
 		MinRouteConfidence:    cfg.MinRouteConfidence,
 		EvalSummaryFile:       cfg.EvalSummaryFile,
+		BacktestSummaryFile:   cfg.BacktestSummaryFile,
 		StaleAfter:            cfg.StaleAfter,
+		KalshiWarnAfter:       cfg.KalshiWarnAfter,
+		PolymarketWarnAfter:   cfg.PolymarketWarnAfter,
 		SkewWarn:              cfg.SkewWarn,
 		SkewMax:               cfg.SkewMax,
 		MinBookDepth:          cfg.MinBookDepth,
 		BasisPenaltyMult:      cfg.BasisPenaltyMult,
 		ReviewEdgeMin:         cfg.ReviewEdgeMin,
 		StaleRoundWarnMinutes: cfg.StaleRoundWarnMinutes,
+		RoundWarnMinutes:      cfg.RoundWarnMinutes,
 	}, deps)
 }
 

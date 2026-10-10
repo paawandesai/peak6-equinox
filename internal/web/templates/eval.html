@@ -32,12 +32,93 @@
   <div>
     <p>Precision and recall per relationship type, computed by <code>equinox eval</code> over the human-confirmed labels in <code>testdata/golden/labels.yaml</code>. This page only reads the stored summary.</p>
     <p>Produced <strong>{{formatTime $.Produced $.Timezone}}</strong>{{if .Command}} by <code>{{.Command}}</code>{{end}}{{if .RoundID}} on round <strong>{{.RoundID}}</strong>{{end}}: <strong>{{.Labels}}</strong> labelled pair{{if ne .Labels 1}}s{{end}}{{if .LabelsFile}} from <code>{{.LabelsFile}}</code>{{end}}{{if .Method}}, method <code>{{.Method}}</code>{{end}}.</p>
+    {{if $.LabelsSHA256}}<p><strong>Golden-set version:</strong> <code>{{$.LabelsSHA256}}</code></p>{{end}}
+    {{if $.Previous}}
+    <p><strong>Δ vs previous run</strong> ({{formatTime $.Previous.GeneratedAt $.Timezone}}):
+    {{if ne $.LabelsSHA256 $.Previous.LabelsSHA256}}
+      labels changed, Δ not comparable
+    {{else}}
+      {{range $.Rows}}
+        {{if or .PrecisionDelta .RecallDelta}}
+          {{.Label}}:
+          {{if .PrecisionDelta}}P {{.PrecisionDelta}}{{end}}
+          {{if .RecallDelta}}{{if .PrecisionDelta}} {{end}}R {{.RecallDelta}}{{end}}.
+        {{end}}
+      {{end}}
+    {{end}}
+    </p>
+    <p class="note sign-rule">Positive deltas (+X%) are improvements (precision or recall increased); negative deltas ((X%)) are regressions.</p>
+    {{end}}
   </div>
 </div>
 {{end}}
 
 {{if .Rows}}
 <h2>Quality by type</h2>
+{{if .DualMethod}}
+<p class="note">The columns show rules-only and rules+llm methods side by side, with Δ (rules → rules+llm).</p>
+<table class="data">
+  <thead>
+    <tr>
+      <th rowspan="2">Type</th>
+      <th rowspan="2">Support</th>
+      <th colspan="3">Counts</th>
+      <th colspan="2">Rules</th>
+      <th colspan="2">Rules+LLM</th>
+      <th colspan="2">Δ</th>
+    </tr>
+    <tr>
+      <th>TP</th>
+      <th>FP</th>
+      <th>FN</th>
+      <th>Precision</th>
+      <th>Recall</th>
+      <th>Precision</th>
+      <th>Recall</th>
+      <th>Precision</th>
+      <th>Recall</th>
+    </tr>
+  </thead>
+  <tbody>
+  {{range .Rows}}
+    <tr>
+      <td>{{template "badge" .TypeBadge}}</td>
+      <td class="num">{{.Support}}</td>
+      <td class="num">{{.TP}}</td>
+      <td class="num">{{.FP}}</td>
+      <td class="num">{{.FN}}</td>
+      <td class="meter-cell">
+        {{if ne .RulesPrecision "n/a"}}
+        <meter min="0" max="1" low="0.7" high="0.9" optimum="1" value="{{.RulesPrecisionFloat}}"></meter>
+        {{end}}
+        <span class="num">{{.RulesPrecision}}</span>
+      </td>
+      <td class="meter-cell">
+        {{if ne .RulesRecall "n/a"}}
+        <meter min="0" max="1" low="0.7" high="0.9" optimum="1" value="{{.RulesRecallFloat}}"></meter>
+        {{end}}
+        <span class="num">{{.RulesRecall}}</span>
+      </td>
+      <td class="meter-cell">
+        {{if ne .Precision "n/a"}}
+        <meter min="0" max="1" low="0.7" high="0.9" optimum="1" value="{{.PrecisionFloat}}"></meter>
+        {{end}}
+        <span class="num">{{.Precision}}</span>
+      </td>
+      <td class="meter-cell">
+        {{if ne .Recall "n/a"}}
+        <meter min="0" max="1" low="0.7" high="0.9" optimum="1" value="{{.RecallFloat}}"></meter>
+        {{end}}
+        <span class="num">{{.Recall}}</span>
+      </td>
+      <td class="num">{{if .PrecisionMethodDelta}}{{.PrecisionMethodDelta}}{{else}}—{{end}}</td>
+      <td class="num">{{if .RecallMethodDelta}}{{.RecallMethodDelta}}{{else}}—{{end}}</td>
+    </tr>
+  {{end}}
+  </tbody>
+</table>
+<p class="note sign-rule">Favourable deltas (LLM improved over rules) read positive (+X%); unfavourable ones (LLM regressed) appear in parentheses ((X%)).</p>
+{{else}}
 <table class="data">
   <thead>
     <tr>
@@ -74,6 +155,7 @@
       <td class="num">{{.F1}}</td>
     </tr>
   {{end}}
+  {{if not $.DualMethod}}
   {{if .MacroAverage}}
   <tr class="summary-row">
     <td><strong>Macro average</strong></td>
@@ -118,13 +200,76 @@
     <td class="num">{{.WeightedAverage.F1}}</td>
   </tr>
   {{end}}
+  {{end}}
   </tbody>
 </table>
+{{end}}
 
 <p class="note">There is no calibration plot because confidence is a rules score, not a probability.</p>
 
 {{else}}
 <p>The summary has no per-type metrics.</p>
+{{end}}
+
+{{if $.ConfusionMatrix}}
+<h2>Confusion matrix</h2>
+<div class="confusion-wrap">
+<table class="data confusion">
+  <thead>
+    <tr>
+      <th>Label \ Predicted</th>
+      {{range $.AllTypes}}<th>{{.}}</th>{{end}}
+    </tr>
+  </thead>
+  <tbody>
+  {{range $label := $.AllTypes}}
+    <tr>
+      <th>{{$label}}</th>
+      {{range $pred := $.AllTypes}}
+        {{with index $.ConfusionMatrix (printf "%s:%s" $label $pred)}}
+          <td aria-label="{{.Count}} pair{{if ne .Count 1}}s{{end}} labelled {{$label}}, predicted {{$pred}}">
+            {{if gt .Count 0}}
+              <a href="/eval/cell?label={{$label}}&predicted={{$pred}}" class="{{ConfusionClass $label $pred .Count}}" hx-get="/eval/cell?label={{$label}}&predicted={{$pred}}" hx-target="body" hx-push-url="true">{{.Count}}</a>
+            {{else}}
+              <a class="zero">0</a>
+            {{end}}
+          </td>
+        {{else}}
+          <td aria-label="0 pairs labelled {{$label}}, predicted {{$pred}}"><a class="zero">0</a></td>
+        {{end}}
+      {{end}}
+    </tr>
+  {{end}}
+  </tbody>
+</table>
+</div>
+{{end}}
+
+{{if $.Thresholds}}
+<h2>P/R at confidence thresholds</h2>
+<p class="note">Precision and recall for <code>equivalent</code> predictions at various confidence cut-offs.</p>
+<table class="data">
+  <thead>
+    <tr>
+      <th>Threshold</th>
+      <th>True positives</th>
+      <th>False positives</th>
+      <th>Precision</th>
+      <th>Recall</th>
+    </tr>
+  </thead>
+  <tbody>
+  {{range $.Thresholds}}
+    <tr{{if eq .Threshold "0.90"}} class="chosen"{{end}}>
+      <td>≥ {{.Threshold}}</td>
+      <td class="num">{{.TP}}</td>
+      <td class="num">{{.FP}}</td>
+      <td class="num">{{if .Precision}}{{.Precision}}{{else}}n/a{{end}}</td>
+      <td class="num">{{if .Recall}}{{.Recall}}{{else}}n/a{{end}}</td>
+    </tr>
+  {{end}}
+  </tbody>
+</table>
 {{end}}
 
 {{if .Notes}}
@@ -133,4 +278,8 @@
 {{end}}
 
 {{end}}
+
+{{/* M4-76: Settlement back-test results */}}
+{{template "backtest_results" .}}
+
 {{end}}

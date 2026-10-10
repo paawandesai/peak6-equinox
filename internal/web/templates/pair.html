@@ -58,13 +58,13 @@
   <h2>Contract diff</h2>
   <p>Every term the normaliser extracted, side by side. <em>unknown</em> means a term could not be parsed on at least one side; it is never guessed.</p>
   <table class="data terms">
-    <thead><tr><th>Term</th><th>A: {{.A.Venue}}</th><th>B: {{.B.Venue}}</th><th>Verdict</th></tr></thead>
+    <thead><tr><th>Term</th><th>A: {{.A.Venue}}</th><th>B: {{.B.Venue}}</th><th>Verdict</th>{{if .HasEvidence}}<th>Contribution</th>{{end}}</tr></thead>
     {{/* UI-12: group diff rows by rule part */}}
     {{range $part := partOrder}}
       {{$rows := filterByPart $.DiffRows $part}}
       {{if $rows}}
       <tbody>
-        <tr><th class="part" colspan="4">{{$part}}</th></tr>
+        <tr><th class="part" colspan="{{if $.HasEvidence}}5{{else}}4{{end}}">{{$part}}</th></tr>
         {{range $rows}}
         <tr class="{{.Class}}">
           <td>{{.Field}}</td>
@@ -75,12 +75,15 @@
             {{if .Annotation}}<small>{{.Annotation}}</small>{{end}}
             {{if .BasisLink}}<a href="{{.BasisLink}}" class="basis-link">basis →</a>{{end}}
           </td>
+          {{if $.HasEvidence}}<td>{{if .Contribution}}{{.Contribution}}{{else}}<span class="muted">—</span>{{end}}</td>{{end}}
         </tr>
         {{end}}
       </tbody>
       {{end}}
     {{end}}
-    {{if not .DiffRows}}<tbody><tr><td colspan="4">No diff was stored for this pair.</td></tr></tbody>{{end}}
+    {{if not .DiffRows}}<tbody><tr><td colspan="{{if .HasEvidence}}5{{else}}4{{end}}">No diff was stored for this pair.</td></tr></tbody>{{end}}
+    {{/* UI-20: Evidence footer */}}
+    <tfoot><tr><td colspan="{{if .HasEvidence}}5{{else}}4{{end}}"><small>Matcher evidence: {{.EvidenceFooter}}</small></td></tr></tfoot>
   </table>
   <p class="diff-counts">{{.DiffCounts}}</p>
 </section>
@@ -127,10 +130,37 @@
   </div>
 </section>
 
-{{/* UI-12: Why (explanation only; LLM rationale comes in UI-22) */}}
+{{/* UI-12: Why (explanation); UI-22: LLM rationale */}}
 <section>
   <h2>Why: the explanation</h2>
   <p class="explanation">{{.Explanation}}</p>
+
+  {{/* UI-22: LLM verifier rationale (hidden when pair was never verified) */}}
+  {{if .HasLLMRationale}}
+  <details>
+    <summary>LLM verifier rationale (model output)</summary>
+    <dl>
+      <dt>Model</dt>
+      <dd>{{.LLMModel}}</dd>
+      <dt>Run ID</dt>
+      <dd>{{.LLMRunID}}</dd>
+      <dt>Verified at</dt>
+      <dd>{{.LLMVerifiedAt}}</dd>
+      <dt>Rationale</dt>
+      <dd>
+        {{if .LLMRationale}}
+        <ul>
+          {{range .LLMRationale}}
+          <li>{{.}}</li>
+          {{end}}
+        </ul>
+        {{else}}
+        <p>(no rationale recorded)</p>
+        {{end}}
+      </dd>
+    </dl>
+  </details>
+  {{end}}
 </section>
 
 {{/* UI-12: Current touch with freshness badge in Fetched column */}}
@@ -184,8 +214,13 @@
         <select name="outcome"><option value="yes"{{if eq .Form.Outcome "yes"}} selected{{end}}>yes</option><option value="no"{{if eq .Form.Outcome "no"}} selected{{end}}>no</option></select>
       </label>
       <label>Quantity
-        <small>1 to 100,000 contracts</small>
-        <input type="number" name="quantity" min="1" max="100000" step="1" value="{{.Form.Quantity}}" required>
+        <small>contracts or USD notional</small>
+        <fieldset>
+          <label><input type="radio" name="quantity_mode" value="contracts"{{if ne .Form.QuantityMode "usd"}} checked{{end}}> Contracts</label>
+          <label><input type="radio" name="quantity_mode" value="usd"{{if eq .Form.QuantityMode "usd"}} checked{{end}}> USD notional</label>
+        </fieldset>
+        <input type="number" name="quantity" min="0.01" max="100000" step="0.01" value="{{.Form.Quantity}}" placeholder="100" required>
+        <small>Contracts: 1 to 100,000 (whole numbers). USD: $0.01 to $100,000. Fractional contracts round down.</small>
       </label>
       <label>Order type
         <small>market or limit</small>

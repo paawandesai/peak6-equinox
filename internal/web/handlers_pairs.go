@@ -46,6 +46,14 @@ type pairPage struct {
 	History         historyChart
 	LogEntries      []logEntryView
 	Form            routeFormView
+	EvidenceFooter  string // UI-20: "prior + Σ = total → confidence X.XX" or "not recorded"
+	HasEvidence     bool   // UI-20: whether evidence was recorded
+	// UI-22: LLM verifier rationale (hidden when pair was never verified)
+	HasLLMRationale bool
+	LLMRationale    []string // Evidence from verdict (up to 3 entries × 200 chars)
+	LLMModel        string   // Model used for verification
+	LLMRunID        int64    // Run ID
+	LLMVerifiedAt   string   // Formatted timestamp
 }
 
 // confView is the confidence for the {{template "conf"}} define (UI-12).
@@ -72,18 +80,19 @@ type basisComponentView struct {
 
 // diffRowView is one diff row with annotations for vetoes and facts (UI-04, UI-12).
 type diffRowView struct {
-	Field      string
-	A          string
-	B          string
-	ATokens    []diffToken // UI-12: word-level diff tokens for template wrapping
-	BTokens    []diffToken // UI-12: word-level diff tokens for template wrapping
-	Status     string      // "match", "differ", "unknown"
-	StatusText string      // status word with color token
-	Annotation string      // veto or fact annotation, or empty
-	Part       string      // UI-12: rule part (resolution criteria, strike, direction, etc.)
-	Class      string      // UI-12: CSS class (t-match, t-differ, t-closed, t-unknown)
-	Badge      Badge       // UI-12: verdict badge
-	BasisLink  string      // UI-12: link to basis component, or empty
+	Field        string
+	A            string
+	B            string
+	ATokens      []diffToken // UI-12: word-level diff tokens for template wrapping
+	BTokens      []diffToken // UI-12: word-level diff tokens for template wrapping
+	Status       string      // "match", "differ", "unknown"
+	StatusText   string      // status word with color token
+	Annotation   string      // veto or fact annotation, or empty
+	Part         string      // UI-12: rule part (resolution criteria, strike, direction, etc.)
+	Class        string      // UI-12: CSS class (t-match, t-differ, t-closed, t-unknown)
+	Badge        Badge       // UI-12: verdict badge
+	BasisLink    string      // UI-12: link to basis component, or empty
+	Contribution string      // UI-20: signed contribution for this term, or empty
 }
 
 // diffToken is one word/space token with its operation for word-level diffs (UI-12).
@@ -336,6 +345,13 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// UI-22: fetch LLM rationale if the pair was verified
+	llmData, hasLLM, err := st.GetRelationshipLLMData(ctx, rel.ID)
+	if err != nil {
+		s.log.Error("loading LLM data for pair", "relationship_id", rel.ID, "error", err)
+		// Continue without LLM data; non-fatal
+	}
+
 	data := pairPage{
 		page:          s.pageBase(round, "Pair "+r.PathValue("id"), "Why does Equinox think these two contracts are, or are not, the same bet, and where would an order fill best?", tz, "pair"),
 		ID:            rel.ID,
@@ -373,13 +389,19 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 		NearMiss:        rel.Type == canonical.RelRelated,
 		Types:           allTypeViews(),
 		Form:            defaultRouteForm(rel),
+		// UI-22: LLM rationale
+		HasLLMRationale: hasLLM,
+		LLMRationale:    llmData.Evidence,
+		LLMModel:        llmData.Model,
+		LLMRunID:        llmData.RunID,
+		LLMVerifiedAt:   formatTime(llmData.VerifiedAt, tz),
 	}
 	points, err := st.QuoteHistory(ctx, []string{rel.AID, rel.BID}, maxHistoryPt)
 	if err != nil {
 		s.dbError(w, "loading the pair's price history", err)
 		return
 	}
-	data.History = buildHistoryChart(rel.AID, rel.BID, points, tz)
+	data.History = buildHistoryChart(rel.AID, rel.BID, rel.Type, points, tz)
 	entries, err := st.ListLog(ctx, store.LogFilter{Kind: store.LogRelationship, Ref: strconv.FormatInt(rel.ID, 10), Limit: maxPairLogEntries})
 	if err != nil {
 		s.dbError(w, "loading the pair's decision-log entries", err)
@@ -409,26 +431,58 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 			q.dest.StampAsOf = formatTime(quote.FetchedAt, tz)
 			q.dest.StampDT = quote.FetchedAt.Format(time.RFC3339)
 
-			// Determine freshness state (UI-10: only Fresh/Stale/Unknown for now; Warn comes in UI-19)
-			// Use D-077 stale threshold
+			// Determine freshness state (UI-19: venue-specific warn windows)
+			venue := canonical.VenueOf(q.id)
+			warnThreshold := s.warnThresholdForVenue(venue)
 			staleThreshold := s.cfg.StaleAfter
-			freshState := FreshStateFresh
-			if currentRound.Pinned {
-				freshState = FreshStatePinned
-			} else if age > staleThreshold {
-				freshState = FreshStateStale
-			}
+			freshState := quoteFreshState(venue, quote.FetchedAt, now, currentRound.Pinned, warnThreshold, staleThreshold)
 			q.dest.FreshState = string(freshState)
 			q.dest.FreshBadge = FreshBadge(freshState)
 		}
 		q.dest.Venue = string(canonical.VenueOf(q.id))
 		q.dest.Tz = tz
 	}
+	// UI-20: Build evidence footer
+	if rel.Evidence != nil {
+		data.HasEvidence = true
+		// Format: "prior + Σ = total → confidence X.XX"
+		// Count non-prior contributions
+		contribCount := len(rel.Evidence.Contributions) - 1 // excluding prior
+		data.EvidenceFooter = fmt.Sprintf("%s + Σ(%d) = %s → confidence %s",
+			rel.Evidence.Prior.StringFixed(2),
+			contribCount,
+			rel.Evidence.Total.StringFixed(2),
+			rel.Confidence.StringFixed(2))
+	} else {
+		data.HasEvidence = false
+		data.EvidenceFooter = "not recorded"
+	}
 	s.render(w, http.StatusOK, "pair", data)
 }
 
 // buildDiffRows maps vetoes and facts onto diff rows by term name (UI-04, UI-12).
 // UI-12 adds: Part grouping, CSS class, badge, word-level tokens, basis link.
+// evidenceKeyToField maps a matcher evidence contribution term to a diff field
+// name (UI-20, D-115). Returns the field name and whether it should be shown
+// per-row (true) or only in the footer (false). Footer-only terms: "prior",
+// "fact_applied". Unknown terms return ("", false).
+func evidenceKeyToField(term string) (field string, perRow bool) {
+	switch {
+	case term == "prior":
+		return "", false // Footer only
+	case strings.HasPrefix(term, "unknown_unit"):
+		return "unit", true
+	case strings.HasPrefix(term, "unknown_edge_rules"):
+		return "edge_rules", true
+	case strings.HasPrefix(term, "deadline_gap") || strings.HasPrefix(term, "deadline_defaulted"):
+		return "deadline", true
+	case term == "fact_applied":
+		return "", false // Footer only (global deduction)
+	default:
+		return "", false // Unknown term
+	}
+}
+
 func buildDiffRows(rel canonical.Relationship) []diffRowView {
 	rows := make([]diffRowView, 0, len(rel.Diff))
 
@@ -459,6 +513,35 @@ func buildDiffRows(rel canonical.Relationship) []diffRowView {
 			}
 			if strings.Contains(c.Name, "source") {
 				basisByField["resolution_source"] = true
+			}
+		}
+	}
+
+	// UI-20: Build contribution map by field (maps diff field names to contributions)
+	contributionByField := make(map[string]string)
+	if rel.Evidence != nil {
+		for _, contrib := range rel.Evidence.Contributions {
+			field, perRow := evidenceKeyToField(contrib.Term)
+			if !perRow {
+				continue // Skip footer-only and unknown terms
+			}
+
+			// Format contribution value with sign
+			val := contrib.Value
+			var formatted string
+			if val.IsNegative() {
+				formatted = fmt.Sprintf("−%s", val.Abs().StringFixed(2))
+			} else if val.IsPositive() {
+				formatted = fmt.Sprintf("+%s", val.StringFixed(2))
+			} else {
+				formatted = "0.00"
+			}
+
+			// Accumulate if field already has a contribution (e.g. both unknown_unit_a and unknown_unit_b)
+			if existing, ok := contributionByField[field]; ok {
+				contributionByField[field] = existing + ", " + formatted
+			} else {
+				contributionByField[field] = formatted
 			}
 		}
 	}
@@ -517,6 +600,11 @@ func buildDiffRows(rel canonical.Relationship) []diffRowView {
 		// UI-12: basis link if this field contributes to basis risk
 		if basisByField[d.Field] {
 			row.BasisLink = "#basis"
+		}
+
+		// UI-20: set contribution if available for this field
+		if contrib, ok := contributionByField[d.Field]; ok {
+			row.Contribution = contrib
 		}
 
 		rows = append(rows, row)

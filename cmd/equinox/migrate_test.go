@@ -32,8 +32,8 @@ func TestMigrateCommandUpDown(t *testing.T) {
 	}{
 		{[]string{"migrate"}, "0001_init.sql"}, // up applies all migrations
 		{[]string{"migrate", "status"}, "applied"},
-		{[]string{"migrate", "down"}, "down 0005"},           // down rolls back the latest (0005)
-		{[]string{"migrate", "up"}, "up 0005"},               // up re-applies 0005
+		{[]string{"migrate", "down"}, "down 0006"},           // down rolls back the latest (0006)
+		{[]string{"migrate", "up"}, "up 0006"},               // up re-applies 0006
 		{[]string{"migrate", "reset"}, "down 0001_init.sql"}, // reset rolls back all, ending with 0001
 	} {
 		var out, errOut bytes.Buffer

@@ -300,3 +300,99 @@ func TestVerifierPipeline(t *testing.T) {
 		t.Errorf("transport failure = %v", err)
 	}
 }
+
+// TestGuardAdjustsMatcherEvidenceOnApply covers the UI-20 × Guard invariant that
+// blocked final MR !97 (note 143743): after Guard adjusts Confidence on a
+// confirm/downgrade, the evidence is a copy whose trailing llm_adjustment
+// term makes total == the guarded confidence (Relationship.Validate), and the
+// rules evidence is untouched. Reject-upgrade leaves Evidence intact.
+func TestGuardAdjustsMatcherEvidenceOnApply(t *testing.T) {
+	log := slog.New(slog.DiscardHandler)
+	rulesConf := d("0.95")
+	ev := &canonical.MatcherEvidence{
+		Prior: rulesConf,
+		Contributions: []canonical.ContributionTerm{
+			{Term: "prior", Value: rulesConf},
+		},
+		Total: rulesConf,
+	}
+	r := rulesRel(canonical.RelEquivalent)
+	r.Confidence = rulesConf
+	r.Evidence = ev
+	if err := r.Validate(); err != nil {
+		t.Fatalf("rules relationship with evidence must validate: %v", err)
+	}
+
+	t.Run("confirm lowers confidence", func(t *testing.T) {
+		v := verdict(canonical.RelEquivalent, "0.80")
+		got := Guard(context.Background(), log, r, v)
+		if got.Outcome != OutcomeConfirmed {
+			t.Fatalf("outcome = %s (%s)", got.Outcome, got.Reason)
+		}
+		e := got.Relationship.Evidence
+		if e == nil || !e.Total.Equal(got.Relationship.Confidence) {
+			t.Fatalf("Evidence must be kept with total = guarded confidence, got %+v", e)
+		}
+		if last := e.Contributions[len(e.Contributions)-1]; last.Term != "llm_adjustment" || !last.Value.Equal(got.Relationship.Confidence.Sub(rulesConf)) {
+			t.Fatalf("want a trailing llm_adjustment contribution, got %+v", last)
+		}
+		if !ev.Total.Equal(rulesConf) || len(ev.Contributions) != 1 {
+			t.Fatalf("Guard mutated the rules evidence: %+v", ev)
+		}
+		wantConf := decimal.Min(rulesConf, v.Confidence)
+		if !got.Relationship.Confidence.Equal(wantConf) {
+			t.Fatalf("Confidence = %s, want min %s", got.Relationship.Confidence, wantConf)
+		}
+		if err := got.Relationship.Validate(); err != nil {
+			t.Fatalf("result.Validate: %v", err)
+		}
+	})
+
+	t.Run("downgrade lowers confidence", func(t *testing.T) {
+		v := verdict(canonical.RelRelated, "0.70")
+		got := Guard(context.Background(), log, r, v)
+		if got.Outcome != OutcomeDowngraded {
+			t.Fatalf("outcome = %s (%s)", got.Outcome, got.Reason)
+		}
+		e := got.Relationship.Evidence
+		if e == nil || !e.Total.Equal(got.Relationship.Confidence) {
+			t.Fatalf("Evidence must be kept with total = guarded confidence, got %+v", e)
+		}
+		if last := e.Contributions[len(e.Contributions)-1]; last.Term != "llm_adjustment" || !last.Value.Equal(got.Relationship.Confidence.Sub(rulesConf)) {
+			t.Fatalf("want a trailing llm_adjustment contribution, got %+v", last)
+		}
+		if !ev.Total.Equal(rulesConf) || len(ev.Contributions) != 1 {
+			t.Fatalf("Guard mutated the rules evidence: %+v", ev)
+		}
+		wantConf := decimal.Min(rulesConf, v.Confidence)
+		if !got.Relationship.Confidence.Equal(wantConf) {
+			t.Fatalf("Confidence = %s, want min %s", got.Relationship.Confidence, wantConf)
+		}
+		if err := got.Relationship.Validate(); err != nil {
+			t.Fatalf("result.Validate: %v", err)
+		}
+	})
+
+	t.Run("reject upgrade keeps evidence", func(t *testing.T) {
+		related := rulesRel(canonical.RelRelated)
+		related.Confidence = rulesConf
+		related.Evidence = ev
+		v := verdict(canonical.RelEquivalent, "0.50")
+		got := Guard(context.Background(), log, related, v)
+		if got.Outcome != OutcomeRejectedUpgrade {
+			t.Fatalf("outcome = %s (%s)", got.Outcome, got.Reason)
+		}
+		if got.Relationship.Evidence == nil {
+			t.Fatal("Evidence must be kept when rules verdict stands")
+		}
+		if !got.Relationship.Evidence.Total.Equal(rulesConf) {
+			t.Fatalf("kept Evidence.Total = %s, want %s", got.Relationship.Evidence.Total, rulesConf)
+		}
+		if !got.Relationship.Confidence.Equal(rulesConf) {
+			t.Fatalf("Confidence = %s, want rules %s", got.Relationship.Confidence, rulesConf)
+		}
+		if err := got.Relationship.Validate(); err != nil {
+			t.Fatalf("result.Validate: %v", err)
+		}
+	})
+}

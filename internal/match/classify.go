@@ -77,6 +77,16 @@ func classify(a, b canonical.Instrument, blocked *blockReason, vetoes []canonica
 		return verdict{typ: canonical.RelUnrelated, confidence: conf,
 			explanation: fmt.Sprintf("unrelated: blocked on %s (%s).", blocked.field, blocked.detail)}
 	case len(vetoes) == 0:
+		// D-109: try Fed same-metric pairs first, even when there are no vetoes.
+		// Exact matches on the Fed grid should report equivalent_given_facts to document
+		// that the grid constraint was checked.
+		if a.Category == canonical.CategoryFed && b.Category == canonical.CategoryFed &&
+			a.Terms.Metric == b.Terms.Metric && a.Terms.Metric != canonical.Unknown {
+			if d, _ := deriveSameMetricFed(a, b, vetoes, f); d != nil {
+				return verdict{typ: d.typ, confidence: derivedConfidence(a, b, d), explanation: derivedExplanation(a, b, vetoes, d),
+					facts: d.facts, derived: d}
+			}
+		}
 		return verdict{typ: canonical.RelEquivalent, confidence: equivalentConfidence(a, b), explanation: equivalentExplanation(a, b)}
 	}
 	d, note := derive(a, b, vetoes, f)
@@ -236,4 +246,126 @@ func caveats(a, b canonical.Instrument) []string {
 		c = append(c, "a deadline was taken from the close time")
 	}
 	return c
+}
+
+// buildEvidence constructs the MatcherEvidence for a verdict (UI-20, D-115).
+// It records the prior, per-term contributions, total, and for near misses
+// (pairs with vetoes), the pre-veto score and required score.
+func buildEvidence(a, b canonical.Instrument, v verdict, vetoes []canonical.Veto) canonical.MatcherEvidence {
+	// Determine the prior based on the verdict type
+	var prior decimal.Decimal
+	switch v.typ {
+	case canonical.RelEquivalent:
+		prior = confEquivalentBase
+	case canonical.RelEquivalentGivenFacts:
+		prior = confGivenFactsBase
+	case canonical.RelComplement:
+		prior = confComplementBase
+	case canonical.RelImplies:
+		prior = confImpliesBase
+	case canonical.RelRelated:
+		prior = confRelatedKnown
+		if uncertain(vetoes) {
+			prior = confUncertain
+		}
+	case canonical.RelUnrelated:
+		// For unrelated, check if it's due to unknown
+		prior = confUnrelatedKnown
+		// The blocked reason would contain "unknown" if uncertain
+		// We don't have direct access to blocked here, so we use the confidence
+		if v.confidence.Equal(confUncertain) {
+			prior = confUnrelatedUnsure
+		}
+	}
+
+	contributions := []canonical.ContributionTerm{
+		{Term: "prior", Value: prior},
+	}
+
+	// Only add deductions for types that use the additive confidence model.
+	// Related and unrelated use fixed confidence values, not additive.
+	usesAdditiveModel := v.typ == canonical.RelEquivalent ||
+		v.typ == canonical.RelEquivalentGivenFacts ||
+		v.typ == canonical.RelComplement ||
+		v.typ == canonical.RelImplies
+
+	if usesAdditiveModel {
+		// Add minor deductions (unknown unit, unknown edge rules)
+		if a.Terms.Unit == canonical.Unknown {
+			contributions = append(contributions, canonical.ContributionTerm{
+				Term:  "unknown_unit_a",
+				Value: confUnknownMinor.Neg(),
+			})
+		}
+		if b.Terms.Unit == canonical.Unknown {
+			contributions = append(contributions, canonical.ContributionTerm{
+				Term:  "unknown_unit_b",
+				Value: confUnknownMinor.Neg(),
+			})
+		}
+		if a.Terms.EdgeRules == canonical.Unknown {
+			contributions = append(contributions, canonical.ContributionTerm{
+				Term:  "unknown_edge_rules_a",
+				Value: confUnknownMinor.Neg(),
+			})
+		}
+		if b.Terms.EdgeRules == canonical.Unknown {
+			contributions = append(contributions, canonical.ContributionTerm{
+				Term:  "unknown_edge_rules_b",
+				Value: confUnknownMinor.Neg(),
+			})
+		}
+	}
+
+	// Add deadline deductions (only for equivalent and derived types where meeting=false)
+	applyDeadlineDeductions := v.typ == canonical.RelEquivalent ||
+		(v.derived != nil && !v.derived.meeting)
+
+	if applyDeadlineDeductions {
+		hours := int64(deadlineGap(a, b) / time.Hour)
+		if hours > 0 {
+			contributions = append(contributions, canonical.ContributionTerm{
+				Term:  "deadline_gap_hours",
+				Value: confPerHourGap.Mul(decimal.NewFromInt(hours)).Neg(),
+			})
+		}
+		if a.Quality.Has(canonical.QualityDeadlineDefaulted) {
+			contributions = append(contributions, canonical.ContributionTerm{
+				Term:  "deadline_defaulted_a",
+				Value: confDefaultedDeadl.Neg(),
+			})
+		}
+		if b.Quality.Has(canonical.QualityDeadlineDefaulted) {
+			contributions = append(contributions, canonical.ContributionTerm{
+				Term:  "deadline_defaulted_b",
+				Value: confDefaultedDeadl.Neg(),
+			})
+		}
+	}
+
+	// Add fact-applied deduction for complement/implies
+	if v.derived != nil && len(v.facts) > 0 && v.typ != canonical.RelEquivalentGivenFacts {
+		contributions = append(contributions, canonical.ContributionTerm{
+			Term:  "fact_applied",
+			Value: confFactApplied.Neg(),
+		})
+	}
+
+	// Build the evidence
+	evidence := canonical.MatcherEvidence{
+		Prior:         prior,
+		Contributions: contributions,
+		Total:         v.confidence,
+	}
+
+	// For near misses (pairs with vetoes that aren't unrelated), compute pre-veto score
+	// A near miss is a pair that has vetoes but could theoretically be equivalent if the vetoes didn't exist
+	if len(vetoes) > 0 && v.typ != canonical.RelUnrelated {
+		preVetoScore := equivalentConfidence(a, b)
+		requiredScore := decimal.RequireFromString("0.9") // MIN_ROUTE_CONFIDENCE
+		evidence.PreVetoScore = &preVetoScore
+		evidence.RequiredScore = &requiredScore
+	}
+
+	return evidence
 }

@@ -5,11 +5,12 @@ import (
 	"time"
 )
 
-// Supported timezones for the timezone selector (M3-08).
+// Supported timezones for the timezone selector (M3-08, M4-77).
 const (
-	TzET  = "ET"
-	TzCT  = "CT"
-	TzUTC = "UTC"
+	TzET    = "ET"
+	TzCT    = "CT"
+	TzUTC   = "UTC"
+	TzLocal = "Local"
 )
 
 // timezoneCookie is the cookie name for the user's timezone preference.
@@ -27,7 +28,7 @@ func timezoneFromRequest(r *http.Request) string {
 		return TzET
 	}
 	switch cookie.Value {
-	case TzET, TzCT, TzUTC:
+	case TzET, TzCT, TzUTC, TzLocal:
 		return cookie.Value
 	default:
 		return TzET
@@ -35,8 +36,9 @@ func timezoneFromRequest(r *http.Request) string {
 }
 
 // formatTime formats a time.Time in the given timezone. tz must be one of
-// TzET, TzCT, or TzUTC (M3-08). Returns "unknown" for zero times.
+// TzET, TzCT, TzUTC, or TzLocal (M3-08, M4-77). Returns "unknown" for zero times.
 // Errors loading a timezone location fall back to UTC. Unknown tz defaults to ET.
+// For TzLocal, displays UTC with a note (JS rewrites it client-side when enabled).
 func formatTime(t time.Time, tz string) string {
 	if t.IsZero() {
 		return "unknown"
@@ -50,7 +52,8 @@ func formatTime(t time.Time, tz string) string {
 		loc, err = loadLocation("America/New_York")
 	case TzCT:
 		loc, err = loadLocation("America/Chicago")
-	case TzUTC:
+	case TzUTC, TzLocal:
+		// Local falls back to UTC when JS is disabled (M4-77)
 		loc = time.UTC
 	default:
 		// Unknown timezone defaults to ET (M3-08)

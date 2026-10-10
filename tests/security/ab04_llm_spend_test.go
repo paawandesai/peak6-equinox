@@ -77,6 +77,7 @@ func TestAB04_PublicRoutesNeverCallLLM(t *testing.T) {
 	//   GET /near-misses
 	//   GET /log
 	//   GET /eval
+	//   GET /eval/cell
 	//   POST /route
 
 	tests := []struct {
@@ -90,6 +91,7 @@ func TestAB04_PublicRoutesNeverCallLLM(t *testing.T) {
 		{"GET /near-misses", "GET", "/near-misses", ""},
 		{"GET /log", "GET", "/log", ""},
 		{"GET /eval", "GET", "/eval", ""},
+		{"GET /eval/cell", "GET", "/eval/cell?label=equivalent&predicted=equivalent", ""},
 		{"POST /route", "POST", "/route", `{"instrument_id":"` + insA.ID + `","side":"yes","outcome":"yes","quantity":"10"}`},
 	}
 

@@ -20,27 +20,31 @@ import (
 
 // Defaults for optional variables, as documented in docs/environment.md.
 const (
-	DefaultPort                  = 8080
-	DefaultKalshiBaseURL         = "https://api.elections.kalshi.com/trade-api/v2"
-	DefaultPolymarketGammaURL    = "https://gamma-api.polymarket.com"
-	DefaultPolymarketClobURL     = "https://clob.polymarket.com"
-	DefaultUniverseDir           = "config/universe"
-	DefaultFactsFile             = "config/facts.yaml"
-	DefaultEvalSummaryFile       = "config/eval_summary.json"
-	DefaultHTTPTimeoutSeconds    = 10
-	DefaultMaxBodyBytes          = 10485760
-	DefaultStaleAfterSeconds     = 120
-	DefaultSkewWarnSeconds       = 5
-	DefaultSkewMaxSeconds        = 30
-	DefaultMinRouteConfidence    = "0.9"
-	DefaultMinBookDepth          = "1"
-	DefaultBasisPenaltyMult      = "0.01"
-	DefaultReviewEdgeMin         = "0.02"
-	DefaultPublicRateLimitPerMin = 60
-	DefaultStaleRoundWarnMinutes = 10
-	DefaultLLMModel              = "claude-haiku-4-5-20251001"
-	DefaultLLMDailyCallCap       = 200
-	DefaultLLMMaxOutputTokens    = 400
+	DefaultPort                       = 8080
+	DefaultKalshiBaseURL              = "https://api.elections.kalshi.com/trade-api/v2"
+	DefaultPolymarketGammaURL         = "https://gamma-api.polymarket.com"
+	DefaultPolymarketClobURL          = "https://clob.polymarket.com"
+	DefaultUniverseDir                = "config/universe"
+	DefaultFactsFile                  = "config/facts.yaml"
+	DefaultEvalSummaryFile            = "config/eval_summary.json"
+	DefaultBacktestSummaryFile        = "config/backtest_summary.json"
+	DefaultHTTPTimeoutSeconds         = 10
+	DefaultMaxBodyBytes               = 10485760
+	DefaultStaleAfterSeconds          = 120
+	DefaultKalshiWarnAfterSeconds     = 60
+	DefaultPolymarketWarnAfterSeconds = 60
+	DefaultSkewWarnSeconds            = 5
+	DefaultSkewMaxSeconds             = 30
+	DefaultMinRouteConfidence         = "0.9"
+	DefaultMinBookDepth               = "1"
+	DefaultBasisPenaltyMult           = "0.01"
+	DefaultReviewEdgeMin              = "0.02"
+	DefaultPublicRateLimitPerMin      = 60
+	DefaultStaleRoundWarnMinutes      = 10
+	DefaultRoundWarnMinutes           = 5
+	DefaultLLMModel                   = "claude-haiku-4-5-20251001"
+	DefaultLLMDailyCallCap            = 200
+	DefaultLLMMaxOutputTokens         = 400
 
 	// MinAdminPasswordLen is the shortest ADMIN_PASSWORD accepted.
 	MinAdminPasswordLen = 24
@@ -64,19 +68,24 @@ type Config struct {
 	DatabaseURLTest string
 	AdminUser       string
 	AdminPassword   string
+	AppVersion      string // Git commit SHA for /version endpoint (issue #80)
+	AppBuildTime    string // Build timestamp RFC 3339 for /version endpoint (issue #80)
 
-	KalshiBaseURL      string
-	PolymarketGammaURL string
-	PolymarketClobURL  string
-	UniverseDir        string
-	FactsFile          string
-	EvalSummaryFile    string
+	KalshiBaseURL       string
+	PolymarketGammaURL  string
+	PolymarketClobURL   string
+	UniverseDir         string
+	FactsFile           string
+	EvalSummaryFile     string
+	BacktestSummaryFile string
 
-	HTTPTimeout  time.Duration
-	MaxBodyBytes int64
-	StaleAfter   time.Duration
-	SkewWarn     time.Duration
-	SkewMax      time.Duration
+	HTTPTimeout         time.Duration
+	MaxBodyBytes        int64
+	StaleAfter          time.Duration
+	KalshiWarnAfter     time.Duration
+	PolymarketWarnAfter time.Duration
+	SkewWarn            time.Duration
+	SkewMax             time.Duration
 
 	MinRouteConfidence    decimal.Decimal
 	MinBookDepth          decimal.Decimal
@@ -84,6 +93,7 @@ type Config struct {
 	ReviewEdgeMin         decimal.Decimal
 	PublicRateLimitPerMin int
 	StaleRoundWarnMinutes int
+	RoundWarnMinutes      int
 
 	LLMEnabled         bool
 	AnthropicAPIKey    string
@@ -113,19 +123,24 @@ func Load(lookup LookupFunc) (Config, error) {
 		DatabaseURLTest: l.optional("DATABASE_URL_TEST", ""),
 		AdminUser:       l.required("ADMIN_USER"),
 		AdminPassword:   l.required("ADMIN_PASSWORD"),
+		AppVersion:      l.optional("APP_VERSION", "dev"),
+		AppBuildTime:    l.optional("APP_BUILD_TIME", ""),
 
-		KalshiBaseURL:      l.httpURL("KALSHI_BASE_URL", DefaultKalshiBaseURL),
-		PolymarketGammaURL: l.httpURL("POLYMARKET_GAMMA_URL", DefaultPolymarketGammaURL),
-		PolymarketClobURL:  l.httpURL("POLYMARKET_CLOB_URL", DefaultPolymarketClobURL),
-		UniverseDir:        l.optional("UNIVERSE_DIR", DefaultUniverseDir),
-		FactsFile:          l.optional("FACTS_FILE", DefaultFactsFile),
-		EvalSummaryFile:    l.optional("EVAL_SUMMARY_FILE", DefaultEvalSummaryFile),
+		KalshiBaseURL:       l.httpURL("KALSHI_BASE_URL", DefaultKalshiBaseURL),
+		PolymarketGammaURL:  l.httpURL("POLYMARKET_GAMMA_URL", DefaultPolymarketGammaURL),
+		PolymarketClobURL:   l.httpURL("POLYMARKET_CLOB_URL", DefaultPolymarketClobURL),
+		UniverseDir:         l.optional("UNIVERSE_DIR", DefaultUniverseDir),
+		FactsFile:           l.optional("FACTS_FILE", DefaultFactsFile),
+		EvalSummaryFile:     l.optional("EVAL_SUMMARY_FILE", DefaultEvalSummaryFile),
+		BacktestSummaryFile: l.optional("BACKTEST_SUMMARY_FILE", DefaultBacktestSummaryFile),
 
-		HTTPTimeout:  l.seconds("HTTP_TIMEOUT_SECONDS", DefaultHTTPTimeoutSeconds),
-		MaxBodyBytes: int64(l.integer("MAX_BODY_BYTES", DefaultMaxBodyBytes, 1, 1<<31-1)),
-		StaleAfter:   l.seconds("STALE_AFTER_SECONDS", DefaultStaleAfterSeconds),
-		SkewWarn:     l.seconds("SKEW_WARN_SECONDS", DefaultSkewWarnSeconds),
-		SkewMax:      l.seconds("SKEW_MAX_SECONDS", DefaultSkewMaxSeconds),
+		HTTPTimeout:         l.seconds("HTTP_TIMEOUT_SECONDS", DefaultHTTPTimeoutSeconds),
+		MaxBodyBytes:        int64(l.integer("MAX_BODY_BYTES", DefaultMaxBodyBytes, 1, 1<<31-1)),
+		StaleAfter:          l.seconds("STALE_AFTER_SECONDS", DefaultStaleAfterSeconds),
+		KalshiWarnAfter:     l.seconds("KALSHI_WARN_AFTER_SECONDS", DefaultKalshiWarnAfterSeconds),
+		PolymarketWarnAfter: l.seconds("POLYMARKET_WARN_AFTER_SECONDS", DefaultPolymarketWarnAfterSeconds),
+		SkewWarn:            l.seconds("SKEW_WARN_SECONDS", DefaultSkewWarnSeconds),
+		SkewMax:             l.seconds("SKEW_MAX_SECONDS", DefaultSkewMaxSeconds),
 
 		MinRouteConfidence:    l.probability("MIN_ROUTE_CONFIDENCE", DefaultMinRouteConfidence),
 		MinBookDepth:          l.positiveDecimal("MIN_BOOK_DEPTH", DefaultMinBookDepth),
@@ -133,6 +148,7 @@ func Load(lookup LookupFunc) (Config, error) {
 		ReviewEdgeMin:         l.positiveDecimal("REVIEW_EDGE_MIN", DefaultReviewEdgeMin),
 		PublicRateLimitPerMin: l.integer("PUBLIC_RATE_LIMIT_PER_MIN", DefaultPublicRateLimitPerMin, 1, 1_000_000),
 		StaleRoundWarnMinutes: l.integer("STALE_ROUND_WARN_MINUTES", DefaultStaleRoundWarnMinutes, 1, 10_000),
+		RoundWarnMinutes:      l.integer("ROUND_WARN_MINUTES", DefaultRoundWarnMinutes, 1, 10_000),
 
 		LLMEnabled:         l.boolean("LLM_ENABLED", false),
 		AnthropicAPIKey:    l.optional("ANTHROPIC_API_KEY", ""),
@@ -163,6 +179,16 @@ func (c Config) validate() []error {
 	if c.SkewWarn > c.SkewMax {
 		errs = append(errs, errors.New("SKEW_WARN_SECONDS must not exceed SKEW_MAX_SECONDS"))
 	}
+	// UI-19: warn windows must be strictly below stale thresholds
+	if c.KalshiWarnAfter >= c.StaleAfter {
+		errs = append(errs, errors.New("KALSHI_WARN_AFTER_SECONDS must be less than STALE_AFTER_SECONDS"))
+	}
+	if c.PolymarketWarnAfter >= c.StaleAfter {
+		errs = append(errs, errors.New("POLYMARKET_WARN_AFTER_SECONDS must be less than STALE_AFTER_SECONDS"))
+	}
+	if c.RoundWarnMinutes >= c.StaleRoundWarnMinutes {
+		errs = append(errs, errors.New("ROUND_WARN_MINUTES must be less than STALE_ROUND_WARN_MINUTES"))
+	}
 	if c.LLMEnabled && c.AnthropicAPIKey == "" {
 		errs = append(errs, errors.New("ANTHROPIC_API_KEY is required when LLM_ENABLED=true"))
 	}
@@ -178,6 +204,8 @@ func (c Config) LogValue() slog.Value {
 		slog.String("database_url_test", redactIfSet(c.DatabaseURLTest)),
 		slog.String("admin_user", c.AdminUser),
 		slog.String("admin_password", redactIfSet(c.AdminPassword)),
+		slog.String("app_version", c.AppVersion),
+		slog.String("app_build_time", c.AppBuildTime),
 		slog.String("kalshi_base_url", c.KalshiBaseURL),
 		slog.String("polymarket_gamma_url", c.PolymarketGammaURL),
 		slog.String("polymarket_clob_url", c.PolymarketClobURL),
@@ -187,6 +215,8 @@ func (c Config) LogValue() slog.Value {
 		slog.Duration("http_timeout", c.HTTPTimeout),
 		slog.Int64("max_body_bytes", c.MaxBodyBytes),
 		slog.Duration("stale_after", c.StaleAfter),
+		slog.Duration("kalshi_warn_after", c.KalshiWarnAfter),
+		slog.Duration("polymarket_warn_after", c.PolymarketWarnAfter),
 		slog.Duration("skew_warn", c.SkewWarn),
 		slog.Duration("skew_max", c.SkewMax),
 		slog.String("min_route_confidence", c.MinRouteConfidence.String()),
@@ -194,6 +224,8 @@ func (c Config) LogValue() slog.Value {
 		slog.String("basis_penalty_mult", c.BasisPenaltyMult.String()),
 		slog.String("review_edge_min", c.ReviewEdgeMin.String()),
 		slog.Int("public_rate_limit_per_min", c.PublicRateLimitPerMin),
+		slog.Int("stale_round_warn_minutes", c.StaleRoundWarnMinutes),
+		slog.Int("round_warn_minutes", c.RoundWarnMinutes),
 		slog.Bool("llm_enabled", c.LLMEnabled),
 		slog.String("anthropic_api_key", redactIfSet(c.AnthropicAPIKey)),
 		slog.String("llm_model", c.LLMModel),

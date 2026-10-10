@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
+	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/eval"
 )
 
 // fixtureRoot is testdata/fixtures from the package directory tests run in.
@@ -90,7 +91,10 @@ func TestBacktestCommandFixtures(t *testing.T) {
 		"Gate (NFR-07): 0 equivalent-tier pairs settled differently — PASS",
 		"| equivalent_given_facts | 1 | 1 | 1 | 0 | 0 | same outcome |",
 		"| complement | 1 | 1 | 1 | 0 | 0 | opposite outcomes |",
-		"| implies | 22 | 22 | 22 | 0 | 0 |",
+		// D-109: the settled KXFEDDECISION buckets add three exact matches
+		// (Cut 25, no change, Hike 25) and two implies (50+ bps forces >25 bps).
+		"| equivalent | 3 | 3 | 3 | 0 | 0 | same outcome |",
+		"| implies | 24 | 24 | 24 | 0 | 0 |",
 		"kalshi:KXFED-26SEP-T4.00 settled no",
 		// The ethereum settled pages are not recorded (D-057): reported, not fatal.
 		"Fetch warnings",
@@ -133,5 +137,43 @@ func TestBacktestCommandAllowlistAndFacts(t *testing.T) {
 				t.Errorf("exit %d, want 1; stderr %q", code, stderr.String())
 			}
 		})
+	}
+}
+
+func TestBacktestCommandWithOutput(t *testing.T) {
+	t.Setenv("UNIVERSE_DIR", filepath.Join("..", "..", "config", "universe"))
+	dir := t.TempDir()
+	outPath := filepath.Join(dir, "backtest_summary.json")
+
+	var stdout, stderr bytes.Buffer
+	code := run(context.Background(), []string{"backtest", "--fixtures", "-fixture-dir", fixtureRoot, "-out", outPath}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit %d\nstdout:\n%s\nstderr:\n%s", code, stdout.String(), stderr.String())
+	}
+
+	if !strings.Contains(stdout.String(), "Wrote summary to "+outPath) {
+		t.Errorf("stdout lacks summary write confirmation:\n%s", stdout.String())
+	}
+
+	// Verify the summary file was created and is valid
+	summary, err := eval.LoadBacktestSummary(outPath)
+	if err != nil {
+		t.Fatalf("LoadBacktestSummary failed: %v", err)
+	}
+
+	if summary.Source != "fixtures" {
+		t.Errorf("Source = %q, want 'fixtures'", summary.Source)
+	}
+	if summary.Pairs <= 0 {
+		t.Errorf("Pairs = %d, want > 0", summary.Pairs)
+	}
+	if summary.Checked <= 0 {
+		t.Errorf("Checked = %d, want > 0", summary.Checked)
+	}
+	if !summary.Passed {
+		t.Errorf("Passed = false, want true (fixtures should pass)")
+	}
+	if !strings.Contains(summary.Command, "equinox backtest") {
+		t.Errorf("Command = %q, want to contain 'equinox backtest'", summary.Command)
 	}
 }

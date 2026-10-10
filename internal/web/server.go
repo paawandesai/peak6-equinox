@@ -30,8 +30,15 @@ type Config struct {
 	// EvalSummaryFile is the JSON artifact `equinox eval` writes and /eval
 	// renders (EVAL_SUMMARY_FILE). Empty or missing means "no eval yet".
 	EvalSummaryFile string
+	// BacktestSummaryFile is the JSON artifact `equinox backtest` writes and
+	// /eval renders (BACKTEST_SUMMARY_FILE, M4-76). Empty or missing means
+	// "no backtest results yet".
+	BacktestSummaryFile string
 	// StaleAfter is the staleness threshold (STALE_AFTER_SECONDS).
-	StaleAfter time.Duration
+	StaleAfter          time.Duration
+	KalshiWarnAfter     time.Duration
+	PolymarketWarnAfter time.Duration
+	RoundWarnMinutes    int
 	// SkewWarn is the skew warning threshold (SKEW_WARN_SECONDS).
 	SkewWarn time.Duration
 	// SkewMax is the skew exclusion threshold (SKEW_MAX_SECONDS).
@@ -60,6 +67,10 @@ type Deps struct {
 	LLMDailyCallCap int
 	// LLMMaxOutputTokens caps each LLM response (default 400).
 	LLMMaxOutputTokens int
+	// AppVersion is the git commit SHA for the /version endpoint (from APP_VERSION env, issue #80).
+	AppVersion string
+	// AppBuildTime is the build timestamp for the /version endpoint (from APP_BUILD_TIME env, issue #80).
+	AppBuildTime string
 	// Now overrides the clock (tests). It must return UTC.
 	Now func() time.Time
 	// DBSize overrides the database-size query behind the AB-15 growth alert
@@ -148,6 +159,8 @@ func (s *Server) routes() *http.ServeMux {
 	// Cloud Run's front end reserves paths ending in "z" on *.run.app, so
 	// /healthz never reaches the app there; /health is the deployed alias (D-052).
 	mux.HandleFunc("GET /health", s.handleHealthz)
+	// /version returns the deployed git commit and build time (issue #80, NFR-01).
+	mux.HandleFunc("GET /version", s.handleVersion)
 
 	s.publicRoutes(mux)
 	s.adminRoutes(mux)
