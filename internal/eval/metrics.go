@@ -18,7 +18,8 @@ const metricPlaces = 4
 
 // Predictor returns the matcher's type for a labelled pair, or false when the
 // pair cannot be classified (an instrument is not in the store).
-type Predictor func(aID, bID string) (canonical.RelationshipType, bool)
+// UI-23: extended to return confidence for threshold sweep analysis.
+type Predictor func(aID, bID string) (canonical.RelationshipType, decimal.Decimal, bool)
 
 // TypeMetrics is the confusion count for one relationship type, treating that
 // type as the positive class.
@@ -39,9 +40,10 @@ func (m TypeMetrics) Recall() (decimal.Decimal, bool) { return ratio(m.TP, m.TP+
 
 // Outcome is one evaluated label with the matcher's answer.
 type Outcome struct {
-	Label     Label
-	Predicted canonical.RelationshipType
-	Correct   bool
+	Label      Label
+	Predicted  canonical.RelationshipType
+	Confidence decimal.Decimal // UI-23: for threshold sweep
+	Correct    bool
 }
 
 // Report is the result of one evaluation.
@@ -67,7 +69,7 @@ func Evaluate(labels Labels, predict Predictor, method canonical.Method) Report 
 		byType[t] = &TypeMetrics{Type: t}
 	}
 	for _, l := range labels.Labels {
-		got, ok := predict(l.AID, l.BID)
+		got, conf, ok := predict(l.AID, l.BID)
 		if !ok {
 			r.Missing = append(r.Missing, l)
 			continue
@@ -77,7 +79,7 @@ func Evaluate(labels Labels, predict Predictor, method canonical.Method) Report 
 		if correct {
 			r.Correct++
 		}
-		r.Outcomes = append(r.Outcomes, Outcome{Label: l, Predicted: got, Correct: correct})
+		r.Outcomes = append(r.Outcomes, Outcome{Label: l, Predicted: got, Confidence: conf, Correct: correct})
 		want := byType[l.Label]
 		want.Labelled++
 		pred, known := byType[got]

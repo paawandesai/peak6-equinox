@@ -2,6 +2,7 @@ package web
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,11 +10,13 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/shopspring/decimal"
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
+	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/store"
 )
 
 // Eval artifact contract (FR-21 eval page, US-06). `equinox eval` (M2-05)
@@ -38,14 +41,39 @@ import (
 // precision and recall are decimal strings or numbers in [0,1], or null when
 // undefined (no predictions, or no labelled positives).
 type evalSummary struct {
-	GeneratedAt time.Time         `json:"generated_at"`
-	Command     string            `json:"command"`
-	RoundID     int64             `json:"round_id"`
-	LabelsFile  string            `json:"labels_file"`
-	Labels      int               `json:"labels"`
-	Method      string            `json:"method"`
-	Types       []evalTypeMetrics `json:"types"`
-	Notes       []string          `json:"notes"`
+	GeneratedAt  time.Time            `json:"generated_at"`
+	Command      string               `json:"command"`
+	RoundID      int64                `json:"round_id"`
+	LabelsFile   string               `json:"labels_file"`
+	Labels       int                  `json:"labels"`
+	Method       string               `json:"method"`
+	Types        []evalTypeMetrics    `json:"types"`
+	Notes        []string             `json:"notes"`
+	Confusion    *evalConfusionMatrix `json:"confusion,omitempty"`     // UI-23
+	Thresholds   []evalThresholdJSON  `json:"thresholds,omitempty"`    // UI-23
+	LabelsSHA256 string               `json:"labels_sha256,omitempty"` // UI-23
+	Previous     *evalPreviousJSON    `json:"previous,omitempty"`      // UI-23
+}
+
+// evalThresholdJSON mirrors the JSON structure. UI-23.
+type evalThresholdJSON struct {
+	Threshold *decimal.Decimal `json:"threshold"`
+	Precision *decimal.Decimal `json:"precision"`
+	Recall    *decimal.Decimal `json:"recall"`
+	TP        int              `json:"tp"`
+	FP        int              `json:"fp"`
+}
+
+// evalPreviousJSON mirrors the JSON structure. UI-23.
+type evalPreviousJSON struct {
+	GeneratedAt  time.Time                       `json:"generated_at"`
+	LabelsSHA256 string                          `json:"labels_sha256"`
+	Types        map[string]evalPreviousTypeJSON `json:"types"`
+}
+
+type evalPreviousTypeJSON struct {
+	Precision *decimal.Decimal `json:"precision"`
+	Recall    *decimal.Decimal `json:"recall"`
 }
 
 type evalTypeMetrics struct {
@@ -56,6 +84,37 @@ type evalTypeMetrics struct {
 	FN        int              `json:"fn"`
 	Precision *decimal.Decimal `json:"precision"`
 	Recall    *decimal.Decimal `json:"recall"`
+}
+
+// evalConfusionMatrix and evalConfusionCell mirror the eval.Summary UI-23 types.
+type evalConfusionMatrix struct {
+	Cells map[string]evalConfusionCell `json:"cells"`
+}
+
+type evalConfusionCell struct {
+	Count   int      `json:"count"`
+	PairIDs []string `json:"pair_ids,omitempty"`
+}
+
+// evalThresholdRow is one row in the threshold sweep table. UI-23.
+type evalThresholdRow struct {
+	Threshold string
+	TP        int
+	FP        int
+	Precision string
+	Recall    string
+}
+
+// evalPreviousRun holds previous summary data for deltas. UI-23.
+type evalPreviousRun struct {
+	GeneratedAt  time.Time
+	LabelsSHA256 string
+	Types        map[string]evalPreviousType
+}
+
+type evalPreviousType struct {
+	Precision string
+	Recall    string
 }
 
 // maxEvalArtifactBytes bounds the artifact read; a real summary is a few KB.
@@ -79,6 +138,12 @@ type evalPage struct {
 	Produced        time.Time // Raw UTC time, formatted with formatTime in templates (M3-08)
 	MacroAverage    *evalRow  // UI-16: macro average row
 	WeightedAverage *evalRow  // UI-16: weighted by support row
+	// UI-23: confusion matrix, thresholds, versioning
+	ConfusionMatrix map[string]evalConfusionCell // key: "label:predicted"
+	AllTypes        []string                     // all relationship types for matrix axes
+	Thresholds      []evalThresholdRow
+	LabelsSHA256    string
+	Previous        *evalPreviousRun
 }
 
 // evalRow is one relationship type's metrics, formatted.
@@ -99,6 +164,9 @@ type evalRow struct {
 	VerdictText    string  // for the headline: "meets the 0.95 target", "below the 0.95 target", "undefined: no equivalent predictions"
 	VerdictBadge   Badge   // UI-16: verdict badge for headline panel
 	VerdictChip    string  // chip class for the verdict (kept for compatibility)
+	// UI-23: delta vs previous
+	PrecisionDelta string // formatted delta with sign rule, or empty if no previous
+	RecallDelta    string // formatted delta with sign rule, or empty if no previous
 }
 
 // handleEval answers GET /eval: the latest `equinox eval` summary from the
@@ -122,8 +190,24 @@ func (s *Server) handleEval(w http.ResponseWriter, r *http.Request) {
 		data.Summary = sum
 		data.Produced = sum.GeneratedAt
 		data.Notes = sum.Notes
+		// UI-23: prepare previous metrics map for delta computation
+		var prevMetrics map[string]evalPreviousType
+		if sum.Previous != nil && sum.LabelsSHA256 == sum.Previous.LabelsSHA256 {
+			prevMetrics = make(map[string]evalPreviousType)
+			for typ, m := range sum.Previous.Types {
+				prevMetrics[typ] = evalPreviousType{
+					Precision: formatPercent(m.Precision),
+					Recall:    formatPercent(m.Recall),
+				}
+			}
+		}
 		for _, m := range sum.Types {
 			row := newEvalRow(m, data.Target)
+			// UI-23: compute deltas if labels match
+			if prev, ok := prevMetrics[m.Type]; ok {
+				row.PrecisionDelta = computeDelta(row.Precision, prev.Precision)
+				row.RecallDelta = computeDelta(row.Recall, prev.Recall)
+			}
 			data.Rows = append(data.Rows, row)
 			if m.Type == string(canonical.RelEquivalent) {
 				r := row
@@ -133,8 +217,141 @@ func (s *Server) handleEval(w http.ResponseWriter, r *http.Request) {
 		// UI-16: compute macro and weighted averages
 		data.MacroAverage = computeMacroAverage(sum.Types)
 		data.WeightedAverage = computeWeightedAverage(sum.Types)
+		// UI-23: populate confusion matrix, thresholds, versioning
+		if sum.Confusion != nil {
+			data.ConfusionMatrix = sum.Confusion.Cells
+			data.AllTypes = []string{
+				string(canonical.RelEquivalent),
+				string(canonical.RelEquivalentGivenFacts),
+				string(canonical.RelComplement),
+				string(canonical.RelImplies),
+				string(canonical.RelRelated),
+				string(canonical.RelUnrelated),
+			}
+		}
+		if len(sum.Thresholds) > 0 {
+			for _, t := range sum.Thresholds {
+				var threshold string
+				if t.Threshold != nil {
+					threshold = t.Threshold.StringFixed(2)
+				}
+				data.Thresholds = append(data.Thresholds, evalThresholdRow{
+					Threshold: threshold,
+					TP:        t.TP,
+					FP:        t.FP,
+					Precision: formatPercent(t.Precision),
+					Recall:    formatPercent(t.Recall),
+				})
+			}
+		}
+		data.LabelsSHA256 = sum.LabelsSHA256
+		if sum.Previous != nil {
+			prev := &evalPreviousRun{
+				GeneratedAt:  sum.Previous.GeneratedAt,
+				LabelsSHA256: sum.Previous.LabelsSHA256,
+				Types:        make(map[string]evalPreviousType),
+			}
+			for typ, m := range sum.Previous.Types {
+				prev.Types[typ] = evalPreviousType{
+					Precision: formatPercent(m.Precision),
+					Recall:    formatPercent(m.Recall),
+				}
+			}
+			data.Previous = prev
+		}
 	}
 	s.render(w, http.StatusOK, "eval", data)
+}
+
+// handleEvalCell answers GET /eval/cell?label=X&predicted=Y: drill-down into one
+// confusion matrix cell. UI-23.
+func (s *Server) handleEvalCell(w http.ResponseWriter, r *http.Request) {
+	label := r.URL.Query().Get("label")
+	predicted := r.URL.Query().Get("predicted")
+	// AB-08: validate params against known types
+	labelType := canonical.RelationshipType(label)
+	predType := canonical.RelationshipType(predicted)
+	if !labelType.Valid() || !predType.Valid() {
+		http.Error(w, "Invalid label or predicted type", http.StatusBadRequest)
+		return
+	}
+	sum, err := readEvalSummary(s.cfg.EvalSummaryFile)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			http.Error(w, "Eval summary not found", http.StatusNotFound)
+		} else {
+			s.log.Error("reading eval summary for cell", "file", s.cfg.EvalSummaryFile, "err", err)
+			http.Error(w, "Could not read eval summary", http.StatusInternalServerError)
+		}
+		return
+	}
+	if sum.Confusion == nil {
+		http.Error(w, "Confusion matrix not available in summary", http.StatusNotFound)
+		return
+	}
+	key := fmt.Sprintf("%s:%s", label, predicted)
+	cell, ok := sum.Confusion.Cells[key]
+	if !ok {
+		// Empty cell: valid but no pairs
+		cell = evalConfusionCell{Count: 0, PairIDs: []string{}}
+	}
+	// UI-23 AC: resolve canonical IDs to numeric pair IDs for linking to Pair detail
+	type pairLink struct {
+		ID    int64
+		Label string
+	}
+	pairs := make([]pairLink, 0, len(cell.PairIDs))
+	if s.deps.Store != nil && sum.RoundID > 0 {
+		st := s.deps.Store
+		ctx, cancel := context.WithTimeout(r.Context(), dbTimeout)
+		defer cancel()
+		for _, pairID := range cell.PairIDs {
+			// Parse "a_id / b_id" format
+			parts := strings.Split(pairID, " / ")
+			if len(parts) != 2 {
+				continue // skip malformed IDs
+			}
+			aID, bID := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
+			// Query relationships involving aID
+			rels, err := st.ListRelationships(ctx, store.RelationshipFilter{
+				RoundID:      sum.RoundID,
+				InstrumentID: aID,
+				Limit:        100,
+			})
+			if err != nil {
+				continue // skip on error
+			}
+			// Find the one where the other instrument is bID
+			for _, rel := range rels {
+				if (rel.AID == aID && rel.BID == bID) || (rel.AID == bID && rel.BID == aID) {
+					pairs = append(pairs, pairLink{ID: rel.ID, Label: pairID})
+					break
+				}
+			}
+		}
+	}
+	// If no pairs were resolved (no store or not found), fall back to showing canonical IDs
+	if len(pairs) == 0 && len(cell.PairIDs) > 0 {
+		for _, pairID := range cell.PairIDs {
+			pairs = append(pairs, pairLink{ID: 0, Label: pairID})
+		}
+	}
+	round := roundFromContext(r.Context())
+	tz := timezoneFromRequest(r)
+	data := struct {
+		page
+		Label     string
+		Predicted string
+		Count     int
+		Pairs     []pairLink
+	}{
+		page:      s.pageBase(round, "Eval Cell", fmt.Sprintf("Pairs labelled %s, predicted %s", label, predicted), tz, "eval"),
+		Label:     label,
+		Predicted: predicted,
+		Count:     cell.Count,
+		Pairs:     pairs,
+	}
+	s.render(w, http.StatusOK, "eval_cell", data)
 }
 
 func newEvalRow(m evalTypeMetrics, target string) evalRow {
@@ -180,6 +397,27 @@ func newEvalRow(m evalTypeMetrics, target string) evalRow {
 		}
 	}
 	return row
+}
+
+// computeDelta applies the sign rule: positive shows "+X%", negative shows "(X%)". UI-23.
+func computeDelta(current, previous string) string {
+	if current == "n/a" || previous == "n/a" {
+		return ""
+	}
+	// Parse as percentage strings (already formatted with %)
+	curr, err1 := decimal.NewFromString(current[:len(current)-1]) // strip %
+	prev, err2 := decimal.NewFromString(previous[:len(previous)-1])
+	if err1 != nil || err2 != nil {
+		return ""
+	}
+	delta := curr.Sub(prev)
+	if delta.IsZero() {
+		return ""
+	}
+	if delta.IsPositive() {
+		return "+" + delta.StringFixed(2) + "%"
+	}
+	return "(" + delta.Abs().StringFixed(2) + "%)"
 }
 
 // computeMacroAverage computes the macro average (unweighted mean) of precision, recall and F1

@@ -12,7 +12,7 @@ import (
 // POST is /route, which is pure computation (threat-model AB-14).
 var publicPaths = []string{
 	"/", "/healthz", "/health", "/pairs/1", "/pairs/kalshi:X", "/matches", "/static/app.css",
-	"/rounds", "/rounds/1", "/instruments/kalshi:X", "/eval", "/history", "/index.html", "/robots.txt",
+	"/rounds", "/rounds/1", "/instruments/kalshi:X", "/eval", "/eval/cell", "/history", "/index.html", "/robots.txt",
 }
 
 var mutatingMethods = []string{http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete}

@@ -90,6 +90,23 @@ var templateFuncs = template.FuncMap{
 	// Template arithmetic helpers (UI-17).
 	"mul": func(a, b int) int { return a * b },
 	"add": func(a, b int64) int64 { return a + b },
+	// UI-23: confusion matrix bucket classes (HANDOFF ◆9: d1-d3 diagonal, e1-e3 off-diagonal)
+	"ConfusionClass": func(label, predicted string, count int) string {
+		// Bucket by count: 1-5 light, 6-15 medium, 16+ dark
+		var bucket string
+		switch {
+		case count <= 5:
+			bucket = "1"
+		case count <= 15:
+			bucket = "2"
+		default:
+			bucket = "3"
+		}
+		if label == predicted {
+			return "d" + bucket // diagonal: d1/d2/d3 (green intensity)
+		}
+		return "e" + bucket // off-diagonal: e1/e2/e3 (red intensity)
+	},
 }
 
 // pages are the parsed template sets, one per page, each with the layout.
@@ -101,6 +118,7 @@ var pages = map[string]*template.Template{
 	"decision":    parsePage("decision.html", "route_result.html"),
 	"log":         parsePage("log.html"),
 	"eval":        parsePage("eval.html"),
+	"eval_cell":   parsePage("eval_cell.html"), // UI-23
 	"error":       parsePage("error.html"),
 }
 
@@ -128,6 +146,7 @@ func (s *Server) publicRoutes(mux *http.ServeMux) {
 	mux.Handle("GET /decisions/{id}", wrap(s.handleDecision))
 	mux.Handle("GET /log", wrap(s.handleLog))
 	mux.Handle("GET /eval", wrap(s.handleEval))
+	mux.Handle("GET /eval/cell", wrap(s.handleEvalCell)) // UI-23
 	// POST /timezone sets the user's timezone preference cookie (M3-08, no round middleware needed)
 	mux.Handle("POST /timezone", s.rateLimitMiddleware(http.HandlerFunc(s.handleTimezone)))
 	mux.HandleFunc("GET /static/app.css", s.handleAppCSS)
