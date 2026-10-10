@@ -67,7 +67,7 @@ Env vars are listed in [docs/environment.md](docs/environment.md). Copy `.env.ex
 
 ## Definition of done
 
-CI green, Cursor reviewer approved, and every acceptance criterion met and evidenced in the MR.
+CI green, Paawan's approval on the MR, and every acceptance criterion met and evidenced in the MR. (The Cursor reviewer was retired on 2026-10-10; see D-130.)
 
 ## When blocked
 
