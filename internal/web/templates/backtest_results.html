@@ -12,7 +12,7 @@
   <dl class="strip">
     <div>
       <dt>As of</dt>
-      <dd><time datetime="{{.Backtest.AsOf.Format "2006-01-02T15:04:05Z07:00"}}">{{.Backtest.AsOf.Format "2006-01-02 15:04 UTC"}}</time></dd>
+      <dd><time datetime="{{.Backtest.AsOf}}">{{.Backtest.AsOf}}</time></dd>
     </div>
     <div>
       <dt>Source</dt>
@@ -129,7 +129,7 @@
   {{end}}
 
   <p class="small">Command: <code>{{.Backtest.Command}}</code></p>
-  <p class="small">Generated: <time datetime="{{.Backtest.GeneratedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{.Backtest.GeneratedAt.Format "2006-01-02 15:04 UTC"}}</time></p>
+  <p class="small">Generated: <time datetime="{{.Backtest.GeneratedAt}}">{{.Backtest.GeneratedAt}}</time></p>
 </section>
 {{else}}
 <section id="backtest">
