@@ -7,7 +7,7 @@ Cross-venue prediction-market aggregation and routing **simulation**, built for 
 
 **https://peak6-equinox-287867547175.us-central1.run.app**
 
-The service runs on Cloud Run (us-central1) with Cloud SQL Postgres. A Cloud Scheduler job collects one fetch round from Kalshi and Polymarket every 2 minutes (D-129). The demo is **read-only and simulated**: no real orders are ever placed.
+The service runs on Cloud Run (us-central1) with Cloud SQL Postgres. A Cloud Scheduler job collects one fetch round from Kalshi and Polymarket every 2 minutes (D-130). The demo is **read-only and simulated**: no real orders are ever placed.
 
 **What the pages show.** Pairs, relationship types and contract diffs come from **pinned round 904** (matched 2026-10-10), so the demo is stable. Prices, quote ages and routing use the **newest collected quote** for each instrument, and every price shows its age (D-117). The banner at the top of each page says this. Both come from the database: serving a page or a route makes zero venue API calls (NFR-04, `TestNFR04PinnedRoundZeroOutbound`).
 
@@ -88,7 +88,7 @@ The optional LLM verifier (`internal/llm`) is admin-triggered and downgrade-only
 - **No operator status page.** `/status` (M6 P9) was not built; collector health is on `/admin` only.
 - **The LLM verifier has not run in production**, and `LLM_ENABLED` does not gate it; only the missing key does (status.md Q-11).
 - **The home page lists the first 1,000 stored relationships of a round.** Fine for round 904, but locally the fixture round shows Routable 0.
-- **Collection runs every 2 minutes**, not the 5 minutes FR-04 states (D-129). Spend against the $50 cap is not measured (status.md).
+- **Collection runs every 2 minutes**, not the 5 minutes FR-04 states (D-130). Spend against the $50 cap is not measured (status.md).
 
 ## Recording
 
@@ -104,7 +104,7 @@ Backup walkthrough recording: (link added by M4-H1)
 
 - [docs/equivalence.md](docs/equivalence.md): when two contracts are the same bet (definition, vetoes, facts, basis risk, confidence, current eval numbers).
 - [docs/routing.md](docs/routing.md): how an order is routed (eligibility, cost formula, sweep, complements, worked examples).
-- [docs/decisions.md](docs/decisions.md): every non-routine decision (D-001 to D-131), with why and how to reverse it.
+- [docs/decisions.md](docs/decisions.md): every non-routine decision (D-001 to D-132), with why and how to reverse it.
 - [docs/architecture.md](docs/architecture.md): components, data flow, data model, external services, tech stack.
 - [docs/ai-usage.md](docs/ai-usage.md): runtime LLM use, development AI tools, spend.
 - [docs/status.md](docs/status.md): requirements coverage with evidence, decisions awaiting veto, open questions.

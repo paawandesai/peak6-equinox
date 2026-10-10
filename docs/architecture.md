@@ -61,7 +61,7 @@ flowchart LR
 
 Each step of the flow:
 
-1. A **fetch round** starts on a Scheduler call (every 2 minutes in production, D-129), an admin call, or `equinox ingest`.
+1. A **fetch round** starts on a Scheduler call (every 2 minutes in production, D-130), an admin call, or `equinox ingest`.
 2. The collector calls both adapters concurrently. Each adapter returns raw responses plus canonical `Instrument`s and `Quote`s stamped with `fetched_at` (and `venue_ts` when present).
 3. Raw bodies are gzipped into `raw_responses`. Instruments are upserted, and quotes are inserted per round.
 4. **Matching runs on demand, not after every ingest** (D-065, Q-5). `equinox match` (locally, or as the Cloud Run job `equinox-match` in production) runs over one round's instruments: normalise, block, veto, classify, diff, then score basis risk. The resulting `relationships` are stored for that round, and each verdict goes to the decision log. The operator then pins the matched round with `equinox pin` (or `equinox match --pin-min-routable N`), so `/` stays on a matched round while new fetch rounds keep arriving. The rules behind each step are written up in [equivalence.md](equivalence.md).
@@ -140,7 +140,7 @@ Golden labels are files in the repo (`testdata/golden/labels.yaml`), not DB rows
 | Polymarket CLOB `https://clob.polymarket.com` | No auth. `GET /book?token_id=…` returns `{asset_id, timestamp (unix ms string), bids, asks}` with `price`/`size` strings; bids are sorted lowest first and asks highest first (worst first), so the adapter sorts best first. Resting orders at 0.001 / 0.999 are common and are kept. A token with no book gives HTTP 404. | Same as above. Books missing → quote flagged `no_book`, and the instrument is ineligible for routing. |
 | Anthropic Messages API | `ANTHROPIC_API_KEY` from Secret Manager. Admin-triggered only. | The verdict is recorded as `llm_error` and the rules verdict stands. The cap is reached when `llm_usage.calls ≥ LLM_DAILY_CALL_CAP`. |
 | Cloud SQL | Cloud Run built-in Cloud SQL connection (unix socket `/cloudsql/<instance>`), `DATABASE_URL` secret | `GET /health` is a liveness check only and does not query the database (`/healthz` is reserved by Cloud Run, D-052); pages that read the database fail until it is back |
-| Cloud Scheduler | `equinox-collect`: HTTP target `POST /admin/ingest` with a basic-auth header (the admin password from Secret Manager), every 2 minutes (`*/2 * * * *`, D-129; `scripts/gcp-bootstrap.sh` still creates it at `*/5`). `equinox-rematch-hourly`: runs the `equinox-match` job at minute 17 with `--latest --pin-min-routable 10`, created **paused** (D-117) | A missed round shows in the collector success rate (NFR-05) |
+| Cloud Scheduler | `equinox-collect`: HTTP target `POST /admin/ingest` with a basic-auth header (the admin password from Secret Manager), every 2 minutes (`*/2 * * * *`, D-130; `scripts/gcp-bootstrap.sh` still creates it at `*/5`). `equinox-rematch-hourly`: runs the `equinox-match` job at minute 17 with `--latest --pin-min-routable 10`, created **paused** (D-117) | A missed round shows in the collector success rate (NFR-05) |
 
 Venue endpoint details and series and tag names are **verified in M1-04 (Kalshi) and M1-05 (Polymarket)**. Any correction is a Tier 1 update to this table and to `config/universe/<venue>.yaml`.
 
