@@ -117,8 +117,8 @@ var pages = map[string]*template.Template{
 	"route":       parsePage("route.html", "route_result.html"),
 	"decision":    parsePage("decision.html", "route_result.html"),
 	"log":         parsePage("log.html"),
-	"eval":        parsePage("eval.html"),
-	"eval_cell":   parsePage("eval_cell.html"), // UI-23
+	"eval":        parsePage("eval.html", "backtest_results.html"), // M4-76: backtest results partial
+	"eval_cell":   parsePage("eval_cell.html"),                     // UI-23
 	"error":       parsePage("error.html"),
 }
 

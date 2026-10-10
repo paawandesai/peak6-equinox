@@ -145,6 +145,8 @@ type evalPage struct {
 	Thresholds      []evalThresholdRow
 	LabelsSHA256    string
 	Previous        *evalPreviousRun
+	// M4-76: settlement back-test results
+	Backtest *BacktestViewModel
 }
 
 // evalRow is one relationship type's metrics, formatted.
@@ -260,6 +262,14 @@ func (s *Server) handleEval(w http.ResponseWriter, r *http.Request) {
 			}
 			data.Previous = prev
 		}
+	}
+	// M4-76: load settlement back-test results
+	backtest, err := LoadBacktestResults(s.cfg.BacktestSummaryFile, s.log)
+	if err != nil {
+		s.log.Error("loading backtest results", "file", s.cfg.BacktestSummaryFile, "err", err)
+		// Continue rendering eval page even if backtest fails to load
+	} else {
+		data.Backtest = backtest
 	}
 	s.render(w, http.StatusOK, "eval", data)
 }
