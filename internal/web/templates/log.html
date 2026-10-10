@@ -98,12 +98,7 @@
           {{if .Routing}}{{.Routing.Label}}{{end}}
         </td>
         <td data-label="Summary">
-          {{if .Summary}}
-            <details>
-              <summary title="{{.Summary}}"><span class="clamp-2">{{.Summary}}</span></summary>
-              <p>{{.Summary}}</p>
-            </details>
-          {{end}}
+          {{template "log_summary" .}}
         </td>
       </tr>
     {{end}}
@@ -152,12 +147,7 @@
         {{if .Routing}}{{.Routing.Label}}{{end}}
       </td>
       <td data-label="Summary">
-        {{if .Summary}}
-          <details>
-            <summary title="{{.Summary}}"><span class="clamp-2">{{.Summary}}</span></summary>
-            <p>{{.Summary}}</p>
-          </details>
-        {{end}}
+        {{template "log_summary" .}}
       </td>
     </tr>
   {{end}}
@@ -181,12 +171,7 @@
         {{if .AboutTitle}}{{if ne .About .AboutTitle}} · {{.AboutTitle}}{{end}}{{end}}
       </td>
       <td data-label="Summary">
-        {{if .Summary}}
-          <details>
-            <summary title="{{.Summary}}"><span class="clamp-2">{{.Summary}}</span></summary>
-            <p>{{.Summary}}</p>
-          </details>
-        {{end}}
+        {{template "log_summary" .}}
       </td>
     </tr>
   {{end}}
@@ -196,3 +181,5 @@
 {{end}}
 {{end}}
 {{end}}
+
+{{define "log_summary"}}{{if .SummaryTail}}<details class="log-summary"><summary>{{.SummaryHead}} …</summary><p>… {{.SummaryTail}}</p></details>{{else}}{{.SummaryHead}}{{end}}{{end}}

@@ -827,9 +827,9 @@ func TestM508BuildLeadSentence(t *testing.T) {
 
 	// Test not routed
 	d.Chosen = nil
-	d.Exclusions = []canonical.Exclusion{{Reason: "stale"}, {Reason: "insufficient_depth"}}
+	d.Exclusions = []canonical.Exclusion{{InstrumentID: seedKalshiA, Venue: canonical.VenueKalshi, Reason: "stale", Detail: "fetched 300 s ago"}, {InstrumentID: seedPolyB, Venue: canonical.VenuePolymarket, Reason: "insufficient_depth"}}
 	lead = buildLeadSentence(d, dec("0"), qty, dec("0"), nil)
-	if !strings.Contains(lead, "Not routed: 1 stale, 1 too shallow") {
+	if !strings.Contains(lead, "Nothing routed: the Kalshi book is stale") || !strings.Contains(lead, "1 partner is too shallow") {
 		t.Errorf("not-routed lead = %q", lead)
 	}
 
@@ -931,13 +931,11 @@ func TestM508LeadSentenceNotRouted(t *testing.T) {
 	wantHTML(t, rec, http.StatusOK)
 	body := rec.Body.String()
 
-	// Should show not-routed lead sentence with reasons in words (not codes)
+	// Should show the not-routed lead sentence with reasons in words (not codes), M6 P2
 	wantContains(t, body,
-		"Not routed:",   // Lead sentence prefix
-		"stale",         // Reason phrase (not "stale" code)
-		"too shallow",   // Reason phrase for insufficient_depth (not the code)
-		"1 stale",       // Tally format
-		"2 too shallow", // Tally format
+		"Nothing routed: the Kalshi book is stale", // target class
+		"2 partners are too shallow",               // partners grouped by reason
+		"too shallow",                              // exclusion table phrase
 	)
 
 	// Should NOT show reason codes

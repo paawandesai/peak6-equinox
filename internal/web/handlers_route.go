@@ -197,8 +197,9 @@ type decisionView struct {
 	Partners         int
 	OutcomePhrase    string
 	OutcomeChipClass string
-	OutcomeSummary   string // One-line summary for the strip
-	LeadSentence     string // M5-08: Plain summary in design.md § 4 format
+	OutcomeSummary   string           // One-line summary for the strip
+	LeadSentence     string           // M5-08: Plain summary in design.md § 4 format; M6 P2: deciding reasons when not routed
+	Suggestion       *routeSuggestion // M6 P2: "Try: buy NO" when a stored book shows the opposite order has a candidate
 	TotalFilled      decimal.Decimal
 	TotalRequested   decimal.Decimal
 	AverageAllIn     decimal.Decimal
@@ -480,6 +481,24 @@ func exclusionReasonPhrase(reason string) string {
 		return "low confidence"
 	case "limit_not_reachable":
 		return "limit not reachable"
+	case "sure_loss":
+		return "sure loss"
+	case "not_open":
+		return "not open"
+	case "no_quantity":
+		return "no quantity"
+	case "no_relationship":
+		return "no relationship"
+	case "relationship_mismatch":
+		return "relationship mismatch"
+	case "quote_mismatch":
+		return "quote mismatch"
+	case "fee_unknown":
+		return "fee unknown"
+	case "basis_risk_unknown":
+		return "basis risk unknown"
+	case "complement_unsupported":
+		return "complement unsupported"
 	default:
 		return reason // fallback: show the code as-is
 	}
@@ -554,12 +573,8 @@ func buildLeadSentence(d canonical.Decision, totalFill, totalReq, avgAllIn decim
 	partial := chosen && d.Order.Quantity != nil && !totalReq.IsZero() && totalFill.LessThan(totalReq)
 
 	if !chosen {
-		// Not routed: "Not routed: <reason in words>"
-		tally := tallyExclusionReasons(d.Exclusions)
-		if tally == "" {
-			return "Not routed: every candidate was excluded"
-		}
-		return fmt.Sprintf("Not routed: %s", tally)
+		// M6 P2: one sentence naming the deciding reason per candidate class.
+		return notRoutedSentence(d)
 	}
 
 	// Partial fill
@@ -826,11 +841,13 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 		titles[c.Instrument.ID] = c.Instrument.Title
 	}
 
+	view := newDecisionView(dec, len(partners), decisionSnapshot(dec, cfg.Eligibility.Snapshot), titles, s.cfg.BasisPenaltyMult, s.cfg.StaleAfter)
+	view.Suggestion = suggestOpposite(dec, candidateQuotes(target, partners), in.PairID)
 	data := routePage{
 		page:          p,
 		PairID:        in.PairID,
 		DecisionID:    id,
-		Decision:      newDecisionView(dec, len(partners), decisionSnapshot(dec, cfg.Eligibility.Snapshot), titles, s.cfg.BasisPenaltyMult, s.cfg.StaleAfter),
+		Decision:      view,
 		RenderContext: "route",
 	}
 	s.renderRoute(w, r, http.StatusOK, data)

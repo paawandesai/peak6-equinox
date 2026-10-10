@@ -80,21 +80,35 @@ func TestLogAboutField(t *testing.T) {
 		`href="/decisions/`)
 }
 
-// TestLogSummaryClamped verifies summaries use clamp-2 and expand in details.
-func TestLogSummaryClamped(t *testing.T) {
+// TestLogSummaryShownOnce verifies each summary appears once in its cell
+// (M6 P2): short summaries inline, long ones split into a head and the rest.
+func TestLogSummaryShownOnce(t *testing.T) {
 	s, st := newTestServer(t)
 	sd := seedPublic(t, st)
 	seedMore(t, s, st, sd)
 	rec := get(s.Handler(), "/log")
 	wantHTML(t, rec, 200)
 	body := rec.Body.String()
-
-	// Summaries should be in details elements with clamp-2 inside a span
-	wantContains(t, body, `<details>`)
-	wantContains(t, body, `<span class="clamp-2">`)
-
-	// The full summary text should appear inside the details (not just truncated)
-	wantContains(t, body, seedExplainEq) // From the relationship entry
+	// The relationship summary embeds seedExplainEq; its first and last words appear once each.
+	for _, part := range []string{"Same subject, threshold", "differ in name only."} {
+		if n := strings.Count(body, part); n != 1 {
+			t.Errorf("summary part %q appears %d times, want 1", part, n)
+		}
+	}
+	if strings.Contains(body, `<span class="clamp-2">`) {
+		t.Error("summary should not be repeated in a clamped summary element")
+	}
+	long := strings.Repeat("word ", 40) + "end"
+	head, tail := splitSummary(long, summaryHeadLen)
+	if head+" "+tail != long || tail == "" || len(head) > summaryHeadLen {
+		t.Errorf("split %q | %q", head, tail)
+	}
+	if h, tl := splitSummary("short", summaryHeadLen); h != "short" || tl != "" {
+		t.Errorf("short split %q | %q", h, tl)
+	}
+	if h, tl := splitSummary(strings.Repeat("x", 200), summaryHeadLen); len(h) != summaryHeadLen || len(tl) != 60 {
+		t.Errorf("no-space split %d | %d", len(h), len(tl))
+	}
 }
 
 // TestLogRowDataLabels verifies the stacking layout has data-label attributes.
