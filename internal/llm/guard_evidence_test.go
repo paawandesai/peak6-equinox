@@ -19,11 +19,11 @@ import (
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/normalize"
 )
 
-// TestCompareGuardKeepsEvidenceValid covers Compare -> llm.Guard -> Validate with
+// TestCompareGuardClearsEvidenceValid covers Compare -> llm.Guard -> Validate with
 // non-nil matcher evidence: when the LLM lowers the confidence (confirm or
-// downgrade), the evidence total must follow it, or UpsertRelationship rejects
-// the row (final review of !97, round 1).
-func TestCompareGuardKeepsEvidenceValid(t *testing.T) {
+// downgrade), Evidence is cleared so UpsertRelationship accepts the row
+// (!97 blocker; supersedes adjustEvidence approach).
+func TestCompareGuardClearsEvidenceValid(t *testing.T) {
 	fs := loadFacts(t)
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	checked := 0
@@ -46,8 +46,9 @@ func TestCompareGuardKeepsEvidenceValid(t *testing.T) {
 			if err := res.Relationship.Validate(); err != nil {
 				t.Fatalf("%s: guarded relationship (%s) fails Validate: %v", c.ID, res.Outcome, err)
 			}
-			if res.Relationship.Evidence == nil || !res.Relationship.Evidence.Total.Equal(res.Relationship.Confidence) {
-				t.Fatalf("%s: evidence total does not follow the guarded confidence", c.ID)
+			// Required !97 fix: clear rules MatcherEvidence under post-LLM confidence.
+			if res.Relationship.Evidence != nil {
+				t.Fatalf("%s: Evidence must be nil after Guard apply, got %+v", c.ID, res.Relationship.Evidence)
 			}
 			if !rel.Evidence.Total.Equal(rulesTotal) {
 				t.Fatalf("%s: Guard mutated the rules evidence in place", c.ID)
