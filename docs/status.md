@@ -159,7 +159,7 @@ Paawan kept these four in the operator chat on 2026-10-07 at 8:38 PM CT, after t
 
 | ID | Status | | ID | Status |
 |---|---|---|---|---|
-| FR-01 | done (M1) | | NFR-01 | done (M4-05 measured; #80 /version) |
+| FR-01 | done (M1) | | NFR-01 | done (M4-05; #80 TestNFR01 local: GET / p95=2.33ms, GET /pairs/{id} p95=2.26ms, POST /route p95=3.25ms) |
 | FR-02 | done (M1) | | NFR-02 | partial (observed <60s; accepted per sweep) |
 | FR-03 | done (M1) | | NFR-03 | done (M1) |
 | FR-04 | done (M1) | | NFR-04 | done (M3-07 demo mode) |
@@ -219,7 +219,7 @@ Paawan kept these four in the operator chat on 2026-10-07 at 8:38 PM CT, after t
 
 | Criterion | Evidence | Status | Note |
 |---|---|---|---|
-| **NFR-01: Performance** (p95 <500ms pages, <300ms route) | CI test suite, scripts/smoke-live.sh (M4-05 #63 merged), internal/web response times | met | M4-05 smoke script merged; p95 measured on live URL (pinned round 735); targets met per M4-05 output |
+| **NFR-01: Performance** (p95 <500ms pages, <300ms route) | CI test suite, scripts/smoke-live.sh (M4-05 #63), #80 TestNFR01_PageLatencyP95 (N=20, seeded test DB): GET / p95=2.33ms (p50=580µs), GET /pairs/{id} p95=2.26ms (p50=933µs), POST /route p95=3.25ms (p50=1.32ms); live smoke M4-05 pinned round 735 | met | M4-05 live smoke + #80 TestNFR01 local figures recorded; all under NFR-01 targets (<500ms pages, <300ms route / within 500ms general) |
 | **NFR-02: Fetch performance** (<60s round) | [docs/architecture.md § External services](architecture.md#external-services) (10s timeout, pacing), https://equinox-o5hdimw5rq-uc.a.run.app/admin (round times) | partial | Fetch completes <60s observed on /admin; not formally measured in M4-05 (pages only); pacing and caps in place. Gap accepted: measurement optional (visually confirmed on /admin rounds table) |
 | **NFR-03: Reliability** (one venue fails, other succeeds) | internal/collector/collector.go (concurrent fetch, per-venue error handling), tests/security/ab03_* (venue failure tests) | met | Collector continues on one venue's failure; failure logged; other venue's data stored |
 | **NFR-04: Demo reliability** (0 outbound calls when pinned) | AB-04 test `TestNFR04PinnedRoundZeroOutbound`, M3-07 (closes #27), `equinox pin` | met | Test exists (M1); demo mode (M3-07 merged): zero venue calls when pinned, verified by AB-04 test |
