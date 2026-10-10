@@ -613,3 +613,33 @@ svg.bars .missing { fill: none; stroke: var(--eq-unknown); }
 td.log-when { white-space: nowrap; font-size: var(--eq-text-s); }
 td.log-when time { font-weight: 500; }
 /* M5-11 end */
+
+/* M5-07 start */
+/* Jump links and route button in pair verdict panel */
+.jump-links {
+  margin-top: var(--eq-space-3);
+  font-size: var(--eq-text-s);
+  color: var(--eq-muted);
+}
+.jump-links a {
+  color: var(--eq-info);
+  text-decoration: none;
+}
+.jump-links a:hover {
+  text-decoration: underline;
+}
+.route-button {
+  display: inline-block;
+  padding: var(--eq-space-2) var(--eq-space-3);
+  background-color: var(--eq-info);
+  color: var(--eq-on-solid);
+  border-radius: var(--eq-r-2);
+  text-decoration: none;
+  font-weight: 600;
+}
+.route-button:hover {
+  background-color: var(--eq-info);
+  opacity: 0.9;
+  color: var(--eq-on-solid);
+}
+/* M5-07 end */
