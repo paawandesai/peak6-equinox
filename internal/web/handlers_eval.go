@@ -149,6 +149,9 @@ type evalPage struct {
 	Backtest *BacktestViewModel
 	// UI-24: dual-method evaluation
 	DualMethod bool // true when summary has both rules+llm and rules-only metrics
+	// P11: what the scores were computed on, kept apart from the pinned round.
+	Evaluated int            // labels the run scored (sum of supports)
+	Unscored  []evalUnscored // labels it could not score, with why
 }
 
 // evalNote represents a note with optional collapsed details (M5-12a).
@@ -187,6 +190,8 @@ type evalRow struct {
 	// UI-24: deltas between rules+llm and rules-only (D-098 sign rule)
 	PrecisionMethodDelta string // delta from rules to rules+llm, or empty if single method
 	RecallMethodDelta    string // delta from rules to rules+llm, or empty if single method
+	// P11: labelled example pairs of this type, linked in the current round.
+	Examples []evalExampleLink
 }
 
 // handleEval answers GET /eval: the latest `equinox eval` summary from the
@@ -209,6 +214,9 @@ func (s *Server) handleEval(w http.ResponseWriter, r *http.Request) {
 	default:
 		data.Summary = sum
 		data.Produced = sum.GeneratedAt
+		data.Evaluated = evaluatedPairs(sum.Types)
+		data.Unscored = unscoredLabels(sum.Notes, sum.GeneratedAt)
+		examples := s.evalExampleLinks(r.Context(), round.ID)
 		// M5-12a: process notes for readability
 		data.Notes = processEvalNotes(sum.Notes)
 		// UI-24: check if we have dual-method data
@@ -234,6 +242,7 @@ func (s *Server) handleEval(w http.ResponseWriter, r *http.Request) {
 		}
 		for _, m := range sum.Types {
 			row := newEvalRow(m, data.Target)
+			row.Examples = examples[m.Type]
 			// UI-23: compute deltas if labels match
 			if prev, ok := prevMetrics[m.Type]; ok {
 				row.PrecisionDelta = computeDelta(row.Precision, prev.Precision)
@@ -589,11 +598,11 @@ func computeWeightedAverage(types []evalTypeMetrics) *evalRow {
 }
 
 // processEvalNotes transforms notes for readability (M5-12a):
-// - Rewords "rules+llm: not evaluated (M3)" to plain language
-// - Collapses "not evaluated ... (instrument not found)" into one entry with details
+//   - Rewords "rules+llm: not evaluated (M3)" to plain language
+//   - Drops "not evaluated ... (instrument not found)": the page lists those
+//     labels with their reasons in their own section (P11, unscoredLabels)
 func processEvalNotes(notes []string) []evalNote {
 	var processed []evalNote
-	var notFoundPairs []string
 
 	for _, note := range notes {
 		switch {
@@ -602,31 +611,12 @@ func processEvalNotes(notes []string) []evalNote {
 			processed = append(processed, evalNote{
 				Text: "Rules + LLM verifier: not run in production yet (the LLM verifier is admin-only and budget-capped)",
 			})
-		case strings.Contains(note, "(instrument not found)"):
-			// M5-12a: collect for collapsing
-			// Extract the pair IDs from "not evaluated: <id1> / <id2> (instrument not found)"
-			if strings.HasPrefix(note, "not evaluated: ") && strings.HasSuffix(note, " (instrument not found)") {
-				pairIDs := strings.TrimPrefix(note, "not evaluated: ")
-				pairIDs = strings.TrimSuffix(pairIDs, " (instrument not found)")
-				notFoundPairs = append(notFoundPairs, pairIDs)
-			}
+		case strings.HasPrefix(note, "not evaluated: ") && strings.HasSuffix(note, notFoundSuffix):
+			// P11: listed under "Labels not scored" instead
 		default:
 			// Keep other notes as-is
 			processed = append(processed, evalNote{Text: note})
 		}
-	}
-
-	// M5-12a: add collapsed note for "instrument not found" pairs
-	if len(notFoundPairs) > 0 {
-		summary := fmt.Sprintf("%d labelled pair", len(notFoundPairs))
-		if len(notFoundPairs) != 1 {
-			summary += "s"
-		}
-		summary += " couldn't be scored because the recorded fixtures don't include one side"
-		processed = append(processed, evalNote{
-			Text:    summary,
-			Details: notFoundPairs,
-		})
 	}
 
 	return processed

@@ -67,3 +67,14 @@ func formatTime(t time.Time, tz string) string {
 
 	return t.In(loc).Format("2006-01-02 15:04:05 MST")
 }
+
+// factDate renders a fact's as-of date (M6 P5). Facts carry calendar dates
+// (UTC midnight, facts.DateLayout), the form the matcher writes into
+// explanations, so the date is shown as written and never shifted into a
+// display timezone, which would move it to the previous day west of UTC.
+func factDate(t time.Time) string {
+	if t.IsZero() {
+		return "unknown"
+	}
+	return t.UTC().Format("2006-01-02")
+}

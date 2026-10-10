@@ -12,7 +12,7 @@
   <dl class="verdict-meta">
     <div>
       <dt>Confidence</dt>
-      <dd>{{template "conf" .Confidence}}</dd>
+      <dd>{{template "conf" .Confidence}}{{if .ConfidenceBreakdown}}<br><small class="conf-breakdown">{{.ConfidenceBreakdown}}</small>{{end}}</dd>
     </div>
     <div>
       <dt>Method</dt>
@@ -48,6 +48,7 @@
 {{/* UI-12: The two contracts with .layers details group */}}
 <section>
   <h2>The two contracts</h2>
+  <p><small>"closes" is when the venue stops trading. Settlement follows the resolution deadline in the diff (Timeframe / cutoff), which can be later than the close.</small></p>
   <div class="grid">
     {{template "instrument" .A}}
     {{template "instrument" .B}}
@@ -58,6 +59,7 @@
 <section id="diff">
   <h2>Contract diff</h2>
   <p>Every term the normaliser extracted, side by side. <em>unknown</em> means a term could not be parsed on at least one side; it is never guessed.</p>
+  <p class="diff-legend"><small>How to read it: where the two sides' wording differs, A's words are <del>struck through</del> and B's are <ins>underlined</ins>. The bar on each row's left and its Verdict badge give the result: ✓ match (green), ✕ differs, the veto stands (red), ◇ closed by fact (blue: a documented fact closes the difference), ? unknown (grey, italic: not parsed on at least one side).</small></p>
   <table class="data terms">
     <thead><tr><th>Term</th><th>A: {{.A.Venue}}</th><th>B: {{.B.Venue}}</th><th>Verdict</th>{{if .HasEvidence}}<th>Contribution</th>{{end}}</tr></thead>
     {{/* UI-12: group diff rows by rule part */}}
@@ -110,9 +112,10 @@
     {{if .Facts}}
     <p>Each fact is reviewed data from <code>config/facts.yaml</code> (FR-10). For <em>equivalent_given_facts</em> the verdict rests on them; for a <em>related</em> verdict they are the facts that were tried and did not close the gap.</p>
     <table class="data facts">
-      <thead><tr><th>Fact</th><th>Value</th><th>Source</th><th>As of</th></tr></thead>
-      <tbody>{{range .Facts}}<tr><td><code>{{.Key}}</code></td><td>{{.Value}}</td><td>{{with httpURL .Source}}<a href="{{.}}" rel="noopener noreferrer">{{.}}</a>{{else}}{{.Source}}{{end}}</td><td>{{formatTime .AsOf $.Timezone}}</td></tr>{{end}}</tbody>
+      <thead><tr><th>Fact</th><th>Value</th><th>Source</th><th>As of (date)</th></tr></thead>
+      <tbody>{{range .Facts}}<tr><td><code>{{.Key}}</code></td><td>{{.Value}}</td><td>{{with httpURL .Source}}<a href="{{.}}" rel="noopener noreferrer">{{.}}</a>{{else}}{{.Source}}{{end}}</td><td><time datetime="{{factDate .AsOf}}">{{factDate .AsOf}}</time></td></tr>{{end}}</tbody>
     </table>
+    <p><small>As-of values are calendar dates, as written in <code>config/facts.yaml</code> and in the explanation below; they are not times, so they are not shifted to {{$.Timezone}}.</small></p>
     {{else}}
     <p>None: this verdict rests on the contract terms alone.</p>
     {{end}}
@@ -167,7 +170,7 @@
 {{/* UI-12: Current touch with freshness badge in Fetched column */}}
 <section>
   <h2>Current touch</h2>
-  <p>Best YES bid and ask on each venue from the newest collected round (pairs come from round {{.Round.ID}}). Mid is for display only; routing walks this same book.</p>
+  <p>Best YES bid and ask on each venue from the newest collected round (pairs come from round {{.Round.ID}}). Mid is for display only; routing walks this same book.{{if not .QuoteRef.IsZero}} Ages are measured against that round ({{formatTime .QuoteRef $.Timezone}}), the reference routing uses.{{end}}</p>
   <table>
     <thead><tr><th>Venue</th><th>Best bid</th><th>Best ask</th><th>Mid</th><th>Levels (bid/ask)</th><th>Fetched</th><th>Venue time</th><th>Quality</th></tr></thead>
     <tbody>
@@ -199,6 +202,8 @@
 <section id="route">
   <h2>Route a hypothetical order</h2>
   <p>Simulates the order against the target's book and every routable partner in this round, then explains the choice. Nothing is sent to a venue.</p>
+  <p class="route-defaults"><small>{{.RouteDefaults}}</small></p>
+  {{if .FormPreset}}<p class="note-info">Pre-filled from the guided demo. Nothing is routed until you press <strong>Route it</strong>.</p>{{end}}
   <form method="post" action="/route" hx-post="/route" hx-target="#route-result" hx-swap="outerHTML">
     <input type="hidden" name="pair" value="{{.Form.PairID}}">
     <div class="grid">
@@ -267,7 +272,7 @@
     {{else}}
     <details name="layers-{{.Venue}}">
       <summary>Summary</summary>
-      <p class="rules">venue publishes none</p>
+      <p class="rules">{{if .Rules}}no separate summary; full rules below{{else}}venue publishes none{{end}}</p>
     </details>
     {{end}}
     <details name="layers-{{.Venue}}">
@@ -301,7 +306,7 @@
     {{if .FreshBadge.Glyph}}{{template "fbadge" .FreshBadge}} {{end}}as of <time datetime="{{.StampDT}}">{{.StampAsOf}}</time>{{if and .Age (not .FreshBadge.Aged)}} · {{.Age}}{{end}}
   </td>
   <td>{{if .VenueTS}}{{formatTime .VenueTS .Tz}}{{else}}{{.VenueTSStr}}{{end}}</td>
-  <td>{{if .Quality}}{{range .Quality}}<code>{{.Flag}}</code> {{end}}{{else}}ok{{end}}</td>
+  <td>{{if .Quality}}{{range .Quality}}<code>{{.Flag}}</code> {{end}}{{else}}ok{{end}}{{if .OneSided}} <small>{{.OneSided}}</small>{{end}}</td>
   {{else}}
   <td colspan="7">No quote for this instrument in the round.</td>
   {{end}}

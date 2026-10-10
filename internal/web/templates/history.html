@@ -2,6 +2,7 @@
 {{if .Empty}}
 <p>No stored quotes for either contract yet. Each fetch round adds one point per contract.</p>
 {{else}}
+{{if not .MatchedAt.IsZero}}<p class="hist-pin-note">Pairs matched at {{formatTime .MatchedAt .Tz}}{{if gt .LaterPoints 0}}; later points ({{.LaterPoints}}) are live collection{{end}}.{{if .PinX}} The dotted vertical line marks the match time.{{end}}</p>{{end}}
 <p>{{.Points}} touch{{if ne .Points 1}}es{{end}} across {{.Rounds}} round{{if ne .Rounds 1}}s{{end}}, from {{formatTime .From .Tz}} to {{formatTime .To .Tz}}. Solid line: mid of the best YES bid and ask; thin lines: best bid and best ask. Prices are per $1 payout on a fixed 0 to 1 axis so both venues share one scale. Dashed line: cross-venue spread (mid A − mid B), on a −1 to 1 axis with 0 at the centre.</p>
 <figure class="history">
 <svg class="hist" viewBox="0 0 {{.Width}} {{.Height}}" width="{{.Width}}" height="{{.Height}}" role="img" aria-labelledby="hist-title">
@@ -16,6 +17,7 @@
   {{range .Dots}}<circle class="hist-dot hist-{{$key}}" cx="{{.X}}" cy="{{.Y}}" r="3"></circle>{{end}}
   {{end}}
   {{if .Spread.Line}}<polyline class="hist-spread" points="{{.Spread.Line}}"></polyline>{{end}}
+  {{if .PinX}}<line class="hist-pin" x1="{{.PinX}}" y1="{{.Y0}}" x2="{{.PinX}}" y2="{{.Y1}}"></line>{{end}}
   {{range .Spread.Dots}}<circle class="hist-dot-spread" cx="{{.X}}" cy="{{.Y}}" r="3"></circle>{{end}}
 </svg>
 <figcaption>
@@ -28,7 +30,9 @@
 <details>
   <summary>Data points</summary>
   {{if gt (len .Rows) 50}}
-  <p>Showing 50 of {{len .Rows}} points (chart shows all).</p>
+  <p>Showing the 50 most recent of {{len .Rows}} points, both venues, newest first (chart shows all).</p>
+  {{else}}
+  <p>Both venues, newest first.</p>
   {{end}}
   <table>
     <thead><tr><th>Fetched</th><th>Round</th><th>Venue</th><th>Best bid</th><th>Best ask</th><th>Mid</th></tr></thead>

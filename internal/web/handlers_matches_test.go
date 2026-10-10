@@ -693,8 +693,12 @@ func TestStartHereCard(t *testing.T) {
 	// Link 2: Route a hypothetical order on it → pair route.
 	wantContains(t, body, fmt.Sprintf(`href="/pairs/%d#route"`, pairID), "Route a hypothetical order on it")
 
-	// Link 3: See the near-miss → near-misses page with group-fact-did-not-close anchor.
-	wantContains(t, body, `href="/near-misses#group-fact-did-not-close"`, "See the near-miss that was rejected, and why")
+	// M6 P1: with no Fed demo pairs in the round the card falls back to the
+	// featured pair only; the near-miss step is resolved per pair (see
+	// start_here_test.go) and never links a group that may be empty.
+	if strings.Contains(body, `href="/near-misses#group-fact-did-not-close"`) {
+		t.Error("fallback card links the near-misses group anchor")
+	}
 
 	// Verify that the anchor exists on the /near-misses page.
 	nearMissesRec := get(s.Handler(), "/near-misses")
