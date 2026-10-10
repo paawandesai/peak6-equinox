@@ -75,7 +75,7 @@
             {{if .Annotation}}<small>{{.Annotation}}</small>{{end}}
             {{if .BasisLink}}<a href="{{.BasisLink}}" class="basis-link">basis →</a>{{end}}
           </td>
-          {{if $.HasEvidence}}<td>{{.Contribution}}</td>{{end}}
+          {{if $.HasEvidence}}<td>{{if .Contribution}}{{.Contribution}}{{else}}<span class="muted">—</span>{{end}}</td>{{end}}
         </tr>
         {{end}}
       </tbody>
