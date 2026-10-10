@@ -10,6 +10,8 @@ import (
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/store"
 )
 
+var one = decimal.NewFromInt(1)
+
 // The price-history chart (FR-25, US-07) is server-rendered SVG built from
 // stored quotes across fetch rounds, so it needs no script and no new CDN
 // asset: the CSP stays as M1-09 left it. Coordinates are pixels, computed
@@ -31,6 +33,7 @@ type historyChart struct {
 	X0, Y0, X1, Y1 string
 	PlotW, PlotH   string
 	Series         []historySeries
+	Spread         historySpread // M4-75: cross-venue spread series
 	YTicks         []chartTick
 	XTicks         []chartTick
 	Points         int
@@ -55,6 +58,15 @@ type historySeries struct {
 	Last  string // last mid, for the legend
 }
 
+// historySpread is the cross-venue spread series (M4-75: mid A - mid B,
+// polarity-aware for complements). Missing price on either venue produces a gap.
+type historySpread struct {
+	Line string // polyline of spread values
+	Dots []chartPt
+	N    int
+	Last string // last spread value, for the legend
+}
+
 type chartPt struct{ X, Y string }
 
 type chartTick struct {
@@ -75,9 +87,11 @@ type historyRow struct {
 
 // buildHistoryChart lays out points for the pair (aID first, bID second).
 // Prices are on a fixed [0,1] axis, the domain every price lives in, so two
-// venues are always on the same scale. Time runs from the first to the last
-// stored fetch; a single round is centred.
-func buildHistoryChart(aID, bID string, pts []store.QuotePoint, tz string) historyChart {
+// venues are always on the same scale. The spread (M4-75) is mid A − mid B for
+// most types, or mid A − (1 − mid B) for complements, on a [−1,1] axis with 0
+// at the centre. Missing price on either venue leaves a gap. Time runs from
+// the first to the last stored fetch; a single round is centred.
+func buildHistoryChart(aID, bID string, relType canonical.RelationshipType, pts []store.QuotePoint, tz string) historyChart {
 	c := historyChart{Width: chartWidth, Height: chartHeight,
 		X0: px(chartLeft), Y0: px(chartTop), X1: px(chartWidth - chartRight), Y1: px(chartHeight - chartBottom),
 		PlotW: px(chartWidth - chartLeft - chartRight), PlotH: px(chartHeight - chartTop - chartBottom), Tz: tz}
@@ -127,6 +141,8 @@ func buildHistoryChart(aID, bID string, pts []store.QuotePoint, tz string) histo
 		sr.Mid, sr.Bid, sr.Ask = string(mid), string(bid), string(ask)
 		c.Series = append(c.Series, sr)
 	}
+	// M4-75: spread series (mid A − mid B, or mid A − (1 − mid B) for complements)
+	c.Spread = buildSpreadSeries(aID, bID, relType, pts, xOf)
 	for _, v := range []string{"0", "0.25", "0.5", "0.75", "1"} {
 		d := decimal.RequireFromString(v)
 		c.YTicks = append(c.YTicks, chartTick{X: px(chartLeft - 6), Y: fpx(yOf(d)), Label: d.StringFixed(2), Anchor: "end"})
@@ -143,6 +159,56 @@ func buildHistoryChart(aID, bID string, pts []store.QuotePoint, tz string) histo
 	return c
 }
 
+// buildSpreadSeries calculates the cross-venue spread for each point where both
+// mids are present. For complements, spread = mid A − (1 − mid B); otherwise
+// spread = mid A − mid B. Missing mid on either venue produces a gap (M4-75).
+func buildSpreadSeries(aID, bID string, relType canonical.RelationshipType, pts []store.QuotePoint, xOf func(time.Time) float64) historySpread {
+	sp := historySpread{Last: "n/a"}
+	// Group points by fetch time and instrument
+	type key struct {
+		t  time.Time
+		id string
+	}
+	mids := make(map[key]decimal.Decimal)
+	times := make(map[time.Time]bool)
+	for _, p := range pts {
+		if !p.Mid.Valid {
+			continue
+		}
+		k := key{t: p.FetchedAt, id: p.InstrumentID}
+		mids[k] = p.Mid.Decimal
+		times[p.FetchedAt] = true
+	}
+	// Calculate spread for each time where both mids exist
+	var line []byte
+	isComplement := relType == canonical.RelComplement
+	for t := range times {
+		midA, hasA := mids[key{t: t, id: aID}]
+		midB, hasB := mids[key{t: t, id: bID}]
+		if !hasA || !hasB {
+			continue
+		}
+		var spread decimal.Decimal
+		if isComplement {
+			spread = midA.Add(midB).Sub(one)
+		} else {
+			spread = midA.Sub(midB)
+		}
+		sp.N++
+		x := xOf(t)
+		if len(line) > 0 {
+			line = append(line, ' ')
+		}
+		line = strconv.AppendFloat(line, x, 'f', 1, 64)
+		line = append(line, ',')
+		line = strconv.AppendFloat(line, yOfSpread(spread), 'f', 1, 64)
+		sp.Dots = append(sp.Dots, chartPt{X: fpx(x), Y: fpx(yOfSpread(spread))})
+		sp.Last = spread.StringFixed(4)
+	}
+	sp.Line = string(line)
+	return sp
+}
+
 // yOf maps a price in [0,1] to a pixel row (1 at the top). Out-of-range
 // values, which the store rejects anyway, are clamped.
 func yOf(d decimal.Decimal) float64 {
@@ -155,6 +221,20 @@ func yOf(d decimal.Decimal) float64 {
 	}
 	h := float64(chartHeight - chartTop - chartBottom)
 	return chartTop + h*(1-f)
+}
+
+// yOfSpread maps a spread value in [−1,1] to a pixel row (1 at the top, −1 at
+// the bottom, 0 at the centre). Out-of-range values are clamped.
+func yOfSpread(d decimal.Decimal) float64 {
+	f, _ := d.Float64()
+	if f < -1 {
+		f = -1
+	}
+	if f > 1 {
+		f = 1
+	}
+	h := float64(chartHeight - chartTop - chartBottom)
+	return chartTop + h*0.5*(1-f)
 }
 
 // appendPoint adds "x,y " to an SVG points list when the price is present.
