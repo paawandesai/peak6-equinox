@@ -81,6 +81,19 @@ Next operator action (Tier 2): human verification of Fed demo rendering (criteri
 - UI-07: Eval page — merged as cbac998 (closes #36).
 - UI-08: Admin page — merged (closes #37); follow-up (persist LLM verify last-run summary, #40) merged as da123b9.
 
+- M5-01: Home page p95 under 500 ms — MR !113 merged (closes #83).
+- M5-02: Pair page under 500 ms — MR !114 merged (closes #84).
+- M5-03: Timezone JS fix — MR !116 merged (closes #85).
+- M5-04: Admin dead end explanation — MR !117 merged (closes #86).
+- M5-05: Start here demo moment — MR !118 merged (closes #87).
+- M5-06: Glossary plain language — MR !115 merged (closes #88).
+- M5-07: Pair page jump links — MR !121 merged (closes #89).
+- M5-08: Route result summary — MR !120 merged (closes #90).
+- M5-09: Layout question line once, Glossary in nav, tagline — MR !123 merged (closes #91).
+- M5-10: Near-misses headings and per-group cap — MR !122 merged (closes #92).
+- M5-11: Decision log reviewer-first view — MR !119 merged (closes #93).
+- M5-12a: Eval page readability — MR !125 merged (closes #94).
+
 ## In progress
 
 - M4-07 final deploy (#65): done except spend line (pending: billing page). deployed 2026-10-10 04:36 UTC: main 41b8202 (!97 at 7ea4b21 plus /eval hotfix !108) as the NEW Cloud Run service `peak6-equinox` revision `peak6-equinox-00003-rbj`, https://peak6-equinox-287867547175.us-central1.run.app (Paawan 2026-10-09 9:15 PM CT; same image source, env, secrets, Cloud SQL, service account and settings as the old `equinox` service, which was deleted after verification). Fresh prod round 904 (collected by the new service), equinox-match run, round 904 pinned: **12 routable pairs** (11 `equivalent_given_facts` + 1 `complement`, all confidence >= 0.90). `scripts/smoke-live.sh` passed against the new URL. Measured p95: GET / 726 ms (above the NFR-01 500 ms page target; flagged), POST /route 267 ms. All public routes returned 200 (/, /near-misses, /pairs/2390, the /route POST, /eval, /log, /health, /version commit 41b8202). Spend line (status.md:277) PENDING: requires manual GCP billing page and Anthropic console access.
