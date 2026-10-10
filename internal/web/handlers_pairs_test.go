@@ -507,3 +507,134 @@ func TestEvidenceKeyToField(t *testing.T) {
 		})
 	}
 }
+
+// UI-20 D-115: Test HTML escaping in evidence contribution display
+func TestPairEvidenceHTMLEscaping(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+	ctx := context.Background()
+
+	rel, err := st.GetRelationship(ctx, sd.eqID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Attach evidence with contribution values that get formatted
+	rel.Evidence = &canonical.MatcherEvidence{
+		Prior: dec("0.99"),
+		Contributions: []canonical.ContributionTerm{
+			{Term: "prior", Value: dec("0.99")},
+			{Term: "unknown_unit_a", Value: dec("-0.02")},
+			{Term: "deadline_gap_hours", Value: dec("-0.05")},
+		},
+		Total: dec("0.92"),
+	}
+	if _, err := st.UpsertRelationship(ctx, rel); err != nil {
+		t.Fatal(err)
+	}
+
+	rec := get(s.Handler(), "/pairs/"+strconv.FormatInt(sd.eqID, 10))
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+
+	// Verify contribution values are properly rendered (not as raw HTML tags)
+	// The minus sign (−) should be HTML entity or properly escaped
+	wantContains(t, body, "−0.02") // Unit contribution
+	wantContains(t, body, "−0.05") // Deadline contribution
+
+	// Verify footer evidence is shown
+	wantContains(t, body, "Matcher evidence:")
+	wantContains(t, body, "0.92") // Total confidence
+
+	// Verify no script injection is possible through contribution display
+	// (HTML entities in output should be escaped as &lt; &gt; etc)
+	if strings.Contains(body, "<script>") {
+		t.Error("found unescaped <script> tag in output")
+	}
+	if strings.Contains(body, "javascript:") {
+		t.Error("found javascript: protocol in output")
+	}
+}
+
+// UI-20 D-115: Test evidence contribution column display
+func TestPairEvidenceContributionColumn(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+	ctx := context.Background()
+
+	rel, err := st.GetRelationship(ctx, sd.eqID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create diff rows with specific fields that map to contributions
+	rel.Diff = []canonical.FieldDiff{
+		{Field: "unit", A: "unknown", B: "USD", Status: canonical.DiffUnknown},
+		{Field: "deadline", A: "2026-10-08T12:00:00Z", B: "2026-10-08T13:00:00Z", Status: canonical.DiffDiffer},
+		{Field: "edge_rules", A: "unknown", B: "standard", Status: canonical.DiffUnknown},
+		{Field: "subject", A: "BTC", B: "BTC", Status: canonical.DiffMatch}, // No contribution for this
+	}
+
+	// Attach evidence with matching contributions
+	rel.Evidence = &canonical.MatcherEvidence{
+		Prior: dec("0.99"),
+		Contributions: []canonical.ContributionTerm{
+			{Term: "prior", Value: dec("0.99")},
+			{Term: "unknown_unit_a", Value: dec("-0.02")},
+			{Term: "deadline_gap_hours", Value: dec("-0.01")},
+			{Term: "unknown_edge_rules_a", Value: dec("-0.02")},
+		},
+		Total: dec("0.94"),
+	}
+	if _, err := st.UpsertRelationship(ctx, rel); err != nil {
+		t.Fatal(err)
+	}
+
+	rec := get(s.Handler(), "/pairs/"+strconv.FormatInt(sd.eqID, 10))
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+
+	// Verify Contribution column header exists
+	wantContains(t, body, "<th>Contribution</th>")
+
+	// Verify per-row contributions are shown
+	wantContains(t, body, "−0.02") // Unit contribution
+	wantContains(t, body, "−0.01") // Deadline contribution
+
+	// Verify rows without contributions show em-dash placeholder
+	wantContains(t, body, `<span class="muted">—</span>`) // For subject row
+
+	// Verify footer shows evidence summary
+	wantContains(t, body, "prior + Σ")
+	wantContains(t, body, "0.94") // Total
+}
+
+// UI-20 D-115: Test evidence not recorded (old relationships)
+func TestPairEvidenceNotRecorded(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+	ctx := context.Background()
+
+	rel, err := st.GetRelationship(ctx, sd.eqID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Old relationship without evidence
+	rel.Evidence = nil
+	if _, err := st.UpsertRelationship(ctx, rel); err != nil {
+		t.Fatal(err)
+	}
+
+	rec := get(s.Handler(), "/pairs/"+strconv.FormatInt(sd.eqID, 10))
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+
+	// Verify "not recorded" message in footer
+	wantContains(t, body, "not recorded")
+
+	// Verify Contribution column is NOT shown when evidence is missing
+	if strings.Contains(body, "<th>Contribution</th>") {
+		t.Error("Contribution column should not be shown when evidence is nil")
+	}
+}
