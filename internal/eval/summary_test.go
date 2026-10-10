@@ -309,7 +309,11 @@ func TestWriteSummaryErrors(t *testing.T) {
 		t.Fatal("expected error when the parent path is a file")
 	}
 
-	// Read-only directory (if we can create one)
+	// Read-only directory: root ignores permission bits (CI runs as root), so
+	// only assert this branch for non-root users.
+	if os.Geteuid() == 0 {
+		return
+	}
 	dir := t.TempDir()
 	readOnlyPath := filepath.Join(dir, "readonly", "summary.json")
 	if err := os.Mkdir(filepath.Join(dir, "readonly"), 0o400); err == nil {
