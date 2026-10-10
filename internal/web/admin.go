@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -47,6 +48,7 @@ func (s *Server) adminRoutes(mux *http.ServeMux) {
 	mux.Handle("/admin/{$}", index)
 	mux.Handle("/admin/ingest", s.adminAuth(http.HandlerFunc(s.handleAdminIngest)))
 	mux.Handle("/admin/llm-verify", s.adminAuth(http.HandlerFunc(s.handleAdminLLMVerify)))
+	mux.Handle("/admin/pin", s.adminAuth(http.HandlerFunc(s.handleAdminPin)))
 	mux.Handle("/admin/unpin", s.adminAuth(http.HandlerFunc(s.handleAdminUnpin)))
 	mux.Handle("/admin/", s.adminAuth(http.NotFoundHandler()))
 }
@@ -930,6 +932,60 @@ func (s *Server) handleAdminLLMVerify(w http.ResponseWriter, r *http.Request) {
 		Downgraded:      downgraded,
 		BudgetExhausted: budgetExhausted,
 	})
+}
+
+// handleAdminPin pins a specified round for demo mode (M4-78, FR-22, US-09).
+// After pin, all pages use that round's stored data with no live venue calls.
+func (s *Server) handleAdminPin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", "POST")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if s.deps.Store == nil {
+		http.Error(w, "database not configured", http.StatusServiceUnavailable)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	// Parse round_id from form
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form data", http.StatusBadRequest)
+		return
+	}
+
+	roundIDStr := r.FormValue("round_id")
+	if roundIDStr == "" {
+		http.Error(w, "round_id is required", http.StatusBadRequest)
+		return
+	}
+
+	roundID, err := strconv.ParseInt(roundIDStr, 10, 64)
+	if err != nil || roundID <= 0 {
+		http.Error(w, "round_id must be a positive integer", http.StatusBadRequest)
+		return
+	}
+
+	if err := s.deps.Store.PinRound(ctx, roundID); err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			http.Error(w, "round not found or not finished ok/partial", http.StatusNotFound)
+			return
+		}
+		s.log.Error("pinning round", "error", err, "round_id", roundID)
+		http.Error(w, "database unavailable", http.StatusServiceUnavailable)
+		return
+	}
+
+	s.log.Info("pinned round", "round_id", roundID)
+
+	// Redirect back to the admin page
+	if wantsHTML(r) {
+		http.Redirect(w, r, "/admin", http.StatusSeeOther)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
 // handleAdminUnpin unpins any pinned round (M3-07, NFR-04). After unpin, the
