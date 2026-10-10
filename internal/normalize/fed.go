@@ -62,8 +62,9 @@ const (
 	// pctPattern: a rate level such as "4.25%" or "0.00 %". Levels are small,
 	// so the digits are bounded tightly.
 	pctPattern = `(\d{1,3}(?:\.\d{1,4})?)\s?%`
-	// bpsPattern: a change size, "25 bps", "50+ bps", "25 basis points", "0.25%".
-	bpsPattern = `(\d{1,3}(?:\.\d{1,2})?)(\+)?\s?(bps|bp|basis\s+points?|%|percentage\s+points?)`
+	// bpsPattern: a change size, "25 bps", "50+ bps", ">25 bps", "25 basis points", "0.25%".
+	// KXFEDDECISION uses ">25bps" for "Cut/Hike >25bps" where the comparator precedes the number.
+	bpsPattern = `([<>])?(\d{1,3}(?:\.\d{1,2})?)(\+)?\s?(bps|bp|basis\s+points?|%|percentage\s+points?)`
 	upWords    = `increases?|increased|increasing|raises?|raised|raising|hikes?|hiked|hiking`
 	downWords  = `decreases?|decreased|decreasing|cuts?|cutting|lowers?|lowered|lowering|reduces?|reduced|reducing`
 	changeNoun = `increase|decrease|cut|hike|raise|reduction|rise`
@@ -100,13 +101,18 @@ var (
 	// Change conditions.
 	changeByRe = regexp.MustCompile(`(?i)\b(` + upWords + `|` + downWords + `)\s+(?:(?:the|its|their|interest|fed|target|federal|funds|rates?|range)\s+){0,6}` +
 		`by\s+(at\s+least\s+|more\s+than\s+)?` + bpsPattern + `(\s+or\s+more)?`)
+	// KXFEDDECISION format: "Cut of >25bps", "Hike of <50bps" (D-109).
+	// Requires comparator prefix to avoid matching example clauses.
+	changeOfRe   = regexp.MustCompile(`(?i)\b(` + upWords + `|` + downWords + `)\s+of\s+([<>])(\d{1,3}(?:\.\d{1,2})?)(\+)?\s?(bps|bp|basis\s+points?|%|percentage\s+points?)`)
 	changeNounRe = regexp.MustCompile(`(?i)\b` + bpsPattern + `\s+(` + changeNoun + `)\b`)
 	noChangeRe   = regexp.MustCompile(`(?i)(["“'‘]?)\b(?:no\s+change|unchanged|holds?\s+(?:rates?\s+)?steady)\b`)
 	upWordRe     = regexp.MustCompile(`(?i)^(?:` + upWords + `|increase|hike|raise|rise)$`)
 
 	// exampleRe: a condition inside an illustration ("for example, if the Fed
-	// cuts rates by 50 bps ...") is not the market's condition.
-	exampleRe = regexp.MustCompile(`(?i)\b(?:for\s+example|e\.g\.|such\s+as|for\s+instance)\b[^.]*$`)
+	// cuts rates by 50 bps ...", Kalshi's "This market is mutually exclusive.
+	// Therefore, if the Federal Reserve hikes by 50bps, the 50bps market will
+	// resolve to Yes", D-109) is not the market's condition.
+	exampleRe = regexp.MustCompile(`(?i)\b(?:for\s+example|e\.g\.|such\s+as|for\s+instance|therefore,?\s+if)\b[^.]*$`)
 
 	// Meeting dates: "October 27-28, 2026", "Jan 26 to 27, 2027" resolve on the last day.
 	meetingRangeRe = regexp.MustCompile(`(?i)\b` + fedMonthPattern + `\.?\s+(\d{1,2})(?:st|nd|rd|th)?\s*(?:-|–|—|to|through)\s*(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?\b`)
@@ -151,6 +157,13 @@ func extractFed(in canonical.Instrument) (canonical.Terms, canonical.Quality) {
 	}
 	textDeadline(&t, &q, in.CloseTime, srcs, meetingDatesIn)
 	t.ResolutionSource = namedSource(all, fedSourceNames, nil)
+
+	// D-109: KXFEDDECISION and KXRATECUTCOUNT markets resolve based on the Fed's official statement,
+	// even when the rules text doesn't explicitly mention federalreserve.gov.
+	if t.ResolutionSource == canonical.Unknown && (strings.HasPrefix(in.VenueMarketID, "KXFEDDECISION-") || strings.HasPrefix(in.VenueMarketID, "KXRATECUTCOUNT-")) {
+		t.ResolutionSource = SourceFederalReserve
+	}
+
 	return t, q
 }
 
@@ -285,16 +298,41 @@ func changeConditionsIn(text string) []condition {
 			continue
 		}
 		sub := submatches(text, loc)
-		// sub: 1 direction, 2 "at least "/"more than ", 3 digits, 4 "+", 5 unit, 6 " or more"
+		// sub: 1 direction, 2 "at least "/"more than ", 3 ">"/"<" prefix, 4 digits, 5 "+", 6 unit, 7 " or more"
+		magnitude, ok := changeMagnitude(sub[4], sub[6])
+		if !ok {
+			continue
+		}
+		comp := canonical.ComparatorEQ
+		switch {
+		case sub[3] == ">":
+			comp = canonical.ComparatorGT
+		case sub[3] == "<":
+			comp = canonical.ComparatorLT
+		case strings.HasPrefix(strings.ToLower(strings.TrimSpace(sub[2])), "more"):
+			comp = canonical.ComparatorGT
+		case sub[2] != "" || sub[5] != "" || sub[7] != "":
+			comp = canonical.ComparatorGTE
+		}
+		out = append(out, signedChange(sub[1], comp, magnitude, negated(text, loc[0])))
+	}
+	for _, loc := range changeOfRe.FindAllStringSubmatchIndex(text, -1) {
+		if illustrative(text, loc[0]) {
+			continue
+		}
+		sub := submatches(text, loc)
+		// sub: 1 direction, 2 ">"/"<" prefix, 3 digits, 4 "+", 5 unit
 		magnitude, ok := changeMagnitude(sub[3], sub[5])
 		if !ok {
 			continue
 		}
 		comp := canonical.ComparatorEQ
 		switch {
-		case strings.HasPrefix(strings.ToLower(strings.TrimSpace(sub[2])), "more"):
+		case sub[2] == ">":
 			comp = canonical.ComparatorGT
-		case sub[2] != "" || sub[4] != "" || sub[6] != "":
+		case sub[2] == "<":
+			comp = canonical.ComparatorLT
+		case sub[4] != "":
 			comp = canonical.ComparatorGTE
 		}
 		out = append(out, signedChange(sub[1], comp, magnitude, negated(text, loc[0])))
@@ -304,16 +342,21 @@ func changeConditionsIn(text string) []condition {
 			continue
 		}
 		sub := submatches(text, loc)
-		// sub: 1 digits, 2 "+", 3 unit, 4 noun
-		magnitude, ok := changeMagnitude(sub[1], sub[3])
+		// sub: 1 ">"/"<" prefix, 2 digits, 3 "+", 4 unit, 5 noun
+		magnitude, ok := changeMagnitude(sub[2], sub[4])
 		if !ok {
 			continue
 		}
 		comp := canonical.ComparatorEQ
-		if sub[2] != "" {
+		switch {
+		case sub[1] == ">":
+			comp = canonical.ComparatorGT
+		case sub[1] == "<":
+			comp = canonical.ComparatorLT
+		case sub[3] != "":
 			comp = canonical.ComparatorGTE
 		}
-		out = append(out, signedChange(sub[4], comp, magnitude, negated(text, loc[0])))
+		out = append(out, signedChange(sub[5], comp, magnitude, negated(text, loc[0])))
 	}
 	for _, loc := range noChangeRe.FindAllStringSubmatchIndex(text, -1) {
 		sub := submatches(text, loc)

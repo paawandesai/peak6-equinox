@@ -122,6 +122,7 @@ Postgres. Migrations live in `migrations/NNNN_name.sql`, run with goose.
 | `llm_verdicts` | `cache_key text pk` (sha256), `model`, `prompt_version`, `verdict jsonb`, `created_at` |
 | `llm_usage` | `day date pk`, `calls`, `input_tokens`, `output_tokens` |
 | `llm_verify_last_run` | `id boolean pk default true check (id = true)` (singleton), `verified integer`, `downgraded integer`, `cache_hits integer`, `ran_at timestamptz` (UI-08 follow-up, issue #40) |
+| `match_runs` | `id bigserial pk`, `round_id fk`, `started_at`, `finished_at`, `duration_ms`, `pairs_compared`, `relationships_stored`, `outcome` (`ok`/`failed`), retention capped at 500 rows (UI-26 phase 1, issue #58) |
 | `routing_decisions` | `id`, `round_id`, `order jsonb`, `decision jsonb` (includes `inputs` and `target_type` since UI-25, D-099), `created_at` |
 | `decision_log` | `id`, `kind` (`relationship`/`routing`/`llm`/`ingest`), `ref`, `summary`, `payload jsonb`, `created_at` |
 

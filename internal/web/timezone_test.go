@@ -48,6 +48,12 @@ func TestFormatTime(t *testing.T) {
 			want: "2026-10-08 12:00:00 UTC",
 		},
 		{
+			name: "Local (falls back to UTC when JS disabled)",
+			t:    time.Date(2026, 10, 8, 12, 0, 0, 0, time.UTC),
+			tz:   TzLocal,
+			want: "2026-10-08 12:00:00 UTC",
+		},
+		{
 			name: "zero time",
 			t:    time.Time{},
 			tz:   TzET,
@@ -99,6 +105,11 @@ func TestTimezoneFromRequest(t *testing.T) {
 			name:      "UTC cookie",
 			cookieVal: "UTC",
 			wantTz:    TzUTC,
+		},
+		{
+			name:      "Local cookie",
+			cookieVal: "Local",
+			wantTz:    TzLocal,
 		},
 		{
 			name:     "no cookie defaults to ET",
@@ -168,6 +179,13 @@ func TestHandleTimezone(t *testing.T) {
 			wantStatus:   http.StatusSeeOther,
 			wantCookie:   true,
 			wantLocation: "/log?kind=routing",
+		},
+		{
+			name:         "valid Local",
+			tz:           "Local",
+			wantStatus:   http.StatusSeeOther,
+			wantCookie:   true,
+			wantLocation: "/",
 		},
 		{
 			name:         "cross-host referer rejected",
