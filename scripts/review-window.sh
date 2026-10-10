@@ -18,7 +18,7 @@ set -euo pipefail
 DRY_RUN=0
 PROJECT="${GCP_PROJECT:-peak6-equinox-510816}"
 REGION="${GCP_REGION:-us-central1}"
-SERVICE="equinox"
+SERVICE="peak6-equinox"
 
 # gc runs gcloud against the project, without interactive prompts.
 gc() { gcloud --project="$PROJECT" --quiet "$@"; }

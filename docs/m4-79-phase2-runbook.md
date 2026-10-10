@@ -25,7 +25,7 @@ Run these from a clean checkout of the agreed sha. Every command uses the alread
 
 ```bash
 export SVC=equinox REGION=us-central1
-LIVE=https://equinox-o5hdimw5rq-uc.a.run.app
+LIVE=https://peak6-equinox-287867547175.us-central1.run.app
 ADMIN="admin:$(gcloud secrets versions access latest --secret=equinox-admin-password)"
 ```
 

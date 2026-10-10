@@ -7,7 +7,7 @@ _Last updated: 2026-10-10 by M4-08 worker (integration/m4-final at merge: #72 Fe
 
 **M4 demo and submission (target freeze Sun 2026-10-11 09:00 CT, submit by 11:00 CT):** Exit criteria from plan.md § M4:
   1. Every brief deliverable present and linked from README — **MET** (M4-01 !59 merged: live URL, setup, architecture summary, 60-second walkthrough, recording placeholder pending M4-H1 #67; deliverables 2/5/6 already merged)
-  2. Live URL and pinned round both pass E2E smoke test — **PENDING-DEPLOY** (M4-05 !66 merged: `scripts/smoke-live.sh`; live routable-pairs count ≥ 10 verified after !97 merges to main, D-102/D-114)
+  2. Live URL and pinned round both pass E2E smoke test — **done**: deployed 2026-10-10 04:36 UTC: main 41b8202 (!97 at 7ea4b21 plus /eval hotfix !108) as the NEW Cloud Run service `peak6-equinox` revision `peak6-equinox-00003-rbj`, https://peak6-equinox-287867547175.us-central1.run.app (Paawan 2026-10-09 9:15 PM CT; same image source, env, secrets, Cloud SQL, service account and settings as the old `equinox` service, which was deleted after verification). Fresh prod round 904 (collected by the new service), equinox-match run, round 904 pinned: **12 routable pairs** (11 `equivalent_given_facts` + 1 `complement`, all confidence >= 0.90). `scripts/smoke-live.sh` passed against the new URL. Measured p95: GET / 726 ms (above the NFR-01 500 ms page target; flagged), POST /route 267 ms. All public routes returned 200 (/, /near-misses, /pairs/2390, the /route POST, /eval, /log, /health, /version commit 41b8202).
   3. After freeze, only docs and demo fixes — **pending** (freeze is 2026-10-11 09:00 CT)
 
 **M2 exit verification (2026-10-07 ~18:00 UTC):** **MISS.** All M2 code tickets merged and deployed to prod (revision equinox-00010-h9v); docs/equivalence.md landed; golden/eval machinery + back-test complete. Exit criteria status:
@@ -83,7 +83,7 @@ Next operator action (Tier 2): human verification of Fed demo rendering (criteri
 
 ## In progress
 
-- M4-07 final deploy (#65): PENDING-DEPLOY (depends on !97 integration → main merge, D-102)
+- M4-07 final deploy (#65): done (D-102). deployed 2026-10-10 04:36 UTC: main 41b8202 (!97 at 7ea4b21 plus /eval hotfix !108) as the NEW Cloud Run service `peak6-equinox` revision `peak6-equinox-00003-rbj`, https://peak6-equinox-287867547175.us-central1.run.app (Paawan 2026-10-09 9:15 PM CT; same image source, env, secrets, Cloud SQL, service account and settings as the old `equinox` service, which was deleted after verification). Fresh prod round 904 (collected by the new service), equinox-match run, round 904 pinned: **12 routable pairs** (11 `equivalent_given_facts` + 1 `complement`, all confidence >= 0.90). `scripts/smoke-live.sh` passed against the new URL. Measured p95: GET / 726 ms (above the NFR-01 500 ms page target; flagged), POST /route 267 ms. All public routes returned 200 (/, /near-misses, /pairs/2390, the /route POST, /eval, /log, /health, /version commit 41b8202).
 - M4-08 final docs (#66): this MR !89, ready for integration → main
 - M4-H1 backup recording (#67): Paawan human item after M4-07
 - #74-#78 UI-v2 polish: graded-first tier (operator may merge to integration or defer)
@@ -201,7 +201,7 @@ Paawan kept these four in the operator chat on 2026-10-07 at 8:38 PM CT, after t
 | FR-20 | done (M3-06 !38, D-075; UI-22 !99 D-113 llm_verify_runs; UI-24 !100 D-112 rules+llm eval) | | | |
 | FR-21 | done (M1-09 !14, M2-07 !27, UI-02 !50, UI-10..26 !63-!100) | | | |
 | FR-22 | done (M1-09 !14, AB-05/AB-12 tests) | | | |
-| FR-23 | done (M3-07 !46, M4-03 !60, round 735; PENDING-DEPLOY: D-114 routable ≥10 verified post-!97) | | | |
+| FR-23 | done (M3-07 !46, M4-03 !60, round 735; D-114: 12 routable live on pinned round 904, verified 2026-10-10) | | | |
 | FR-24 | done (M3-08 !47, !51; UI-20 !95 local tz JS) | | | |
 | FR-25 | done (M2-07 !27; UI-20 !95 history enhancements) | | | |
 | FR-26 | done (M1-06 !13, M2-05 !26, M2-06 !29; 8 subcommands; streaming won't FR-28) | | | |
@@ -210,7 +210,7 @@ Paawan kept these four in the operator chat on 2026-10-07 at 8:38 PM CT, after t
 
 ## PRD evaluation sweep (M4)
 
-**Swept on:** 2026-10-10 UTC at merge into integration/m4-final (ffcf7a6). Pages checked against integration code; PENDING-DEPLOY for live URL routable ≥10 verification (D-114, post-!97). UI-v2 merged: UI-10..26 (design system, matches, pair, route, near-misses, log, eval, admin, net gap, freshness, match cards, LLM runs table, eval confusion matrix, admin backtest, notional routing, rule layers); M4-01..06 merged; #70 !86 (nominees, D-108), #72 !88 (Fed decision, D-109), #73 !92 (complement sure-loss), #79 !97 (routable diagnosis D-111/D-114), #80 !96 (latency test) merged to integration.
+**Swept on:** 2026-10-10 UTC at merge into integration/m4-final (ffcf7a6). Pages checked against integration code; Live URL routable >= 10 verified after deploy: 12 on pinned round 904 at https://peak6-equinox-287867547175.us-central1.run.app (D-114). UI-v2 merged: UI-10..26 (design system, matches, pair, route, near-misses, log, eval, admin, net gap, freshness, match cards, LLM runs table, eval confusion matrix, admin backtest, notional routing, rule layers); M4-01..06 merged; #70 !86 (nominees, D-108), #72 !88 (Fed decision, D-109), #73 !92 (complement sure-loss), #79 !97 (routable diagnosis D-111/D-114), #80 !96 (latency test) merged to integration.
 
 ### Brief's five graded areas
 

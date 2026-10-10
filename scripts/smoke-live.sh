@@ -13,7 +13,7 @@
 # round id equals the pinned one.
 set -euo pipefail
 
-LIVE_URL="https://equinox-o5hdimw5rq-uc.a.run.app"
+LIVE_URL="https://peak6-equinox-287867547175.us-central1.run.app"
 BASE_URL="$LIVE_URL"
 PINNED_ROUND=""
 TIMEOUT=20

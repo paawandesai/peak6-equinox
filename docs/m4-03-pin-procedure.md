@@ -23,7 +23,7 @@ Use the `equinox-match` Cloud Run job (D-065; 2 GiB memory, 2 vCPU) to match the
 
 ```bash
 # Get the latest successful round ID from the live service
-LATEST_ROUND=$(curl -fsS https://equinox-o5hdimw5rq-uc.a.run.app/admin \
+LATEST_ROUND=$(curl -fsS https://peak6-equinox-287867547175.us-central1.run.app/admin \
   -u admin:$(gcloud secrets versions access latest --secret=equinox-admin-password) \
   | grep -oP 'round_id":\K\d+' | head -1)
 
@@ -64,7 +64,7 @@ equinox pin ${LATEST_ROUND}
 Verify the pinned round is serving and contains the required demo pairs:
 
 ```bash
-LIVE_URL="https://equinox-o5hdimw5rq-uc.a.run.app"
+LIVE_URL="https://peak6-equinox-287867547175.us-central1.run.app"
 
 # Check that the home page shows "pinned" in the context bar
 curl -fsS "${LIVE_URL}/" | grep -o "pinned"
