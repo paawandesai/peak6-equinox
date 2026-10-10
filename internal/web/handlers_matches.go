@@ -51,6 +51,12 @@ type matchesPage struct {
 	FeeEstimates []FeeEstimate
 	// M5-05: featured pair for the "Start here" card (nil if no routable pairs)
 	FeaturedPair *pairRow
+	// M6 P3: the time quote ages are measured against (routing's reference).
+	QuoteRef   time.Time
+	StaleAfter time.Duration
+	// M6 P1: the guided demo steps, resolved by instrument ID in this round.
+	// Empty means fall back to the featured pair.
+	StartSteps []startStep
 }
 
 // pairGroup is every pair of one relationship type, strongest type first.
@@ -98,6 +104,8 @@ type pairRow struct {
 	NetGapText    string // "0.02" or "(0.01)" per sign rule, empty when !NetGap.HasValue
 	IsFlagged     bool   // true when net gap >= REVIEW_EDGE_MIN and confidence < 0.90
 	FlaggedReason string // "⚠ review: large edge, low confidence" when IsFlagged
+	// M6 P3: one-sided books, e.g. "kalshi one-sided: no YES bid"
+	BookNotes []string
 }
 
 // typeLabels say what each relationship type means (domain.md), in one line.
@@ -293,6 +301,8 @@ func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	views := instrumentViewsFrom(allIDs, instrumentRecs)
+	// M6 P1: the guided demo path, from the whole round (before filters).
+	data.StartSteps = resolveStartHere(rels, instrumentRecs, s.cfg.FedNextMeeting)
 
 	// UI-11 Cursor round 1: apply filters (including q on titles) before setting Total.
 	rels = filterRelationships(rels, views, minConf, hasMinFilter, qParam, hasQFilter)
@@ -305,16 +315,15 @@ func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
 		s.dbError(w, "loading quotes for matches", err)
 		return
 	}
+	// M6 P3: ages are measured against the reference routing uses
+	// (quoteSnapshot), so this badge, the pair page and the route trace agree.
+	ref := quoteSnapshot(ctx, st, round)
+	data.QuoteRef, data.StaleAfter = ref, s.cfg.StaleAfter
 	quoteTimes := make(map[string]time.Time, len(quotes))
 	quoteMap := make(map[string]*canonical.Quote, len(quotes))
-	now := s.now()
 	for i := range quotes {
 		quoteTimes[quotes[i].InstrumentID] = quotes[i].FetchedAt
-		// UI-18: exclude stale quotes from gap computation (AC: "missing/stale quote → no gap").
-		if isQuoteFresh(quotes[i].FetchedAt, now, s.cfg.StaleAfter) {
-			quoteMap[quotes[i].InstrumentID] = &quotes[i].Quote
-		}
-		// Stale quotes stay out of quoteMap, so ComputeNetGap receives nil and returns "no quote: <venue>".
+		quoteMap[quotes[i].InstrumentID] = &quotes[i].Quote
 	}
 
 	// UI-18: instruments of the kept pairs, for fee schedules (net gap computation).
@@ -338,7 +347,7 @@ func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
 	}
 	// UI-11: groupPairs now accepts sortOrder, qParam, and quoteTimes.
 	// UI-18: also accepts quoteMap, instMap, and reviewEdgeMin for net gap computation.
-	data.Groups = groupPairs(rels, views, asOf, sortOrder, qParam, quoteTimes, now, quoteMap, instMap, s.cfg.ReviewEdgeMin)
+	data.Groups = groupPairs(rels, views, asOf, sortOrder, qParam, quoteTimes, ref, quoteMap, instMap, s.cfg.ReviewEdgeMin, s.cfg.StaleAfter)
 
 	// UI-03: split groups into Routable (combined, sorted by the chosen order), Implies, Related.
 	// Routable pairs are shown as one combined group, not separated by type.
@@ -369,6 +378,7 @@ func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
 		data.Routable = []pairGroup{{Type: "routable", Label: "Routable pairs", Pairs: routablePairs}}
 		// M5-05: featured pair for "Start here" card is the first routable pair in priority order.
 		data.FeaturedPair = &routablePairs[0]
+		data.StartSteps = withFeaturedPair(data.StartSteps, data.FeaturedPair.ID)
 	}
 	// Sort implies and related by the chosen order too.
 	if data.Implies != nil {
@@ -418,7 +428,8 @@ func relationshipInstrumentIDs(rels []canonical.Relationship) []string {
 
 // groupPairs buckets rels by type, strongest type first, populates UI-11 and UI-18 fields.
 // Sorting by sortOrder happens in handleMatches; filtering is done before calling this.
-func groupPairs(rels []canonical.Relationship, views map[string]instrumentView, asOf time.Time, _ string, _ string, quoteTimes map[string]time.Time, now time.Time, quoteMap map[string]*canonical.Quote, instMap map[string]canonical.Instrument, reviewEdgeMin decimal.Decimal) []pairGroup {
+// Quote ages are measured against ref with the router's stale rule (quoteAgeAt, M6 P3).
+func groupPairs(rels []canonical.Relationship, views map[string]instrumentView, asOf time.Time, _ string, _ string, quoteTimes map[string]time.Time, ref time.Time, quoteMap map[string]*canonical.Quote, instMap map[string]canonical.Instrument, reviewEdgeMin decimal.Decimal, staleAfter time.Duration) []pairGroup {
 	byType := make(map[canonical.RelationshipType][]pairRow)
 
 	for _, r := range rels {
@@ -457,30 +468,10 @@ func groupPairs(rels []canonical.Relationship, views map[string]instrumentView, 
 			reviewPriority = -confFloat // negate so higher confidence = lower priority value
 		}
 
-		// UI-11: MaxQuoteAge from stored quote FetchedAt (for freshness badge).
-		maxQuoteAge := 0
-		if tA, ok := quoteTimes[r.AID]; ok {
-			ageA := int(now.Sub(tA).Seconds())
-			if ageA > maxQuoteAge {
-				maxQuoteAge = ageA
-			}
-		}
-		if tB, ok := quoteTimes[r.BID]; ok {
-			ageB := int(now.Sub(tB).Seconds())
-			if ageB > maxQuoteAge {
-				maxQuoteAge = ageB
-			}
-		}
-
-		// UI-11 Cursor round 1: calculate FreshState from MaxQuoteAge.
-		var freshState FreshState
-		if maxQuoteAge == 0 {
-			freshState = FreshStateUnknown
-		} else if time.Duration(maxQuoteAge)*time.Second < matchesStaleAfter {
-			freshState = FreshStateFresh
-		} else {
-			freshState = FreshStateStale
-		}
+		// UI-11, M6 P3: the pair's freshness is its older quote's, by the one rule.
+		pf := pairFreshness(quoteTimes, ref, staleAfter, r.AID, r.BID)
+		maxQuoteAge := int(pf.age.Seconds())
+		freshState := pf.state
 
 		// UI-11 Cursor round 1: build ConfValue for {{template "conf"}}.
 		confWord := ConfidenceWord(r.Confidence)
@@ -491,7 +482,11 @@ func groupPairs(rels []canonical.Relationship, views map[string]instrumentView, 
 		bInst := instMap[r.BID]
 		aQuote := quoteMap[r.AID]
 		bQuote := quoteMap[r.BID]
+		// UI-18: a stale quote gives no gap; M6 P3 says so instead of "no quote".
 		netGap := ComputeNetGap(aInst, bInst, aQuote, bQuote)
+		if v, stale := pf.staleVenue(aInst, bInst); stale {
+			netGap = NetGap{Reason: "stale " + v + " quote"}
+		}
 
 		// UI-18: format net gap with sign rule (D-098 call 2).
 		netGapText := ""
@@ -530,7 +525,8 @@ func groupPairs(rels []canonical.Relationship, views map[string]instrumentView, 
 			MaxQuoteAge:    maxQuoteAge,
 			ReviewPriority: reviewPriority,
 			TypeBadge:      TypeBadge(r.Type),
-			FreshBadge:     FreshBadgeAged(freshState, time.Duration(maxQuoteAge)*time.Second, matchesStaleAfter, FreshKindQuote),
+			FreshBadge:     FreshBadgeAged(freshState, pf.age, staleAfter, FreshKindQuote),
+			BookNotes:      bookNotes(aInst, bInst, aQuote, bQuote, netGap.Reason),
 			NetGap:         netGap,
 			NetGapText:     netGapText,
 			IsFlagged:      isFlagged,
@@ -559,5 +555,78 @@ func groupPairs(rels []canonical.Relationship, views map[string]instrumentView, 
 	return groups
 }
 
-// matchesStaleAfter is the quote freshness window used by the pairs list (D-077 default).
-const matchesStaleAfter = 120 * time.Second
+// pairQuoteFreshness is a pair's freshness: its older quote's age and state,
+// and which side (if any) is stale (M6 P3).
+type pairQuoteFreshness struct {
+	age    time.Duration
+	state  FreshState
+	staleA bool
+	staleB bool
+}
+
+// pairFreshness applies quoteAgeAt to both sides of a pair. A side with no
+// quote does not count; with no quote on either side the state is unknown.
+func pairFreshness(quoteTimes map[string]time.Time, ref time.Time, staleAfter time.Duration, aID, bID string) pairQuoteFreshness {
+	pf := pairQuoteFreshness{state: FreshStateUnknown}
+	for i, id := range []string{aID, bID} {
+		at, ok := quoteTimes[id]
+		if !ok {
+			continue
+		}
+		age, st := quoteAgeAt(ref, at, staleAfter)
+		pf.age = max(pf.age, age)
+		pf.state = worseFresh(pf.state, st)
+		if st == FreshStateStale {
+			if i == 0 {
+				pf.staleA = true
+			} else {
+				pf.staleB = true
+			}
+		}
+	}
+	return pf
+}
+
+// staleVenue names the first stale side's venue, if any.
+func (pf pairQuoteFreshness) staleVenue(a, b canonical.Instrument) (string, bool) {
+	switch {
+	case pf.staleA:
+		return string(a.Venue), true
+	case pf.staleB:
+		return string(b.Venue), true
+	}
+	return "", false
+}
+
+// bookNotes says which side of each quote's book is empty, e.g.
+// "kalshi one-sided: no YES bid" (M6 P3), leaving out the note the net-gap
+// reason already gives.
+func bookNotes(a, b canonical.Instrument, qa, qb *canonical.Quote, gapReason string) []string {
+	var notes []string
+	for _, side := range []struct {
+		inst canonical.Instrument
+		q    *canonical.Quote
+	}{{a, qa}, {b, qb}} {
+		if n := oneSidedNote(side.q); n != "" && string(side.inst.Venue)+" "+n != gapReason {
+			notes = append(notes, string(side.inst.Venue)+" "+n)
+		}
+	}
+	return notes
+}
+
+// oneSidedNote describes a book with a missing side, or "" when both sides
+// have levels or there is no quote.
+func oneSidedNote(q *canonical.Quote) string {
+	if q == nil {
+		return ""
+	}
+	switch noBids, noAsks := len(q.YesBids) == 0, len(q.YesAsks) == 0; {
+	case noBids && noAsks:
+		return "empty book: no YES bids or asks"
+	case noAsks:
+		return "one-sided: no YES ask"
+	case noBids:
+		return "one-sided: no YES bid"
+	}
+	return ""
+}

@@ -18,10 +18,13 @@
 <div class="toolbar-chips">
   {{range .Groups}}<a href="#{{.Anchor}}" class="chip-filter">{{.Code}} ({{.Count}})</a> {{end}}
 </div>
-<p class="near-miss-legend"><strong>Legend:</strong> How close: the gap between the two thresholds; Score: rule confidence vs the 0.90 needed for equivalent.</p>
+<p class="near-miss-legend"><strong>Legend:</strong> How close: the gap between the two thresholds in the contracts' unit (USD, percentage points with basis points for rates), or between the deadlines when only they differ; Score: rule confidence vs the 0.90 needed for equivalent.</p>
 {{range .Groups}}
 <section id="{{.Anchor}}">
   <h2>{{.Description}} (<code>{{.Code}}</code>, {{.Count}})</h2>
+  {{if not .Rows}}
+  <p>None in this round: no stored near miss had a fact consulted that did not close it.</p>
+  {{else}}
   <table class="data stack">
     <thead>
       <tr><th>Veto that fired</th><th>How close</th><th>Score</th><th>Contracts</th><th>Explanation</th></tr>
@@ -35,6 +38,7 @@
           {{else}}
             <span class="badge b-info"><span class="g" aria-hidden="true">◇</span>no veto</span>: {{if .Facts}}a fact was consulted but did not apply{{else}}a term differs{{end}}
           {{end}}
+          {{if .FactNote}}<br><small><strong>Fact consulted, did not close:</strong> {{.FactNote}}</small>{{end}}
         </td>
         <td data-label="How close"><code>{{.TermGap}}</code></td>
         <td data-label="Score"><small>{{.Score}}</small></td>
@@ -54,6 +58,7 @@
     {{end}}
     </tbody>
   </table>
+  {{end}}
   {{if .Truncated}}
   <p class="show-all-link"><a href="{{.ShowAllLink}}">Show all {{.Count}} →</a></p>
   {{end}}

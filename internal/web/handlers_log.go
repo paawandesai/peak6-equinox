@@ -33,6 +33,8 @@ type logPage struct {
 	Newest         time.Time // Raw UTC time of the newest entry
 	HiddenIngestCt int       // Count of hidden ingest entries (M5-11)
 	ShowIngestLink string    // Link to show ingest entries (M5-11)
+	Listed         int       // M6 P7: entries listed before identical routing rows were folded
+	Folded         int       // M6 P7: rows folded into a newer identical routing row
 }
 
 type logEntryGroup struct {
@@ -76,6 +78,9 @@ type logEntryView struct {
 	About         string // Human-readable "about" text (UI-06)
 	AboutTitle    string // Short title for the About link (UI-15)
 	Summary       string
+	SummaryHead   string // M6 P2: the summary, or its first words when long
+	SummaryTail   string // M6 P2: the rest of a long summary, shown on expand; "" when short
+	Repeat        int    // M6 P7: identical consecutive routing decisions this row stands for (1 = itself)
 	// Routing-specific fields (UI-15), empty for other kinds
 	Routing *routingLogView
 }
@@ -201,9 +206,12 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 			}
 			entries = append(entries, kindEntries...)
 		}
-		// Sort by created_at DESC (newest first)
-		sort.Slice(entries, func(i, j int) bool {
-			return entries[i].CreatedAt.After(entries[j].CreatedAt)
+		// Sort by created_at DESC, then id DESC (newest first, as ListLog orders one kind)
+		sort.SliceStable(entries, func(i, j int) bool {
+			if !entries[i].CreatedAt.Equal(entries[j].CreatedAt) {
+				return entries[i].CreatedAt.After(entries[j].CreatedAt)
+			}
+			return entries[i].ID > entries[j].ID
 		})
 		// Limit to maxLogRows
 		if len(entries) > maxLogRows {
@@ -256,6 +264,12 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 		data.Outliers = s.computeOutliers(data.Entries, tz)
 	}
 
+	// M6 P7: fold runs of identical routing decisions into their newest row
+	// (display only; every decision stays in the insert-only log).
+	data.Listed = len(data.Entries)
+	data.Entries = foldRepeatedRouting(data.Entries)
+	data.Folded = data.Listed - len(data.Entries)
+
 	// Group entries if requested (UI-15)
 	if group != "" && kind == store.LogRouting && len(data.Entries) > 0 {
 		data.GroupedEntries = groupRoutingEntries(data.Entries, group)
@@ -273,6 +287,7 @@ func (s *Server) newLogEntryView(e store.LogEntry, tz string) logEntryView {
 		Ref:           e.Ref,
 		Summary:       e.Summary,
 	}
+	v.SummaryHead, v.SummaryTail = splitSummary(e.Summary, summaryHeadLen)
 	v.Link, v.LinkLabel = logEntryLink(e.Kind, e.Ref)
 	v.About = logEntryAbout(e) // Build from payload per UI-06
 	v.AboutTitle = logEntryAboutTitle(e)
@@ -755,7 +770,7 @@ func (s *Server) handleDecision(w http.ResponseWriter, r *http.Request) {
 	}
 	snapshot := time.Time{}
 	if err == nil {
-		snapshot = decisionSnapshot(rd.Decision, round.SnapshotAt())
+		snapshot = storedDecisionSnapshot(ctx, st, rd.Decision, round.SnapshotAt())
 	}
 
 	// Use current round from context for the page banner (not the decision's own round)
@@ -765,12 +780,65 @@ func (s *Server) handleDecision(w http.ResponseWriter, r *http.Request) {
 		routePage: routePage{
 			page:          s.pageBase(currentRound, "Decision "+r.PathValue("id"), "What did this simulated order do, and why did the router choose that venue?", tz, "decision"),
 			DecisionID:    rd.ID,
-			Decision:      newDecisionView(rd.Decision, countPartners(rd.Decision), snapshot, s.loadDecisionInstrumentTitles(ctx, st, rd.Decision), s.cfg.BasisPenaltyMult),
+			Decision:      newDecisionView(rd.Decision, countPartners(rd.Decision), snapshot, s.loadDecisionInstrumentTitles(ctx, st, rd.Decision), s.cfg.BasisPenaltyMult, s.cfg.StaleAfter),
 			RenderContext: "decision",
 		},
 		CreatedAt: rd.CreatedAt,
 	}
+	data.Decision.Suggestion = s.decisionSuggestion(ctx, st, rd.Decision, currentRound.ID)
 	s.render(w, http.StatusOK, "decision", data)
+}
+
+// decisionSuggestion builds the "Try: <opposite order>" hint for a stored
+// not-routed decision (M6 P2): the stored quotes of the target and of the
+// partners not ruled out by their relationship, and a pair holding the
+// target, resolved by instrument ID in the current round first (pair IDs are
+// per round), preferring one of the decision's target type. Lookup failures
+// only drop the hint or its link.
+func (s *Server) decisionSuggestion(ctx context.Context, st *store.Store, d canonical.Decision, currentRoundID int64) *routeSuggestion {
+	if len(d.Chosen) > 0 {
+		return nil
+	}
+	quotes := map[string]canonical.Quote{}
+	ids := []string{d.TargetID}
+	for _, in := range d.Inputs {
+		if in.InstrumentID != d.TargetID && in.RelationshipType.Routable() {
+			ids = append(ids, in.InstrumentID)
+		}
+	}
+	for _, id := range ids {
+		q, err := quoteFor(ctx, st, d.RoundID, id, s.now())
+		if err != nil {
+			s.log.Warn("loading quote for route suggestion", "instrument", id, "err", err.Error())
+			continue
+		}
+		quotes[id] = q
+	}
+	return suggestOpposite(d, quotes, s.pairForTarget(ctx, st, d, currentRoundID))
+}
+
+// pairForTarget finds a pair containing the decision's target, in the current
+// round and then the decision's round, preferring the decision's target type.
+func (s *Server) pairForTarget(ctx context.Context, st *store.Store, d canonical.Decision, currentRoundID int64) int64 {
+	for _, roundID := range []int64{currentRoundID, d.RoundID} {
+		if roundID <= 0 {
+			continue
+		}
+		rels, err := st.ListRelationships(ctx, store.RelationshipFilter{RoundID: roundID, InstrumentID: d.TargetID, Limit: maxRoutePartners})
+		if err != nil {
+			s.log.Warn("finding pair for route suggestion", "target", d.TargetID, "err", err.Error())
+			return 0
+		}
+		for _, r := range rels {
+			if r.Type == d.TargetType {
+				return r.ID
+			}
+		}
+		if len(rels) > 0 {
+			return rels[0].ID
+		}
+	}
+	return 0
 }
 
 // formatDuration returns a human-readable duration string (UI-15).
@@ -902,4 +970,58 @@ func getGroupKey(e logEntryView, groupBy string) string {
 	default:
 		return "unknown"
 	}
+}
+
+// summaryHeadLen is how much of a log summary shows before "more".
+const summaryHeadLen = 140
+
+// splitSummary splits a summary at a word boundary near n characters so the
+// log shows it once: the head inline and, when long, the rest on expand
+// (M6 P2; the cell used to show the whole summary twice).
+func splitSummary(s string, n int) (head, tail string) {
+	r := []rune(s)
+	if len(r) <= n {
+		return s, ""
+	}
+	cut := n
+	for i := n; i > n/2; i-- {
+		if r[i] == ' ' {
+			cut = i
+			break
+		}
+	}
+	return strings.TrimSpace(string(r[:cut])), strings.TrimSpace(string(r[cut:]))
+}
+
+// foldRepeatedRouting collapses consecutive routing rows for the same pair,
+// target, order and outcome (the same stored summary) into the first, which
+// is the newest because the log lists newest first. The kept row links to
+// that newest decision and carries the run length in Repeat.
+func foldRepeatedRouting(entries []logEntryView) []logEntryView {
+	out := make([]logEntryView, 0, len(entries))
+	for _, e := range entries {
+		e.Repeat = 1
+		if n := len(out); n > 0 && sameRoutingRow(out[n-1], e) {
+			out[n-1].Repeat++
+			continue
+		}
+		out = append(out, e)
+	}
+	return out
+}
+
+// sameRoutingRow reports whether two log rows are the same routing decision
+// as far as the reader can tell: kind routing, same summary (which names the
+// order, the target and the result), same pair and same outcome.
+func sameRoutingRow(a, b logEntryView) bool {
+	if a.Kind != string(store.LogRouting) || b.Kind != string(store.LogRouting) || a.Summary != b.Summary {
+		return false
+	}
+	if (a.Routing == nil) != (b.Routing == nil) {
+		return false
+	}
+	if a.Routing == nil {
+		return true
+	}
+	return a.Routing.PairID == b.Routing.PairID && a.Routing.Outcome.Text == b.Routing.Outcome.Text
 }

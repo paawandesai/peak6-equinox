@@ -53,6 +53,17 @@ func defaultRouteForm(rel canonical.Relationship) routeFormView {
 	}
 }
 
+// routeDefaultsText states the route form's defaults in one line (M6 P6), from
+// the values defaultRouteForm pre-fills, so the page and the form never drift.
+func routeDefaultsText(f routeFormView) string {
+	tif := "fill what you can"
+	if f.TIF == string(canonical.TIFFOK) {
+		tif = "all or nothing"
+	}
+	return fmt.Sprintf("Defaults: %s %s %s contracts, %s %s (%s), target A.",
+		f.Side, strings.ToUpper(f.Outcome), f.Quantity, f.Type, f.TIF, tif)
+}
+
 // routeInput is the validated POST /route form.
 type routeInput struct {
 	PairID int64
@@ -186,8 +197,9 @@ type decisionView struct {
 	Partners         int
 	OutcomePhrase    string
 	OutcomeChipClass string
-	OutcomeSummary   string // One-line summary for the strip
-	LeadSentence     string // M5-08: Plain summary in design.md § 4 format
+	OutcomeSummary   string           // One-line summary for the strip
+	LeadSentence     string           // M5-08: Plain summary in design.md § 4 format; M6 P2: deciding reasons when not routed
+	Suggestion       *routeSuggestion // M6 P2: "Try: buy NO" when a stored book shows the opposite order has a candidate
 	TotalFilled      decimal.Decimal
 	TotalRequested   decimal.Decimal
 	AverageAllIn     decimal.Decimal
@@ -251,7 +263,7 @@ type inputSnapshotView struct {
 	FetchedAt    time.Time // Raw UTC time for formatTime
 }
 
-func newDecisionView(d canonical.Decision, partners int, snapshot time.Time, instrumentTitles map[string]string, basisMult decimal.Decimal) *decisionView {
+func newDecisionView(d canonical.Decision, partners int, snapshot time.Time, instrumentTitles map[string]string, basisMult decimal.Decimal, staleAfter time.Duration) *decisionView {
 	chosen := len(d.Chosen) > 0
 	partial := chosen && d.Order.Quantity != nil && totalFilled(d.Chosen).LessThan(*d.Order.Quantity)
 	isComplement := hasComplement(d.Chosen)
@@ -367,7 +379,7 @@ func newDecisionView(d canonical.Decision, partners int, snapshot time.Time, ins
 	}
 
 	// Build input snapshots (UI-13, step 1)
-	inputViews, maxAge, maxAgeBadge := buildInputSnapshots(d, snapshot)
+	inputViews, maxAge, maxAgeBadge := buildInputSnapshots(d, snapshot, staleAfter)
 	inputsRecorded := len(d.Inputs) > 0
 
 	// Kept vs total candidates (UI-13, step 2)
@@ -469,6 +481,24 @@ func exclusionReasonPhrase(reason string) string {
 		return "low confidence"
 	case "limit_not_reachable":
 		return "limit not reachable"
+	case "sure_loss":
+		return "sure loss"
+	case "not_open":
+		return "not open"
+	case "no_quantity":
+		return "no quantity"
+	case "no_relationship":
+		return "no relationship"
+	case "relationship_mismatch":
+		return "relationship mismatch"
+	case "quote_mismatch":
+		return "quote mismatch"
+	case "fee_unknown":
+		return "fee unknown"
+	case "basis_risk_unknown":
+		return "basis risk unknown"
+	case "complement_unsupported":
+		return "complement unsupported"
 	default:
 		return reason // fallback: show the code as-is
 	}
@@ -543,12 +573,8 @@ func buildLeadSentence(d canonical.Decision, totalFill, totalReq, avgAllIn decim
 	partial := chosen && d.Order.Quantity != nil && !totalReq.IsZero() && totalFill.LessThan(totalReq)
 
 	if !chosen {
-		// Not routed: "Not routed: <reason in words>"
-		tally := tallyExclusionReasons(d.Exclusions)
-		if tally == "" {
-			return "Not routed: every candidate was excluded"
-		}
-		return fmt.Sprintf("Not routed: %s", tally)
+		// M6 P2: one sentence naming the deciding reason per candidate class.
+		return notRoutedSentence(d)
 	}
 
 	// Partial fill
@@ -815,11 +841,13 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 		titles[c.Instrument.ID] = c.Instrument.Title
 	}
 
+	view := newDecisionView(dec, len(partners), decisionSnapshot(dec, cfg.Eligibility.Snapshot), titles, s.cfg.BasisPenaltyMult, s.cfg.StaleAfter)
+	view.Suggestion = suggestOpposite(dec, candidateQuotes(target, partners), in.PairID)
 	data := routePage{
 		page:          p,
 		PairID:        in.PairID,
 		DecisionID:    id,
-		Decision:      newDecisionView(dec, len(partners), decisionSnapshot(dec, round.SnapshotAt()), titles, s.cfg.BasisPenaltyMult),
+		Decision:      view,
 		RenderContext: "route",
 	}
 	s.renderRoute(w, r, http.StatusOK, data)
@@ -963,35 +991,26 @@ func buildInputMap(inputs []canonical.DecisionInput) map[string]canonical.Decisi
 
 // buildInputSnapshots creates the input snapshot views for the trace step 1 (UI-13).
 // Returns the snapshot views, the oldest quote age, and its freshness badge.
-func buildInputSnapshots(d canonical.Decision, snapshot time.Time) ([]inputSnapshotView, time.Duration, Badge) {
+// Ages and states use the one freshness rule (quoteAgeAt, M6 P3) against
+// snapshot, so the trace agrees with the matches list and the pair page.
+func buildInputSnapshots(d canonical.Decision, snapshot time.Time, staleAfter time.Duration) ([]inputSnapshotView, time.Duration, Badge) {
 	if len(d.Inputs) == 0 {
 		return nil, 0, Badge{}
 	}
 
 	views := make([]inputSnapshotView, len(d.Inputs))
 	var maxAge time.Duration
+	oldestState := FreshStateUnknown
 
 	for i, input := range d.Inputs {
-		age := snapshot.Sub(input.FetchedAt)
-		if age < 0 {
-			age = 0
-		}
-		if age > maxAge {
-			maxAge = age
-		}
+		age, freshState := quoteAgeAt(snapshot, input.FetchedAt, staleAfter)
+		maxAge = max(maxAge, age)
+		oldestState = worseFresh(oldestState, freshState)
 
 		// Compute depth (sum of ask levels)
 		depth := 0
 		for _, level := range input.AskDepth {
 			depth += int(level.Size.IntPart())
-		}
-
-		// Determine fresh state using existing staleAfter threshold
-		// UI-19 will add warn state; for now only Fresh/Stale/Unknown
-		freshState := FreshStateFresh
-		staleThreshold := 120 * time.Second // D-077 default
-		if age >= staleThreshold {
-			freshState = FreshStateStale
 		}
 
 		views[i] = inputSnapshotView{
@@ -1006,12 +1025,5 @@ func buildInputSnapshots(d canonical.Decision, snapshot time.Time) ([]inputSnaps
 		}
 	}
 
-	// Badge for the oldest input
-	oldestState := FreshStateFresh
-	if maxAge >= 120*time.Second {
-		oldestState = FreshStateStale
-	}
-	maxAgeBadge := FreshBadgeAged(oldestState, maxAge, 120*time.Second, FreshKindQuote)
-
-	return views, maxAge, maxAgeBadge
+	return views, maxAge, FreshBadgeAged(oldestState, maxAge, staleAfter, FreshKindQuote)
 }

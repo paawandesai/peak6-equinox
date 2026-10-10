@@ -104,3 +104,25 @@ func decisionSnapshot(d canonical.Decision, roundSnapshot time.Time) time.Time {
 	}
 	return snap
 }
+
+// storedDecisionSnapshot is decisionSnapshot for a decision read back from the
+// store: the reference also includes the snapshot of the newest round the
+// router read inputs from, which is what quoteSnapshot returned when it routed.
+// A fresh /decisions/{id} page then shows the same ages and freshness as the
+// trace rendered right after routing (M6 P3). A lookup failure falls back to
+// decisionSnapshot.
+func storedDecisionSnapshot(ctx context.Context, st interface {
+	GetRound(ctx context.Context, id int64) (store.Round, error)
+}, d canonical.Decision, roundSnapshot time.Time) time.Time {
+	var newest int64
+	for _, in := range d.Inputs {
+		newest = max(newest, in.RoundID)
+	}
+	snap := roundSnapshot
+	if newest != 0 && newest != d.RoundID {
+		if r, err := st.GetRound(ctx, newest); err == nil && r.SnapshotAt().After(snap) {
+			snap = r.SnapshotAt()
+		}
+	}
+	return decisionSnapshot(d, snap)
+}

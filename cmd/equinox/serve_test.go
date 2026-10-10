@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"os"
 	"strings"
 	"testing"
 
@@ -122,3 +123,24 @@ func TestMigrationLogWritesOneRecordPerLine(t *testing.T) {
 
 // TestBuildDepsWiresLLMFields is covered by tests/security/ab04_llm_spend_test.go
 // which creates a full server with fake LLM credentials and verifies the route works.
+
+// TestFedNextMeeting: the guided demo reads fed_next_meeting from the facts
+// file, and a missing file or fact leaves it empty without failing (M6 P1).
+func TestFedNextMeeting(t *testing.T) {
+	logger := slog.New(slog.DiscardHandler)
+	if got := fedNextMeeting("../../config/facts.yaml", logger); len(got) != len("2006-01-02") {
+		t.Errorf("fedNextMeeting(config/facts.yaml) = %q, want a date", got)
+	}
+	if got := fedNextMeeting("../../config/no-such-facts.yaml", logger); got != "" {
+		t.Errorf("missing file: got %q, want empty", got)
+	}
+	dir := t.TempDir()
+	path := dir + "/facts.yaml"
+	body := "facts:\n  - id: fed_upper_bound\n    value: \"4.00\"\n    source: https://www.federalreserve.gov/\n    as_of: 2026-09-16\n"
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if got := fedNextMeeting(path, logger); got != "" {
+		t.Errorf("file without the fact: got %q, want empty", got)
+	}
+}
