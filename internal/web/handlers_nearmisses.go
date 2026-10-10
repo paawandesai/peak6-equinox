@@ -33,28 +33,32 @@ type nearMissGroup struct {
 	Description string // one-line description of this failure reason
 	Rows        []nearMissRow
 	Anchor      string // HTML id for this section
+	Truncated   int    // rows not shown when capped at 25 (M5-10)
+	ShowAllLink string // link to show all rows for this group (M5-10)
 }
 
 // nearMissRow is one stored `related` pair with the veto(s) that blocked it.
 type nearMissRow struct {
-	ID          int64
-	A, B        instrumentView
-	Confidence  string
-	VetoBadge   Badge  // badge for the veto that fired
-	VetoField   string // field name (e.g., "subject")
-	VetoDetail  string // detail text (e.g., "BTC is not ETH")
-	TermGap     string // how close (numeric difference or time distance, or "—")
-	Score       string // UI-20: "X.XX of Y.YY required" or "not recorded"
-	Facts       []canonical.FactUse
-	Explanation string
-	LogLink     string // link to the pair's verdict entry
+	ID              int64
+	A, B            instrumentView
+	Confidence      string
+	VetoBadge       Badge  // badge for the veto that fired
+	VetoField       string // field name (e.g., "subject")
+	VetoDetail      string // detail text (e.g., "BTC is not ETH")
+	VetoDetailWords string // comparator rendered as words (M5-10)
+	TermGap         string // how close (numeric difference or time distance, or "—")
+	Score           string // UI-20: "X.XX of Y.YY required" or "not recorded"
+	Facts           []canonical.FactUse
+	Explanation     string
+	LogLink         string // link to the pair's verdict entry
 }
 
 // handleNearMisses answers GET /near-misses: every `related` pair stored for
 // the current round. `equinox match` keeps a `related` result only when it
 // is a near miss (D-061, D-068): the same subject with one term off, or a
 // pair a fact was consulted for but did not close. Rows are grouped by the
-// veto that fired (UI-14).
+// veto that fired (UI-14). M5-10 adds ?veto=<code>&all=1 to show all rows
+// for a specific group (default: 25 per group).
 func (s *Server) handleNearMisses(w http.ResponseWriter, r *http.Request) {
 	st, ok := s.storeOrFail(w)
 	if !ok {
@@ -62,6 +66,10 @@ func (s *Server) handleNearMisses(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), dbTimeout)
 	defer cancel()
+
+	// M5-10: Parse query parameters
+	vetoFilter := r.URL.Query().Get("veto")
+	showAll := r.URL.Query().Get("all") == "1"
 
 	round := roundFromContext(r.Context())
 	tz := timezoneFromRequest(r)
@@ -89,7 +97,27 @@ func (s *Server) handleNearMisses(w http.ResponseWriter, r *http.Request) {
 	}
 	rows := nearMissRows(rels, views)
 	data.Total = len(rows)
-	data.Groups = groupNearMisses(rows)
+
+	// M5-10: If veto filter is set, validate it exists in the data
+	if vetoFilter != "" {
+		found := false
+		for _, row := range rows {
+			code := row.VetoBadge.Text
+			if code == "" {
+				code = "fact_did_not_close"
+			}
+			if code == vetoFilter {
+				found = true
+				break
+			}
+		}
+		if !found {
+			s.renderErrorWithContext(w, r, http.StatusBadRequest, "Unknown veto code.")
+			return
+		}
+	}
+
+	data.Groups = groupNearMisses(rows, vetoFilter, showAll)
 	data.VetoCount = 0
 	for _, row := range rows {
 		if row.VetoBadge.Text != "" {
@@ -128,6 +156,8 @@ func nearMissRows(rels []canonical.Relationship, views map[string]instrumentView
 			row.VetoBadge = Badge{Class: "b-danger mono", Glyph: "✕", Text: v.Code}
 			row.VetoField = v.Field
 			row.VetoDetail = v.Detail
+			// M5-10: Render comparators as words
+			row.VetoDetailWords = comparatorToWords(v.Detail)
 		}
 		rows = append(rows, row)
 	}
@@ -136,8 +166,11 @@ func nearMissRows(rels []canonical.Relationship, views map[string]instrumentView
 
 // groupNearMisses groups rows by veto code. Rows with the same first veto
 // code are grouped together, and rows without a veto go under "fact did not
-// close". Groups are sorted by code.
-func groupNearMisses(rows []nearMissRow) []nearMissGroup {
+// close". Groups are sorted by code. M5-10 adds filtering by veto code and
+// a 25-row cap per group (unless showAll is true).
+func groupNearMisses(rows []nearMissRow, vetoFilter string, showAll bool) []nearMissGroup {
+	const maxRowsPerGroup = 25
+
 	codeMap := make(map[string][]nearMissRow)
 	for _, row := range rows {
 		code := row.VetoBadge.Text
@@ -148,13 +181,28 @@ func groupNearMisses(rows []nearMissRow) []nearMissGroup {
 	}
 	var groups []nearMissGroup
 	for code, gRows := range codeMap {
-		groups = append(groups, nearMissGroup{
+		// M5-10: Skip groups not matching the filter
+		if vetoFilter != "" && code != vetoFilter {
+			continue
+		}
+
+		group := nearMissGroup{
 			Code:        code,
 			Count:       len(gRows),
 			Description: vetoDescription(code),
-			Rows:        gRows,
 			Anchor:      "group-" + strings.ReplaceAll(code, "_", "-"),
-		})
+		}
+
+		// M5-10: Cap rows at 25 unless showAll or this is the filtered group with all=1
+		if !showAll && len(gRows) > maxRowsPerGroup {
+			group.Rows = gRows[:maxRowsPerGroup]
+			group.Truncated = len(gRows) - maxRowsPerGroup
+			group.ShowAllLink = fmt.Sprintf("/near-misses?veto=%s&all=1#%s", code, group.Anchor)
+		} else {
+			group.Rows = gRows
+		}
+
+		groups = append(groups, group)
 	}
 	sort.Slice(groups, func(i, j int) bool {
 		// "fact_did_not_close" always last
@@ -250,7 +298,7 @@ func vetoDescription(code string) string {
 	case "source_mismatch":
 		return "Data source differs: the contracts settle on different authorities or indexes."
 	case "source_unknown":
-		return "No single resolution source could be read from at least one contract."
+		return "No single resolution source could not be read from at least one contract."
 	case "polarity_mismatch":
 		return "One contract asks whether something happens and the other whether it does not."
 	case "polarity_unresolved":
@@ -260,4 +308,26 @@ func vetoDescription(code string) string {
 	default:
 		return strings.ReplaceAll(code, "_", " ")
 	}
+}
+
+// comparatorToWords converts comparator codes like "gt vs lt" to readable
+// phrases like "above vs below" (M5-10). Keeps the code in <code> elements.
+func comparatorToWords(detail string) string {
+	// Replace longer codes first to avoid partial replacements
+	// (e.g., "gte" before "gt" to avoid "abovee")
+	replacements := []struct{ code, word string }{
+		{"gte", "at or above"},
+		{"lte", "at or below"},
+		{"between", "between"},
+		{"gt", "above"},
+		{"lt", "below"},
+		{"eq", "equal to"},
+	}
+
+	result := detail
+	for _, r := range replacements {
+		result = strings.ReplaceAll(result, r.code, r.word)
+	}
+
+	return result
 }

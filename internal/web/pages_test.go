@@ -119,13 +119,13 @@ func TestNearMissesEmptyStates(t *testing.T) {
 func TestNearMissRowsOrdering(t *testing.T) {
 	rels := []canonical.Relationship{
 		{ID: 1, AID: "kalshi:A", BID: "polymarket:B", Confidence: dec("0.9")},
-		{ID: 2, AID: "kalshi:A", BID: "polymarket:C", Confidence: dec("0.5"), Vetoes: []canonical.Veto{{Code: "x"}}},
-		{ID: 3, AID: "kalshi:A", BID: "polymarket:D", Confidence: dec("0.7"), Vetoes: []canonical.Veto{{Code: "y"}}},
-		{ID: 4, AID: "kalshi:A", BID: "polymarket:E", Confidence: dec("0.7"), Vetoes: []canonical.Veto{{Code: "z"}}},
+		{ID: 2, AID: "kalshi:A", BID: "polymarket:C", Confidence: dec("0.5"), Vetoes: []canonical.Veto{{Code: "x", Field: "field", Detail: "detail"}}},
+		{ID: 3, AID: "kalshi:A", BID: "polymarket:D", Confidence: dec("0.7"), Vetoes: []canonical.Veto{{Code: "y", Field: "field", Detail: "detail"}}},
+		{ID: 4, AID: "kalshi:A", BID: "polymarket:E", Confidence: dec("0.7"), Vetoes: []canonical.Veto{{Code: "z", Field: "field", Detail: "detail"}}},
 	}
 	views := map[string]instrumentView{}
 	rows := nearMissRows(rels, views)
-	groups := groupNearMisses(rows)
+	groups := groupNearMisses(rows, "", false)
 	// Should have 4 groups (x, y, z, fact_did_not_close)
 	if len(groups) != 4 {
 		t.Fatalf("groups = %d, want 4", len(groups))
