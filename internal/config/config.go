@@ -67,6 +67,8 @@ type Config struct {
 	DatabaseURLTest string
 	AdminUser       string
 	AdminPassword   string
+	AppVersion      string // Git commit SHA for /version endpoint (issue #80)
+	AppBuildTime    string // Build timestamp RFC 3339 for /version endpoint (issue #80)
 
 	KalshiBaseURL      string
 	PolymarketGammaURL string
@@ -119,6 +121,8 @@ func Load(lookup LookupFunc) (Config, error) {
 		DatabaseURLTest: l.optional("DATABASE_URL_TEST", ""),
 		AdminUser:       l.required("ADMIN_USER"),
 		AdminPassword:   l.required("ADMIN_PASSWORD"),
+		AppVersion:      l.optional("APP_VERSION", "dev"),
+		AppBuildTime:    l.optional("APP_BUILD_TIME", ""),
 
 		KalshiBaseURL:      l.httpURL("KALSHI_BASE_URL", DefaultKalshiBaseURL),
 		PolymarketGammaURL: l.httpURL("POLYMARKET_GAMMA_URL", DefaultPolymarketGammaURL),
@@ -197,6 +201,8 @@ func (c Config) LogValue() slog.Value {
 		slog.String("database_url_test", redactIfSet(c.DatabaseURLTest)),
 		slog.String("admin_user", c.AdminUser),
 		slog.String("admin_password", redactIfSet(c.AdminPassword)),
+		slog.String("app_version", c.AppVersion),
+		slog.String("app_build_time", c.AppBuildTime),
 		slog.String("kalshi_base_url", c.KalshiBaseURL),
 		slog.String("polymarket_gamma_url", c.PolymarketGammaURL),
 		slog.String("polymarket_clob_url", c.PolymarketClobURL),

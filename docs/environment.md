@@ -11,6 +11,8 @@
 | `DATABASE_URL_TEST` | Postgres DSN for tests (each package gets its own schema) | tests only | `postgres://equinox:equinox@localhost:5432/equinox_test?sslmode=disable` |
 | `ADMIN_USER` | Basic-auth user for `/admin/*` | yes | `admin` |
 | `ADMIN_PASSWORD` | Basic-auth password, at least 24 random characters | yes | `change-me-local-only-000000000` |
+| `APP_VERSION` | Git commit SHA for `/version` endpoint (issue #80); set at deploy time via `--update-env-vars` | no (default `dev`) | `abc123def456...` |
+| `APP_BUILD_TIME` | Build timestamp RFC 3339 for `/version` endpoint (issue #80); set at deploy time via `--update-env-vars` | no (default empty) | `2026-10-09T12:00:00Z` |
 | `KALSHI_BASE_URL` | Kalshi public API base | no | `https://api.elections.kalshi.com/trade-api/v2` |
 | `POLYMARKET_GAMMA_URL` | Polymarket metadata API base | no | `https://gamma-api.polymarket.com` |
 | `POLYMARKET_CLOB_URL` | Polymarket order-book API base | no | `https://clob.polymarket.com` |
