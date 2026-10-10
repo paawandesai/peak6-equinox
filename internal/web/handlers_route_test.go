@@ -795,3 +795,274 @@ func TestRouteResultPartialFillBar(t *testing.T) {
 		"seg-unfilled",    // Unfilled segment for partial (40% of 100)
 	)
 }
+
+// M5-08: Test buildLeadSentence function directly
+func TestM508BuildLeadSentence(t *testing.T) {
+	qty := dec("100")
+
+	// Test routed with gap to next alternative
+	d := canonical.Decision{
+		TargetID: seedKalshiA,
+		Order:    canonical.Order{Side: canonical.SideBuy, Outcome: canonical.OutcomeYes, Quantity: &qty},
+		Chosen:   []canonical.Leg{{Venue: canonical.VenuePolymarket, InstrumentID: seedPolyB, Quantity: qty, AllInPerContract: dec("0.5000"), Route: "direct", Outcome: canonical.OutcomeYes}},
+	}
+	alts := []alternativeView{
+		{Alternative: canonical.Alternative{Rank: 1, AllInPerContract: dec("0.5000"), Legs: []canonical.Leg{{Venue: canonical.VenuePolymarket}}}, GapToChosen: dec("0")},
+		{Alternative: canonical.Alternative{Rank: 2, AllInPerContract: dec("0.5100"), Legs: []canonical.Leg{{Venue: canonical.VenueKalshi}}}, GapToChosen: dec("0.0100")}, // 1 cent more expensive
+	}
+	lead := buildLeadSentence(d, qty, qty, dec("0.5000"), alts)
+	wantParts := []string{"Routed:", "buy", "100", "YES", "polymarket", "0.5000", "all-in", "cheaper than", "kalshi"}
+	for _, want := range wantParts {
+		if !strings.Contains(lead, want) {
+			t.Errorf("lead sentence %q lacks %q", lead, want)
+		}
+	}
+
+	// Test partial fill
+	d.Chosen[0].Quantity = dec("80")
+	lead = buildLeadSentence(d, dec("80"), qty, dec("0.5000"), alts)
+	if !strings.Contains(lead, "Partially routed: 80 of 100 contracts") {
+		t.Errorf("partial lead = %q", lead)
+	}
+
+	// Test not routed
+	d.Chosen = nil
+	d.Exclusions = []canonical.Exclusion{{Reason: "stale"}, {Reason: "insufficient_depth"}}
+	lead = buildLeadSentence(d, dec("0"), qty, dec("0"), nil)
+	if !strings.Contains(lead, "Not routed: 1 stale, 1 too shallow") {
+		t.Errorf("not-routed lead = %q", lead)
+	}
+
+	// Test split across venues
+	d.Chosen = []canonical.Leg{
+		{Venue: canonical.VenuePolymarket, Quantity: dec("60"), AllInPerContract: dec("0.5000"), Route: "direct"},
+		{Venue: canonical.VenueKalshi, Quantity: dec("40"), AllInPerContract: dec("0.5100"), Route: "direct"},
+	}
+	lead = buildLeadSentence(d, qty, qty, dec("0.5040"), alts)
+	if !strings.Contains(lead, "Routed across 2 venues: 60 + 40 contracts") {
+		t.Errorf("split lead = %q", lead)
+	}
+
+	// Test complement
+	d.Chosen = []canonical.Leg{{Venue: canonical.VenuePolymarket, InstrumentID: seedPolyB, Quantity: qty, AllInPerContract: dec("0.5000"), Route: "complement", Outcome: canonical.OutcomeNo}}
+	lead = buildLeadSentence(d, qty, qty, dec("0.5000"), alts)
+	if !strings.Contains(lead, "Routed as NO on polymarket (complement of the target)") {
+		t.Errorf("complement lead = %q", lead)
+	}
+}
+
+// M5-08: Test lead sentence appears in route result
+func TestM508LeadSentenceInResult(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+	rec := postForm(s.Handler(), "/route", validRouteForm(sd.eqID, seedKalshiA), true)
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+
+	// Should show lead sentence in design.md § 4 format
+	wantContains(t, body,
+		"Routed:",         // Lead sentence prefix
+		"buy",             // Side from order
+		"YES",             // Outcome from order
+		"at",              // Preposition before all-in
+		"all-in",          // All-in mention
+		"outcome-summary", // CSS class for lead sentence
+	)
+}
+
+// M5-08: Test lead sentence for partial fill
+func TestM508LeadSentencePartial(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+
+	qty := dec("100")
+	filled := dec("80")
+	decision := canonical.Decision{
+		RoundID:   sd.round.ID,
+		TargetID:  seedKalshiA,
+		DecidedAt: seedNow,
+		Order:     canonical.Order{Side: "buy", Outcome: "yes", Quantity: &qty, Type: "market", TIF: "IOC"},
+		Chosen:    []canonical.Leg{{Venue: "polymarket", InstrumentID: seedPolyB, Outcome: "yes", Quantity: filled, VWAP: dec("0.50"), FeePerContract: dec("0.007"), BasisPenaltyPerContract: dec("0.01"), AllInPerContract: dec("0.517"), Route: "direct"}},
+		Alternatives: []canonical.Alternative{
+			{Rank: 1, AllInPerContract: dec("0.517"), Legs: []canonical.Leg{{Venue: "polymarket", InstrumentID: seedPolyB, Quantity: filled}}},
+		},
+		Explanation: "Partial fill.",
+	}
+	id, err := st.InsertRoutingDecision(context.Background(), decision)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rec := get(s.Handler(), "/decisions/"+strconv.FormatInt(id, 10))
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+
+	wantContains(t, body,
+		"Partially routed:", // Lead sentence for partial fill
+		"80 of 100",         // Filled vs requested
+		"contracts",         // Unit
+	)
+}
+
+// M5-08: Test lead sentence for not-routed result
+func TestM508LeadSentenceNotRouted(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+
+	qty := dec("100")
+	decision := canonical.Decision{
+		RoundID:   sd.round.ID,
+		TargetID:  seedKalshiA,
+		DecidedAt: seedNow,
+		Order:     canonical.Order{Side: "buy", Outcome: "yes", Quantity: &qty, Type: "market", TIF: "IOC"},
+		Exclusions: []canonical.Exclusion{
+			{InstrumentID: seedKalshiA, Venue: "kalshi", Reason: "stale"},
+			{InstrumentID: seedPolyB, Venue: "polymarket", Reason: "insufficient_depth"},
+			{InstrumentID: seedKalshiC, Venue: "kalshi", Reason: "insufficient_depth"},
+		},
+		Explanation: "All excluded.",
+	}
+	id, err := st.InsertRoutingDecision(context.Background(), decision)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rec := get(s.Handler(), "/decisions/"+strconv.FormatInt(id, 10))
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+
+	// Should show not-routed lead sentence with reasons in words (not codes)
+	wantContains(t, body,
+		"Not routed:",   // Lead sentence prefix
+		"stale",         // Reason phrase (not "stale" code)
+		"too shallow",   // Reason phrase for insufficient_depth (not the code)
+		"1 stale",       // Tally format
+		"2 too shallow", // Tally format
+	)
+
+	// Should NOT show reason codes
+	if strings.Contains(body, "insufficient_depth") {
+		t.Error("should show 'too shallow' not 'insufficient_depth' code")
+	}
+}
+
+// M5-08: Test lead sentence for split across venues
+func TestM508LeadSentenceSplit(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+
+	qty := dec("100")
+	decision := canonical.Decision{
+		RoundID:   sd.round.ID,
+		TargetID:  seedKalshiA,
+		DecidedAt: seedNow,
+		Order:     canonical.Order{Side: "buy", Outcome: "yes", Quantity: &qty, Type: "market", TIF: "IOC"},
+		Chosen: []canonical.Leg{
+			{Venue: "polymarket", InstrumentID: seedPolyB, Outcome: "yes", Quantity: dec("60"), VWAP: dec("0.50"), FeePerContract: dec("0.007"), BasisPenaltyPerContract: dec("0.01"), AllInPerContract: dec("0.517"), Route: "direct"},
+			{Venue: "kalshi", InstrumentID: seedKalshiA, Outcome: "yes", Quantity: dec("40"), VWAP: dec("0.52"), FeePerContract: dec("0.007"), BasisPenaltyPerContract: dec("0.01"), AllInPerContract: dec("0.537"), Route: "direct"},
+		},
+		Alternatives: []canonical.Alternative{
+			{Rank: 1, AllInPerContract: dec("0.525"), Legs: []canonical.Leg{{Venue: "polymarket"}, {Venue: "kalshi"}}},
+		},
+		Explanation: "Split across venues.",
+	}
+	id, err := st.InsertRoutingDecision(context.Background(), decision)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rec := get(s.Handler(), "/decisions/"+strconv.FormatInt(id, 10))
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+
+	wantContains(t, body,
+		"Routed across 2 venues", // Lead sentence for split
+		"+ ",                     // Contract split uses + separator
+		"contracts",              // Unit
+	)
+}
+
+// M5-08: Test lead sentence for complement route
+func TestM508LeadSentenceComplement(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+
+	qty := dec("100")
+	decision := canonical.Decision{
+		RoundID:   sd.round.ID,
+		TargetID:  seedKalshiA,
+		DecidedAt: seedNow,
+		Order:     canonical.Order{Side: "buy", Outcome: "yes", Quantity: &qty, Type: "market", TIF: "IOC"},
+		Chosen:    []canonical.Leg{{Venue: "polymarket", InstrumentID: seedPolyB, Outcome: "no", Quantity: qty, VWAP: dec("0.50"), FeePerContract: dec("0.007"), BasisPenaltyPerContract: dec("0.01"), AllInPerContract: dec("0.517"), Route: "complement"}},
+		Alternatives: []canonical.Alternative{
+			{Rank: 1, AllInPerContract: dec("0.517"), Legs: []canonical.Leg{{Venue: "polymarket", Route: "complement", Outcome: "no"}}},
+		},
+		Explanation: "Complement route.",
+	}
+	id, err := st.InsertRoutingDecision(context.Background(), decision)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rec := get(s.Handler(), "/decisions/"+strconv.FormatInt(id, 10))
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+
+	wantContains(t, body,
+		"Routed as NO on polymarket", // Lead sentence for complement
+		"(complement of the target)", // Explanation
+	)
+}
+
+// M5-08: Test bps explanation and glossary link
+func TestM508BpsExplanation(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+	rec := postForm(s.Handler(), "/route", validRouteForm(sd.eqID, seedKalshiA), true)
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+
+	// Should have bps explanation note
+	wantContains(t, body,
+		"Basis points:",      // Explanation text
+		"1 bp = 0.01 ¢",      // Conversion
+		"per $1",             // Unit
+		"/glossary#term-bps", // Link to glossary
+	)
+
+	// Should also have link on the "bps" text in slippage row
+	if !strings.Contains(body, `<a href="/glossary#term-bps">bps</a>`) {
+		t.Error("should link 'bps' in slippage row to glossary")
+	}
+}
+
+// M5-08: Test decision log links
+func TestM508DecisionLogLinks(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+	rec := postForm(s.Handler(), "/route", validRouteForm(sd.eqID, seedKalshiA), true)
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+
+	wantContains(t, body,
+		"Recorded as decision #1",              // Decision reference
+		"view in decision log",                 // Link text
+		"/log?kind=routing",                    // Link to routing log
+		`<a href="/decisions/1">permalink</a>`, // Permalink (this one is in header already)
+	)
+}
+
+// M5-08: Test sign rule mentions D-098
+func TestM508SignRuleD098(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+	rec := postForm(s.Handler(), "/route", validRouteForm(sd.eqID, seedKalshiA), true)
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+
+	wantContains(t, body,
+		"Sign rule (D-098):", // Sign rule with D-098 reference
+		"positive = saving",  // Sign rule text
+		"parentheses = loss", // Sign rule text
+	)
+}

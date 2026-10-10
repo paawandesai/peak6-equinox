@@ -18,9 +18,10 @@
     <div class="verdict verdict-{{if .Chosen}}ok{{else}}danger{{end}}">
       <div class="verdict-head">
         <span class="badge badge-l {{.OutcomeChipClass}}"><span class="g" aria-hidden="true">{{if .Chosen}}✓{{else}}✕{{end}}</span>{{.OutcomePhrase}}</span>
-        <p class="outcome-summary">{{.OutcomeSummary}}</p>
+        <p class="outcome-summary">{{.LeadSentence}}</p>
       </div>
       <p class="order-line"><strong>Order:</strong> {{.OrderLine}}. <strong>Partners considered:</strong> {{.Partners}}.</p>
+      <p class="decision-log-link">Recorded as decision #{{$.DecisionID}} → <a href="/log?kind=routing">view in decision log</a> or <a href="/decisions/{{$.DecisionID}}">permalink</a>.</p>
       {{if .UsedNotional}}{{if .ConversionTouch.IsPositive}}
       <p class="note"><strong>Notional conversion:</strong> ${{.OriginalNotional.String}} ÷ {{money .ConversionTouch}} touch = {{.ConvertedQuantity.String}} contracts (rounded down).</p>
       {{end}}{{end}}
@@ -34,9 +35,10 @@
       <div><dt>Fees</dt><dd>{{money .TotalFees}}</dd></div>
       <div><dt>Basis penalty</dt><dd>{{money .TotalBasis}}</dd></div>
       {{if .InputsRecorded}}
-      <div><dt>Slippage vs quoted</dt><dd class="{{if .SlippageTotalBps.IsNegative}}word-ok{{else}}neg{{end}}">{{if .SlippageTotalBps.IsNegative}}{{.SlippageTotalBps.Abs.StringFixed 1}}{{else}}({{.SlippageTotalBps.StringFixed 1}}){{end}} bps</dd></div>
+      <div><dt>Slippage vs quoted</dt><dd class="{{if .SlippageTotalBps.IsNegative}}word-ok{{else}}neg{{end}}">{{if .SlippageTotalBps.IsNegative}}{{.SlippageTotalBps.Abs.StringFixed 1}}{{else}}({{.SlippageTotalBps.StringFixed 1}}){{end}} <a href="/glossary#term-bps">bps</a></dd></div>
       {{end}}
     </dl>
+    {{if .InputsRecorded}}<p class="note">Basis points: 1 bp = 0.01 ¢ per $1. See <a href="/glossary#term-bps">glossary</a>.</p>{{end}}
 
     {{if .Chosen}}
     <svg class="split" role="img" aria-label="Split: {{range $i, $leg := .Chosen}}{{if $i}}, {{end}}{{$leg.Quantity.String}} on {{$leg.Venue}}{{end}}{{if not .UnfilledPct.IsZero}}, {{.UnfilledPct.StringFixed 0}}% unfilled{{end}}">
@@ -93,7 +95,7 @@
       </tbody>
     </table>
     {{if not .BasisMultiplier.IsZero}}<p class="note">basis penalty = score × {{money .BasisMultiplier}} per contract</p>{{end}}
-    {{if .InputsRecorded}}<p class="sign-rule">Sign rule: positive = saving (favourable), parentheses = loss (unfavourable).</p>{{end}}
+    {{if .InputsRecorded}}<p class="sign-rule">Sign rule (D-098): positive = saving (favourable), parentheses = loss (unfavourable).</p>{{end}}
     {{else}}
     <h3>Chosen route</h3>
     <p><strong class="reason">No venue can fill this order.</strong> Every candidate was excluded; see below.</p>
