@@ -24,20 +24,32 @@ func init() { register("match", runMatch) }
 
 // runMatch classifies every cross-venue pair in a round (FR-26 `match`):
 //
-//	equinox match [--round N] [--store-all]
+//	equinox match [--round N | --latest] [--store-all] [--pin-min-routable N]
 //
 // Without --round it uses the current round (pinned, else the latest finished
 // one). Every pair in the same category is compared with the facts from
 // FACTS_FILE; every result except unrelated and non-near-miss related ones is
 // stored and logged (D-061, D-068). --store-all stores and logs every
-// non-unrelated result instead.
+// non-unrelated result instead. --latest matches the newest finished round
+// even while another round is pinned. --pin-min-routable N (N > 0) then pins
+// the matched round only if it produced at least N routable pairs
+// (equivalent, equivalent_given_facts, complement); otherwise the current pin
+// is kept, so the site never drops below N routable pairs (hourly rematch).
 func runMatch(ctx context.Context, args []string, stdout io.Writer) error {
 	fs := flag.NewFlagSet("match", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	roundID := fs.Int64("round", 0, "round to match (default: the current round)")
 	storeAll := fs.Bool("store-all", false, "store and log every non-unrelated result, not only near misses")
+	latest := fs.Bool("latest", false, "match the newest finished round, ignoring any pin")
+	pinMin := fs.Int("pin-min-routable", 0, "pin the matched round if it has at least this many routable pairs (0 = never pin)")
 	if err := fs.Parse(args); err != nil {
 		return fmt.Errorf("%w: %w", err, errUsage)
+	}
+	if *latest && *roundID > 0 {
+		return fmt.Errorf("--latest and --round are exclusive: %w", errUsage)
+	}
+	if *pinMin < 0 {
+		return fmt.Errorf("--pin-min-routable must be >= 0: %w", errUsage)
 	}
 	if fs.NArg() > 0 {
 		return fmt.Errorf("match takes no positional arguments: %w", errUsage)
@@ -56,11 +68,51 @@ func runMatch(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 	defer st.Close()
+	if *latest {
+		r, err := st.LatestRound(ctx)
+		if err != nil {
+			return fmt.Errorf("no finished round to match: %w", err)
+		}
+		*roundID = r.ID
+	}
 	sum, err := matchRound(ctx, st, *roundID, *storeAll, factSet, logger)
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprint(stdout, sum.String())
+	if _, err := fmt.Fprint(stdout, sum.String()); err != nil {
+		return err
+	}
+	if *pinMin == 0 {
+		return nil
+	}
+	return maybePin(ctx, st, sum, *pinMin, stdout, logger)
+}
+
+// routablePairs counts the summary's routing-candidate verdicts.
+func (s matchSummary) routablePairs() int {
+	n := 0
+	for t, c := range s.ByType {
+		if t.Routable() {
+			n += c
+		}
+	}
+	return n
+}
+
+// maybePin pins the matched round when it has at least minRoutable routable
+// pairs, and otherwise leaves the current pin alone.
+func maybePin(ctx context.Context, st *store.Store, sum matchSummary, minRoutable int, stdout io.Writer, logger *slog.Logger) error {
+	n := sum.routablePairs()
+	if n < minRoutable {
+		logger.Warn("auto-pin skipped: too few routable pairs", "round", sum.RoundID, "routable", n, "min", minRoutable)
+		_, err := fmt.Fprintf(stdout, "kept current pin: round %d has %d routable pairs (< %d)\n", sum.RoundID, n, minRoutable)
+		return err
+	}
+	if err := st.PinRound(ctx, sum.RoundID); err != nil {
+		return fmt.Errorf("auto-pinning round %d: %w", sum.RoundID, err)
+	}
+	logger.Info("auto-pinned round", "round", sum.RoundID, "routable", n, "min", minRoutable)
+	_, err := fmt.Fprintf(stdout, "pinned round %d (%d routable pairs)\n", sum.RoundID, n)
 	return err
 }
 
