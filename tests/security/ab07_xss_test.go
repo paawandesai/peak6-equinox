@@ -97,7 +97,8 @@ func checkEscaped(t *testing.T, page, body string, escaped ...string) {
 	t.Helper()
 	for _, tag := range rawTagRe.FindAllString(body, -1) {
 		lower := strings.ToLower(tag)
-		if strings.HasPrefix(lower, "<script") && !strings.Contains(tag, "https://cdn.jsdelivr.net/npm/htmx.org@") {
+		// M4-77: allow htmx (pinned CDN) and timezone-local.js (same-origin)
+		if strings.HasPrefix(lower, "<script") && !strings.Contains(tag, "https://cdn.jsdelivr.net/npm/htmx.org@") && !strings.Contains(tag, `src="/static/timezone-local.js"`) {
 			t.Errorf("%s: unexpected script tag: %s", page, tag)
 		}
 		if handlerAttrRe.MatchString(tag) {
@@ -181,7 +182,11 @@ func TestAB07_HostileTextRendersEscaped(t *testing.T) {
 		checkCSP(t, "/route", rec.Header())
 		body := rec.Body.String()
 		for _, tag := range rawTagRe.FindAllString(body, -1) {
-			if handlerAttrRe.MatchString(tag) || (strings.HasPrefix(strings.ToLower(tag), "<script") && !strings.Contains(tag, "htmx.org@")) {
+			// M4-77: allow htmx and timezone-local.js
+			isScript := strings.HasPrefix(strings.ToLower(tag), "<script")
+			isHtmx := strings.Contains(tag, "htmx.org@")
+			isTimezoneLocal := strings.Contains(tag, `src="/static/timezone-local.js"`)
+			if handlerAttrRe.MatchString(tag) || (isScript && !isHtmx && !isTimezoneLocal) {
 				t.Errorf("/route: hostile tag: %s", tag)
 			}
 		}
