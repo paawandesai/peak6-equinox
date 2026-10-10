@@ -549,39 +549,41 @@ func (s *Server) handleAdminIndex(w http.ResponseWriter, r *http.Request) {
 
 	// UI-22: fetch LLM verify runs (latest 20, newest first)
 	tz = timezoneFromRequest(r)
-	if runs, err := s.deps.Store.GetLLMVerifyRuns(ctx, 20); err != nil {
-		s.log.Error("getting LLM verify runs for admin page", "error", err)
-	} else {
-		p.LLMVerifyRuns = make([]llmVerifyRunView, 0, len(runs))
-		for _, r := range runs {
-			v := llmVerifyRunView{
-				ID:           r.ID,
-				StartedAt:    formatTime(r.StartedAt, tz),
-				Model:        r.Model,
-				Verified:     r.Verified,
-				Downgraded:   r.Downgraded,
-				CacheHits:    r.CacheHits,
-				CallsMade:    r.CallsMade,
-				InputTokens:  r.InputTokens,
-				OutputTokens: r.OutputTokens,
-				Outcome:      r.Outcome,
-				FinishedAt:   r.FinishedAt,
+	if s.deps.Store != nil {
+		if runs, err := s.deps.Store.GetLLMVerifyRuns(ctx, 20); err != nil {
+			s.log.Error("getting LLM verify runs for admin page", "error", err)
+		} else {
+			p.LLMVerifyRuns = make([]llmVerifyRunView, 0, len(runs))
+			for _, r := range runs {
+				v := llmVerifyRunView{
+					ID:           r.ID,
+					StartedAt:    formatTime(r.StartedAt, tz),
+					Model:        r.Model,
+					Verified:     r.Verified,
+					Downgraded:   r.Downgraded,
+					CacheHits:    r.CacheHits,
+					CallsMade:    r.CallsMade,
+					InputTokens:  r.InputTokens,
+					OutputTokens: r.OutputTokens,
+					Outcome:      r.Outcome,
+					FinishedAt:   r.FinishedAt,
+				}
+				if r.FinishedAt != nil {
+					v.Duration = r.FinishedAt.Sub(r.StartedAt).Round(time.Second).String()
+				}
+				// Outcome badge
+				switch r.Outcome {
+				case "ok":
+					v.OutcomeBadge = Badge{Class: "b-ok", Glyph: "✓", Text: "ok"}
+				case "cap_reached":
+					v.OutcomeBadge = Badge{Class: "b-warn", Glyph: "!", Text: "cap reached"}
+				case "error":
+					v.OutcomeBadge = Badge{Class: "b-danger", Glyph: "✕", Text: "error"}
+				default:
+					v.OutcomeBadge = Badge{Class: "b-unknown", Glyph: "?", Text: r.Outcome}
+				}
+				p.LLMVerifyRuns = append(p.LLMVerifyRuns, v)
 			}
-			if r.FinishedAt != nil {
-				v.Duration = r.FinishedAt.Sub(r.StartedAt).Round(time.Second).String()
-			}
-			// Outcome badge
-			switch r.Outcome {
-			case "ok":
-				v.OutcomeBadge = Badge{Class: "b-ok", Glyph: "✓", Text: "ok"}
-			case "cap_reached":
-				v.OutcomeBadge = Badge{Class: "b-warn", Glyph: "!", Text: "cap reached"}
-			case "error":
-				v.OutcomeBadge = Badge{Class: "b-danger", Glyph: "✕", Text: "error"}
-			default:
-				v.OutcomeBadge = Badge{Class: "b-unknown", Glyph: "?", Text: r.Outcome}
-			}
-			p.LLMVerifyRuns = append(p.LLMVerifyRuns, v)
 		}
 	}
 
