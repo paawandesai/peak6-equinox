@@ -394,8 +394,11 @@ func (s *Server) handleAdminIndex(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tz := timezoneFromRequest(r)
+	basePage := s.pageBase(currentRound, "Admin", "Is data flowing, which round is pinned, and what can the LLM verifier spend?", tz, "")
+	// M5-04: show Unpin link on admin pages only
+	basePage.Banner.ShowUnpinLink = true
 	p := adminPage{
-		page:        s.pageBase(currentRound, "Admin", "Is data flowing, which round is pinned, and what can the LLM verifier spend?", tz, ""),
+		page:        basePage,
 		Now:         s.now().Format(time.RFC3339),
 		AppEnv:      s.cfg.AppEnv,
 		IngestReady: s.deps.Ingester != nil,
