@@ -414,6 +414,7 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	data.History = buildHistoryChart(rel.AID, rel.BID, rel.Type, points, tz)
+	data.History.markMatched(round.SnapshotAt())
 	entries, err := st.ListLog(ctx, store.LogFilter{Kind: store.LogRelationship, Ref: strconv.FormatInt(rel.ID, 10), Limit: maxPairLogEntries})
 	if err != nil {
 		s.dbError(w, "loading the pair's decision-log entries", err)

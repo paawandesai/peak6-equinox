@@ -692,3 +692,6 @@ table.terms ins, .diff-legend ins { text-decoration: underline; }
 .diff-legend del { background: var(--eq-danger-bg); color: var(--eq-danger); }
 .diff-legend ins { background: var(--eq-ok-bg); color: var(--eq-ok); }
 /* M6 P6 end */
+
+/* M6 P5: the match (pin) time on the price-history chart */
+line.hist-pin { stroke: var(--eq-info); stroke-width: 1.5; stroke-dasharray: 1 3; }

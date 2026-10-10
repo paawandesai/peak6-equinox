@@ -351,7 +351,8 @@ func TestBuildHistoryChart(t *testing.T) {
 	if len(sa.Dots) != 1 || sa.Dots[0] != (chartPt{X: "44.0", Y: "120.0"}) || len(sb.Dots) != 1 {
 		t.Errorf("dots = %+v / %+v", sa.Dots, sb.Dots)
 	}
-	if len(c.Rows) != 3 || c.Rows[1].Mid != "n/a" || c.Rows[1].Ask != "0.7000" || c.Rows[2].Venue != "polymarket" {
+	// M6 P5: the table is newest first with both venues interleaved.
+	if len(c.Rows) != 3 || c.Rows[0].Mid != "n/a" || c.Rows[0].Ask != "0.7000" || c.Rows[2].Venue != "polymarket" {
 		t.Errorf("rows = %+v", c.Rows)
 	}
 	// A single round is centred and gets one x tick.
