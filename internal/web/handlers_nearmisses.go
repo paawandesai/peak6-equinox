@@ -3,13 +3,9 @@ package web
 import (
 	"context"
 	"fmt"
-	"math"
 	"net/http"
 	"sort"
 	"strings"
-	"time"
-
-	"github.com/shopspring/decimal"
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/store"
@@ -22,8 +18,8 @@ type nearMissesPage struct {
 	Groups          []nearMissGroup
 	Total           int
 	Truncated       int // rows dropped by the cap
-	VetoCount       int // rows where at least one hard veto fired
-	FactDidNotClose int // rows where no veto fired (Total - VetoCount)
+	VetoCount       int // rows grouped under the veto that fired
+	FactDidNotClose int // rows a fact was consulted for but did not close (Total - VetoCount)
 }
 
 // nearMissGroup groups near-miss rows by the veto code that fired.
@@ -46,12 +42,18 @@ type nearMissRow struct {
 	VetoField       string // field name (e.g., "subject")
 	VetoDetail      string // detail text (e.g., "BTC is not ETH")
 	VetoDetailWords string // comparator rendered as words (M5-10)
-	TermGap         string // how close (numeric difference or time distance, or "—")
+	TermGap         string // how close, with units (threshold gap or deadline distance, or "—")
 	Score           string // UI-20: "X.XX of Y.YY required" or "not recorded"
 	Facts           []canonical.FactUse
-	Explanation     string
+	Explanation     string // stored explanation, made readable (readableExplanation)
+	FactNote        string // why the consulted fact did not close the pair, from the explanation
+	Group           string // group code: the first veto, or factDidNotCloseCode
 	LogLink         string // link to the pair's verdict entry
 }
+
+// factDidNotCloseCode is the group for pairs a fact was consulted for but did
+// not close; its anchor is #group-fact-did-not-close.
+const factDidNotCloseCode = "fact_did_not_close"
 
 // handleNearMisses answers GET /near-misses: every `related` pair stored for
 // the current round. `equinox match` keeps a `related` result only when it
@@ -100,13 +102,9 @@ func (s *Server) handleNearMisses(w http.ResponseWriter, r *http.Request) {
 
 	// M5-10: If veto filter is set, validate it exists in the data
 	if vetoFilter != "" {
-		found := false
+		found := vetoFilter == factDidNotCloseCode
 		for _, row := range rows {
-			code := row.VetoBadge.Text
-			if code == "" {
-				code = "fact_did_not_close"
-			}
-			if code == vetoFilter {
+			if row.Group == vetoFilter {
 				found = true
 				break
 			}
@@ -118,13 +116,12 @@ func (s *Server) handleNearMisses(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data.Groups = groupNearMisses(rows, vetoFilter, showAll)
-	data.VetoCount = 0
 	for _, row := range rows {
-		if row.VetoBadge.Text != "" {
-			data.VetoCount++
+		if row.Group == factDidNotCloseCode {
+			data.FactDidNotClose++
 		}
 	}
-	data.FactDidNotClose = data.Total - data.VetoCount
+	data.VetoCount = data.Total - data.FactDidNotClose
 	s.render(w, http.StatusOK, "near_misses", data)
 }
 
@@ -138,9 +135,9 @@ func nearMissRows(rels []canonical.Relationship, views map[string]instrumentView
 			B:           views[r.BID],
 			Confidence:  r.Confidence.StringFixed(2),
 			Facts:       r.FactsUsed,
-			Explanation: r.Explanation,
+			Explanation: readableExplanation(r.Explanation, r.FactsUsed),
 			LogLink:     fmt.Sprintf("/pairs/%d", r.ID),
-			TermGap:     computeTermGap(r.Diff),
+			TermGap:     termGap(r.Diff),
 		}
 		// UI-20: Pre-veto score
 		if r.Evidence != nil && r.Evidence.PreVetoScore != nil && r.Evidence.RequiredScore != nil {
@@ -155,9 +152,14 @@ func nearMissRows(rels []canonical.Relationship, views map[string]instrumentView
 			v := r.Vetoes[0]
 			row.VetoBadge = Badge{Class: "b-danger mono", Glyph: "✕", Text: v.Code}
 			row.VetoField = v.Field
-			row.VetoDetail = v.Detail
+			row.VetoDetail = humanizeDurations(v.Detail)
 			// M5-10: Render comparators as words
-			row.VetoDetailWords = comparatorToWords(v.Detail)
+			row.VetoDetailWords = comparatorToWords(row.VetoDetail)
+			row.Group = v.Code
+		}
+		if factDidNotClose(r) {
+			row.Group = factDidNotCloseCode
+			row.FactNote = humanizeDurations(factNote(r.Explanation))
 		}
 		rows = append(rows, row)
 	}
@@ -165,17 +167,22 @@ func nearMissRows(rels []canonical.Relationship, views map[string]instrumentView
 }
 
 // groupNearMisses groups rows by veto code. Rows with the same first veto
-// code are grouped together, and rows without a veto go under "fact did not
-// close". Groups are sorted by code. M5-10 adds filtering by veto code and
-// a 25-row cap per group (unless showAll is true).
+// code are grouped together; rows without a veto, and rows the Fed fact was
+// consulted for but did not close (factDidNotClose), go under "fact did not
+// close", which is always present (possibly empty) so its anchor never
+// dangles. Groups are sorted by code with that group last. M5-10 adds
+// filtering by veto code and a 25-row cap per group (unless showAll is true).
 func groupNearMisses(rows []nearMissRow, vetoFilter string, showAll bool) []nearMissGroup {
 	const maxRowsPerGroup = 25
 
 	codeMap := make(map[string][]nearMissRow)
+	if len(rows) > 0 {
+		codeMap[factDidNotCloseCode] = nil
+	}
 	for _, row := range rows {
-		code := row.VetoBadge.Text
+		code := row.Group
 		if code == "" {
-			code = "fact_did_not_close"
+			code = factDidNotCloseCode
 		}
 		codeMap[code] = append(codeMap[code], row)
 	}
@@ -206,65 +213,15 @@ func groupNearMisses(rows []nearMissRow, vetoFilter string, showAll bool) []near
 	}
 	sort.Slice(groups, func(i, j int) bool {
 		// "fact_did_not_close" always last
-		if groups[i].Code == "fact_did_not_close" {
+		if groups[i].Code == factDidNotCloseCode {
 			return false
 		}
-		if groups[j].Code == "fact_did_not_close" {
+		if groups[j].Code == factDidNotCloseCode {
 			return true
 		}
 		return groups[i].Code < groups[j].Code
 	})
 	return groups
-}
-
-// computeTermGap returns "how close" the near miss was: the numeric difference
-// for thresholds, time distance for deadlines, or "—" for non-numeric fields.
-func computeTermGap(diff []canonical.FieldDiff) string {
-	for _, d := range diff {
-		if d.Status != canonical.DiffDiffer {
-			continue
-		}
-		// Try parsing as decimals for threshold
-		if a, err1 := decimal.NewFromString(d.A); err1 == nil {
-			if b, err2 := decimal.NewFromString(d.B); err2 == nil {
-				gap := a.Sub(b).Abs()
-				return gap.StringFixed(2)
-			}
-		}
-		// Try parsing as time for deadline
-		if ta, err1 := time.Parse(time.RFC3339, d.A); err1 == nil {
-			if tb, err2 := time.Parse(time.RFC3339, d.B); err2 == nil {
-				dur := ta.Sub(tb)
-				if dur < 0 {
-					dur = -dur
-				}
-				return formatDurationDistance(dur)
-			}
-		}
-	}
-	return "—"
-}
-
-// formatDurationDistance formats a duration as a readable distance.
-func formatDurationDistance(d time.Duration) string {
-	absDays := math.Abs(d.Hours() / 24)
-	if absDays >= 1 {
-		return fmt.Sprintf("%.0f day%s", absDays, pluralS(int(absDays)))
-	}
-	absHours := math.Abs(d.Hours())
-	if absHours >= 1 {
-		return fmt.Sprintf("%.0f hour%s", absHours, pluralS(int(absHours)))
-	}
-	absMinutes := math.Abs(d.Minutes())
-	return fmt.Sprintf("%.0f minute%s", absMinutes, pluralS(int(absMinutes)))
-}
-
-// pluralS returns "s" if n != 1, else "".
-func pluralS(n int) string {
-	if n == 1 {
-		return ""
-	}
-	return "s"
 }
 
 // vetoDescription returns a one-sentence plain description for each veto
