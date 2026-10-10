@@ -1,0 +1,113 @@
+{{define "content"}}
+<div class="page-head">
+  <h1>About Equinox</h1>
+  <p class="intro">Equinox is a prototype built for PEAK6 Labs. It reads contracts and order books from Kalshi and Polymarket, decides which contracts are the same bet, explains every verdict, and simulates where an order would fill best. It is read-only and never places orders.</p>
+</div>
+
+<section>
+  <h2 id="questions">The two questions</h2>
+  <p>The brief's problem statement: "Nobody can say programmatically 'these two contracts are the same bet' or compare their prices on a like-for-like basis, which means no one can route an order intelligently between venues." Equinox tests whether both can be done.</p>
+  <ol>
+    <li><strong>Can software tell that a Kalshi contract and a Polymarket contract are the same bet, and explain why?</strong> Today's verdicts are on <a href="/">Matches</a> and <a href="/near-misses">Near misses</a>; accuracy on human-labelled pairs and the settlement back-test are on <a href="/eval">Eval</a>.</li>
+    <li><strong>Can it compare their prices like for like and decide where an order would execute best?</strong> Open any routable pair from <a href="/">Matches</a> and simulate an order; every simulated route is kept on the <a href="/log">Decision log</a>.</li>
+  </ol>
+</section>
+
+<section>
+  <h2 id="equivalent">What "equivalent" means</h2>
+  <blockquote>Two contracts are <code>equivalent</code> if and only if buying YES on both pays out identically in every reachable world state.</blockquote>
+  <p>This is a payout definition, not a text-similarity one. Four things must match: the proposition (subject, metric, comparator, threshold, unit and polarity), the resolution instant, the resolution source, and edge-case handling. The first three are hard vetoes; edge-case handling is scored, not vetoed (see <a href="#limits">Known limits</a>). There is no tolerance: one cent or one hour of difference is a difference, and an unknown term caps a pair at <code>related</code>.</p>
+</section>
+
+<section>
+  <h2 id="ladder">The relationship ladder</h2>
+  <p>Strongest first. Only routable types with confidence {{.MinConfidence}} or more are offered to the router; the LLM verifier may only move a pair down this list.</p>
+  <table class="data stack">
+    <thead><tr><th>Type</th><th>Meaning</th><th>Routable</th></tr></thead>
+    <tbody>
+    {{range .Types}}
+      <tr id="about-{{.Anchor}}">
+        <td data-label="Type">{{template "badge" .Badge}}</td>
+        <td data-label="Meaning">{{.Meaning}}</td>
+        <td data-label="Routable">{{if .Routable}}<strong>yes</strong>{{else}}no{{end}}</td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+  <p class="note">Veto codes and other terms are defined on the <a href="/glossary">Glossary</a>.</p>
+</section>
+
+<section>
+  <h2 id="pipeline">How a verdict is made</h2>
+  <div class="two-col">
+    <figure class="pipeline-figure">
+      <svg class="pipeline" viewBox="0 0 320 {{.SVGHeight}}" width="320" height="{{.SVGHeight}}" role="img" aria-labelledby="pipeline-title pipeline-desc" xmlns="http://www.w3.org/2000/svg">
+        <title id="pipeline-title">The Equinox pipeline</title>
+        <desc id="pipeline-desc">Seven steps, top to bottom: collect, normalise, block, veto and facts, classify, route, log.</desc>
+        <defs>
+          <marker id="pipeline-arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" class="pipeline-head" fill="currentColor"></path>
+          </marker>
+        </defs>
+        {{range .Steps}}
+        <rect x="10" y="{{.Y}}" width="300" height="44" rx="6" class="pipeline-box" fill="none" stroke="currentColor"></rect>
+        <text x="22" y="{{.NameY}}" class="pipeline-name" fill="currentColor" font-size="14" font-weight="600">{{.N}}. {{.Name}}</text>
+        <text x="22" y="{{.ShortY}}" class="pipeline-short" fill="currentColor" font-size="12">{{.Short}}</text>
+        {{if not .Last}}<line x1="160" y1="{{.ArrowY1}}" x2="160" y2="{{.ArrowY2}}" class="pipeline-arrow" stroke="currentColor" marker-end="url(#pipeline-arrowhead)"></line>{{end}}
+        {{end}}
+      </svg>
+    </figure>
+    <ol class="pipeline-steps">
+      {{range .Steps}}<li><strong>{{.Name}}.</strong> {{.Detail}}</li>
+      {{end}}
+    </ol>
+  </div>
+</section>
+
+<section>
+  <h2 id="cost">All-in cost</h2>
+  <p>For a buy, the router ranks every eligible venue by what one contract really costs per $1 payout:</p>
+  <pre><code>all-in cost per contract = VWAP + fee per contract + basis-risk score × {{.BasisMult}}</code></pre>
+  <ul>
+    <li><strong>VWAP</strong>: the average price paid walking the book from the best price to worse ones.</li>
+    <li><strong>Fee</strong>: the venue's published fee formula, applied at each level consumed. A venue whose fee schedule is unknown is excluded, never guessed.</li>
+    <li><strong>Basis penalty</strong>: the pair's basis-risk score (0 to 1) times <code>BASIS_PENALTY_MULTIPLIER</code> ({{.BasisMult}}; the default is 0.01). A score of 0.5 adds ${{.BasisHalf}} per contract, and the most it can add is ${{.BasisMult}}. The contract you name has no relationship to itself, so it pays no penalty.</li>
+    <li>For a sell, net proceeds per contract = VWAP − fee − basis penalty, and the router maximises it.</li>
+  </ul>
+  <p>The router prefers the cheapest venue that can fill the whole order; otherwise it fills greedily from the cheapest all-in cost upward across venues. Worked examples are in <a href="https://labs.gauntletai.com/paawandesai/peak6-equinox/-/blob/main/docs/routing.md">routing.md</a>.</p>
+</section>
+
+<section>
+  <h2 id="ai">What AI does and doesn't do</h2>
+  <ul>
+    <li>Matching, diffs and routing are deterministic rules code. No public page calls a model.</li>
+    <li>An LLM verifier (Anthropic, cheapest model tier) can give a second opinion on rules verdicts. Only an admin can trigger it, and it can only confirm, downgrade or reject a verdict: it can never create or upgrade a relationship. A guard in code enforces this, and tests cover it.</li>
+    <li>Status in production: <code>make deploy</code> sets <code>LLM_ENABLED=false</code>, and the scores on <a href="/eval">Eval</a> are for the rules alone (method <code>rules</code>). Each pair page shows the method behind its verdict.</li>
+    <li>Equinox was built by AI coding agents working under human-approved decisions. <a href="https://labs.gauntletai.com/paawandesai/peak6-equinox/-/blob/main/docs/ai-usage.md">ai-usage.md</a> discloses both uses.</li>
+  </ul>
+</section>
+
+<section>
+  <h2 id="limits">Known limits</h2>
+  <ul>
+    <li><strong>Edge rules are scored, not vetoed.</strong> Early-close, tie and void rules are not extracted, so they are never compared. Each matched pair pays a confidence and basis-risk cost for this and says "edge rules not compared"; a pair that differed only in void handling would still be called equivalent.</li>
+    <li><strong>There is no mutually-exclusive type.</strong> "Vance wins" and "Harris wins" cannot both pay, so their prices are linked, but their subjects differ, so blocking classifies the pair <code>unrelated</code>. Such pairs are never routed.</li>
+    <li><strong>The settlement back-test ran on recorded data only.</strong> It replays contracts that had already settled, from recorded venue fixtures; its result is on <a href="/eval#backtest">Eval</a>. A live back-test against the venues has not been run.</li>
+    <li><strong>No crypto pair is equivalent in the recorded data.</strong> Kalshi's daily Bitcoin contracts resolve on CF Benchmarks at 5 or 6 PM ET and Polymarket's on Binance at noon ET: different sources and instants, so those pairs are <code>related</code> at best.</li>
+  </ul>
+</section>
+
+<section>
+  <h2 id="pinned">The pinned demo round</h2>
+  <p>{{if and .Round .Round.Pinned}}The operator has pinned round {{.Round.ID}} for the review{{else}}When the operator pins a match round for a demo{{end}}, the pairs, their ids and their verdicts stay fixed while it is pinned. Prices and routing still use the newest collected quotes, and every price shows its age (decision D-117), so a pair matched in the pinned round is priced live.</p>
+</section>
+
+<section>
+  <h2 id="docs">Read more</h2>
+  <p>The app does not serve the docs; these links open them in the GitLab repository.</p>
+  <ul>
+    {{range .Docs}}<li><a href="{{.URL}}">{{.Name}}</a>: {{.What}}</li>
+    {{end}}
+  </ul>
+</section>
+{{end}}
