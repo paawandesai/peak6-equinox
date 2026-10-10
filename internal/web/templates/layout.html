@@ -12,7 +12,7 @@
 </head>
 <body>
   {{/* Banners (D-098): demo (info), no-data (warn), stale (danger) with glyphs */}}
-  {{if .Banner.Show}}<div class="banner {{if .Banner.Pinned}}banner-info{{else}}banner-warn{{end}}" {{if .Banner.Pinned}}role="status"{{else}}role="alert"{{end}}><div class="container"><span class="g" aria-hidden="true">{{if .Banner.Pinned}}◆{{else}}?{{end}}</span>{{if .Banner.Pinned}}Demo mode: data as of {{.Banner.AsOf}} (round {{.Banner.RoundID}}, pinned by the operator).{{if .Banner.ShowUnpinLink}} <a href="/admin">Unpin</a>{{end}}{{else}}No data available yet. Run ingest from <a href="/admin">/admin</a>.{{end}}</div></div>{{end}}
+  {{if .Banner.Show}}<div class="banner {{if .Banner.Pinned}}banner-info{{else}}banner-warn{{end}}" {{if .Banner.Pinned}}role="status"{{else}}role="alert"{{end}}><div class="container"><span class="g" aria-hidden="true">{{if .Banner.Pinned}}◆{{else}}?{{end}}</span>{{if .Banner.Pinned}}Demo mode: pairs matched in round {{.Banner.RoundID}} as of {{.Banner.AsOf}}, pinned by the operator. Prices and routing use the newest collected quotes; each price shows its age.{{if .Banner.ShowUnpinLink}} <a href="/admin">Unpin</a>{{end}}{{else}}No data available yet. Run ingest from <a href="/admin">/admin</a>.{{end}}</div></div>{{end}}
   {{if .StaleWarning}}<div class="banner banner-danger" role="alert"><div class="container"><span class="g" aria-hidden="true">✕</span>{{.StaleWarning}}</div></div>{{end}}
   <header class="site-header">
     <nav class="container">

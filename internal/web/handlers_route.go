@@ -776,7 +776,7 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 		MinRouteConfidence:     s.cfg.MinRouteConfidence,
 		BasisPenaltyMultiplier: s.cfg.BasisPenaltyMult,
 		Eligibility: route.EligibilityConfig{
-			Snapshot:     round.SnapshotAt(),
+			Snapshot:     quoteSnapshot(ctx, st, round),
 			StaleAfter:   s.cfg.StaleAfter,
 			SkewWarn:     s.cfg.SkewWarn,
 			SkewMax:      s.cfg.SkewMax,
@@ -819,7 +819,7 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 		page:          p,
 		PairID:        in.PairID,
 		DecisionID:    id,
-		Decision:      newDecisionView(dec, len(partners), round.SnapshotAt(), titles, s.cfg.BasisPenaltyMult),
+		Decision:      newDecisionView(dec, len(partners), decisionSnapshot(dec, round.SnapshotAt()), titles, s.cfg.BasisPenaltyMult),
 		RenderContext: "route",
 	}
 	s.renderRoute(w, r, http.StatusOK, data)
