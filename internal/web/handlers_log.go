@@ -137,13 +137,14 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 	showAll := false
 	reviewerView := false
 
-	if kindParam == "" {
+	switch kindParam {
+	case "":
 		// Default: reviewer-first view (verdicts, routing, LLM; exclude ingest)
 		reviewerView = true
-	} else if kindParam == "all" {
+	case "all":
 		// Show all kinds including ingest
 		showAll = true
-	} else {
+	default:
 		// Specific kind filter
 		kind = store.LogKind(kindParam)
 		if !kind.Valid() {
