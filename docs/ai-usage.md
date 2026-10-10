@@ -39,11 +39,11 @@ Every outcome appends a human-readable note to the relationship's explanation.
 
 ## Spend to date
 
-As of 2026-10-10 (also in `docs/status.md` "Spend to date"):
-- **GCP:** not measured. Nobody has read the billing page since deploy. Whether the $50 budget alert asked for in status.md Q-3 is set could not be checked from the operator host (the budgets API needs billing-account access it lacks).
-- **Anthropic (the product's key):** the production service has no key mounted, so it has made no model calls. No other use of the product key is recorded. The console total has not been read.
+As of 2026-10-10 (also in `docs/status.md` "Spend to date"; D-134):
+- **GCP:** $1.15 for Oct 1–10, from the Cloud Billing console. Cloud SQL Zonal Micro instance $0.94, Cloud SQL storage $0.20, other < $0.01.
+- **Anthropic (the product's key):** $0. The production service has no key mounted, so it has made no model calls (Q-11, D-053).
 - **Development tools** (Claude Code, Cursor) run on the operators' own subscriptions, not on the project budget.
-- **Total against the $50 cap (NFR-15):** not measured.
+- **Total against the $50 cap (NFR-15):** $1.15. NFR-15 is met.
 
 ## Development AI use
 

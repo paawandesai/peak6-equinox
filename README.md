@@ -88,7 +88,7 @@ The optional LLM verifier (`internal/llm`) is admin-triggered and downgrade-only
 - **No operator status page.** `/status` (M6 P9) was not built; collector health is on `/admin` only.
 - **The LLM verifier has not run in production**, and `LLM_ENABLED` does not gate it; only the missing key does (status.md Q-11).
 - **The home page lists the first 1,000 stored relationships of a round.** Fine for round 904, but locally the fixture round shows Routable 0.
-- **Collection runs every 2 minutes**, not the 5 minutes FR-04 states (D-131). Spend against the $50 cap is not measured (status.md).
+- **Collection runs every 2 minutes**, not the 5 minutes FR-04 states (D-131). Spend through 2026-10-10 is $1.15 of the $50 cap, all GCP; the app's Anthropic spend is $0 because prod has no key (status.md, D-134).
 
 ## Recording
 
