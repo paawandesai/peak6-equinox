@@ -125,6 +125,7 @@ None.
 | D-109 | M4-72: Same-metric Fed decision pairs use fed_rate_step grid rounding; zero-veto Fed pairs report equivalent_given_facts (not equivalent) to document grid check. KXFEDDECISION/KXRATECUTCOUNT default to resolution_source=federalreserve_gov when rules lack source. Kalshi's "Therefore, if the Fed hikes by 50bps, the 50bps market resolves Yes" sentence is read as an illustration, not the bucket (fixes back-test DISAGREED on KXFEDDECISION-26SEP-H25, CI #45765). Tier 2 (touches equivalence rules, classify.go + facts.go + fed.go); achieves 15/15 KXFEDDECISION equivalent_given_facts (eval 16/19 EGF, up from 1/19), 15 TP + 0 FP among KXFEDDECISION labels. Scope: KXFEDDECISION same-metric rate_change pairs (15/27 Fed labels). KXRATECUTCOUNT (3 labels) remain related; require rate-cut-count extraction. | 2026-10-09 |
 
 | D-103 | UI-21: Rule layers columns (rules_summary, clarifications, clarifications_updated_at) added to instruments table. Kalshi rules_secondary captured as clarifications; Polymarket has no separate layers. Not fed to matcher/LLM in this ticket. Migration 0004. Tier 2 schema change. | 2026-10-09 |
+| D-111 | M4-79 (#79) Phase 1: live round 735 shows 2 routable pairs because it predates the deployed M4-70 nominee fix; fresh local live round gives 79 by type (94 with !88), 12 router-eligible with !88. No universe change. Phase 2 plan: after !88 merges and deploy, ingest + match + pin a new round and verify Routable ≥ 10 on `/`. Tier 2 (pin/deploy plan; needs sign-off). | 2026-10-10 |
 
 ## Kept decisions (veto closed)
 
