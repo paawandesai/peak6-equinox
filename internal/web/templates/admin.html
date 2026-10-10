@@ -29,7 +29,9 @@
               <li class="{{.Class}}"><span class="g" aria-hidden="true">{{.Glyph}}</span> {{.Text}}</li>
             {{end}}
           </ul>
-          <svg class="bars" width="240" height="24" aria-label="Recent rounds: {{len .Bars}} rounds shown" role="img">
+          {{$numBars := len .Bars}}
+          {{$svgWidth := mul $numBars 10}}
+          <svg class="bars" width="{{$svgWidth}}" height="24" viewBox="0 0 {{$svgWidth}} 24" aria-label="{{.AriaLabel}}" role="img">
             {{range $i, $bar := .Bars}}
               {{if eq $bar.Height "0"}}
                 <rect x="{{mul $i 10}}" y="0" width="8" height="24" class="{{$bar.Class}}" fill="none" stroke="currentColor" stroke-width="1"><title>{{$bar.Title}}</title></rect>

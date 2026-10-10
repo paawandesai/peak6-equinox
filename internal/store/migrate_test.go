@@ -15,6 +15,7 @@ import (
 var dataModelTables = []string{
 	"fetch_rounds", "raw_responses", "instruments", "quotes", "relationships",
 	"llm_verdicts", "llm_usage", "llm_verify_last_run", "routing_decisions", "decision_log",
+	"match_runs",
 }
 
 func tablesIn(t *testing.T, dsn string) map[string]bool {

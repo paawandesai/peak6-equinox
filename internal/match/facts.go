@@ -187,7 +187,7 @@ func deriveWithFacts(a, b canonical.Instrument, f facts.Set) (*derivation, deriv
 // This also handles KXRATECUTCOUNT pairs (count of rate cuts in 2026) where both
 // venues count 25bp cuts the same way, given the fed_rate_step fact that every
 // 2026 move is a multiple of 25bp.
-func deriveSameMetricFed(a, b canonical.Instrument, vetoes []canonical.Veto, f facts.Set) (*derivation, derivationNote) {
+func deriveSameMetricFed(a, b canonical.Instrument, _ []canonical.Veto, f facts.Set) (*derivation, derivationNote) {
 	// Only for Fed category with same subject.
 	if a.Category != canonical.CategoryFed || b.Category != canonical.CategoryFed ||
 		a.Terms.Subject != fedSubject || b.Terms.Subject != fedSubject {
