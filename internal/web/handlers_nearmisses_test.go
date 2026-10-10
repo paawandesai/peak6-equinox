@@ -1,7 +1,12 @@
 package web
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -174,21 +179,62 @@ func TestPluralS(t *testing.T) {
 	}
 }
 
-// TestVetoDescriptionCoverage tests all veto codes.
+// TestVetoDescriptionCoverage: every veto code declared in
+// internal/match/veto.go, plus "fact_did_not_close", has a one-sentence plain
+// description rather than the code-with-spaces fallback (M5-06). The codes are
+// read from veto.go's source, so a new code fails here until it is described.
 func TestVetoDescriptionCoverage(t *testing.T) {
-	tests := map[string]string{
-		"subject_mismatch":   "Different underlying subject",
-		"threshold_mismatch": "Strike or threshold differs",
-		"deadline_mismatch":  "Resolution deadline differs",
-		"direction_mismatch": "Comparison direction differs (over vs under)",
-		"source_mismatch":    "Data source differs",
-		"fact_did_not_close": "A fact was consulted but did not close the difference",
-		"unknown_code":       "unknown code",
-	}
-	for code, want := range tests {
+	codes := append(matchVetoCodes(t), "fact_did_not_close")
+	for _, code := range codes {
 		got := vetoDescription(code)
-		if got != want {
-			t.Errorf("vetoDescription(%q) = %q, want %q", code, got, want)
+		if got == strings.ReplaceAll(code, "_", " ") {
+			t.Errorf("vetoDescription(%q) falls back to the code", code)
+		}
+		if !strings.HasSuffix(got, ".") || strings.Count(got, ". ") > 0 {
+			t.Errorf("vetoDescription(%q) = %q, want one sentence", code, got)
 		}
 	}
+	// The dead direction_mismatch code (never emitted) is gone; unknown codes fall back.
+	for _, code := range []string{"direction_mismatch", "unknown_code"} {
+		if got, want := vetoDescription(code), strings.ReplaceAll(code, "_", " "); got != want {
+			t.Errorf("vetoDescription(%q) = %q, want fallback %q", code, got, want)
+		}
+	}
+}
+
+// matchVetoCodes returns the string values of the Veto* constants declared
+// in internal/match/veto.go, in source order. The web package must not import
+// match's internals for this, so it reads the source.
+func matchVetoCodes(t *testing.T) []string {
+	t.Helper()
+	f, err := parser.ParseFile(token.NewFileSet(), filepath.Join("..", "match", "veto.go"), nil, 0)
+	if err != nil {
+		t.Fatalf("parsing veto.go: %v", err)
+	}
+	var codes []string
+	for _, decl := range f.Decls {
+		gd, ok := decl.(*ast.GenDecl)
+		if !ok || gd.Tok != token.CONST {
+			continue
+		}
+		for _, spec := range gd.Specs {
+			vs := spec.(*ast.ValueSpec)
+			for i, name := range vs.Names {
+				if !strings.HasPrefix(name.Name, "Veto") || i >= len(vs.Values) {
+					continue
+				}
+				if lit, ok := vs.Values[i].(*ast.BasicLit); ok && lit.Kind == token.STRING {
+					v, err := strconv.Unquote(lit.Value)
+					if err != nil {
+						t.Fatal(err)
+					}
+					codes = append(codes, v)
+				}
+			}
+		}
+	}
+	if len(codes) < 15 {
+		t.Fatalf("found %d veto codes in veto.go, want at least 15: %v", len(codes), codes)
+	}
+	return codes
 }
