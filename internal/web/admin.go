@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -47,6 +48,7 @@ func (s *Server) adminRoutes(mux *http.ServeMux) {
 	mux.Handle("/admin/{$}", index)
 	mux.Handle("/admin/ingest", s.adminAuth(http.HandlerFunc(s.handleAdminIngest)))
 	mux.Handle("/admin/llm-verify", s.adminAuth(http.HandlerFunc(s.handleAdminLLMVerify)))
+	mux.Handle("/admin/pin", s.adminAuth(http.HandlerFunc(s.handleAdminPin)))
 	mux.Handle("/admin/unpin", s.adminAuth(http.HandlerFunc(s.handleAdminUnpin)))
 	mux.Handle("/admin/", s.adminAuth(http.NotFoundHandler()))
 }
@@ -75,6 +77,23 @@ type Signal struct {
 	Glyph string // ✓/!/✕/?
 	Class string // signal-healthy, signal-warning, signal-degraded, signal-unknown
 	Text  string // screen-reader text
+}
+
+// llmVerifyRunView represents one LLM verify run for the admin runs table (UI-22).
+type llmVerifyRunView struct {
+	ID           int64
+	StartedAt    string
+	Duration     string
+	Model        string
+	Verified     int
+	Downgraded   int
+	CacheHits    int
+	CallsMade    int
+	InputTokens  int64
+	OutputTokens int64
+	Outcome      string     // "ok", "cap_reached", "error"
+	OutcomeBadge Badge      // badge for the outcome
+	FinishedAt   *time.Time // nil if still running
 }
 
 // HealthRow represents one row in the admin health table (UI-17, HANDOFF.md).
@@ -117,6 +136,8 @@ type adminPage struct {
 	// UI-17: health rollup
 	Health           []HealthRow // health table rows (Collectors, Database, Matcher, Pinned, LLM)
 	FreshnessWindows string      // freshness windows line under health table
+	// UI-22: LLM verify runs table
+	LLMVerifyRuns []llmVerifyRunView // latest N runs, newest first
 }
 
 // worstHealth returns the worst health state from a set of signals (UI-17, HANDOFF.md).
@@ -518,7 +539,55 @@ func (s *Server) handleAdminIndex(w http.ResponseWriter, r *http.Request) {
 	// UI-17 + UI-26: build health rows with worst-signal rollup, match runs, and 90-day bars
 	p.Health = buildHealthRows(p.Collector, growth, hasDB, p.DBError, p.PinnedRound, p.LLMVerifierState, recentForBars, latestMatchRun, dailyHistory, s.now())
 	// UI-17: freshness windows (D-077 threshold 120s, UI-19 will add warn windows)
-	p.FreshnessWindows = "Stale thresholds: Kalshi quotes 120 s, Polymarket quotes 120 s, rounds 10 min."
+	// UI-19: show both warn and stale windows per source
+	p.FreshnessWindows = fmt.Sprintf("Freshness windows (warn→stale): Kalshi quotes %d→%d s, Polymarket quotes %d→%d s, rounds %d→%d min.",
+		int(s.cfg.KalshiWarnAfter.Seconds()),
+		int(s.cfg.StaleAfter.Seconds()),
+		int(s.cfg.PolymarketWarnAfter.Seconds()),
+		int(s.cfg.StaleAfter.Seconds()),
+		s.cfg.RoundWarnMinutes,
+		s.cfg.StaleRoundWarnMinutes,
+	)
+
+	// UI-22: fetch LLM verify runs (latest 20, newest first)
+	tz = timezoneFromRequest(r)
+	if s.deps.Store != nil {
+		if runs, err := s.deps.Store.GetLLMVerifyRuns(ctx, 20); err != nil {
+			s.log.Error("getting LLM verify runs for admin page", "error", err)
+		} else {
+			p.LLMVerifyRuns = make([]llmVerifyRunView, 0, len(runs))
+			for _, r := range runs {
+				v := llmVerifyRunView{
+					ID:           r.ID,
+					StartedAt:    formatTime(r.StartedAt, tz),
+					Model:        r.Model,
+					Verified:     r.Verified,
+					Downgraded:   r.Downgraded,
+					CacheHits:    r.CacheHits,
+					CallsMade:    r.CallsMade,
+					InputTokens:  r.InputTokens,
+					OutputTokens: r.OutputTokens,
+					Outcome:      r.Outcome,
+					FinishedAt:   r.FinishedAt,
+				}
+				if r.FinishedAt != nil {
+					v.Duration = r.FinishedAt.Sub(r.StartedAt).Round(time.Second).String()
+				}
+				// Outcome badge
+				switch r.Outcome {
+				case "ok":
+					v.OutcomeBadge = Badge{Class: "b-ok", Glyph: "✓", Text: "ok"}
+				case "cap_reached":
+					v.OutcomeBadge = Badge{Class: "b-warn", Glyph: "!", Text: "cap reached"}
+				case "error":
+					v.OutcomeBadge = Badge{Class: "b-danger", Glyph: "✕", Text: "error"}
+				default:
+					v.OutcomeBadge = Badge{Class: "b-unknown", Glyph: "?", Text: r.Outcome}
+				}
+				p.LLMVerifyRuns = append(p.LLMVerifyRuns, v)
+			}
+		}
+	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("X-Robots-Tag", "noindex") // UI-08: noindex via header, not meta tag
@@ -863,6 +932,60 @@ func (s *Server) handleAdminLLMVerify(w http.ResponseWriter, r *http.Request) {
 		Downgraded:      downgraded,
 		BudgetExhausted: budgetExhausted,
 	})
+}
+
+// handleAdminPin pins a specified round for demo mode (M4-78, FR-22, US-09).
+// After pin, all pages use that round's stored data with no live venue calls.
+func (s *Server) handleAdminPin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", "POST")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if s.deps.Store == nil {
+		http.Error(w, "database not configured", http.StatusServiceUnavailable)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	// Parse round_id from form
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form data", http.StatusBadRequest)
+		return
+	}
+
+	roundIDStr := r.FormValue("round_id")
+	if roundIDStr == "" {
+		http.Error(w, "round_id is required", http.StatusBadRequest)
+		return
+	}
+
+	roundID, err := strconv.ParseInt(roundIDStr, 10, 64)
+	if err != nil || roundID <= 0 {
+		http.Error(w, "round_id must be a positive integer", http.StatusBadRequest)
+		return
+	}
+
+	if err := s.deps.Store.PinRound(ctx, roundID); err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			http.Error(w, "round not found or not finished ok/partial", http.StatusNotFound)
+			return
+		}
+		s.log.Error("pinning round", "error", err, "round_id", roundID)
+		http.Error(w, "database unavailable", http.StatusServiceUnavailable)
+		return
+	}
+
+	s.log.Info("pinned round", "round_id", roundID)
+
+	// Redirect back to the admin page
+	if wantsHTML(r) {
+		http.Redirect(w, r, "/admin", http.StatusSeeOther)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
 // handleAdminUnpin unpins any pinned round (M3-07, NFR-04). After unpin, the

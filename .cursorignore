@@ -1,0 +1,57 @@
+# Cursor/Grok Bot context: keep heavy, non-essential files out of agent context.
+# Source, tests, configs, CI yaml and docs (review.md, tickets, plans) stay visible.
+# Terminal commands (tests, builds) are unaffected.
+
+# Dependencies and package caches
+node_modules/
+.pnpm-store/
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Build and generated output
+dist/
+build/
+out/
+.next/
+.turbo/
+.cache/
+target/
+coverage/
+*.min.js
+*.min.css
+*.map
+*.tsbuildinfo
+
+# Test artifacts
+playwright-report/
+test-results/
+blob-report/
+
+# Local binaries, logs, archives, media dumps
+bin/
+*.log
+logs/
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.mp4
+*.webm
+*.mov
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Equinox: operator runtime state (logs, status json, backups) is not repo context
+.ao-ops/*.log
+.ao-ops/**/*.log
+.ao-ops/*status*.json
+.ao-ops/*.bak*
+.ao-ops/wip-backup-*/
+.ao-ops/review-inflight/

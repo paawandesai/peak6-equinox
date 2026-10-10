@@ -25,7 +25,7 @@ func TestSpreadCalculation_Equivalent(t *testing.T) {
 			{InstrumentID: "b", FetchedAt: now, Mid: decimal.NullDecimal{Valid: true, Decimal: midB}},
 		}
 
-		xOf := func(t time.Time) float64 { return 100 }
+		xOf := func(_ time.Time) float64 { return 100 }
 		sp := buildSpreadSeries("a", "b", canonical.RelEquivalent, pts, xOf)
 
 		// For equivalent pairs: spread = midA - midB
@@ -59,7 +59,7 @@ func TestSpreadCalculation_Complement(t *testing.T) {
 			{InstrumentID: "b", FetchedAt: now, Mid: decimal.NullDecimal{Valid: true, Decimal: midB}},
 		}
 
-		xOf := func(t time.Time) float64 { return 100 }
+		xOf := func(_ time.Time) float64 { return 100 }
 		sp := buildSpreadSeries("a", "b", canonical.RelComplement, pts, xOf)
 
 		// For complement pairs: spread = midA + midB - 1
@@ -89,7 +89,7 @@ func TestSpreadCalculation_MissingPrice(t *testing.T) {
 		{InstrumentID: "b", FetchedAt: now, Mid: decimal.NullDecimal{Valid: false}},
 	}
 
-	xOf := func(t time.Time) float64 { return 100 }
+	xOf := func(_ time.Time) float64 { return 100 }
 	sp := buildSpreadSeries("a", "b", canonical.RelEquivalent, pts, xOf)
 
 	if sp.N != 0 {
@@ -118,7 +118,7 @@ func TestSpreadCalculation_MultipleRounds(t *testing.T) {
 		{InstrumentID: "b", FetchedAt: t3, Mid: decimal.NullDecimal{Valid: true, Decimal: decimal.NewFromFloat(0.45)}},
 	}
 
-	xOf := func(t time.Time) float64 { return 100 }
+	xOf := func(_ time.Time) float64 { return 100 }
 	sp := buildSpreadSeries("a", "b", canonical.RelEquivalent, pts, xOf)
 
 	// Should have 2 spread points (rounds 1 and 3)

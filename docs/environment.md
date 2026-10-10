@@ -19,9 +19,12 @@
 | `UNIVERSE_DIR` | Directory with one universe file per venue (series and tags per category) | no | `config/universe` |
 | `FACTS_FILE` | External facts | no | `config/facts.yaml` |
 | `EVAL_SUMMARY_FILE` | JSON summary written by `equinox eval` and shown read-only on `/eval` (absent = "no eval yet") | no | `config/eval_summary.json` |
+| `BACKTEST_SUMMARY_FILE` | JSON summary written by `equinox backtest --out` and shown read-only on `/eval` (M4-76, FR-19, NFR-07; absent = "no backtest results yet") | no | `config/backtest_summary.json` |
 | `HTTP_TIMEOUT_SECONDS` | Per-request timeout to venues | no | `10` |
 | `MAX_BODY_BYTES` | Venue response cap | no | `10485760` |
 | `STALE_AFTER_SECONDS` | Quote staleness limit (live) | no | `120` |
+| `KALSHI_WARN_AFTER_SECONDS` | Kalshi quote warn window (seconds); must be less than STALE_AFTER_SECONDS (UI-19) | no | `60` |
+| `POLYMARKET_WARN_AFTER_SECONDS` | Polymarket quote warn window (seconds); must be less than STALE_AFTER_SECONDS (UI-19) | no | `60` |
 | `SKEW_WARN_SECONDS` | Cross-venue skew warning | no | `5` |
 | `SKEW_MAX_SECONDS` | Cross-venue skew exclusion | no | `30` |
 | `MIN_ROUTE_CONFIDENCE` | Minimum relationship confidence for routing | no | `0.9` |
@@ -30,6 +33,7 @@
 | `REVIEW_EDGE_MIN` | Minimum fee-adjusted net gap (dollars per contract) to flag a pair for review when confidence < 0.90 (UI-18) | no | `0.02` |
 | `PUBLIC_RATE_LIMIT_PER_MIN` | Per-IP limit on public routes | no | `60` |
 | `STALE_ROUND_WARN_MINUTES` | Stale-round warning threshold (minutes); when latest round snapshot is older, public pages show a banner | no | `10` |
+| `ROUND_WARN_MINUTES` | Round warn window (minutes); must be less than STALE_ROUND_WARN_MINUTES (UI-19) | no | `5` |
 | `LLM_ENABLED` | Enables the verifier | no (default `false`) | `false` |
 | `ANTHROPIC_API_KEY` | Anthropic key; the verifier is disabled if empty | only if `LLM_ENABLED=true` | `sk-ant-REPLACE_ME` |
 | `LLM_MODEL` | Model ID | no | `claude-haiku-4-5-20251001` |

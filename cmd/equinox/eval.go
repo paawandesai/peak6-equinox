@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shopspring/decimal"
+
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/config"
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/eval"
@@ -99,9 +101,15 @@ func runEval(ctx context.Context, args []string, stdout io.Writer) error {
 			return err
 		}
 		empty := eval.Evaluate(labels, nil, evalMethod)
-		return writeSummary(stdout, *outPath, empty.Summary(time.Now(), command, labels.RoundID, *labelsPath, 0))
+		// UI-23: hash labels file and rotate previous summary
+		labelsHash, _ := eval.HashLabelsFile(*labelsPath)
+		prevPath := eval.RotatePreviousSummary(*outPath)
+		return writeSummary(stdout, *outPath, empty.Summary(time.Now(), command, labels.RoundID, *labelsPath, 0, labelsHash, prevPath, nil, ""))
 	}
 	var predict eval.Predictor
+	var rulesReport *eval.Report // UI-24: for dual-method evaluation
+	var verifierNote string      // UI-24: explains why LLM wasn't run
+
 	if *candidatesPath != "" {
 		cands, err := eval.LoadCandidates(*candidatesPath)
 		if err != nil {
@@ -122,9 +130,35 @@ func runEval(ctx context.Context, args []string, stdout io.Writer) error {
 			return err
 		}
 		defer st.Close()
-		predict, err = storePredictor(ctx, st, labels, factSet, evalMethod)
-		if err != nil {
-			return err
+
+		// UI-24: when method is rules+llm, evaluate both methods for comparison
+		if evalMethod == canonical.MethodRulesLLM {
+			// First, evaluate with rules only
+			rulesPredict, err := storePredictor(ctx, st, labels, factSet, canonical.MethodRules)
+			if err != nil {
+				return err
+			}
+			r := eval.Evaluate(labels, rulesPredict, canonical.MethodRules)
+			rulesReport = &r
+
+			// Check if LLM verifier is available
+			if cfg.AnthropicAPIKey == "" {
+				// No API key: fall back to rules-only
+				verifierNote = "LLM verifier disabled: ANTHROPIC_API_KEY not set"
+				predict = rulesPredict
+			} else {
+				// LLM enabled: storePredictor reads pre-verified relationships
+				// (actual verification via /admin/llm-verify)
+				predict, err = storePredictor(ctx, st, labels, factSet, canonical.MethodRulesLLM)
+				if err != nil {
+					return err
+				}
+			}
+		} else {
+			predict, err = storePredictor(ctx, st, labels, factSet, evalMethod)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	report := eval.Evaluate(labels, predict, evalMethod)
@@ -136,7 +170,10 @@ func runEval(ctx context.Context, args []string, stdout io.Writer) error {
 			return err
 		}
 	}
-	return writeSummary(stdout, *outPath, report.Summary(time.Now(), command, labels.RoundID, *labelsPath, len(labels.Labels)))
+	// UI-23: hash labels file and rotate previous summary
+	labelsHash, _ := eval.HashLabelsFile(*labelsPath)
+	prevPath := eval.RotatePreviousSummary(*outPath)
+	return writeSummary(stdout, *outPath, report.Summary(time.Now(), command, labels.RoundID, *labelsPath, len(labels.Labels), labelsHash, prevPath, rulesReport, verifierNote))
 }
 
 // writeSummary writes the artifact unless path is empty, and says where.
@@ -154,9 +191,10 @@ func writeSummary(stdout io.Writer, path string, s eval.Summary) error {
 // candidatesPredictor answers from the verdicts a draft recorded.
 func candidatesPredictor(c eval.Candidates) eval.Predictor {
 	suggested := c.Suggestions()
-	return func(aID, bID string) (canonical.RelationshipType, bool) {
+	return func(aID, bID string) (canonical.RelationshipType, decimal.Decimal, bool) {
 		t, ok := suggested[eval.PairKey(aID, bID)]
-		return t, ok
+		// Candidates don't store confidence; use 1.0 as default
+		return t, decimal.NewFromInt(1), ok
 	}
 }
 
@@ -213,22 +251,24 @@ func storePredictor(ctx context.Context, st *store.Store, labels eval.Labels, fs
 		for id, r := range records {
 			instruments[id] = normalize.Normalize(r.Instrument)
 		}
-		return func(aID, bID string) (canonical.RelationshipType, bool) {
+		return func(aID, bID string) (canonical.RelationshipType, decimal.Decimal, bool) {
 			key := pairKey(aID, bID)
 			// Check rules+llm first
 			if t, ok := llmMap[key]; ok {
-				return t, true
+				// LLM-verified relationships don't store confidence separately; use 1.0
+				return t, decimal.NewFromInt(1), true
 			}
 			// Fall back to rules
 			a, okA := instruments[aID]
 			b, okB := instruments[bID]
 			if !okA || !okB {
-				return "", false
+				return "", decimal.Zero, false
 			}
 			if venueRank(a.Venue) > venueRank(b.Venue) || (a.Venue == b.Venue && a.ID > b.ID) {
 				a, b = b, a
 			}
-			return match.Compare(a, b, fs).Type, true
+			rel := match.Compare(a, b, fs)
+			return rel.Type, rel.Confidence, true
 		}, nil
 	}
 
@@ -251,16 +291,17 @@ func storePredictor(ctx context.Context, st *store.Store, labels eval.Labels, fs
 	for id, r := range records {
 		instruments[id] = normalize.Normalize(r.Instrument)
 	}
-	return func(aID, bID string) (canonical.RelationshipType, bool) {
+	return func(aID, bID string) (canonical.RelationshipType, decimal.Decimal, bool) {
 		a, okA := instruments[aID]
 		b, okB := instruments[bID]
 		if !okA || !okB {
-			return "", false
+			return "", decimal.Zero, false
 		}
 		if venueRank(a.Venue) > venueRank(b.Venue) || (a.Venue == b.Venue && a.ID > b.ID) {
 			a, b = b, a
 		}
-		return match.Compare(a, b, fs).Type, true
+		rel := match.Compare(a, b, fs)
+		return rel.Type, rel.Confidence, true
 	}, nil
 }
 

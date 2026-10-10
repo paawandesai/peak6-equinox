@@ -1,0 +1,21 @@
+{{define "content"}}
+<h1>Confusion Matrix Cell</h1>
+
+<p class="note">Pairs labelled <strong>{{.Label}}</strong>, predicted <strong>{{.Predicted}}</strong></p>
+
+{{if gt .Count 0}}
+<p><strong>Count:</strong> {{.Count}} pair{{if ne .Count 1}}s{{end}}</p>
+
+<h2>Pairs in this cell</h2>
+<ul>
+{{range .Pairs}}
+  <li>{{if gt .ID 0}}<a href="/pairs/{{.ID}}">{{.Label}}</a>{{else}}<code>{{.Label}}</code>{{end}}</li>
+{{end}}
+</ul>
+<p><a href="/eval">← Back to Eval</a></p>
+{{else}}
+<p>No pairs in this cell.</p>
+<p><a href="/eval">← Back to Eval</a></p>
+{{end}}
+
+{{end}}
