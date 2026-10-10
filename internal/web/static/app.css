@@ -572,3 +572,38 @@ svg.bars .missing { fill: none; stroke: var(--eq-unknown); }
 
 /* --- M5-01: related summary on / (top rows + link to /near-misses) ------- */
 .related-summary > p:last-child { margin-top: .75rem; font-weight: 600; }
+
+/* --- M5-05: "Start here" demo moment card on / (NFR-16) ------------------ */
+.start-here {
+  background: var(--eq-info-bg);
+  border: 2px solid var(--eq-info);
+  border-radius: var(--eq-r-2);
+  padding: var(--eq-space-3) var(--eq-space-35);
+  margin-bottom: var(--eq-space-4);
+}
+.start-here h2 {
+  font-size: var(--eq-text-lede);
+  color: var(--eq-info);
+  margin-bottom: var(--eq-space-2);
+}
+.start-here ol {
+  margin: 0;
+  padding-left: 1.5rem;
+  list-style: decimal;
+}
+.start-here li {
+  margin-bottom: var(--eq-space-2);
+  font-weight: 500;
+}
+.start-here li:last-child {
+  margin-bottom: 0;
+}
+.start-here a {
+  color: var(--eq-info);
+  text-decoration: underline;
+  font-weight: 600;
+}
+.start-here a:hover {
+  color: var(--eq-ink);
+}
+/* M5-05 end */

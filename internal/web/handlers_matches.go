@@ -49,6 +49,8 @@ type matchesPage struct {
 	HasFilters  bool   // true if any filter is active
 	// UI-18: fee estimates for checks key
 	FeeEstimates []FeeEstimate
+	// M5-05: featured pair for the "Start here" card (nil if no routable pairs)
+	FeaturedPair *pairRow
 }
 
 // pairGroup is every pair of one relationship type, strongest type first.
@@ -365,6 +367,8 @@ func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
 	sortPairRows(routablePairs, sortOrder)
 	if len(routablePairs) > 0 {
 		data.Routable = []pairGroup{{Type: "routable", Label: "Routable pairs", Pairs: routablePairs}}
+		// M5-05: featured pair for "Start here" card is the first routable pair in priority order.
+		data.FeaturedPair = &routablePairs[0]
 	}
 	// Sort implies and related by the chosen order too.
 	if data.Implies != nil {
