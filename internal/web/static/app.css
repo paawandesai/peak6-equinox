@@ -644,6 +644,28 @@ td.log-when time { font-weight: 500; }
 }
 /* M5-07 end */
 
+/* M5-10 start */
+/* Near misses: legend and show-all link (M5-10) */
+.near-miss-legend {
+  font-size: var(--eq-text-s);
+  color: var(--eq-muted);
+  margin-bottom: var(--eq-space-3);
+}
+.show-all-link {
+  margin-top: var(--eq-space-2);
+  font-size: var(--eq-text-s);
+  text-align: right;
+}
+.show-all-link a {
+  color: var(--eq-info);
+  text-decoration: none;
+  font-weight: 600;
+}
+.show-all-link a:hover {
+  text-decoration: underline;
+}
+/* M5-10 end */
+
 /* M5-12a start: eval page readability */
 details.inline-details {
   display: inline;
