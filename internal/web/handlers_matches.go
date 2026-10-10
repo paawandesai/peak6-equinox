@@ -19,6 +19,10 @@ import (
 // page fetches one more to know whether it was cut (NFR-01).
 const maxMatchRows = 1000
 
+// relatedPreviewRows is how many related pairs / shows without a search.
+// The full list lives on /near-misses (M5-01, NFR-01).
+const relatedPreviewRows = 10
+
 // matchesPage is the data for matches.html.
 type matchesPage struct {
 	page
@@ -31,6 +35,7 @@ type matchesPage struct {
 	RoutableCount int         // Count of routable pairs
 	ImpliesCount  int         // Count of implies pairs
 	RelatedCount  int         // Count of related pairs
+	RelatedCut    bool        // M5-01: Related.Pairs holds only the top relatedPreviewRows
 	FlaggedCount  int         // UI-18: Count of pairs flagged for review
 	Truncated     bool
 	// UI-11: filter and sort state
@@ -44,6 +49,8 @@ type matchesPage struct {
 	HasFilters  bool   // true if any filter is active
 	// UI-18: fee estimates for checks key
 	FeeEstimates []FeeEstimate
+	// M5-05: featured pair for the "Start here" card (nil if no routable pairs)
+	FeaturedPair *pairRow
 }
 
 // pairGroup is every pair of one relationship type, strongest type first.
@@ -278,11 +285,14 @@ func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// UI-11: load views before filtering so q filter can check titles.
-	views, err := loadInstrumentViews(ctx, st, relationshipInstrumentIDs(rels))
+	// M5-01: one GetInstruments call serves the views and the fee data.
+	allIDs := relationshipInstrumentIDs(rels)
+	instrumentRecs, err := st.GetInstruments(ctx, allIDs)
 	if err != nil {
 		s.dbError(w, "loading instruments for matches", err)
 		return
 	}
+	views := instrumentViewsFrom(allIDs, instrumentRecs)
 
 	// UI-11 Cursor round 1: apply filters (including q on titles) before setting Total.
 	rels = filterRelationships(rels, views, minConf, hasMinFilter, qParam, hasQFilter)
@@ -307,17 +317,15 @@ func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
 		// Stale quotes stay out of quoteMap, so ComputeNetGap receives nil and returns "no quote: <venue>".
 	}
 
-	// UI-18: load instruments for fee schedules (net gap computation).
-	instrumentRecs, err := st.GetInstruments(ctx, relationshipInstrumentIDs(rels))
-	if err != nil {
-		s.dbError(w, "loading instruments for matches", err)
-		return
-	}
-	instMap := make(map[string]canonical.Instrument, len(instrumentRecs))
-	var instruments []canonical.Instrument
-	for id, rec := range instrumentRecs {
-		instMap[id] = rec.Instrument
-		instruments = append(instruments, rec.Instrument)
+	// UI-18: instruments of the kept pairs, for fee schedules (net gap computation).
+	keptIDs := relationshipInstrumentIDs(rels)
+	instMap := make(map[string]canonical.Instrument, len(keptIDs))
+	instruments := make([]canonical.Instrument, 0, len(keptIDs))
+	for _, id := range keptIDs {
+		if rec, ok := instrumentRecs[id]; ok {
+			instMap[id] = rec.Instrument
+			instruments = append(instruments, rec.Instrument)
+		}
 	}
 
 	// UI-18: build fee estimates for the checks key.
@@ -330,7 +338,7 @@ func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
 	}
 	// UI-11: groupPairs now accepts sortOrder, qParam, and quoteTimes.
 	// UI-18: also accepts quoteMap, instMap, and reviewEdgeMin for net gap computation.
-	data.Groups = groupPairs(rels, views, asOf, sortOrder, qParam, quoteTimes, round.ID, quoteMap, instMap, s.cfg.ReviewEdgeMin)
+	data.Groups = groupPairs(rels, views, asOf, sortOrder, qParam, quoteTimes, now, quoteMap, instMap, s.cfg.ReviewEdgeMin)
 
 	// UI-03: split groups into Routable (combined, sorted by the chosen order), Implies, Related.
 	// Routable pairs are shown as one combined group, not separated by type.
@@ -359,6 +367,8 @@ func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
 	sortPairRows(routablePairs, sortOrder)
 	if len(routablePairs) > 0 {
 		data.Routable = []pairGroup{{Type: "routable", Label: "Routable pairs", Pairs: routablePairs}}
+		// M5-05: featured pair for "Start here" card is the first routable pair in priority order.
+		data.FeaturedPair = &routablePairs[0]
 	}
 	// Sort implies and related by the chosen order too.
 	if data.Implies != nil {
@@ -366,9 +376,29 @@ func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
 	}
 	if data.Related != nil {
 		sortPairRows(data.Related.Pairs, sortOrder)
+		// M5-01: without a search, show only the top related pairs; the
+		// count above stays the full count and /near-misses lists them all.
+		if !hasQFilter && len(data.Related.Pairs) > relatedPreviewRows {
+			data.Related = &pairGroup{Type: data.Related.Type, Label: data.Related.Label, Pairs: data.Related.Pairs[:relatedPreviewRows]}
+			data.RelatedCut = true
+		}
 	}
 
 	s.render(w, http.StatusOK, "matches", data)
+}
+
+// instrumentViewsFrom builds a view for every id, marking ids with no
+// stored instrument as missing (same result as loadInstrumentViews).
+func instrumentViewsFrom(ids []string, recs map[string]store.InstrumentRecord) map[string]instrumentView {
+	out := make(map[string]instrumentView, len(ids))
+	for _, id := range ids {
+		if rec, ok := recs[id]; ok {
+			out[id] = newInstrumentView(rec.Instrument)
+		} else {
+			out[id] = missingInstrumentView(id)
+		}
+	}
+	return out
 }
 
 // relationshipInstrumentIDs lists every distinct instrument ID in rels.
@@ -388,7 +418,7 @@ func relationshipInstrumentIDs(rels []canonical.Relationship) []string {
 
 // groupPairs buckets rels by type, strongest type first, populates UI-11 and UI-18 fields.
 // Sorting by sortOrder happens in handleMatches; filtering is done before calling this.
-func groupPairs(rels []canonical.Relationship, views map[string]instrumentView, asOf time.Time, _ string, _ string, quoteTimes map[string]time.Time, _ int64, quoteMap map[string]*canonical.Quote, instMap map[string]canonical.Instrument, reviewEdgeMin decimal.Decimal) []pairGroup {
+func groupPairs(rels []canonical.Relationship, views map[string]instrumentView, asOf time.Time, _ string, _ string, quoteTimes map[string]time.Time, now time.Time, quoteMap map[string]*canonical.Quote, instMap map[string]canonical.Instrument, reviewEdgeMin decimal.Decimal) []pairGroup {
 	byType := make(map[canonical.RelationshipType][]pairRow)
 
 	for _, r := range rels {
@@ -429,7 +459,6 @@ func groupPairs(rels []canonical.Relationship, views map[string]instrumentView, 
 
 		// UI-11: MaxQuoteAge from stored quote FetchedAt (for freshness badge).
 		maxQuoteAge := 0
-		now := time.Now()
 		if tA, ok := quoteTimes[r.AID]; ok {
 			ageA := int(now.Sub(tA).Seconds())
 			if ageA > maxQuoteAge {

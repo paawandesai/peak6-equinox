@@ -81,6 +81,19 @@ Next operator action (Tier 2): human verification of Fed demo rendering (criteri
 - UI-07: Eval page — merged as cbac998 (closes #36).
 - UI-08: Admin page — merged (closes #37); follow-up (persist LLM verify last-run summary, #40) merged as da123b9.
 
+- M5-01: Home page p95 under 500 ms — MR !111 merged (closes #83).
+- M5-02: Pair page under 500 ms — MR !112 merged (closes #84).
+- M5-03: Timezone JS fix — MR !110 merged (closes #85).
+- M5-04: Admin dead end explanation — MR !115 merged (closes #86).
+- M5-05: Start here demo moment — MR !116 merged (closes #87).
+- M5-06: Glossary plain language — MR !118 merged (closes #88).
+- M5-07: Pair page jump links — MR !121 merged (closes #89).
+- M5-08: Route result summary — MR !120 merged (closes #90).
+- M5-09: Layout question line once, Glossary in nav, tagline — MR !123 merged (closes #91).
+- M5-10: Near-misses headings and per-group cap — MR !122 merged (closes #92).
+- M5-11: Decision log reviewer-first view — MR !113 merged (closes #93).
+- M5-12a: Eval page readability — MR !119 merged (closes #94).
+
 ## In progress
 
 - M4-07 final deploy (#65): done except spend line (pending: billing page). deployed 2026-10-10 04:36 UTC: main 41b8202 (!97 at 7ea4b21 plus /eval hotfix !108) as the NEW Cloud Run service `peak6-equinox` revision `peak6-equinox-00003-rbj`, https://peak6-equinox-287867547175.us-central1.run.app (Paawan 2026-10-09 9:15 PM CT; same image source, env, secrets, Cloud SQL, service account and settings as the old `equinox` service, which was deleted after verification). Fresh prod round 904 (collected by the new service), equinox-match run, round 904 pinned: **12 routable pairs** (11 `equivalent_given_facts` + 1 `complement`, all confidence >= 0.90). `scripts/smoke-live.sh` passed against the new URL. Measured p95: GET / 726 ms (above the NFR-01 500 ms page target; flagged), POST /route 267 ms. All public routes returned 200 (/, /near-misses, /pairs/2390, the /route POST, /eval, /log, /health, /version commit 41b8202). Spend line (status.md:277) PENDING: requires manual GCP billing page and Anthropic console access.
@@ -138,6 +151,7 @@ None.
 | D-104 | UI-23: Eval contract extension (D-070) with optional confusion matrix, threshold sweep, golden-set versioning, previous-run deltas. New `/eval/cell` public route. Tier 2, eval artifact contract change. | 2026-10-09 |
 | D-108 | M4-70: Extract settlement_sources for KXPRESNOMD/R nomination markets. Tier 2 (touches equivalence rules); achieves 9/9 equivalent for 2028 nominee pairs (eval 55/90, up from 46/90), 9 TP + 0 FP among nomination labels. Scope: nomination markets only (9/27 labels). KXFEDDECISION (15 labels) and KXRATECUTCOUNT (3 labels) remain out of scope; require matcher same-metric equivalence logic. | 2026-10-09 |
 | D-115 | UI-20: Matcher evidence column (evidence jsonb in relationships table). Stores confidence calculation: prior, per-term contributions (signed), total, and for near misses, pre-veto score + required score (0.90). Migration 0003. Tier 2 schema change. No verdict/type/confidence changes (additive metadata only). | 2026-10-09 |
+| D-116 | M5-02: Pair page under 500 ms. Migration 0007 adds index quotes_instrument_fetched ON quotes (instrument_id, fetched_at DESC). Replace GetRelationshipLLMData 1000-run scan with GetLLMVerifyRun(id) direct lookup. Cap history table at 50 rows, chart shows all. Fix spread series ordering bug (sort timestamps before building points). | 2026-10-10 |
 | D-109 | M4-72: Same-metric Fed decision pairs use fed_rate_step grid rounding; zero-veto Fed pairs report equivalent_given_facts (not equivalent) to document grid check. KXFEDDECISION/KXRATECUTCOUNT default to resolution_source=federalreserve_gov when rules lack source. Kalshi's "Therefore, if the Fed hikes by 50bps, the 50bps market resolves Yes" sentence is read as an illustration, not the bucket (fixes back-test DISAGREED on KXFEDDECISION-26SEP-H25, CI #45765). Tier 2 (touches equivalence rules, classify.go + facts.go + fed.go); achieves 15/15 KXFEDDECISION equivalent_given_facts (eval 16/19 EGF, up from 1/19), 15 TP + 0 FP among KXFEDDECISION labels. Scope: KXFEDDECISION same-metric rate_change pairs (15/27 Fed labels). KXRATECUTCOUNT (3 labels) remain related; require rate-cut-count extraction. | 2026-10-09 |
 
 | D-103 | UI-21: Rule layers columns (rules_summary, clarifications, clarifications_updated_at) added to instruments table. Kalshi rules_secondary captured as clarifications; Polymarket has no separate layers. Not fed to matcher/LLM in this ticket. Migration 0004. Tier 2 schema change. | 2026-10-09 |

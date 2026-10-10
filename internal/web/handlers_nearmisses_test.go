@@ -1,7 +1,12 @@
 package web
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -18,14 +23,18 @@ func TestNearMissGrouping(t *testing.T) {
 	body := rec.Body.String()
 
 	// Groups should have sections with anchors
-	wantContains(t, body, `id="group-subject-mismatch"`, `<code>subject_mismatch</code>`)
-	wantContains(t, body, `id="group-fact-did-not-close"`, `<code>fact_did_not_close</code>`)
+	wantContains(t, body, `id="group-subject-mismatch"`)
+	wantContains(t, body, `id="group-fact-did-not-close"`)
+
+	// M5-10: Headings now show description first
+	wantContains(t, body, "Different underlying subject", `(<code>subject_mismatch</code>`)
+	wantContains(t, body, "A fact was consulted but did not close the difference", `(<code>fact_did_not_close</code>`)
 
 	// Group chips should appear
 	wantContains(t, body, `href="#group-subject-mismatch"`, `href="#group-fact-did-not-close"`)
 
-	// Descriptions should appear
-	wantContains(t, body, "Different underlying subject", "A fact was consulted but did not close the difference")
+	// M5-10: Legend should appear
+	wantContains(t, body, "<strong>Legend:</strong>", "How close: the gap between the two thresholds")
 }
 
 // TestNearMissCountCells verifies strip shows count, veto count and fact-did-not-close.
@@ -107,11 +116,11 @@ func TestNearMissNoVetoGroup(t *testing.T) {
 	views := map[string]instrumentView{"kalshi:A": {}, "kalshi:B": {}, "kalshi:C": {}}
 	rels := []canonical.Relationship{
 		{ID: 1, AID: "kalshi:A", BID: "kalshi:B", Type: canonical.RelRelated, Confidence: dec("0.5"),
-			Vetoes: []canonical.Veto{{Code: "x"}}},
+			Vetoes: []canonical.Veto{{Code: "x", Field: "field", Detail: "detail"}}},
 		{ID: 2, AID: "kalshi:A", BID: "kalshi:C", Type: canonical.RelRelated, Confidence: dec("0.6")},
 	}
 	rows := nearMissRows(rels, views)
-	groups := groupNearMisses(rows)
+	groups := groupNearMisses(rows, "", false)
 	var codes []string
 	for _, g := range groups {
 		codes = append(codes, g.Code)
@@ -174,21 +183,257 @@ func TestPluralS(t *testing.T) {
 	}
 }
 
-// TestVetoDescriptionCoverage tests all veto codes.
+// TestVetoDescriptionCoverage: every veto code declared in
+// internal/match/veto.go, plus "fact_did_not_close", has a one-sentence plain
+// description rather than the code-with-spaces fallback (M5-06). The codes are
+// read from veto.go's source, so a new code fails here until it is described.
 func TestVetoDescriptionCoverage(t *testing.T) {
-	tests := map[string]string{
-		"subject_mismatch":   "Different underlying subject",
-		"threshold_mismatch": "Strike or threshold differs",
-		"deadline_mismatch":  "Resolution deadline differs",
-		"direction_mismatch": "Comparison direction differs (over vs under)",
-		"source_mismatch":    "Data source differs",
-		"fact_did_not_close": "A fact was consulted but did not close the difference",
-		"unknown_code":       "unknown code",
-	}
-	for code, want := range tests {
+	codes := append(matchVetoCodes(t), "fact_did_not_close")
+	for _, code := range codes {
 		got := vetoDescription(code)
-		if got != want {
-			t.Errorf("vetoDescription(%q) = %q, want %q", code, got, want)
+		if got == strings.ReplaceAll(code, "_", " ") {
+			t.Errorf("vetoDescription(%q) falls back to the code", code)
 		}
+		if !strings.HasSuffix(got, ".") || strings.Count(got, ". ") > 0 {
+			t.Errorf("vetoDescription(%q) = %q, want one sentence", code, got)
+		}
+	}
+	// The dead direction_mismatch code (never emitted) is gone; unknown codes fall back.
+	for _, code := range []string{"direction_mismatch", "unknown_code"} {
+		if got, want := vetoDescription(code), strings.ReplaceAll(code, "_", " "); got != want {
+			t.Errorf("vetoDescription(%q) = %q, want fallback %q", code, got, want)
+		}
+	}
+}
+
+// matchVetoCodes returns the string values of the Veto* constants declared
+// in internal/match/veto.go, in source order. The web package must not import
+// match's internals for this, so it reads the source.
+func matchVetoCodes(t *testing.T) []string {
+	t.Helper()
+	f, err := parser.ParseFile(token.NewFileSet(), filepath.Join("..", "match", "veto.go"), nil, 0)
+	if err != nil {
+		t.Fatalf("parsing veto.go: %v", err)
+	}
+	var codes []string
+	for _, decl := range f.Decls {
+		gd, ok := decl.(*ast.GenDecl)
+		if !ok || gd.Tok != token.CONST {
+			continue
+		}
+		for _, spec := range gd.Specs {
+			vs := spec.(*ast.ValueSpec)
+			for i, name := range vs.Names {
+				if !strings.HasPrefix(name.Name, "Veto") || i >= len(vs.Values) {
+					continue
+				}
+				if lit, ok := vs.Values[i].(*ast.BasicLit); ok && lit.Kind == token.STRING {
+					v, err := strconv.Unquote(lit.Value)
+					if err != nil {
+						t.Fatal(err)
+					}
+					codes = append(codes, v)
+				}
+			}
+		}
+	}
+	if len(codes) < 15 {
+		t.Fatalf("found %d veto codes in veto.go, want at least 15: %v", len(codes), codes)
+	}
+	return codes
+}
+
+// TestNearMissVetoFilter verifies ?veto= filters to a single group (M5-10).
+func TestNearMissVetoFilter(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+	seedMore(t, s, st, sd)
+
+	// Default view has multiple groups
+	rec := get(s.Handler(), "/near-misses")
+	wantHTML(t, rec, 200)
+	body := rec.Body.String()
+	wantContains(t, body, `id="group-subject-mismatch"`, `id="group-fact-did-not-close"`)
+
+	// Filtered view shows only subject_mismatch group
+	rec = get(s.Handler(), "/near-misses?veto=subject_mismatch")
+	wantHTML(t, rec, 200)
+	body = rec.Body.String()
+	wantContains(t, body, `id="group-subject-mismatch"`)
+	if strings.Contains(body, `id="group-fact-did-not-close"`) {
+		t.Error("filtered view should not show fact_did_not_close group")
+	}
+}
+
+// TestNearMissInvalidVeto verifies unknown veto code returns 400 (M5-10).
+func TestNearMissInvalidVeto(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+	seedMore(t, s, st, sd)
+
+	rec := get(s.Handler(), "/near-misses?veto=nonexistent_code")
+	if rec.Code != 400 {
+		t.Errorf("GET /near-misses?veto=nonexistent_code = %d, want 400", rec.Code)
+	}
+	wantContains(t, rec.Body.String(), "Unknown veto code")
+}
+
+// TestNearMissGroupCapLogic verifies the 25-row cap logic directly (M5-10).
+func TestNearMissGroupCapLogic(t *testing.T) {
+	// Create 30 rows with the same veto
+	views := map[string]instrumentView{"a": {}, "b": {}}
+	var rels []canonical.Relationship
+	for i := 0; i < 30; i++ {
+		rels = append(rels, canonical.Relationship{
+			ID: int64(i + 1), AID: "a", BID: "b", Type: canonical.RelRelated, Confidence: dec("0.5"),
+			Vetoes: []canonical.Veto{{Code: "threshold_mismatch", Field: "threshold", Detail: "0.5 vs 0.6"}},
+		})
+	}
+	rows := nearMissRows(rels, views)
+
+	// Default view (showAll=false) should cap at 25
+	groups := groupNearMisses(rows, "", false)
+	if len(groups) != 1 {
+		t.Fatalf("expected 1 group, got %d", len(groups))
+	}
+	g := groups[0]
+	if g.Code != "threshold_mismatch" {
+		t.Errorf("group code = %q, want threshold_mismatch", g.Code)
+	}
+	if g.Count != 30 {
+		t.Errorf("group count = %d, want 30", g.Count)
+	}
+	if len(g.Rows) != 25 {
+		t.Errorf("group rows = %d, want 25 (capped)", len(g.Rows))
+	}
+	if g.Truncated != 5 {
+		t.Errorf("group truncated = %d, want 5", g.Truncated)
+	}
+	if g.ShowAllLink == "" {
+		t.Error("expected ShowAllLink to be set")
+	}
+
+	// showAll=true should show all 30
+	groupsAll := groupNearMisses(rows, "", true)
+	if len(groupsAll) != 1 {
+		t.Fatalf("expected 1 group with all=true, got %d", len(groupsAll))
+	}
+	gAll := groupsAll[0]
+	if len(gAll.Rows) != 30 {
+		t.Errorf("group rows with all=true = %d, want 30", len(gAll.Rows))
+	}
+	if gAll.Truncated != 0 {
+		t.Errorf("group truncated with all=true = %d, want 0", gAll.Truncated)
+	}
+}
+
+// TestNearMissGroupCap verifies 25-row cap per group with "Show all" link (M5-10).
+func TestNearMissGroupCap(t *testing.T) {
+	// Simplified integration test - the unit test TestNearMissGroupCapLogic verifies capping logic
+	s, st := newTestServer(t)
+	seedPublic(t, st)
+
+	rec := get(s.Handler(), "/near-misses")
+	wantHTML(t, rec, 200)
+	body := rec.Body.String()
+
+	// Should have the legend
+	wantContains(t, body, "<strong>Legend:</strong>", "How close: the gap between the two thresholds")
+
+	// Should have groups with plain headings
+	wantContains(t, body, `id="group-subject-mismatch"`)
+	wantContains(t, body, "Different underlying subject")
+
+	// Test query parameter filtering
+	rec = get(s.Handler(), "/near-misses?veto=subject_mismatch")
+	wantHTML(t, rec, 200)
+	body = rec.Body.String()
+	wantContains(t, body, `id="group-subject-mismatch"`)
+
+	// Test invalid veto parameter returns 400
+	rec = get(s.Handler(), "/near-misses?veto=invalid_code")
+	if rec.Code != 400 {
+		t.Errorf("GET /near-misses?veto=invalid_code = %d, want 400", rec.Code)
+	}
+	wantContains(t, rec.Body.String(), "Unknown veto code")
+}
+
+// TestComparatorToWords verifies comparator codes are rendered as words (M5-10).
+func TestComparatorToWords(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"gt vs lt", "above vs below"},
+		{"gte vs lte", "at or above vs at or below"},
+		{"eq", "equal to"},
+		{"between", "between"},
+		{"some other text", "some other text"},
+	}
+	for _, tt := range tests {
+		got := comparatorToWords(tt.input)
+		if got != tt.want {
+			t.Errorf("comparatorToWords(%q) = %q, want %q", tt.input, got, tt.want)
+		}
+	}
+}
+
+// TestNearMissComparatorRendering verifies comparators render as words in the page (M5-10).
+func TestNearMissComparatorRendering(t *testing.T) {
+	s, st := newTestServer(t)
+	sd := seedPublic(t, st)
+
+	// Create a pair with comparator_mismatch veto
+	ctx := t.Context()
+	aID := "kalshi:COMPTEST"
+	bID := "polymarket:COMPTEST"
+	threshold := dec("1.0")
+	// Create instruments first (foreign key requirement)
+	if err := st.UpsertInstrument(ctx, sd.round.ID, canonical.Instrument{
+		ID:            aID,
+		Venue:         canonical.VenueKalshi,
+		VenueMarketID: "mktcomp",
+		Category:      canonical.CategoryCrypto,
+		Title:         "Test comparator",
+		Status:        canonical.StatusOpen,
+		Terms:         canonical.Terms{Subject: "BTC", Metric: "price", Comparator: canonical.ComparatorGTE, Threshold: &threshold, Unit: "USD", DeadlineTZ: "UTC", ResolutionSource: "test", EdgeRules: canonical.Unknown, Polarity: canonical.PolarityPositive},
+		FeeSchedule:   canonical.FeeSchedule{ID: canonical.FeeScheduleKalshiTakerV1},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.UpsertInstrument(ctx, sd.round.ID, canonical.Instrument{
+		ID:            bID,
+		Venue:         canonical.VenuePolymarket,
+		VenueMarketID: "mktcomp",
+		Category:      canonical.CategoryCrypto,
+		Title:         "Test comparator",
+		Status:        canonical.StatusOpen,
+		Terms:         canonical.Terms{Subject: "BTC", Metric: "price", Comparator: canonical.ComparatorLT, Threshold: &threshold, Unit: "USD", DeadlineTZ: "UTC", ResolutionSource: "test", EdgeRules: canonical.Unknown, Polarity: canonical.PolarityPositive},
+		FeeSchedule:   canonical.FeeSchedule{ID: canonical.FeeSchedulePolymarketV1},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	_, err := st.UpsertRelationship(ctx, canonical.Relationship{
+		AID:         aID,
+		BID:         bID,
+		Type:        canonical.RelRelated,
+		Method:      canonical.MethodRules,
+		Confidence:  dec("0.5"),
+		Explanation: "test",
+		Vetoes:      []canonical.Veto{{Code: "comparator_mismatch", Field: "comparator", Detail: "gt vs lt"}},
+		RoundID:     sd.round.ID,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rec := get(s.Handler(), "/near-misses")
+	wantHTML(t, rec, 200)
+	body := rec.Body.String()
+
+	// Should show "above vs below" instead of "gt vs lt"
+	wantContains(t, body, "above vs below")
+	if strings.Contains(body, "gt vs lt") {
+		t.Error("should not show raw 'gt vs lt' in comparator detail")
 	}
 }

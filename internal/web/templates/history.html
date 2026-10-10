@@ -27,9 +27,12 @@
 </figure>
 <details>
   <summary>Data points</summary>
+  {{if gt (len .Rows) 50}}
+  <p>Showing 50 of {{len .Rows}} points (chart shows all).</p>
+  {{end}}
   <table>
     <thead><tr><th>Fetched</th><th>Round</th><th>Venue</th><th>Best bid</th><th>Best ask</th><th>Mid</th></tr></thead>
-    <tbody>{{range .Rows}}<tr><td>{{formatTime .At $.Tz}}</td><td>{{.RoundID}}</td><td><span class="venue">{{.Venue}}</span></td><td>{{.Bid}}</td><td>{{.Ask}}</td><td>{{.Mid}}</td></tr>{{end}}</tbody>
+    <tbody>{{range $i, $row := .Rows}}{{if lt $i 50}}<tr><td>{{formatTime $row.At $.Tz}}</td><td>{{$row.RoundID}}</td><td><span class="venue">{{$row.Venue}}</span></td><td>{{$row.Bid}}</td><td>{{$row.Ask}}</td><td>{{$row.Mid}}</td></tr>{{end}}{{end}}</tbody>
   </table>
 </details>
 {{end}}

@@ -471,7 +471,7 @@ ul.checks .g { display: inline-block; width: .9rem; font-weight: 700; }
 table.data tr.flagged { background: color-mix(in srgb, var(--eq-danger-bg) 55%, transparent); box-shadow: inset 3px 0 0 var(--eq-danger); }
 a.chip-filter { display: inline-flex; align-items: center; gap: .5rem; min-height: 30px; padding: 0 .75rem; border-radius: 15px;
   font-size: var(--eq-text-s); font-weight: 600; text-decoration: none; color: var(--eq-ink); box-shadow: inset 0 0 0 1px var(--eq-control); }
-a.chip-filter[aria-current] { background: var(--eq-ink); color: var(--pico-background-color); box-shadow: none; }
+a.chip-filter[aria-current] { background: var(--eq-info); color: var(--eq-on-solid); box-shadow: none; }
 a.chip-filter.removable { background: var(--eq-info-bg); color: var(--eq-info); box-shadow: inset 0 0 0 1px var(--eq-info); }
 a.chip-filter:focus-visible { outline: 2px solid var(--pico-primary); outline-offset: 2px; }
 .toolbar-chips { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .875rem; padding: .75rem 0; border-block: 1px solid var(--eq-rule); }
@@ -569,3 +569,118 @@ svg.bars .missing { fill: none; stroke: var(--eq-unknown); }
   .toolbar-chips { flex-wrap: nowrap; overflow-x: auto; }
   .admin-cols { grid-template-columns: 1fr; gap: 1rem; }
 }
+
+/* --- M5-01: related summary on / (top rows + link to /near-misses) ------- */
+.related-summary > p:last-child { margin-top: .75rem; font-weight: 600; }
+
+/* --- M5-05: "Start here" demo moment card on / (NFR-16) ------------------ */
+.start-here {
+  background: var(--eq-info-bg);
+  border: 2px solid var(--eq-info);
+  border-radius: var(--eq-r-2);
+  padding: var(--eq-space-3) var(--eq-space-35);
+  margin-bottom: var(--eq-space-4);
+}
+.start-here h2 {
+  font-size: var(--eq-text-lede);
+  color: var(--eq-info);
+  margin-bottom: var(--eq-space-2);
+}
+.start-here ol {
+  margin: 0;
+  padding-left: 1.5rem;
+  list-style: decimal;
+}
+.start-here li {
+  margin-bottom: var(--eq-space-2);
+  font-weight: 500;
+}
+.start-here li:last-child {
+  margin-bottom: 0;
+}
+.start-here a {
+  color: var(--eq-info);
+  text-decoration: underline;
+  font-weight: 600;
+}
+.start-here a:hover {
+  color: var(--eq-ink);
+}
+/* M5-05 end */
+
+/* M5-11 start */
+/* Decision log: compact timestamps with white-space:nowrap (M5-11) */
+td.log-when { white-space: nowrap; font-size: var(--eq-text-s); }
+td.log-when time { font-weight: 500; }
+/* M5-11 end */
+
+/* M5-07 start */
+/* Jump links and route button in pair verdict panel */
+.jump-links {
+  margin-top: var(--eq-space-3);
+  font-size: var(--eq-text-s);
+  color: var(--eq-muted);
+}
+.jump-links a {
+  color: var(--eq-info);
+  text-decoration: none;
+}
+.jump-links a:hover {
+  text-decoration: underline;
+}
+.route-button {
+  display: inline-block;
+  padding: var(--eq-space-2) var(--eq-space-3);
+  background-color: var(--eq-info);
+  color: var(--eq-on-solid);
+  border-radius: var(--eq-r-2);
+  text-decoration: none;
+  font-weight: 600;
+}
+.route-button:hover {
+  background-color: var(--eq-info);
+  opacity: 0.9;
+  color: var(--eq-on-solid);
+}
+/* M5-07 end */
+
+/* M5-10 start */
+/* Near misses: legend and show-all link (M5-10) */
+.near-miss-legend {
+  font-size: var(--eq-text-s);
+  color: var(--eq-muted);
+  margin-bottom: var(--eq-space-3);
+}
+.show-all-link {
+  margin-top: var(--eq-space-2);
+  font-size: var(--eq-text-s);
+  text-align: right;
+}
+.show-all-link a {
+  color: var(--eq-info);
+  text-decoration: none;
+  font-weight: 600;
+}
+.show-all-link a:hover {
+  text-decoration: underline;
+}
+/* M5-10 end */
+
+/* M5-12a start: eval page readability */
+details.inline-details {
+  display: inline;
+  margin-left: 0.5em;
+}
+details.inline-details summary {
+  display: inline;
+  cursor: pointer;
+  color: var(--pico-primary);
+}
+details.inline-details summary:hover {
+  text-decoration: underline;
+}
+details.inline-details ul {
+  margin-top: 0.5em;
+  margin-left: 1.5em;
+}
+/* M5-12a end */

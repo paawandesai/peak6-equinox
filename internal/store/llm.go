@@ -223,6 +223,34 @@ func (s *Store) FinishLLMVerifyRun(ctx context.Context, id int64, verified, down
 	return nil
 }
 
+// GetLLMVerifyRun retrieves a single verification run by ID, or returns
+// (empty, false, nil) if the run does not exist.
+func (s *Store) GetLLMVerifyRun(ctx context.Context, id int64) (LLMVerifyRun, bool, error) {
+	var r LLMVerifyRun
+	var finishedAt *time.Time
+	err := s.pool.QueryRow(ctx, `
+		SELECT id, started_at, finished_at, model, prompt_version,
+		       verified, downgraded, cache_hits, calls_made,
+		       input_tokens, output_tokens, outcome
+		FROM llm_verify_runs
+		WHERE id = $1
+	`, id).Scan(&r.ID, &r.StartedAt, &finishedAt, &r.Model, &r.PromptVersion,
+		&r.Verified, &r.Downgraded, &r.CacheHits, &r.CallsMade,
+		&r.InputTokens, &r.OutputTokens, &r.Outcome)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return LLMVerifyRun{}, false, nil
+	}
+	if err != nil {
+		return LLMVerifyRun{}, false, fmt.Errorf("querying llm_verify_run %d: %w", id, err)
+	}
+	r.StartedAt = r.StartedAt.UTC()
+	if finishedAt != nil {
+		t := finishedAt.UTC()
+		r.FinishedAt = &t
+	}
+	return r, true, nil
+}
+
 // GetLLMVerifyRuns returns the latest N verification runs, newest first.
 func (s *Store) GetLLMVerifyRuns(ctx context.Context, limit int) ([]LLMVerifyRun, error) {
 	rows, err := s.pool.Query(ctx, `
@@ -335,18 +363,15 @@ func (s *Store) GetRelationshipLLMData(ctx context.Context, relationshipID int64
 		}, true, nil
 	}
 
-	// Fetch the run to get the model
-	runs, err := s.GetLLMVerifyRuns(ctx, 1000) // Get enough runs to find this one
+	// Fetch the run to get the model (M5-02: direct lookup instead of scanning 1000 runs)
+	run, found, err := s.GetLLMVerifyRun(ctx, *runID)
 	if err != nil {
-		return RelationshipLLMData{}, false, fmt.Errorf("reading LLM runs for relationship %d: %w", relationshipID, err)
+		return RelationshipLLMData{}, false, fmt.Errorf("reading LLM run %d for relationship %d: %w", *runID, relationshipID, err)
 	}
 
 	model := "unknown"
-	for _, run := range runs {
-		if run.ID == *runID {
-			model = run.Model
-			break
-		}
+	if found {
+		model = run.Model
 	}
 
 	return RelationshipLLMData{

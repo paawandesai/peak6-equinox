@@ -2,11 +2,23 @@
 {{/* UI-11: page-head wrapper */}}
 <div class="page-head">
   <h1>Matches</h1>
-  <p>Which Kalshi and Polymarket contracts are the same bet, and how sure is Equinox?</p>
 </div>
 {{if .NoRound}}
 <p>No completed fetch round yet, so there is nothing to compare. Run <code>equinox seed</code> (offline fixtures) or <code>equinox ingest</code>, then <code>equinox match</code>.</p>
 {{else}}
+{{/* M5-05: "Start here" card for the demo moment (NFR-16) */}}
+{{if .FeaturedPair}}
+<div class="start-here">
+  <h2>Start here</h2>
+  <ol>
+    <li><a href="/pairs/{{.FeaturedPair.ID}}#diff">See why two contracts are the same bet</a></li>
+    <li><a href="/pairs/{{.FeaturedPair.ID}}#route">Route a hypothetical order on it</a></li>
+    <li><a href="/near-misses#group-fact-did-not-close">See the near-miss that was rejected, and why</a></li>
+  </ol>
+</div>
+{{else}}
+<p class="note-info">No routable pairs in this round. See <a href="/near-misses">near misses</a> for pairs that were close, or <a href="/eval">eval</a> for matcher performance.</p>
+{{end}}
 {{/* UI-11: counter strip */}}
 <dl class="strip">
   <div><dt>Round</dt><dd>{{.Round.ID}}</dd></div>
@@ -52,7 +64,7 @@
 {{if gt .RoutableCount 0}}
 <section>
   <h2 id="routable">Routable pairs ({{.RoutableCount}})</h2>
-  <p>equivalent, equivalent_given_facts and complement. The router may use these.</p>
+  <p>{{.RoutableCount}} {{if eq .RoutableCount 1}}pair{{else}}pairs{{end}} Equinox will route an order across: same bet (equivalent), same bet once a stated fact is applied (equivalent given facts), or exact opposites (complement).</p>
   <table class="data stack">
     <thead>
       <tr>
@@ -159,10 +171,12 @@
 </section>
 {{end}}
 
-{{/* UI-11: Related pairs: collapsed in details.fold */}}
+{{/* M5-01: Related summary: the count, the top rows, and a link to /near-misses for the rest (NFR-01) */}}
 {{if .Related}}
-<details class="fold">
-  <summary>related ({{.RelatedCount}}): same event, different payout; never routed</summary>
+<section class="related-summary">
+  <h2 id="type-related">related ({{.RelatedCount}})</h2>
+  <p>{{.RelatedCount}} related {{if eq .RelatedCount 1}}pair{{else}}pairs{{end}}: same event, different payout; never routed.
+  {{if .RelatedCut}}{{if eq .Sort "priority"}}Top {{len .Related.Pairs}} by review priority.{{else}}First {{len .Related.Pairs}} in the chosen order.{{end}}{{end}}</p>
   <table class="data stack">
     <thead>
       <tr>
@@ -203,7 +217,8 @@
     {{end}}
     </tbody>
   </table>
-</details>
+  <p><a href="/near-misses">{{if .HasFilters}}See every related pair{{else}}See all {{.RelatedCount}}{{end}} with the rule that separated them →</a></p>
+</section>
 {{end}}
 
 {{/* UI-11: Checks key */}}

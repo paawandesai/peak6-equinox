@@ -119,13 +119,13 @@ func TestNearMissesEmptyStates(t *testing.T) {
 func TestNearMissRowsOrdering(t *testing.T) {
 	rels := []canonical.Relationship{
 		{ID: 1, AID: "kalshi:A", BID: "polymarket:B", Confidence: dec("0.9")},
-		{ID: 2, AID: "kalshi:A", BID: "polymarket:C", Confidence: dec("0.5"), Vetoes: []canonical.Veto{{Code: "x"}}},
-		{ID: 3, AID: "kalshi:A", BID: "polymarket:D", Confidence: dec("0.7"), Vetoes: []canonical.Veto{{Code: "y"}}},
-		{ID: 4, AID: "kalshi:A", BID: "polymarket:E", Confidence: dec("0.7"), Vetoes: []canonical.Veto{{Code: "z"}}},
+		{ID: 2, AID: "kalshi:A", BID: "polymarket:C", Confidence: dec("0.5"), Vetoes: []canonical.Veto{{Code: "x", Field: "field", Detail: "detail"}}},
+		{ID: 3, AID: "kalshi:A", BID: "polymarket:D", Confidence: dec("0.7"), Vetoes: []canonical.Veto{{Code: "y", Field: "field", Detail: "detail"}}},
+		{ID: 4, AID: "kalshi:A", BID: "polymarket:E", Confidence: dec("0.7"), Vetoes: []canonical.Veto{{Code: "z", Field: "field", Detail: "detail"}}},
 	}
 	views := map[string]instrumentView{}
 	rows := nearMissRows(rels, views)
-	groups := groupNearMisses(rows)
+	groups := groupNearMisses(rows, "", false)
 	// Should have 4 groups (x, y, z, fact_did_not_close)
 	if len(groups) != 4 {
 		t.Fatalf("groups = %d, want 4", len(groups))
@@ -153,8 +153,9 @@ func TestDecisionLogPage(t *testing.T) {
 		`<details class="intro-details" open>`,
 		`<summary>About the log</summary>`,
 		`href="/pairs/`+strconv.FormatInt(sd.eqID, 10)+`">pair #`+strconv.FormatInt(sd.eqID, 10)+`: kalshi / polymarket</a>`,
-		// UI-15: chip-filter links instead of select
-		`<a href="/log" class="chip-filter" aria-current="page">everything</a>`,
+		// UI-15: chip-filter links instead of select (M5-11: default is verdicts & routing)
+		`<a href="/log" class="chip-filter" aria-current="page">verdicts &amp; routing</a>`,
+		`<a href="/log?kind=all" class="chip-filter">all</a>`,
 		`<a href="/log?kind=relationship" class="chip-filter">relationship verdicts</a>`,
 		`<a href="/log?kind=routing" class="chip-filter">routing decisions</a>`,
 		`<span class="chip chip-info">relationship</span>`, `<span class="chip chip-ok">routing</span>`,
@@ -470,12 +471,17 @@ func TestFormatPercentAndHTTPURL(t *testing.T) {
 func TestLayoutNavLinksNewPages(t *testing.T) {
 	body := get(New(Config{}, Deps{}).Handler(), "/eval").Body.String()
 	// UI-10: nav links now include aria-current on the active page
+	// M5-09: nav includes Glossary after Eval
 	wantContains(t, body,
+		`<a href="/"`,
+		`>Matches</a>`,
 		`<a href="/near-misses"`,
 		`>Near misses</a>`,
 		`<a href="/log"`,
 		`>Decision log</a>`,
 		`<a href="/eval"`,
 		`aria-current="page"`,
-		`>Eval</a>`)
+		`>Eval</a>`,
+		`<a href="/glossary"`,
+		`>Glossary</a>`)
 }

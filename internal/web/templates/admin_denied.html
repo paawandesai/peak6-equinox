@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Access Required · Equinox</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2.1.1/css/pico.classless.min.css" integrity="sha384-NZhm4G1I7BpEGdjDKnzEfy3d78xvy7ECKUwwnKTYi036z42IyF056PbHfpQLIYgL" crossorigin="anonymous">
+</head>
+<body>
+  <main>
+    <h1>Admin Access Required</h1>
+    <p><strong>Admin is operator-only (HTTP basic auth).</strong></p>
+    <p>Reviewers don't need it: the demo runs from pinned round 904.</p>
+
+    <section>
+      <h2>What admin does:</h2>
+      <ul>
+        <li><strong>Ingest:</strong> Fetch fresh venue data and run matching.</li>
+        <li><strong>Pin/Unpin:</strong> Lock the displayed round for stable demos.</li>
+        <li><strong>LLM Verify:</strong> Run the LLM verifier on relationship pairs (admin-only, budget-capped).</li>
+      </ul>
+    </section>
+
+    <section>
+      <h3>Continue to:</h3>
+      <ul>
+        <li><a href="/">Matches</a> — see the routable pairs and start the demo walkthrough</li>
+        <li><a href="/eval">Eval</a> — review precision, recall and F1 scores</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

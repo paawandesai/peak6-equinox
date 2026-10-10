@@ -199,8 +199,10 @@ func TestVetoPhraseForFactsClosedPair(t *testing.T) {
 	}
 }
 
-// TestRelatedCountAndDetails verifies that related pairs are listed inside a <details>
-// element with the summary "related (n): same event, different payout; never routed" (UI-03).
+// TestRelatedCountAndDetails verifies the related summary on / (M5-01,
+// replacing the UI-03 fold): the strip and heading keep the full count, only
+// the top relatedPreviewRows rows render, the link goes to /near-misses, and
+// ?q= still finds every matching related pair.
 func TestRelatedCountAndDetails(t *testing.T) {
 	s, st := newTestServer(t)
 	ctx := context.Background()
@@ -212,58 +214,79 @@ func TestRelatedCountAndDetails(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	a := seedInstrument("kalshi:A", canonical.VenueKalshi, "A", "rules", "BTC", "source", kalshiFee)
-	b := seedInstrument("polymarket:B", canonical.VenuePolymarket, "B", "rules", "BTC", "source", polyFee)
-	c := seedInstrument("kalshi:C", canonical.VenueKalshi, "C", "rules", "BTC", "source", kalshiFee)
-	for _, in := range []canonical.Instrument{a, b, c} {
-		if err := st.UpsertInstrument(ctx, round.ID, in); err != nil {
+	// One Kalshi anchor and relatedPreviewRows+2 Polymarket contracts, each
+	// related to the anchor with a distinct confidence, so 12 related pairs.
+	const n = relatedPreviewRows + 2
+	a := seedInstrument("kalshi:A", canonical.VenueKalshi, "Anchor A", "rules", "BTC", "source", kalshiFee)
+	if err := st.UpsertInstrument(ctx, round.ID, a); err != nil {
+		t.Fatal(err)
+	}
+	ids := make([]int64, n)
+	for i := 0; i < n; i++ {
+		id := fmt.Sprintf("polymarket:R%02d", i)
+		b := seedInstrument(id, canonical.VenuePolymarket, fmt.Sprintf("Related market %02d", i), "rules", "BTC", "source", polyFee)
+		if err := st.UpsertInstrument(ctx, round.ID, b); err != nil {
+			t.Fatal(err)
+		}
+		// Confidence falls with i, so review priority (-confidence asc) ranks i=0 first.
+		ids[i], err = st.UpsertRelationship(ctx, canonical.Relationship{
+			RoundID: round.ID, AID: a.ID, BID: id, Type: canonical.RelRelated,
+			Confidence: dec(fmt.Sprintf("0.%02d", 60-i)),
+			Method:     canonical.MethodRules, Diff: match.Diff(a.Terms, b.Terms), Explanation: "Related",
+			Vetoes: []canonical.Veto{{Code: "threshold_mismatch", Field: "threshold", Detail: ""}},
+		})
+		if err != nil {
 			t.Fatal(err)
 		}
 	}
-
-	// Insert two related pairs.
-	relID1, err := st.UpsertRelationship(ctx, canonical.Relationship{
-		RoundID: round.ID, AID: "kalshi:A", BID: "polymarket:B", Type: canonical.RelRelated, Confidence: dec("0.40"),
-		Method: canonical.MethodRules, Diff: match.Diff(a.Terms, b.Terms), Explanation: "Related 1",
-		Vetoes: []canonical.Veto{{Code: "threshold_mismatch", Field: "threshold", Detail: ""}},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = st.UpsertRelationship(ctx, canonical.Relationship{
-		RoundID: round.ID, AID: "kalshi:A", BID: "kalshi:C", Type: canonical.RelRelated, Confidence: dec("0.35"),
-		Method: canonical.MethodRules, Diff: match.Diff(a.Terms, c.Terms), Explanation: "Related 2",
-		Vetoes: []canonical.Veto{{Code: "deadline_mismatch", Field: "deadline", Detail: ""}},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	pairLink := func(i int) string { return `<a href="/pairs/` + strconv.FormatInt(ids[i], 10) + `">` }
 
 	rec := get(s.Handler(), "/")
 	wantHTML(t, rec, 200)
 	body := rec.Body.String()
 
-	// The strip shows related count as 2.
-	wantContains(t, body, "<dt>Related</dt><dd>2</dd>")
-
-	// The summary contains the count and the phrase.
-	wantContains(t, body, `<summary>related (2): same event, different payout; never routed</summary>`)
-
-	// UI-11: assert related rows sit inside details.fold element without "open".
-	detailsStart := strings.Index(body, `<details class="fold">`)
-	detailsEnd := strings.Index(body, "</details>")
-	if detailsStart < 0 || detailsEnd < 0 {
-		t.Fatal("related pairs should be inside a <details class=\"fold\"> element")
+	// Counts are the full count, before the cut.
+	wantContains(t, body,
+		"<dt>Related</dt><dd>12</dd>",
+		`<h2 id="type-related">related (12)</h2>`,
+		"12 related pairs: same event, different payout; never routed.",
+		"Top 10 by review priority.",
+		`<a href="/near-misses">See all 12 with the rule that separated them →</a>`,
+	)
+	if strings.Contains(body, `<details class="fold">`) {
+		t.Error("related pairs must no longer sit in a <details> fold")
 	}
-	if strings.Contains(body[detailsStart:detailsStart+25], "open") {
-		t.Error("details element should not have 'open' attribute (collapsed by default)")
+	section := body[strings.Index(body, `<h2 id="type-related">`):]
+	if got := strings.Count(section, "<tr>"); got != relatedPreviewRows+1 { // +1 header row
+		t.Errorf("related section has %d <tr>, want %d rows plus the header", got, relatedPreviewRows)
 	}
-	// Verify related rows are inside the details element (UI-11 Cursor round 2: badge template).
-	relatedSection := body[detailsStart:detailsEnd]
-	wantContains(t, relatedSection, `<span class="badge b-related">`)
+	wantContains(t, section, pairLink(0), pairLink(relatedPreviewRows-1), `<span class="badge b-related">`)
+	for _, i := range []int{relatedPreviewRows, relatedPreviewRows + 1} {
+		if strings.Contains(section, pairLink(i)) {
+			t.Errorf("pair %d is below the top %d and should not render without a search", ids[i], relatedPreviewRows)
+		}
+	}
+	// Veto phrase still links to the diff.
+	wantContains(t, body, `<a href="/pairs/`+strconv.FormatInt(ids[0], 10)+`#diff">1 veto</a>`)
 
-	// Cursor round 1 issue 3: veto phrase "1 veto" with link to #diff.
-	wantContains(t, body, `<a href="/pairs/`+strconv.FormatInt(relID1, 10)+`#diff">1 veto</a>`)
+	// ?q= finds a related pair below the cut, and shows every match.
+	rec = get(s.Handler(), "/?q=market+11")
+	wantHTML(t, rec, 200)
+	body = rec.Body.String()
+	wantContains(t, body, pairLink(n-1), "<dt>Related</dt><dd>1</dd>", `<a href="/near-misses">See every related pair with the rule that separated them →</a>`)
+	rec = get(s.Handler(), "/?q=related+market")
+	body = rec.Body.String()
+	for i := range ids {
+		wantContains(t, body, pairLink(i))
+	}
+	if strings.Contains(body, "Top 10 by review priority.") {
+		t.Error("a search must show every matching related pair, not the top 10")
+	}
+
+	// ?sort=id keeps the cut and says so.
+	rec = get(s.Handler(), "/?sort=id")
+	body = rec.Body.String()
+	wantContains(t, body, "First 10 in the chosen order.", pairLink(0))
 }
 
 // TestTwoClickPath verifies that the landing page contains a direct link to /pairs/{id}#route
@@ -603,7 +626,7 @@ func TestSectionOrder(t *testing.T) {
 	// Find section positions.
 	routablePos := strings.Index(body, `<h2 id="routable">`)
 	impliesPos := strings.Index(body, `<h2 id="type-implies">`)
-	relatedPos := strings.Index(body, `<summary>related`)
+	relatedPos := strings.Index(body, `<h2 id="type-related">`)
 
 	if routablePos < 0 || impliesPos < 0 || relatedPos < 0 {
 		t.Fatalf("missing sections: routable=%d, implies=%d, related=%d", routablePos, impliesPos, relatedPos)
@@ -613,4 +636,117 @@ func TestSectionOrder(t *testing.T) {
 	if routablePos >= impliesPos || impliesPos >= relatedPos {
 		t.Errorf("sections out of order: routable at %d, implies at %d, related at %d", routablePos, impliesPos, relatedPos)
 	}
+}
+
+// TestStartHereCard verifies the "Start here" card with links to the featured pair and near-misses (M5-05 AC 1, 2).
+func TestStartHereCard(t *testing.T) {
+	s, st := newTestServer(t)
+	ctx := context.Background()
+	round, err := st.CreateRound(ctx, seedNow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.FinishRound(ctx, round.ID, store.RoundOK, nil, seedNow.Add(60*time.Second)); err != nil {
+		t.Fatal(err)
+	}
+
+	a := seedInstrument("kalshi:A", canonical.VenueKalshi, "A title", "rules", "BTC", "source", kalshiFee)
+	b := seedInstrument("polymarket:B", canonical.VenuePolymarket, "B title", "rules", "BTC", "source", polyFee)
+	// Add instruments for a fact_did_not_close near-miss (C and D are related, fact consulted but did not close)
+	c := seedInstrument("kalshi:C", canonical.VenueKalshi, "C title", "rules", "ETH", "source", kalshiFee)
+	d := seedInstrument("polymarket:D", canonical.VenuePolymarket, "D title", "rules", "ETH", "source", polyFee)
+	for _, in := range []canonical.Instrument{a, b, c, d} {
+		if err := st.UpsertInstrument(ctx, round.ID, in); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Insert routable pair (will be featured).
+	pairID, err := st.UpsertRelationship(ctx, canonical.Relationship{
+		RoundID: round.ID, AID: "kalshi:A", BID: "polymarket:B", Type: canonical.RelEquivalent, Confidence: dec("0.90"),
+		Method: canonical.MethodRules, Diff: match.Diff(a.Terms, b.Terms), Explanation: "Equivalent",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Insert a near-miss pair: related with no explicit veto (fact_did_not_close case).
+	// This creates the group-fact-did-not-close anchor on /near-misses.
+	_, err = st.UpsertRelationship(ctx, canonical.Relationship{
+		RoundID: round.ID, AID: "kalshi:C", BID: "polymarket:D", Type: canonical.RelRelated, Confidence: dec("0.70"),
+		Method: canonical.MethodRules, Diff: match.Diff(c.Terms, d.Terms), Explanation: "Related: fact consulted but did not close",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rec := get(s.Handler(), "/")
+	wantHTML(t, rec, 200)
+	body := rec.Body.String()
+
+	// Start here card exists.
+	wantContains(t, body, `<div class="start-here">`, `<h2>Start here</h2>`)
+
+	// Link 1: See why two contracts are the same bet → pair diff.
+	wantContains(t, body, fmt.Sprintf(`href="/pairs/%d#diff"`, pairID), "See why two contracts are the same bet")
+
+	// Link 2: Route a hypothetical order on it → pair route.
+	wantContains(t, body, fmt.Sprintf(`href="/pairs/%d#route"`, pairID), "Route a hypothetical order on it")
+
+	// Link 3: See the near-miss → near-misses page with group-fact-did-not-close anchor.
+	wantContains(t, body, `href="/near-misses#group-fact-did-not-close"`, "See the near-miss that was rejected, and why")
+
+	// Verify that the anchor exists on the /near-misses page.
+	nearMissesRec := get(s.Handler(), "/near-misses")
+	wantHTML(t, nearMissesRec, 200)
+	nearMissesBody := nearMissesRec.Body.String()
+	wantContains(t, nearMissesBody, `id="group-fact-did-not-close"`)
+
+	// Routable section intro sentence (M5-05). Singular "pair" when count is 1.
+	wantContains(t, body, "1 pair Equinox will route an order across: same bet (equivalent), same bet once a stated fact is applied (equivalent given facts), or exact opposites (complement).")
+}
+
+// TestStartHereEmptyState verifies the empty state when no routable pairs exist (M5-05 AC 3).
+func TestStartHereEmptyState(t *testing.T) {
+	s, st := newTestServer(t)
+	ctx := context.Background()
+	round, err := st.CreateRound(ctx, seedNow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.FinishRound(ctx, round.ID, store.RoundOK, nil, seedNow.Add(60*time.Second)); err != nil {
+		t.Fatal(err)
+	}
+
+	// No routable pairs, only a related pair.
+	a := seedInstrument("kalshi:A", canonical.VenueKalshi, "A", "rules", "BTC", "source", kalshiFee)
+	b := seedInstrument("polymarket:B", canonical.VenuePolymarket, "B", "rules", "BTC", "source", polyFee)
+	for _, in := range []canonical.Instrument{a, b} {
+		if err := st.UpsertInstrument(ctx, round.ID, in); err != nil {
+			t.Fatal(err)
+		}
+	}
+	_, err = st.UpsertRelationship(ctx, canonical.Relationship{
+		RoundID: round.ID, AID: "kalshi:A", BID: "polymarket:B", Type: canonical.RelRelated, Confidence: dec("0.80"),
+		Method: canonical.MethodRules, Diff: match.Diff(a.Terms, b.Terms), Explanation: "Related",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rec := get(s.Handler(), "/")
+	wantHTML(t, rec, 200)
+	body := rec.Body.String()
+
+	// No start-here card.
+	if strings.Contains(body, `<div class="start-here">`) {
+		t.Error("empty state should not show start-here card when no routable pairs")
+	}
+
+	// Empty state message with links to near-misses and eval.
+	wantContains(t, body,
+		"No routable pairs in this round",
+		`href="/near-misses"`,
+		`href="/eval"`,
+	)
 }

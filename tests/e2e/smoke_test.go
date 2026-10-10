@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -111,6 +112,19 @@ func TestSmoke_DemoPath(t *testing.T) {
 	body := get(t, client, site.URL+"/")
 	pairID := firstEquivalentPair(t, body)
 	t.Logf("GET /: first equivalent pair #%d", pairID)
+
+	// M5-05: Verify start-here card with working links.
+	if !strings.Contains(body, `<div class="start-here">`) {
+		t.Error("GET /: start-here card missing")
+	}
+	diffLink := fmt.Sprintf(`href="/pairs/%d#diff"`, pairID)
+	routeLink := fmt.Sprintf(`href="/pairs/%d#route"`, pairID)
+	if !strings.Contains(body, diffLink) {
+		t.Errorf("GET /: start-here card missing diff link %s", diffLink)
+	}
+	if !strings.Contains(body, routeLink) {
+		t.Errorf("GET /: start-here card missing route link %s", routeLink)
+	}
 
 	// 8. GET /pairs/{id} shows the diff table (UI-12: table.terms with t-match/t-differ/t-closed/t-unknown).
 	body = get(t, client, site.URL+"/pairs/"+strconv.FormatInt(pairID, 10))

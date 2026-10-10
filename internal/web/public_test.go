@@ -182,8 +182,10 @@ func TestPublicMatchesPage(t *testing.T) {
 		`<dt>Related</dt><dd>1</dd>`,
 		// UI-11 Cursor round 1: badges and conf template instead of inline chips/text.
 		"equivalent", "high",
-		// UI-03: related is inside <details>.
-		`<summary>related (1): same event, different payout; never routed</summary>`,
+		// M5-01: related is a summary section with a link to /near-misses.
+		`<h2 id="type-related">related (1)</h2>`,
+		`1 related pair: same event, different payout; never routed.`,
+		`<a href="/near-misses">See all 1 with the rule that separated them →</a>`,
 		"related", "low",
 		// UI-11: checks column and key.
 		`<ul class="checks"`,
@@ -192,8 +194,8 @@ func TestPublicMatchesPage(t *testing.T) {
 	// UI-11: assert Pair column with round id.
 	wantContains(t, body, `data-label="Pair">`)
 	wantContains(t, body, `<small>round `+strconv.FormatInt(sd.round.ID, 10)+`</small>`)
-	// UI-03: routable section comes before related details.
-	if strings.Index(body, `id="routable"`) > strings.Index(body, `<summary>related`) {
+	// UI-03: routable section comes before related.
+	if strings.Index(body, `id="routable"`) > strings.Index(body, `id="type-related"`) {
 		t.Error("routable section should come before related")
 	}
 	if strings.Contains(body, `id="type-unrelated"`) {
@@ -329,7 +331,7 @@ func TestGroupPairsOrdering(t *testing.T) {
 	quoteMap := make(map[string]*canonical.Quote)
 	instMap := make(map[string]canonical.Instrument)
 	reviewEdgeMin := decimal.RequireFromString("0.02")
-	groups := groupPairs(rels, views, now, "confidence", "", quoteTimes, 1, quoteMap, instMap, reviewEdgeMin)
+	groups := groupPairs(rels, views, now, "confidence", "", quoteTimes, now, quoteMap, instMap, reviewEdgeMin)
 	if len(groups) != 2 || groups[0].Type != "equivalent" || groups[1].Type != "related" {
 		t.Fatalf("groups = %+v", groups)
 	}

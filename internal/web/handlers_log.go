@@ -22,7 +22,7 @@ const maxLogRows = 200
 // logPage is the data for log.html (US-08, FR-21).
 type logPage struct {
 	page
-	Kind           string // active filter, or "" for every kind
+	Kind           string // active filter: "", "all", or a specific kind
 	Kinds          []logKindOption
 	Group          string // active group: "", "venue", "staleness", "label"
 	Groups         []logGroupOption
@@ -31,6 +31,8 @@ type logPage struct {
 	Outliers       *logOutliers    // For routing entries only (UI-15)
 	Limit          int
 	Newest         time.Time // Raw UTC time of the newest entry
+	HiddenIngestCt int       // Count of hidden ingest entries (M5-11)
+	ShowIngestLink string    // Link to show ingest entries (M5-11)
 }
 
 type logEntryGroup struct {
@@ -102,7 +104,7 @@ type stampView struct {
 	Age   time.Duration
 }
 
-// logKinds are the filter options, in display order.
+// logKinds are the filter options, in display order (M5-11).
 var logKinds = []struct {
 	kind  store.LogKind
 	label string
@@ -113,10 +115,13 @@ var logKinds = []struct {
 	{store.LogIngest, "fetch rounds"},
 }
 
+// reviewerKinds are the kinds shown in the default reviewer-first view (M5-11).
+var reviewerKinds = []store.LogKind{store.LogRelationship, store.LogRouting, store.LogLLM}
+
 // handleLog answers GET /log?kind=&group=: the newest decision-log entries across
 // relationship verdicts, routing decisions, LLM verdicts and fetch rounds,
 // each linked to the pair or stored decision it is about. UI-15 adds group-by and
-// enriched routing columns.
+// enriched routing columns. M5-11 adds reviewer-first default view (non-ingest only).
 func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 	st, ok := s.storeOrFail(w)
 	if !ok {
@@ -125,10 +130,27 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), dbTimeout)
 	defer cancel()
 
-	kind := store.LogKind(r.URL.Query().Get("kind"))
-	if kind != "" && !kind.Valid() {
-		s.renderErrorWithContext(w, r, http.StatusNotFound, "No such decision-log kind.")
-		return
+	kindParam := r.URL.Query().Get("kind")
+
+	// M5-11: Default view (no ?kind) shows non-ingest entries; ?kind=all shows everything
+	var kind store.LogKind
+	showAll := false
+	reviewerView := false
+
+	switch kindParam {
+	case "":
+		// Default: reviewer-first view (verdicts, routing, LLM; exclude ingest)
+		reviewerView = true
+	case "all":
+		// Show all kinds including ingest
+		showAll = true
+	default:
+		// Specific kind filter
+		kind = store.LogKind(kindParam)
+		if !kind.Valid() {
+			s.renderErrorWithContext(w, r, http.StatusNotFound, "No such decision-log kind.")
+			return
+		}
 	}
 
 	group := r.URL.Query().Get("group")
@@ -143,13 +165,17 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 	tz := timezoneFromRequest(r)
 	data := logPage{
 		page:  s.pageBase(round, "Decision log", "What did Equinox decide recently, and why?", tz, "log"),
-		Kind:  string(kind),
+		Kind:  kindParam,
 		Group: group,
 		Limit: maxLogRows,
 	}
+
+	// Build kind chips with "all" option (M5-11)
+	data.Kinds = append(data.Kinds, logKindOption{Value: "all", Label: "all", Selected: showAll})
 	for _, k := range logKinds {
 		data.Kinds = append(data.Kinds, logKindOption{Value: string(k.kind), Label: k.label, Selected: k.kind == kind})
 	}
+
 	// Group options (UI-15)
 	groups := []struct{ value, label string }{
 		{"", "None"},
@@ -161,14 +187,54 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 		data.Groups = append(data.Groups, logGroupOption{Value: g.value, Label: g.label, Selected: g.value == group})
 	}
 
-	entries, err := st.ListLog(ctx, store.LogFilter{Kind: kind, Limit: maxLogRows})
-	if err != nil {
-		s.dbError(w, "listing the decision log", err)
-		return
+	// Fetch entries based on the view
+	var entries []store.LogEntry
+	var err error
+
+	if reviewerView {
+		// Fetch only reviewer-relevant kinds (M5-11)
+		for _, k := range reviewerKinds {
+			kindEntries, err := st.ListLog(ctx, store.LogFilter{Kind: k, Limit: maxLogRows})
+			if err != nil {
+				s.dbError(w, "listing the decision log", err)
+				return
+			}
+			entries = append(entries, kindEntries...)
+		}
+		// Sort by created_at DESC (newest first)
+		sort.Slice(entries, func(i, j int) bool {
+			return entries[i].CreatedAt.After(entries[j].CreatedAt)
+		})
+		// Limit to maxLogRows
+		if len(entries) > maxLogRows {
+			entries = entries[:maxLogRows]
+		}
+
+		// Count hidden ingest entries for the summary line
+		ingestEntries, err := st.ListLog(ctx, store.LogFilter{Kind: store.LogIngest, Limit: maxLogRows})
+		if err == nil && len(ingestEntries) > 0 {
+			data.HiddenIngestCt = len(ingestEntries)
+			data.ShowIngestLink = "/log?kind=ingest"
+		}
+	} else if showAll {
+		// Fetch all entries
+		entries, err = st.ListLog(ctx, store.LogFilter{Kind: "", Limit: maxLogRows})
+		if err != nil {
+			s.dbError(w, "listing the decision log", err)
+			return
+		}
+	} else {
+		// Fetch specific kind
+		entries, err = st.ListLog(ctx, store.LogFilter{Kind: kind, Limit: maxLogRows})
+		if err != nil {
+			s.dbError(w, "listing the decision log", err)
+			return
+		}
 	}
 
 	// Enrich routing entries with decision data (UI-15)
-	if kind == "" || kind == store.LogRouting {
+	needsEnrich := reviewerView || showAll || kind == "" || kind == store.LogRouting
+	if needsEnrich {
 		entries, err = s.enrichRoutingEntries(ctx, st, entries, round.ID)
 		if err != nil {
 			s.dbError(w, "enriching routing log entries", err)
@@ -186,7 +252,7 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Compute outliers for routing entries (UI-15)
-	if kind == store.LogRouting && len(data.Entries) > 0 {
+	if (kind == store.LogRouting || reviewerView || showAll) && len(data.Entries) > 0 {
 		data.Outliers = s.computeOutliers(data.Entries, tz)
 	}
 
@@ -722,6 +788,38 @@ func formatDuration(d time.Duration) string {
 	}
 	h := m / 60
 	return fmt.Sprintf("%d h", h)
+}
+
+// formatTimeCompact returns a compact timestamp for decision log (M5-11).
+// Format: "Oct 10 03:41 EDT" for use in the When column with white-space:nowrap.
+func formatTimeCompact(t time.Time, tz string) string {
+	if t.IsZero() {
+		return "unknown"
+	}
+
+	var loc *time.Location
+	var err error
+
+	switch tz {
+	case TzET:
+		loc, err = loadLocation("America/New_York")
+	case TzCT:
+		loc, err = loadLocation("America/Chicago")
+	case TzUTC, TzLocal:
+		// Local falls back to UTC when JS is disabled (M4-77)
+		loc = time.UTC
+	default:
+		// Unknown timezone defaults to ET
+		loc, err = loadLocation("America/New_York")
+	}
+
+	// If time.LoadLocation fails, fall back to UTC.
+	if err != nil {
+		loc = time.UTC
+	}
+
+	// Format: "Oct 10 03:41 EDT"
+	return t.In(loc).Format("Jan 2 15:04 MST")
 }
 
 // formatPrice formats a decimal price for display (UI-15).

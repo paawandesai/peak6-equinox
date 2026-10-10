@@ -12,14 +12,14 @@
 </head>
 <body>
   {{/* Banners (D-098): demo (info), no-data (warn), stale (danger) with glyphs */}}
-  {{if .Banner.Show}}<div class="banner {{if .Banner.Pinned}}banner-info{{else}}banner-warn{{end}}" {{if .Banner.Pinned}}role="status"{{else}}role="alert"{{end}}><div class="container"><span class="g" aria-hidden="true">{{if .Banner.Pinned}}◆{{else}}?{{end}}</span>{{if .Banner.Pinned}}Demo mode: data as of {{.Banner.AsOf}} (round {{.Banner.RoundID}}). <a href="/admin">Unpin</a>{{else}}No data available yet. Run ingest from <a href="/admin">/admin</a>.{{end}}</div></div>{{end}}
+  {{if .Banner.Show}}<div class="banner {{if .Banner.Pinned}}banner-info{{else}}banner-warn{{end}}" {{if .Banner.Pinned}}role="status"{{else}}role="alert"{{end}}><div class="container"><span class="g" aria-hidden="true">{{if .Banner.Pinned}}◆{{else}}?{{end}}</span>{{if .Banner.Pinned}}Demo mode: data as of {{.Banner.AsOf}} (round {{.Banner.RoundID}}, pinned by the operator).{{if .Banner.ShowUnpinLink}} <a href="/admin">Unpin</a>{{end}}{{else}}No data available yet. Run ingest from <a href="/admin">/admin</a>.{{end}}</div></div>{{end}}
   {{if .StaleWarning}}<div class="banner banner-danger" role="alert"><div class="container"><span class="g" aria-hidden="true">✕</span>{{.StaleWarning}}</div></div>{{end}}
   <header class="site-header">
     <nav class="container">
       <ul>
         <li>
           <a href="/" class="brand">Equinox</a>
-          <span class="tagline">cross-venue contract matcher and router</span>
+          <span class="tagline">Finds the same bet on Kalshi and Polymarket, explains why, and simulates where an order would execute best. Read-only; never places orders.</span>
         </li>
       </ul>
       <ul>
@@ -27,6 +27,7 @@
         <li><a href="/near-misses" {{if eq .Page "near_misses"}}aria-current="page"{{end}}>Near misses</a></li>
         <li><a href="/log" {{if eq .Page "log"}}aria-current="page"{{end}}>Decision log</a></li>
         <li><a href="/eval" {{if eq .Page "eval"}}aria-current="page"{{end}}>Eval</a></li>
+        <li><a href="/glossary" {{if eq .Page "glossary"}}aria-current="page"{{end}}>Glossary</a></li>
       </ul>
     </nav>
     {{if .Round}}<div class="context-bar">
@@ -48,10 +49,7 @@
     </div>{{end}}
   </header>
   <main class="container">
-    <div class="page-head">
-      {{if .Question}}<p class="question">{{.Question}}</p>{{end}}
-    </div>
-{{template "content" .}}
+{{if .Question}}<p class="question">{{.Question}}</p>{{end}}{{template "content" .}}
   </main>
   <footer class="container">
     <small>Everything here is a simulation over recorded venue data. Equinox never places orders. Prices are per $1 payout, in [0,1].</small>

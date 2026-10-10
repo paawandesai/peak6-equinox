@@ -38,6 +38,9 @@ var templateFS embed.FS
 //go:embed static/app.css
 var appCSS []byte
 
+//go:embed static/timezone-local.js
+var timezoneLocalJS []byte
+
 // assets is what the layout needs to reference the pinned CDN files.
 type assets struct {
 	PicoURL, PicoSRI, HtmxURL, HtmxSRI string
@@ -61,6 +64,8 @@ var templateFuncs = template.FuncMap{
 	"httpURL": httpURL,
 	// formatTime formats a time.Time in the user's chosen timezone (M3-08).
 	"formatTime": formatTime,
+	// formatTimeCompact formats a time.Time in the user's timezone compactly (M5-11).
+	"formatTimeCompact": formatTimeCompact,
 	// Age formats a duration as a human-readable age (UI-13).
 	"Age": Age,
 	// UI-12: partOrder returns the ordered list of rule parts for diff grouping.
@@ -120,6 +125,7 @@ var pages = map[string]*template.Template{
 	"eval":        parsePage("eval.html", "backtest_results.html"), // M4-76: backtest results partial
 	"eval_cell":   parsePage("eval_cell.html"),                     // UI-23
 	"error":       parsePage("error.html"),
+	"glossary":    parsePage("glossary.html"), // M5-06
 }
 
 func parsePage(files ...string) *template.Template {
@@ -147,9 +153,11 @@ func (s *Server) publicRoutes(mux *http.ServeMux) {
 	mux.Handle("GET /log", wrap(s.handleLog))
 	mux.Handle("GET /eval", wrap(s.handleEval))
 	mux.Handle("GET /eval/cell", wrap(s.handleEvalCell)) // UI-23
+	mux.Handle("GET /glossary", wrap(s.handleGlossary))  // M5-06
 	// POST /timezone sets the user's timezone preference cookie (M3-08, no round middleware needed)
 	mux.Handle("POST /timezone", s.rateLimitMiddleware(http.HandlerFunc(s.handleTimezone)))
 	mux.HandleFunc("GET /static/app.css", s.handleAppCSS)
+	mux.HandleFunc("GET /static/timezone-local.js", s.handleTimezoneLocalJS)
 }
 
 func (s *Server) handleAppCSS(w http.ResponseWriter, _ *http.Request) {
@@ -157,6 +165,14 @@ func (s *Server) handleAppCSS(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Cache-Control", "public, max-age=3600")
 	if _, err := w.Write(appCSS); err != nil {
 		s.log.Error("writing app.css", "err", err)
+	}
+}
+
+func (s *Server) handleTimezoneLocalJS(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=3600")
+	if _, err := w.Write(timezoneLocalJS); err != nil {
+		s.log.Error("writing timezone-local.js", "err", err)
 	}
 }
 
@@ -185,10 +201,11 @@ type stampInfo struct {
 // banner is the structured data for the demo/no-round banner (M3-07).
 // The HTML markup is in layout.html; these fields are auto-escaped.
 type banner struct {
-	Show    bool   // true = show demo banner or no-round fallback
-	Pinned  bool   // true = demo mode (pinned round), false = no-round fallback
-	AsOf    string // formatted timestamp in ET (demo mode only)
-	RoundID int64  // round ID (demo mode only)
+	Show          bool   // true = show demo banner or no-round fallback
+	Pinned        bool   // true = demo mode (pinned round), false = no-round fallback
+	AsOf          string // formatted timestamp in ET (demo mode only)
+	RoundID       int64  // round ID (demo mode only)
+	ShowUnpinLink bool   // true = show Unpin link (admin pages only, M5-04)
 }
 
 // roundInfo is the round a page reads from, as shown in headers.
