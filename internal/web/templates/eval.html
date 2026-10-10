@@ -55,6 +55,70 @@
 
 {{if .Rows}}
 <h2>Quality by type</h2>
+{{if .DualMethod}}
+<p class="note">The columns show rules-only and rules+llm methods side by side, with Δ (rules → rules+llm).</p>
+<table class="data">
+  <thead>
+    <tr>
+      <th rowspan="2">Type</th>
+      <th rowspan="2">Support</th>
+      <th colspan="3">Counts</th>
+      <th colspan="2">Rules</th>
+      <th colspan="2">Rules+LLM</th>
+      <th colspan="2">Δ</th>
+    </tr>
+    <tr>
+      <th>TP</th>
+      <th>FP</th>
+      <th>FN</th>
+      <th>Precision</th>
+      <th>Recall</th>
+      <th>Precision</th>
+      <th>Recall</th>
+      <th>Precision</th>
+      <th>Recall</th>
+    </tr>
+  </thead>
+  <tbody>
+  {{range .Rows}}
+    <tr>
+      <td>{{template "badge" .TypeBadge}}</td>
+      <td class="num">{{.Support}}</td>
+      <td class="num">{{.TP}}</td>
+      <td class="num">{{.FP}}</td>
+      <td class="num">{{.FN}}</td>
+      <td class="meter-cell">
+        {{if ne .RulesPrecision "n/a"}}
+        <meter min="0" max="1" low="0.7" high="0.9" optimum="1" value="{{.RulesPrecisionFloat}}"></meter>
+        {{end}}
+        <span class="num">{{.RulesPrecision}}</span>
+      </td>
+      <td class="meter-cell">
+        {{if ne .RulesRecall "n/a"}}
+        <meter min="0" max="1" low="0.7" high="0.9" optimum="1" value="{{.RulesRecallFloat}}"></meter>
+        {{end}}
+        <span class="num">{{.RulesRecall}}</span>
+      </td>
+      <td class="meter-cell">
+        {{if ne .Precision "n/a"}}
+        <meter min="0" max="1" low="0.7" high="0.9" optimum="1" value="{{.PrecisionFloat}}"></meter>
+        {{end}}
+        <span class="num">{{.Precision}}</span>
+      </td>
+      <td class="meter-cell">
+        {{if ne .Recall "n/a"}}
+        <meter min="0" max="1" low="0.7" high="0.9" optimum="1" value="{{.RecallFloat}}"></meter>
+        {{end}}
+        <span class="num">{{.Recall}}</span>
+      </td>
+      <td class="num">{{if .PrecisionMethodDelta}}{{.PrecisionMethodDelta}}{{else}}—{{end}}</td>
+      <td class="num">{{if .RecallMethodDelta}}{{.RecallMethodDelta}}{{else}}—{{end}}</td>
+    </tr>
+  {{end}}
+  </tbody>
+</table>
+<p class="note sign-rule">Favourable deltas (LLM improved over rules) read positive (+X%); unfavourable ones (LLM regressed) appear in parentheses ((X%)).</p>
+{{else}}
 <table class="data">
   <thead>
     <tr>
@@ -91,6 +155,7 @@
       <td class="num">{{.F1}}</td>
     </tr>
   {{end}}
+  {{if not $.DualMethod}}
   {{if .MacroAverage}}
   <tr class="summary-row">
     <td><strong>Macro average</strong></td>
@@ -135,8 +200,10 @@
     <td class="num">{{.WeightedAverage.F1}}</td>
   </tr>
   {{end}}
+  {{end}}
   </tbody>
 </table>
+{{end}}
 
 <p class="note">There is no calibration plot because confidence is a rules score, not a probability.</p>
 
