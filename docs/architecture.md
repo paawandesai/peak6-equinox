@@ -118,7 +118,7 @@ Postgres. Migrations live in `migrations/NNNN_name.sql`, run with goose.
 | `raw_responses` | `id`, `round_id fk`, `venue`, `endpoint`, `http_status`, `body_gz bytea`, `fetched_at` |
 | `instruments` | `id text pk` (`kalshi:<ticker>`, `polymarket:<token_id>`), `venue`, `venue_market_id`, `venue_event_id`, `category`, `title`, `rules_text`, `rules_summary text`, `clarifications text`, `clarifications_updated_at timestamptz`, `terms jsonb`, `polarity`, `close_time`, `expiration_time`, `status`, `fee_schedule jsonb`, `quality jsonb`, `first_seen_round`, `last_seen_round` |
 | `quotes` | `pk(round_id, instrument_id)`, `yes_bids jsonb`, `yes_asks jsonb`, `best_bid`, `best_ask`, `mid numeric`, `fetched_at`, `venue_ts`, `quality jsonb` |
-| `relationships` | `id`, `round_id`, `a_id`, `b_id`, `type`, `confidence numeric`, `method` (`rules`/`rules+llm`), `diff jsonb`, `vetoes jsonb`, `facts_used jsonb`, `basis_risk jsonb`, `explanation text`, unique `(round_id,a_id,b_id)` |
+| `relationships` | `id`, `round_id`, `a_id`, `b_id`, `type`, `confidence numeric`, `method` (`rules`/`rules+llm`), `diff jsonb`, `vetoes jsonb`, `facts_used jsonb`, `basis_risk jsonb`, `evidence jsonb`, `explanation text`, unique `(round_id,a_id,b_id)` |
 | `llm_verdicts` | `cache_key text pk` (sha256), `model`, `prompt_version`, `verdict jsonb`, `created_at` |
 | `llm_usage` | `day date pk`, `calls`, `input_tokens`, `output_tokens` |
 | `llm_verify_last_run` | `id boolean pk default true check (id = true)` (singleton), `verified integer`, `downgraded integer`, `cache_hits integer`, `ran_at timestamptz` (UI-08 follow-up, issue #40) |

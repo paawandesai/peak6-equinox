@@ -144,6 +144,58 @@ type LLMVerdict struct {
 	Evidence        []string         `json:"evidence"`
 }
 
+// ContributionTerm is one term's signed contribution to the final confidence (UI-20, D-115).
+type ContributionTerm struct {
+	Term  string          `json:"term"`  // e.g. "prior", "unknown_unit_a", "deadline_gap_hours"
+	Value decimal.Decimal `json:"value"` // Signed: positive for prior, negative for deductions
+}
+
+// MatcherEvidence records the matcher's confidence calculation components (UI-20, D-115).
+// It is optional and may be nil for relationships stored before this feature.
+type MatcherEvidence struct {
+	Prior         decimal.Decimal    `json:"prior"`                    // Base confidence before deductions
+	Contributions []ContributionTerm `json:"contributions"`            // Per-term signed contributions
+	Total         decimal.Decimal    `json:"total"`                    // Sum (equals stored confidence)
+	PreVetoScore  *decimal.Decimal   `json:"pre_veto_score,omitempty"` // For near misses: score before vetoes
+	RequiredScore *decimal.Decimal   `json:"required_score,omitempty"` // For near misses: MIN_ROUTE_CONFIDENCE (0.90)
+}
+
+// Validate checks that total equals the sum of prior and contributions, and that
+// pre_veto_score and required_score are in [0,1] when present.
+func (e MatcherEvidence) Validate() error {
+	var errs []error
+	// Check prior is in [0,1]
+	if err := checkUnit("evidence.prior", e.Prior); err != nil {
+		errs = append(errs, err)
+	}
+	// Check total is in [0,1]
+	if err := checkUnit("evidence.total", e.Total); err != nil {
+		errs = append(errs, err)
+	}
+	// Verify sum: sum of all contributions (including prior) == total
+	sum := decimal.Zero
+	for _, c := range e.Contributions {
+		sum = sum.Add(c.Value)
+	}
+	// Allow small rounding error (1e-10)
+	if sum.Sub(e.Total).Abs().GreaterThan(decimal.NewFromFloat(1e-10)) {
+		errs = append(errs, fmt.Errorf("evidence.total %s does not equal sum of contributions %s",
+			e.Total, sum))
+	}
+	// Check optional fields
+	if e.PreVetoScore != nil {
+		if err := checkUnit("evidence.pre_veto_score", *e.PreVetoScore); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if e.RequiredScore != nil {
+		if err := checkUnit("evidence.required_score", *e.RequiredScore); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
+}
+
 // Validate checks the type, confidence range and evidence limits.
 func (v LLMVerdict) Validate() error {
 	var errs []error
@@ -177,6 +229,9 @@ type Relationship struct {
 	Vetoes     []Veto           `json:"vetoes"`
 	FactsUsed  []FactUse        `json:"facts_used"`
 	BasisRisk  *BasisRisk       `json:"basis_risk,omitempty"`
+	// Evidence records the matcher's confidence calculation (UI-20, D-115).
+	// It is nil for relationships stored before this feature.
+	Evidence *MatcherEvidence `json:"evidence,omitempty"`
 	// Explanation is a human-readable sentence naming the deciding fields. Required.
 	Explanation string `json:"explanation"`
 }
@@ -213,6 +268,16 @@ func (r Relationship) Validate() error {
 	if r.BasisRisk != nil {
 		if err := checkUnit("basis_risk.score", r.BasisRisk.Score); err != nil {
 			errs = append(errs, err)
+		}
+	}
+	if r.Evidence != nil {
+		if err := r.Evidence.Validate(); err != nil {
+			errs = append(errs, err)
+		}
+		// Evidence.Total must equal the relationship's Confidence
+		if !r.Evidence.Total.Equal(r.Confidence) {
+			errs = append(errs, fmt.Errorf("evidence.total %s does not match confidence %s",
+				r.Evidence.Total, r.Confidence))
 		}
 	}
 	if strings.TrimSpace(r.Explanation) == "" {

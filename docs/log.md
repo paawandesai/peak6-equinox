@@ -232,6 +232,40 @@ Stored in the same `routing_decisions.decision` jsonb; no SQL migration needed. 
 
 **How:** (1) `internal/web/handlers_route.go`: new `legView` struct extends `canonical.Leg` with `Quoted`, `SlippageBps`, `SharePct`, `X` (split bar position), `BasisScore`, `Levels`; new `inputSnapshotView` struct for step 1 of trace with `Venue`, `InstrumentID`, `TypeBadge`, `BestAsk`, `Depth`, `Age`, `FreshState`, `FetchedAt`; extended `decisionView` with `TotalCost`, `TotalFees`, `TotalBasis`, `SlippageTotalBps`, `MaxQuoteAge`, `MaxQuoteAgeBadge`, `Inputs`, `KeptCount`, `CandidateCount`, `InputsRecorded`, `UI25CutoffDate`; extended `alternativeView` with `GapBps`; new `buildInputMap()` creates map from instrument ID to DecisionInput; new `buildInputSnapshots()` creates input snapshot views with freshness badges; `RenderContext` field controls trace step open/closed state ("route" vs "decision"). (2) `internal/web/templates/route_result.html`: complete v2 rewrite with `dl.tiles` cost report (6 metrics including "Slippage vs quoted"), split bar SVG for multi-leg routes, enhanced chosen legs table with Quoted and Slippage columns (UI-25 inputs), sign rule text ("positive = saving (favourable), parentheses = loss (unfavourable)"), `ol.trace-steps` with 5 steps (Order and input snapshot, Eligibility, Fill simulation and fee math, Ranked alternatives, Decision), input snapshot table with freshness badges and age display, or "Input quotes were not stored for decisions made before 2026-10-08" for pre-UI-25 decisions. (3) `internal/web/templates/decision.html`: updated to use shared route_result partial with crumbs and RenderContext="decision" so trace steps open. (4) `internal/web/public.go`: added `Age` template function for duration formatting. (5) `internal/web/handlers_log.go`: set RenderContext for decision pages. (6) `internal/web/handlers_route_test.go`: updated v1 HTML assertions to v2 (chip → badge, heading changes, structure changes), added UI-13 test cases: TestRouteResultV2Fields, TestRouteResultRoutedState, TestRouteResultNotRoutedState, TestRouteResultSignRule, TestRouteResultWithInputs. (7) `internal/web/pages_test.go`: updated TestDecisionPage for v2 HTML and trace step headings. (8) Merge conflict in `internal/web/public.go` resolved: kept both Age (UI-13) and template functions from main (partOrder, filterByPart, RoundStatusBadge, mul, add from UI-12/UI-17). All tests pass (go build, go vet, internal/web 3.5s, security 0.6s). p95: POST /route = 6.4ms (p50=2.4ms, AC ≤300ms ✓). Screenshots at 1280px and 390px embedded in MR !81. Depends on UI-25 (!62, merged to main 2026-10-09). · internal/web/{handlers_route.go,handlers_log.go,public.go,templates/{route_result.html,decision.html}}, internal/web/{handlers_route_test.go,pages_test.go}, MR!81
 
+## 2026-10-09 · UI-20: Matcher evidence recording (issue #52, !TBD)
+
+**Worker:** AO peak6-equinox-90 (Sonnet 4.5)
+**Branch:** ao/ui-v2/ui-20-matcher-evidence (stacked on !88 ao/matcher/m4-72-fed-formats)
+**Status:** Draft MR opened, depends on !88
+
+Implemented UI-20 (D-115, Tier 2): matcher evidence recording. The matcher now stores confidence calculation components with every relationship: prior (base confidence), per-term signed contributions (e.g. unknown_unit_a −0.02, deadline_gap_hours −0.05), total (sum, equals stored confidence), and for near misses, pre-veto score (what equivalentConfidence would return before vetoes) + required score (0.90).
+
+**Backend changes:**
+- `canonical.MatcherEvidence` struct: `Prior`, `Contributions []ContributionTerm`, `Total`, `PreVetoScore` *decimal, `RequiredScore` *decimal
+- `ContributionTerm`: `{Term string, Value decimal}` (signed: positive for prior, negative for deductions)
+- `buildEvidence(a, b, verdict, vetoes)` in `internal/match/classify.go` computes evidence
+- `Compare()` in `internal/match/match.go` attaches evidence to every relationship
+- Migration `0003_match_evidence.sql` adds nullable `evidence` jsonb column to `relationships`
+- Store layer (`internal/store/relationships.go`) persists and scans evidence
+
+**UI changes:**
+- Pair page (`pair.html`): footer under table.terms shows "Matcher evidence: prior + Σ(N) = total → confidence X.XX" or "not recorded" for old rows
+- Near misses page (`near_misses.html`): Score column shows "X.XX of Y.YY required" or "not recorded"
+- View models: `pairPage.EvidenceFooter`, `pairPage.HasEvidence`, `nearMissRow.Score`
+
+**Tests:**
+- `internal/match/match_test.go`: TestMatcherEvidence* (evidence computation, contributions, pre-veto score, unrelated)
+- Evidence validation: sum of contributions == total (tolerance 1e-10), all scores in [0,1]
+- Relationship validation: evidence.total == confidence
+
+**Docs:**
+- D-115 entry in `docs/decisions.md`
+- "Awaiting human veto" row in `docs/status.md`
+- This log entry
+
+**No verdict/type/confidence changes:** Evidence recording is pure additive metadata. The golden eval and back-test outputs remain byte-identical.
+
+**Next:** Wait for !88 to merge, then merge origin/main, mark MR ready, run full tests + screenshots.
 ## 2026-10-09 · M4-08: Final docs/status.md (agent `peak6-equinox-91`)
 
 **What:** Final docs/status.md covering requirements coverage, spend to date, and security findings (M4-08, issue #66). Early DRAFT per operator instruction; stacked on !68 (M4-06 PRD sweep); depends on M4-06, M4-07 for finalization.

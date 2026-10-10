@@ -46,6 +46,8 @@ type pairPage struct {
 	History         historyChart
 	LogEntries      []logEntryView
 	Form            routeFormView
+	EvidenceFooter  string // UI-20: "prior + Σ = total → confidence X.XX" or "not recorded"
+	HasEvidence     bool   // UI-20: whether evidence was recorded
 	// UI-22: LLM verifier rationale (hidden when pair was never verified)
 	HasLLMRationale bool
 	LLMRationale    []string // Evidence from verdict (up to 3 entries × 200 chars)
@@ -78,18 +80,19 @@ type basisComponentView struct {
 
 // diffRowView is one diff row with annotations for vetoes and facts (UI-04, UI-12).
 type diffRowView struct {
-	Field      string
-	A          string
-	B          string
-	ATokens    []diffToken // UI-12: word-level diff tokens for template wrapping
-	BTokens    []diffToken // UI-12: word-level diff tokens for template wrapping
-	Status     string      // "match", "differ", "unknown"
-	StatusText string      // status word with color token
-	Annotation string      // veto or fact annotation, or empty
-	Part       string      // UI-12: rule part (resolution criteria, strike, direction, etc.)
-	Class      string      // UI-12: CSS class (t-match, t-differ, t-closed, t-unknown)
-	Badge      Badge       // UI-12: verdict badge
-	BasisLink  string      // UI-12: link to basis component, or empty
+	Field        string
+	A            string
+	B            string
+	ATokens      []diffToken // UI-12: word-level diff tokens for template wrapping
+	BTokens      []diffToken // UI-12: word-level diff tokens for template wrapping
+	Status       string      // "match", "differ", "unknown"
+	StatusText   string      // status word with color token
+	Annotation   string      // veto or fact annotation, or empty
+	Part         string      // UI-12: rule part (resolution criteria, strike, direction, etc.)
+	Class        string      // UI-12: CSS class (t-match, t-differ, t-closed, t-unknown)
+	Badge        Badge       // UI-12: verdict badge
+	BasisLink    string      // UI-12: link to basis component, or empty
+	Contribution string      // UI-20: signed contribution for this term, or empty
 }
 
 // diffToken is one word/space token with its operation for word-level diffs (UI-12).
@@ -439,11 +442,47 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 		q.dest.Venue = string(canonical.VenueOf(q.id))
 		q.dest.Tz = tz
 	}
+	// UI-20: Build evidence footer
+	if rel.Evidence != nil {
+		data.HasEvidence = true
+		// Format: "prior + Σ = total → confidence X.XX"
+		// Count non-prior contributions
+		contribCount := len(rel.Evidence.Contributions) - 1 // excluding prior
+		data.EvidenceFooter = fmt.Sprintf("%s + Σ(%d) = %s → confidence %s",
+			rel.Evidence.Prior.StringFixed(2),
+			contribCount,
+			rel.Evidence.Total.StringFixed(2),
+			rel.Confidence.StringFixed(2))
+	} else {
+		data.HasEvidence = false
+		data.EvidenceFooter = "not recorded"
+	}
 	s.render(w, http.StatusOK, "pair", data)
 }
 
 // buildDiffRows maps vetoes and facts onto diff rows by term name (UI-04, UI-12).
 // UI-12 adds: Part grouping, CSS class, badge, word-level tokens, basis link.
+// evidenceKeyToField maps a matcher evidence contribution term to a diff field
+// name (UI-20, D-115). Returns the field name and whether it should be shown
+// per-row (true) or only in the footer (false). Footer-only terms: "prior",
+// "fact_applied". Unknown terms return ("", false).
+func evidenceKeyToField(term string) (field string, perRow bool) {
+	switch {
+	case term == "prior":
+		return "", false // Footer only
+	case strings.HasPrefix(term, "unknown_unit"):
+		return "unit", true
+	case strings.HasPrefix(term, "unknown_edge_rules"):
+		return "edge_rules", true
+	case strings.HasPrefix(term, "deadline_gap") || strings.HasPrefix(term, "deadline_defaulted"):
+		return "deadline", true
+	case term == "fact_applied":
+		return "", false // Footer only (global deduction)
+	default:
+		return "", false // Unknown term
+	}
+}
+
 func buildDiffRows(rel canonical.Relationship) []diffRowView {
 	rows := make([]diffRowView, 0, len(rel.Diff))
 
@@ -474,6 +513,35 @@ func buildDiffRows(rel canonical.Relationship) []diffRowView {
 			}
 			if strings.Contains(c.Name, "source") {
 				basisByField["resolution_source"] = true
+			}
+		}
+	}
+
+	// UI-20: Build contribution map by field (maps diff field names to contributions)
+	contributionByField := make(map[string]string)
+	if rel.Evidence != nil {
+		for _, contrib := range rel.Evidence.Contributions {
+			field, perRow := evidenceKeyToField(contrib.Term)
+			if !perRow {
+				continue // Skip footer-only and unknown terms
+			}
+
+			// Format contribution value with sign
+			val := contrib.Value
+			var formatted string
+			if val.IsNegative() {
+				formatted = fmt.Sprintf("−%s", val.Abs().StringFixed(2))
+			} else if val.IsPositive() {
+				formatted = fmt.Sprintf("+%s", val.StringFixed(2))
+			} else {
+				formatted = "0.00"
+			}
+
+			// Accumulate if field already has a contribution (e.g. both unknown_unit_a and unknown_unit_b)
+			if existing, ok := contributionByField[field]; ok {
+				contributionByField[field] = existing + ", " + formatted
+			} else {
+				contributionByField[field] = formatted
 			}
 		}
 	}
@@ -532,6 +600,11 @@ func buildDiffRows(rel canonical.Relationship) []diffRowView {
 		// UI-12: basis link if this field contributes to basis risk
 		if basisByField[d.Field] {
 			row.BasisLink = "#basis"
+		}
+
+		// UI-20: set contribution if available for this field
+		if contrib, ok := contributionByField[d.Field]; ok {
+			row.Contribution = contrib
 		}
 
 		rows = append(rows, row)

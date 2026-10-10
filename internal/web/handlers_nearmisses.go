@@ -44,6 +44,7 @@ type nearMissRow struct {
 	VetoField   string // field name (e.g., "subject")
 	VetoDetail  string // detail text (e.g., "BTC is not ETH")
 	TermGap     string // how close (numeric difference or time distance, or "—")
+	Score       string // UI-20: "X.XX of Y.YY required" or "not recorded"
 	Facts       []canonical.FactUse
 	Explanation string
 	LogLink     string // link to the pair's verdict entry
@@ -112,6 +113,14 @@ func nearMissRows(rels []canonical.Relationship, views map[string]instrumentView
 			Explanation: r.Explanation,
 			LogLink:     fmt.Sprintf("/pairs/%d", r.ID),
 			TermGap:     computeTermGap(r.Diff),
+		}
+		// UI-20: Pre-veto score
+		if r.Evidence != nil && r.Evidence.PreVetoScore != nil && r.Evidence.RequiredScore != nil {
+			row.Score = fmt.Sprintf("%s of %s required",
+				r.Evidence.PreVetoScore.StringFixed(2),
+				r.Evidence.RequiredScore.StringFixed(2))
+		} else {
+			row.Score = "not recorded"
 		}
 		// The first veto is shown
 		if len(r.Vetoes) > 0 {
