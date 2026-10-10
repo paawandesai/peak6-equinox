@@ -13,7 +13,7 @@
   <ol>
     <li><a href="/pairs/{{.FeaturedPair.ID}}#diff">See why two contracts are the same bet</a></li>
     <li><a href="/pairs/{{.FeaturedPair.ID}}#route">Route a hypothetical order on it</a></li>
-    <li><a href="/near-misses#metric_unknown">See the near-miss that was rejected, and why</a></li>
+    <li><a href="/near-misses#group-fact-did-not-close">See the near-miss that was rejected, and why</a></li>
   </ol>
 </div>
 {{else}}
@@ -64,7 +64,7 @@
 {{if gt .RoutableCount 0}}
 <section>
   <h2 id="routable">Routable pairs ({{.RoutableCount}})</h2>
-  <p>{{.RoutableCount}} pairs Equinox will route an order across: same bet (equivalent), same bet once a stated fact is applied (equivalent given facts), or exact opposites (complement).</p>
+  <p>{{.RoutableCount}} {{if eq .RoutableCount 1}}pair{{else}}pairs{{end}} Equinox will route an order across: same bet (equivalent), same bet once a stated fact is applied (equivalent given facts), or exact opposites (complement).</p>
   <table class="data stack">
     <thead>
       <tr>

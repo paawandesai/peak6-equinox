@@ -81,18 +81,18 @@ Next operator action (Tier 2): human verification of Fed demo rendering (criteri
 - UI-07: Eval page — merged as cbac998 (closes #36).
 - UI-08: Admin page — merged (closes #37); follow-up (persist LLM verify last-run summary, #40) merged as da123b9.
 
-- M5-01: Home page p95 under 500 ms — MR !113 merged (closes #83).
-- M5-02: Pair page under 500 ms — MR !114 merged (closes #84).
-- M5-03: Timezone JS fix — MR !116 merged (closes #85).
-- M5-04: Admin dead end explanation — MR !117 merged (closes #86).
-- M5-05: Start here demo moment — MR !118 merged (closes #87).
-- M5-06: Glossary plain language — MR !115 merged (closes #88).
+- M5-01: Home page p95 under 500 ms — MR !111 merged (closes #83).
+- M5-02: Pair page under 500 ms — MR !112 merged (closes #84).
+- M5-03: Timezone JS fix — MR !110 merged (closes #85).
+- M5-04: Admin dead end explanation — MR !115 merged (closes #86).
+- M5-05: Start here demo moment — MR !116 merged (closes #87).
+- M5-06: Glossary plain language — MR !118 merged (closes #88).
 - M5-07: Pair page jump links — MR !121 merged (closes #89).
 - M5-08: Route result summary — MR !120 merged (closes #90).
 - M5-09: Layout question line once, Glossary in nav, tagline — MR !123 merged (closes #91).
 - M5-10: Near-misses headings and per-group cap — MR !122 merged (closes #92).
-- M5-11: Decision log reviewer-first view — MR !119 merged (closes #93).
-- M5-12a: Eval page readability — MR !125 merged (closes #94).
+- M5-11: Decision log reviewer-first view — MR !113 merged (closes #93).
+- M5-12a: Eval page readability — MR !119 merged (closes #94).
 
 ## In progress
 
