@@ -299,6 +299,77 @@ func TestLLMVerifyRunsRoundTrip(t *testing.T) {
 	}
 }
 
+// M5-02: GetLLMVerifyRun retrieves a single run by ID instead of scanning all runs.
+func TestGetLLMVerifyRun(t *testing.T) {
+	ctx := context.Background()
+	pool := tdb.Pool(t)
+	st := store.New(pool)
+
+	model := "claude-haiku-4-5-20251001"
+	promptVersion := "v1"
+
+	// Insert and finish a run
+	runID, err := st.InsertLLMVerifyRun(ctx, model, promptVersion, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.FinishLLMVerifyRun(ctx, runID, 10, 2, 5, 5, 1000, 500, "ok"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Retrieve by ID
+	got, found, err := st.GetLLMVerifyRun(ctx, runID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !found {
+		t.Fatal("run not found")
+	}
+
+	if got.ID != runID {
+		t.Errorf("id: got %d, want %d", got.ID, runID)
+	}
+	if got.Model != model {
+		t.Errorf("model: got %s, want %s", got.Model, model)
+	}
+	if got.PromptVersion != promptVersion {
+		t.Errorf("prompt_version: got %s, want %s", got.PromptVersion, promptVersion)
+	}
+	if got.Verified != 10 {
+		t.Errorf("verified: got %d, want 10", got.Verified)
+	}
+	if got.Downgraded != 2 {
+		t.Errorf("downgraded: got %d, want 2", got.Downgraded)
+	}
+	if got.CacheHits != 5 {
+		t.Errorf("cache_hits: got %d, want 5", got.CacheHits)
+	}
+	if got.CallsMade != 5 {
+		t.Errorf("calls_made: got %d, want 5", got.CallsMade)
+	}
+	if got.InputTokens != 1000 {
+		t.Errorf("input_tokens: got %d, want 1000", got.InputTokens)
+	}
+	if got.OutputTokens != 500 {
+		t.Errorf("output_tokens: got %d, want 500", got.OutputTokens)
+	}
+	if got.Outcome != "ok" {
+		t.Errorf("outcome: got %s, want ok", got.Outcome)
+	}
+	if got.FinishedAt == nil {
+		t.Error("finished_at is nil, want non-nil")
+	}
+
+	// Query for non-existent run
+	_, found, err = st.GetLLMVerifyRun(ctx, runID+9999)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if found {
+		t.Error("non-existent run should not be found")
+	}
+}
+
 // TestLLMVerifyRunsPruning verifies that old runs are pruned when inserting new ones (UI-22).
 func TestLLMVerifyRunsPruning(t *testing.T) {
 	ctx := context.Background()
