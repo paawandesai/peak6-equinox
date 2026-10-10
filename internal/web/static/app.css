@@ -570,6 +570,9 @@ svg.bars .missing { fill: none; stroke: var(--eq-unknown); }
   .admin-cols { grid-template-columns: 1fr; gap: 1rem; }
 }
 
+/* --- M5-01: related summary on / (top rows + link to /near-misses) ------- */
+.related-summary > p:last-child { margin-top: .75rem; font-weight: 600; }
+
 /* M5-11 start */
 /* Decision log: compact timestamps with white-space:nowrap (M5-11) */
 td.log-when { white-space: nowrap; font-size: var(--eq-text-s); }

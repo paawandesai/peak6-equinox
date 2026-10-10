@@ -38,6 +38,9 @@ var templateFS embed.FS
 //go:embed static/app.css
 var appCSS []byte
 
+//go:embed static/timezone-local.js
+var timezoneLocalJS []byte
+
 // assets is what the layout needs to reference the pinned CDN files.
 type assets struct {
 	PicoURL, PicoSRI, HtmxURL, HtmxSRI string
@@ -152,6 +155,7 @@ func (s *Server) publicRoutes(mux *http.ServeMux) {
 	// POST /timezone sets the user's timezone preference cookie (M3-08, no round middleware needed)
 	mux.Handle("POST /timezone", s.rateLimitMiddleware(http.HandlerFunc(s.handleTimezone)))
 	mux.HandleFunc("GET /static/app.css", s.handleAppCSS)
+	mux.HandleFunc("GET /static/timezone-local.js", s.handleTimezoneLocalJS)
 }
 
 func (s *Server) handleAppCSS(w http.ResponseWriter, _ *http.Request) {
@@ -159,6 +163,14 @@ func (s *Server) handleAppCSS(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Cache-Control", "public, max-age=3600")
 	if _, err := w.Write(appCSS); err != nil {
 		s.log.Error("writing app.css", "err", err)
+	}
+}
+
+func (s *Server) handleTimezoneLocalJS(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=3600")
+	if _, err := w.Write(timezoneLocalJS); err != nil {
+		s.log.Error("writing timezone-local.js", "err", err)
 	}
 }
 
