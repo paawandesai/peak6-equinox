@@ -2,7 +2,7 @@
 {{if .Empty}}
 <p>No stored quotes for either contract yet. Each fetch round adds one point per contract.</p>
 {{else}}
-<p>{{.Points}} touch{{if ne .Points 1}}es{{end}} across {{.Rounds}} round{{if ne .Rounds 1}}s{{end}}, from {{formatTime .From .Tz}} to {{formatTime .To .Tz}}. Solid line: mid of the best YES bid and ask; thin lines: best bid and best ask. Prices are per $1 payout on a fixed 0 to 1 axis so both venues share one scale.</p>
+<p>{{.Points}} touch{{if ne .Points 1}}es{{end}} across {{.Rounds}} round{{if ne .Rounds 1}}s{{end}}, from {{formatTime .From .Tz}} to {{formatTime .To .Tz}}. Solid line: mid of the best YES bid and ask; thin lines: best bid and best ask. Prices are per $1 payout on a fixed 0 to 1 axis so both venues share one scale. Dashed line: cross-venue spread (mid A − mid B), on a −1 to 1 axis with 0 at the centre.</p>
 <figure class="history">
 <svg class="hist" viewBox="0 0 {{.Width}} {{.Height}}" width="{{.Width}}" height="{{.Height}}" role="img" aria-labelledby="hist-title">
   <title id="hist-title">Price history of the two contracts across fetch rounds</title>
@@ -15,10 +15,13 @@
   {{if .Mid}}<polyline class="hist-mid hist-{{.Key}}" points="{{.Mid}}"></polyline>{{end}}
   {{range .Dots}}<circle class="hist-dot hist-{{$key}}" cx="{{.X}}" cy="{{.Y}}" r="3"></circle>{{end}}
   {{end}}
+  {{if .Spread.Line}}<polyline class="hist-spread" points="{{.Spread.Line}}"></polyline>{{end}}
+  {{range .Spread.Dots}}<circle class="hist-dot-spread" cx="{{.X}}" cy="{{.Y}}" r="3"></circle>{{end}}
 </svg>
 <figcaption>
   <ul class="hist-legend">
   {{range .Series}}<li><span class="hist-swatch hist-{{.Key}}"></span> <span class="venue">{{.Venue}}</span> <code>{{.ID}}</code>: {{.N}} point{{if ne .N 1}}s{{end}}, last mid {{.Last}}</li>{{end}}
+  {{if gt .Spread.N 0}}<li><span class="hist-swatch hist-spread"></span> Spread (A − B): {{.Spread.N}} point{{if ne .Spread.N 1}}s{{end}}, last {{.Spread.Last}}</li>{{end}}
   </ul>
 </figcaption>
 </figure>

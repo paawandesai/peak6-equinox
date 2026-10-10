@@ -1,0 +1,3 @@
+# Indexed out but still readable on demand (tests read them via the terminal)
+testdata/fixtures/
+go.sum

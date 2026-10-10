@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="{{.Assets.PicoURL}}" integrity="{{.Assets.PicoSRI}}" crossorigin="anonymous">
   <link rel="stylesheet" href="/static/app.css">
   <script src="{{.Assets.HtmxURL}}" integrity="{{.Assets.HtmxSRI}}" crossorigin="anonymous" defer></script>
+  <script src="/static/timezone-local.js" defer></script>
 </head>
 <body>
   {{/* Banners (D-098): demo (info), no-data (warn), stale (danger) with glyphs */}}
@@ -38,6 +39,7 @@
               <option value="ET"{{if eq .Timezone "ET"}} selected{{end}}>ET</option>
               <option value="CT"{{if eq .Timezone "CT"}} selected{{end}}>CT</option>
               <option value="UTC"{{if eq .Timezone "UTC"}} selected{{end}}>UTC</option>
+              <option value="Local"{{if eq .Timezone "Local"}} selected{{end}}>Local</option>
             </select>
           </label>
           <button type="submit">Change</button>
