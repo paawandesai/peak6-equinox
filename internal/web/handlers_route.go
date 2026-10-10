@@ -53,6 +53,17 @@ func defaultRouteForm(rel canonical.Relationship) routeFormView {
 	}
 }
 
+// routeDefaultsText states the route form's defaults in one line (M6 P6), from
+// the values defaultRouteForm pre-fills, so the page and the form never drift.
+func routeDefaultsText(f routeFormView) string {
+	tif := "fill what you can"
+	if f.TIF == string(canonical.TIFFOK) {
+		tif = "all or nothing"
+	}
+	return fmt.Sprintf("Defaults: %s %s %s contracts, %s %s (%s), target A.",
+		f.Side, strings.ToUpper(f.Outcome), f.Quantity, f.Type, f.TIF, tif)
+}
+
 // routeInput is the validated POST /route form.
 type routeInput struct {
 	PairID int64

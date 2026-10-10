@@ -66,8 +66,11 @@
     <dt id="term-all-in">All-in cost</dt>
     <dd>What one contract costs per $1 payout once everything is counted: VWAP plus the venue fee plus a basis-risk penalty. The router picks the lowest all-in cost; ties go to the deeper book.</dd>
 
-    <dt id="term-bps">bps (basis points)</dt>
-    <dd>1 bp is 0.0001 of the $1 payout, which is 0.01 ¢ per $1 payout. 100 bps is 1 ¢.</dd>
+    <dt id="term-rate-bps">rate bps (Fed moves)</dt>
+    <dd>Basis points of an interest rate: 1 bp is 0.01 percentage point. "+25 bps" means the Fed raises its target range by a quarter point, for example from 3.75-4.00 % to 4.00-4.25 %. Used in Fed contract titles.</dd>
+
+    <dt id="term-bps">price bps (of a $1 payout)</dt>
+    <dd>Basis points of a contract price: 1 bp is 0.0001 of the $1 payout, which is 0.01 ¢ per $1 payout. 100 bps is 1 ¢. Used for slippage and cost gaps on routing traces.</dd>
 
     <dt id="term-slippage">Slippage</dt>
     <dd>How much worse the VWAP is than the best quoted price, in bps, because a large order eats into deeper, more expensive levels of the book.</dd>

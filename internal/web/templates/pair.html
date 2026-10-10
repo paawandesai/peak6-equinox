@@ -12,7 +12,7 @@
   <dl class="verdict-meta">
     <div>
       <dt>Confidence</dt>
-      <dd>{{template "conf" .Confidence}}</dd>
+      <dd>{{template "conf" .Confidence}}{{if .ConfidenceBreakdown}}<br><small class="conf-breakdown">{{.ConfidenceBreakdown}}</small>{{end}}</dd>
     </div>
     <div>
       <dt>Method</dt>
@@ -48,6 +48,7 @@
 {{/* UI-12: The two contracts with .layers details group */}}
 <section>
   <h2>The two contracts</h2>
+  <p><small>"closes" is when the venue stops trading. Settlement follows the resolution deadline in the diff (Timeframe / cutoff), which can be later than the close.</small></p>
   <div class="grid">
     {{template "instrument" .A}}
     {{template "instrument" .B}}
@@ -58,6 +59,7 @@
 <section id="diff">
   <h2>Contract diff</h2>
   <p>Every term the normaliser extracted, side by side. <em>unknown</em> means a term could not be parsed on at least one side; it is never guessed.</p>
+  <p class="diff-legend"><small>How to read it: where the two sides' wording differs, A's words are <del>struck through</del> and B's are <ins>underlined</ins>. The bar on each row's left and its Verdict badge give the result: ✓ match (green), ✕ differs, the veto stands (red), ◇ closed by fact (blue: a documented fact closes the difference), ? unknown (grey, italic: not parsed on at least one side).</small></p>
   <table class="data terms">
     <thead><tr><th>Term</th><th>A: {{.A.Venue}}</th><th>B: {{.B.Venue}}</th><th>Verdict</th>{{if .HasEvidence}}<th>Contribution</th>{{end}}</tr></thead>
     {{/* UI-12: group diff rows by rule part */}}
@@ -199,6 +201,7 @@
 <section id="route">
   <h2>Route a hypothetical order</h2>
   <p>Simulates the order against the target's book and every routable partner in this round, then explains the choice. Nothing is sent to a venue.</p>
+  <p class="route-defaults"><small>{{.RouteDefaults}}</small></p>
   {{if .FormPreset}}<p class="note-info">Pre-filled from the guided demo. Nothing is routed until you press <strong>Route it</strong>.</p>{{end}}
   <form method="post" action="/route" hx-post="/route" hx-target="#route-result" hx-swap="outerHTML">
     <input type="hidden" name="pair" value="{{.Form.PairID}}">
@@ -268,7 +271,7 @@
     {{else}}
     <details name="layers-{{.Venue}}">
       <summary>Summary</summary>
-      <p class="rules">venue publishes none</p>
+      <p class="rules">{{if .Rules}}no separate summary; full rules below{{else}}venue publishes none{{end}}</p>
     </details>
     {{end}}
     <details name="layers-{{.Venue}}">
