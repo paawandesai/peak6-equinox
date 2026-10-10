@@ -81,6 +81,7 @@ func TestNFR04_DemoZeroOutbound(t *testing.T) {
 		{"GET", "/near-misses"},
 		{"GET", "/log"},
 		{"GET", "/eval"},
+		{"GET", "/glossary"},
 		{"GET", "/pairs/" + strconv.FormatInt(relID, 10)},
 	}
 

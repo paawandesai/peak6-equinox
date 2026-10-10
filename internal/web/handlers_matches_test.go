@@ -652,7 +652,10 @@ func TestStartHereCard(t *testing.T) {
 
 	a := seedInstrument("kalshi:A", canonical.VenueKalshi, "A title", "rules", "BTC", "source", kalshiFee)
 	b := seedInstrument("polymarket:B", canonical.VenuePolymarket, "B title", "rules", "BTC", "source", polyFee)
-	for _, in := range []canonical.Instrument{a, b} {
+	// Add instruments for a fact_did_not_close near-miss (C and D are related, fact consulted but did not close)
+	c := seedInstrument("kalshi:C", canonical.VenueKalshi, "C title", "rules", "ETH", "source", kalshiFee)
+	d := seedInstrument("polymarket:D", canonical.VenuePolymarket, "D title", "rules", "ETH", "source", polyFee)
+	for _, in := range []canonical.Instrument{a, b, c, d} {
 		if err := st.UpsertInstrument(ctx, round.ID, in); err != nil {
 			t.Fatal(err)
 		}
@@ -662,6 +665,16 @@ func TestStartHereCard(t *testing.T) {
 	pairID, err := st.UpsertRelationship(ctx, canonical.Relationship{
 		RoundID: round.ID, AID: "kalshi:A", BID: "polymarket:B", Type: canonical.RelEquivalent, Confidence: dec("0.90"),
 		Method: canonical.MethodRules, Diff: match.Diff(a.Terms, b.Terms), Explanation: "Equivalent",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Insert a near-miss pair: related with no explicit veto (fact_did_not_close case).
+	// This creates the group-fact-did-not-close anchor on /near-misses.
+	_, err = st.UpsertRelationship(ctx, canonical.Relationship{
+		RoundID: round.ID, AID: "kalshi:C", BID: "polymarket:D", Type: canonical.RelRelated, Confidence: dec("0.70"),
+		Method: canonical.MethodRules, Diff: match.Diff(c.Terms, d.Terms), Explanation: "Related: fact consulted but did not close",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -680,11 +693,17 @@ func TestStartHereCard(t *testing.T) {
 	// Link 2: Route a hypothetical order on it → pair route.
 	wantContains(t, body, fmt.Sprintf(`href="/pairs/%d#route"`, pairID), "Route a hypothetical order on it")
 
-	// Link 3: See the near-miss → near-misses page.
-	wantContains(t, body, `href="/near-misses#metric_unknown"`, "See the near-miss that was rejected, and why")
+	// Link 3: See the near-miss → near-misses page with group-fact-did-not-close anchor.
+	wantContains(t, body, `href="/near-misses#group-fact-did-not-close"`, "See the near-miss that was rejected, and why")
 
-	// Routable section intro sentence (M5-05).
-	wantContains(t, body, "1 pairs Equinox will route an order across: same bet (equivalent), same bet once a stated fact is applied (equivalent given facts), or exact opposites (complement).")
+	// Verify that the anchor exists on the /near-misses page.
+	nearMissesRec := get(s.Handler(), "/near-misses")
+	wantHTML(t, nearMissesRec, 200)
+	nearMissesBody := nearMissesRec.Body.String()
+	wantContains(t, nearMissesBody, `id="group-fact-did-not-close"`)
+
+	// Routable section intro sentence (M5-05). Singular "pair" when count is 1.
+	wantContains(t, body, "1 pair Equinox will route an order across: same bet (equivalent), same bet once a stated fact is applied (equivalent given facts), or exact opposites (complement).")
 }
 
 // TestStartHereEmptyState verifies the empty state when no routable pairs exist (M5-05 AC 3).

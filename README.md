@@ -54,7 +54,7 @@ Follow these numbered steps to see the full classification → routing → decis
 
 4. **Decision log** (`/log`) — Browse all routing decisions and relationship verdicts ever made. The default view shows verdicts and routing decisions (filters: all, routing, relationship, LLM, ingest). Each row links to the pair or decision detail page showing the full trace.
 
-5. **Near miss** (`/near-misses`) — See pairs that looked like the same bet but were rejected by a specific veto rule. Each group is labelled by the veto code that fired (e.g., `subject_mismatch`, `metric_unknown`). The December near-miss from the "Start here" card demonstrates a pair that depends on an earlier decision: the Fed's October meeting result determines the December bucket, so the fact `fed_next_meeting` was consulted but did not close the pair.
+5. **Near miss** (`/near-misses#group-fact-did-not-close`) — See pairs that looked like the same bet but were rejected by a specific veto rule. Each group is labelled by the veto code that fired (e.g., `subject_mismatch`, `metric_unknown`). The December near-miss from the "Start here" card demonstrates a pair that depends on an earlier decision: the Fed's October meeting result determines the December bucket, so the fact `fed_next_meeting` was consulted but did not close the pair, so the pair is in the `fact_did_not_close` group.
 
 6. **Evaluation** (`/eval`) — Review the matcher's precision and recall on the golden label set (95 human-confirmed pairs), the settlement back-test results (how well the matcher's predictions align with actual contract resolutions), and the confidence distribution across relationship types. The confusion matrix and threshold sweep show how the matcher performs at different confidence cut-offs.
 

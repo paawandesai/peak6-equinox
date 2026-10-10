@@ -298,7 +298,7 @@ func vetoDescription(code string) string {
 	case "source_mismatch":
 		return "Data source differs: the contracts settle on different authorities or indexes."
 	case "source_unknown":
-		return "No single resolution source could not be read from at least one contract."
+		return "The resolution source could not be read from at least one contract."
 	case "polarity_mismatch":
 		return "One contract asks whether something happens and the other whether it does not."
 	case "polarity_unresolved":

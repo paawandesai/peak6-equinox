@@ -298,7 +298,6 @@ func TestLayoutQuestionAppearsOnce(t *testing.T) {
 	sd := seedPublic(t, st)
 
 	// Public pages with questions (route not included: it has dynamic question text)
-	// Note: glossary excluded from this test due to test harness issue; verified manually
 	pages := []struct {
 		path     string
 		question string
@@ -307,6 +306,7 @@ func TestLayoutQuestionAppearsOnce(t *testing.T) {
 		{"/near-misses", "Which pairs looked like the same bet but were rejected, and by which rule?"},
 		{"/log", "What did Equinox decide recently, and why?"},
 		{"/eval", "How accurate is the matcher on human-labelled pairs, per relationship type?"},
+		{"/glossary", "What do Equinox&#39;s terms mean?"}, // HTML-escaped apostrophe
 		{"/pairs/" + strconv.FormatInt(sd.eqID, 10), "Why does Equinox think these two contracts are, or are not, the same bet, and where would an order fill best?"},
 	}
 
@@ -320,11 +320,5 @@ func TestLayoutQuestionAppearsOnce(t *testing.T) {
 		if !strings.Contains(body, `<p class="question">`+p.question+`</p>`) {
 			t.Errorf("%s: question not in <p class=\"question\">", p.path)
 		}
-	}
-
-	// Separately verify glossary (test harness makes this page act differently)
-	glossaryBody := get(srv.Handler(), "/glossary").Body.String()
-	if !strings.Contains(glossaryBody, "Glossary") {
-		t.Error("/glossary: page not rendering")
 	}
 }
