@@ -29,7 +29,8 @@ func (s *Server) pageBase(r store.Round, title, question, timezone, pageName str
 		if r.Pinned {
 			freshState = FreshStatePinned
 			// Pinned round: show the demo mode banner formatted in the user's timezone (M3-08)
-			bnr = banner{Show: true, Pinned: true, AsOf: formatTime(asOf, timezone), RoundID: r.ID}
+			// M5-04: ShowUnpinLink is false for public pages; admin pages set it to true
+			bnr = banner{Show: true, Pinned: true, AsOf: formatTime(asOf, timezone), RoundID: r.ID, ShowUnpinLink: false}
 		} else if r.Status == store.RoundOK || r.Status == store.RoundPartial {
 			// Determine freshness based on D-077 page-freshness threshold and UI-19 warn window
 			ageMinutes := int(age.Minutes())

@@ -250,3 +250,41 @@ func TestLayoutHeaderNavAriaCurrent(t *testing.T) {
 		t.Error("matches nav link missing aria-current=page")
 	}
 }
+
+// M5-04: TestLayoutPublicPagesHideUnpinLink verifies public pages don't show
+// href="/admin" in the banner when a round is pinned.
+func TestLayoutPublicPagesHideUnpinLink(t *testing.T) {
+	st := store.New(tdb.Pool(t))
+	tdb.Reset(t)
+	sd := seedPublic(t, st)
+	ctx := context.Background()
+	if err := st.PinRound(ctx, sd.round.ID); err != nil {
+		t.Fatal(err)
+	}
+	srv := New(Config{MinRouteConfidence: dec("0.9")}, Deps{Store: st, Now: func() time.Time { return seedNow.Add(3 * time.Minute) }})
+
+	// Public pages must not contain href="/admin" in the banner
+	publicPaths := []string{"/", "/near-misses", "/log", "/eval"}
+	for _, path := range publicPaths {
+		body := get(srv.Handler(), path).Body.String()
+		// Banner should say "pinned by the operator" but not have an Unpin link
+		if !strings.Contains(body, "pinned by the operator") {
+			t.Errorf("%s: banner missing 'pinned by the operator'", path)
+		}
+		// Look specifically for the banner div and check it doesn't have href="/admin"
+		bannerStart := strings.Index(body, `<div class="banner`)
+		if bannerStart == -1 {
+			t.Errorf("%s: banner div not found", path)
+			continue
+		}
+		bannerEnd := strings.Index(body[bannerStart:], "</div></div>")
+		if bannerEnd == -1 {
+			t.Errorf("%s: banner closing tags not found", path)
+			continue
+		}
+		banner := body[bannerStart : bannerStart+bannerEnd+12]
+		if strings.Contains(banner, `href="/admin"`) || strings.Contains(banner, ">Unpin<") {
+			t.Errorf("%s: public page banner contains Unpin link or href=\"/admin\"", path)
+		}
+	}
+}
