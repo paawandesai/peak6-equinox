@@ -866,7 +866,7 @@ func TestAdminHealthTable(t *testing.T) {
 		">Matcher<",
 		">Pinned round<",
 		">LLM verifier<",
-		"Stale thresholds:",
+		"Freshness windows (warn→stale):", // UI-19: updated text
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("body lacks %q", want)

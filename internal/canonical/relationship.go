@@ -144,13 +144,13 @@ type LLMVerdict struct {
 	Evidence        []string         `json:"evidence"`
 }
 
-// ContributionTerm is one term's signed contribution to the final confidence (UI-20, D-110).
+// ContributionTerm is one term's signed contribution to the final confidence (UI-20, D-112).
 type ContributionTerm struct {
 	Term  string          `json:"term"`  // e.g. "prior", "unknown_unit_a", "deadline_gap_hours"
 	Value decimal.Decimal `json:"value"` // Signed: positive for prior, negative for deductions
 }
 
-// MatcherEvidence records the matcher's confidence calculation components (UI-20, D-110).
+// MatcherEvidence records the matcher's confidence calculation components (UI-20, D-112).
 // It is optional and may be nil for relationships stored before this feature.
 type MatcherEvidence struct {
 	Prior         decimal.Decimal    `json:"prior"`                    // Base confidence before deductions
@@ -229,7 +229,7 @@ type Relationship struct {
 	Vetoes     []Veto           `json:"vetoes"`
 	FactsUsed  []FactUse        `json:"facts_used"`
 	BasisRisk  *BasisRisk       `json:"basis_risk,omitempty"`
-	// Evidence records the matcher's confidence calculation (UI-20, D-110).
+	// Evidence records the matcher's confidence calculation (UI-20, D-112).
 	// It is nil for relationships stored before this feature.
 	Evidence *MatcherEvidence `json:"evidence,omitempty"`
 	// Explanation is a human-readable sentence naming the deciding fields. Required.

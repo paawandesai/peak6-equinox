@@ -411,15 +411,11 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 			q.dest.StampAsOf = formatTime(quote.FetchedAt, tz)
 			q.dest.StampDT = quote.FetchedAt.Format(time.RFC3339)
 
-			// Determine freshness state (UI-10: only Fresh/Stale/Unknown for now; Warn comes in UI-19)
-			// Use D-077 stale threshold
+			// Determine freshness state (UI-19: venue-specific warn windows)
+			venue := canonical.VenueOf(q.id)
+			warnThreshold := s.warnThresholdForVenue(venue)
 			staleThreshold := s.cfg.StaleAfter
-			freshState := FreshStateFresh
-			if currentRound.Pinned {
-				freshState = FreshStatePinned
-			} else if age > staleThreshold {
-				freshState = FreshStateStale
-			}
+			freshState := quoteFreshState(venue, quote.FetchedAt, now, currentRound.Pinned, warnThreshold, staleThreshold)
 			q.dest.FreshState = string(freshState)
 			q.dest.FreshBadge = FreshBadge(freshState)
 		}
