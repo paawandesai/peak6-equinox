@@ -1,9 +1,26 @@
 <!-- OWNER: operator. -->
 # Status
 
-_Last updated: 2026-10-10 by M4-08 worker (integration/m4-final at merge: #72 Fed formats !88, #73 complement bug !92, #79 routable-pairs diagnosis D-111/D-114, #80 latency test, UI-19..24 !93-!100 merged; 95 golden labels; eval 69/90 correct, equivalent precision 1.0). Previous: 2026-10-08 17:30 UTC orchestrator._
+_Last updated: 2026-10-10 by the operator (submission cleanup, D-133): main at 5ed9ea8 plus this docs MR; production revision `peak6-equinox-00009-8kx` built from 5ed9ea8. Previous: 2026-10-10 by the M4-08 worker._
 
-## Current milestone
+## Current state (submission)
+
+**Freeze Sun 2026-10-11 09:00 CT; submit by 11:59 AM CT.** After freeze, only docs and demo fixes.
+
+- **Live:** https://peak6-equinox-287867547175.us-central1.run.app, revision `peak6-equinox-00009-8kx` at main `5ed9ea8` (`/version`).
+- **Pinned round 904:** 12 routable pairs (11 `equivalent_given_facts` + 1 `complement`, all Fed, confidence ≥ 0.90; D-114). Pairs come from round 904; prices and routing use the newest collected quotes (D-117).
+- **Collector:** every 2 minutes (D-131; FR-04 says 5). From the Cloud Run request logs, 2026-10-10 04:18–21:02 UTC: 299 of 301 Scheduler rounds returned 200 (2 returned 409, round already running), median 51.8 s, worst 54.7 s.
+- **Merged since M4:**
+  - !128: live quotes on a pinned round (D-117).
+  - M6 demo-path items !129–!138 (D-118 to D-127; tickets in [tickets/M6.md](tickets/M6.md)).
+  - !139: plain-language UI redesign (D-128).
+  - This docs MR (D-131 to D-133).
+- **Deferred from M6:** P8 (politics universe and re-pin), P9 (`/status` page), P10 (`/markets`, `/compare`). Each needs a new public surface or a live re-pin, after the review window.
+- **Admin credential rotated 2026-10-10** after it was printed into an operator transcript (D-132, [ai-usage.md](ai-usage.md)).
+- **Known limits** are listed in one place: [README § Known limits](../README.md#known-limits).
+
+## Earlier milestone checkpoints (historical, superseded by the section above)
+
 
 **M4 demo and submission (target freeze Sun 2026-10-11 09:00 CT, submit by 11:00 CT):** Exit criteria from plan.md § M4:
   1. Every brief deliverable present and linked from README — **MET** (M4-01 !59 merged: live URL, setup, architecture summary, 60-second walkthrough, recording placeholder pending M4-H1 #67; deliverables 2/5/6 already merged)
@@ -94,12 +111,15 @@ Next operator action (Tier 2): human verification of Fed demo rendering (criteri
 - M5-11: Decision log reviewer-first view — MR !113 merged (closes #93).
 - M5-12a: Eval page readability — MR !119 merged (closes #94).
 
+- !128 (`fix/stale-age-label`): live quotes on a pinned round, snapshot-relative ages. Merged as 1828be2; deployed `peak6-equinox-00005-jw5` (D-117).
+- M6 P1–P7, P11, P12: guided Start here, one freshness rule, clarity, pinned labels, near-miss contrast, not-routed lead, log fold, /eval context, /about. !129–!137 into integration/m6-demo-path; !138 merged as 355838c; deployed `peak6-equinox-00006-r98` (D-118 to D-127).
+- ui/plain-language (!139): plain-language redesign of decisions, pairs, /, glossary, /about. Merged as 5ed9ea8; deployed `peak6-equinox-00009-8kx` (D-128).
+- Submission cleanup: admin password rotated (D-132). Merged branches deleted on GitLab. This docs-alignment MR (D-131, D-133).
+
 ## In progress
 
-- M4-07 final deploy (#65): done except spend line (pending: billing page). deployed 2026-10-10 04:36 UTC: main 41b8202 (!97 at 7ea4b21 plus /eval hotfix !108) as the NEW Cloud Run service `peak6-equinox` revision `peak6-equinox-00003-rbj`, https://peak6-equinox-287867547175.us-central1.run.app (Paawan 2026-10-09 9:15 PM CT; same image source, env, secrets, Cloud SQL, service account and settings as the old `equinox` service, which was deleted after verification). Fresh prod round 904 (collected by the new service), equinox-match run, round 904 pinned: **12 routable pairs** (11 `equivalent_given_facts` + 1 `complement`, all confidence >= 0.90). `scripts/smoke-live.sh` passed against the new URL. Measured p95: GET / 726 ms (above the NFR-01 500 ms page target; flagged), POST /route 267 ms. All public routes returned 200 (/, /near-misses, /pairs/2390, the /route POST, /eval, /log, /health, /version commit 41b8202). Spend line (status.md:277) PENDING: requires manual GCP billing page and Anthropic console access.
-- M4-08 final docs (#66): this MR !89, ready for integration → main
-- M4-H1 backup recording (#67): Paawan human item after M4-07
-- #74-#78 UI-v2 polish: graded-first tier (operator may merge to integration or defer)
+- M4-H1 backup recording (#67): human item. The README "Recording" line is still a placeholder.
+- Nothing else is in progress. M6 P8, P9 and P10 are deferred (see Current state).
 
 ## Blocked
 
@@ -107,63 +127,18 @@ None.
 
 ## Awaiting human veto
 
+The current list: the Tier 2 operator entries from D-117 to D-133 that are still open. Tier 1 entries in that range (D-118, D-120, D-121, D-122, D-126, D-133) are logged and need no veto. D-128 (the !139 redesign) was kept by Paawan, recorded as D-129 (By: human), and is listed under Kept decisions. D-130 (By: human) retired the Cursor reviewer: merges now need CI green plus Paawan's approval. The Tier 2 entries listed here before (D-049 to D-116, M1–M5) stand as logged in [decisions.md](decisions.md); any reversal would be a new entry there.
+
 | Decision | Summary | Logged |
 |---|---|---|
-| D-049 | Operator merges CI-green, Cursor-approved MRs without asking (this replaces "never merge without my OK"). Cursor clause superseded by D-130 (2026-10-10): merges need CI green plus Paawan's approval. | 2026-10-06 |
-| D-050 | Pin Go 1.27.1 (go.mod `go 1.27.0` + `toolchain go1.27.1`; CI image `golang:1.27.1`; architecture.md tech-stack row). Tier 2 shared-file update from M1-01. | 2026-10-06 |
-| D-110 | UI-19: Add venue-specific warn windows (`KALSHI_WARN_AFTER_SECONDS`, `POLYMARKET_WARN_AFTER_SECONDS`, `ROUND_WARN_MINUTES`) with warn<stale validation. No schema change. | 2026-10-09 |
-| D-112 | UI-24: Extend eval summary contract to support dual-method evaluation (rules+llm). Add optional `rules []TypeSummary` field, remove hardcoded M3 note. LLM runs through existing cache+cap. Projected spend ~$0.05 for golden set. No schema change. | 2026-10-10 |
-| D-051 | Planned-subcommand stubs in `cmd/equinox/planned.go` (Tier 1 from M1-01; listed for visibility). | 2026-10-06 |
-| D-052 | Health check on live `run.app` is `GET /health` (`/healthz` reserved by Cloud Run GFE). Tier 2 from M1-02. | 2026-10-06 |
-| D-056 | M1-04: Kalshi endpoint facts corrected in architecture.md (book shape, statuses, `min_close_ts` for settled, 429 pacing). Tier 2 shared-file update. | 2026-10-06 |
-| D-057 | M1-05: Polymarket endpoint facts corrected in architecture.md (paging, `up-or-down` exclusion, settled by `endDate` desc, book shape); crypto universe narrowed to `bitcoin` + `ethereum` tags. Tier 2 shared-file update. | 2026-10-06 |
-| D-058 | M1-08: Polymarket fee schedule verified in domain.md; Kalshi kept approximate (PDF behind bot checkpoint). Tier 2 shared-file update. | 2026-10-06 |
-| D-060 | M1-07: crypto normaliser rules; deadline veto refined **stricter** than D-019 (exact deadline for crypto; "within 24 h" read strictly). Tier 2, touches a veto rule; see Q-4. | 2026-10-06 |
-| D-061 (7) | M1-07: `.gitleaks.toml` allowlist for matcher fixture venue market keys (`market_id`/`key: KX…` in `testdata/match/crypto_pairs.yaml` only). Tier 2 CI-gate config; rest of D-061 is Tier 1. | 2026-10-06 |
-| D-065 | M1-12: prod start-up migrations; Dockerfile fixes; Scheduler `equinox-collect`; on-demand `equinox match` via Cloud Run job; **match-then-pin** rule so `/` stays on a matched round across Scheduler ticks. Tier 2 (prod deploy). | 2026-10-07 |
-| D-066 | M2-03: facts loader (`internal/facts`, `config/facts.yaml`); strict YAML validation; `facts.Set` satisfies `match.Facts`. Tier 1. | 2026-10-07 |
-| D-067 | M2-01: Fed/macro normaliser; category-scoped `Register` registry in `internal/normalize`. Tier 1. | 2026-10-07 |
-| D-117 | !128: pinned round keeps its pairs; prices and routing use the newest collected quotes (deviation from FR-23 AC accepted by Paawan); routing ages quotes against the newest round snapshot; banner relabelled; hourly auto-repin Scheduler job created paused. | 2026-10-10 |
-| D-119 | M6-P3: One quote-freshness rule on the Matches Market column, the pair page Current touch and the route trace: age is measured against the routing reference… | 2026-10-10 |
-| D-123 | M6-P4: A related near miss is shown under "fact did not close" when it has no veto or its stored FactsUsed includes fed_upper_bound (the Fed level-vs-change… | 2026-10-10 |
-| D-124 | M6-P4: The stored "deadlines X apart (within W)" clause is rewritten at display time only: "within" only when true; outside the window the page names the fed… | 2026-10-10 |
-| D-125 | M6-P2: The not-routed lead sentence and the "Try: buy NO" hint are built only from the stored decision and the quotes the router read. The hint means the opp… | 2026-10-10 |
-| D-127 | M6 process: M6 item MRs !129-!137 were merged into integration/m6-demo-path on local gates (go test with a live test DB, golangci-lint, coverage, combined-tree re… | 2026-10-10 |
-| D-068 | M2-04: derived types by set algebra (`implies` recorded for either direction, explanation names it); Fed facts rule with two new facts (`fed_next_meeting`, `fed_rate_step`); basis-risk weights; near-miss rule includes "a fact was consulted". Tier 2, defines classification rules; Q-4 not acted on. | 2026-10-07 |
-| D-069 | M2-07: web pages `/near-misses`, `/log`, `/decisions/{id}`, `/eval` (read-only artifact contract), server-rendered SVG price history, facts/basis/type legend on pair page; NFR-05 collector success page; AB-15 5 GiB growth alert. Tier 1. | 2026-10-07 |
-| D-070 | M2-05: golden set machinery (`internal/eval`, `equinox golden draft`, `equinox eval [--out]`, `make eval`); `testdata/golden/candidates.yaml` drafted (40 pairs from fixture round 2); `labels.yaml` ships empty (Q-7). Tier 1. | 2026-10-07 |
-| D-071 | M2-02: politics normaliser; `<stage>:<office>[:<party>]:<year>` metric structure; Kalshi + Polymarket universe filled; politics fixtures recorded. Tier 1. | 2026-10-07 |
-| D-072 | M2-06: settlement back-test (`internal/eval/backtest*.go`, `equinox backtest --fixtures | --live`); allowlist + Markdown report; fixture test PASS (1031 instruments, 207544 pairs, 24/24 agreed); equivalence.md §7–§8 filled. Tier 1. | 2026-10-07 |
-| D-075 | M3-06: LLM verifier uses stdlib `net/http` to call Anthropic Messages API directly, not `anthropic-sdk-go` (60-line implementation vs 10+ dependencies). Tier 2. | 2026-10-07 |
-| D-077 | M3-01: snapshot-relative quote staleness (NFR-09). Quote age measured against round.SnapshotAt() not wall clock. Stale-round warning when latest round snapshot older than STALE_ROUND_WARN_MINUTES (default 10 min). DecidedAt stays wall clock. Tier 2, approved by Paawan 2026-10-07 23:03 UTC. | 2026-10-07 |
-| D-104 | UI-23: Extend eval contract (D-070) with optional confusion matrix, threshold sweep (0.70-1.00 for equivalent), labels_sha256, previous deltas. New route GET /eval/cell for drill-down. Predictor interface gains confidence. No schema change. | 2026-10-09 |
-| D-105 | UI-18: Net gap computation is Tier 1 (read-time in handlers_matches.go), not Tier 2 (persist). Measured p95 GET /matches 100ms. No schema change. | 2026-10-09 |
-| D-106 | UI-18: `REVIEW_EDGE_MIN` config key (default 0.02 $/contract) to flag pairs for review when net gap ≥ threshold and confidence < 0.90. Tier 2 (new config key, shared docs/environment.md). | 2026-10-09 |
-| D-109 | M4-72: Same-metric Fed decision pairs use deriveSameMetricFed() with grid rounding. KXFEDDECISION/KXRATECUTCOUNT default to federalreserve_gov source. "Therefore, if..." is illustration cue. Enables 15/15 KXFEDDECISION `equivalent_given_facts`. Settlement back-test 0 disagreements. Tier 2 (touches equivalence rules). | 2026-10-09 |
-| D-110 | UI-19: Add venue-specific warn windows (`KALSHI_WARN_AFTER_SECONDS`, `POLYMARKET_WARN_AFTER_SECONDS`, `ROUND_WARN_MINUTES`) with warn<stale validation. No schema change. Tier 2 (new config keys). | 2026-10-09 |
-| D-111 | M4-79 Phase 1: Measured on integration/m4-final at 399a0e9: 79 routable-type pairs (77 equiv + 1 equiv_given_facts + 1 complement). With !88: 94 (77+16+1). Live shows 2 because round 735 predates D-108 and #72. No universe/matcher change. Phase 2 pending operator decision. Tier 2. | 2026-10-10 |
-| D-112 | UI-24: Extend eval summary to support dual-method evaluation (rules+llm). Add optional `rules []TypeSummary` field. LLM runs through existing cache+cap. Projected spend ~$0.05 for golden set. No schema change. Tier 2. | 2026-10-10 |
-| D-113 | UI-22: Add `llm_verify_runs` table (migration 0006) with bounded retention (100 runs). Relationships gain llm_cache_key, llm_run_id, llm_verified_at. Rationale = existing Evidence field. Tier 2 schema change. | 2026-10-09 |
-| D-114 | M4-79 Phase 2: Runbook written in m4-79-phase2-runbook.md. Measured at 2d9c1c5: 94 routable-type pairs (77+16+1), 12 router-eligible (≥0.90 conf + quotes). Golden gate: equiv 9/9 TP precision 1.0, equiv_given_facts 16 TP. Not run yet (pending operator/Paawan decision). Tier 2. | 2026-10-10 |
-| D-078 | CI hotfix: `gitleaks` job scans only the MR's own commits (`--log-opts=$CI_MERGE_REQUEST_DIFF_BASE_SHA..HEAD`) on MR pipelines; main keeps the full-history scan; `.gitleaks.toml` unchanged. Tier 2 CI-gate config. | 2026-10-08 |
-| D-080 | M3-02: basis penalty applied in routing cost (FR-11/FR-12). New config BASIS_PENALTY_MULTIPLIER (default 0.01 = 1 cent per 1.0 risk point). allInCost = VWAP + fee + basisPenalty. Partners with nil BasisRisk excluded. Quantize to 4dp for transitive tie-breaking: deeper book, then lower basis score, then venue name. Tier 2, new config default. | 2026-10-07 |
-| D-081 | Human (Paawan, 2026-10-07 8:29 PM CT): UI clarity and usability pass designed by the orchestrator with /design; refines D-031; same stack (html/template + htmx + Pico.css, no JS build, no SPA). **Already approved by Paawan**; listed for the record. | 2026-10-08 |
-| D-084 | Q-7: labels.yaml added to guard-human-files.sh. The test that required an empty labels.yaml now checks the schema, provenance and that each label has a note. Tier 2. | 2026-10-07 |
-| D-097 | UI-08 follow-up (issue #40): llm_verify_last_run singleton table persists last LLM verify run summary (verified, downgraded, cache_hits, ran_at). Admin page shows "last run" state (chip-info); /admin/llm-verify redirects for browser posts. State precedence: disabled > cap_reached > last_run > ready. Migration 0002. Tier 2 schema change. | 2026-10-08 |
-| D-099 | Router stores input quotes with each decision (UI-25, D-098 call 3). `canonical.Decision` gains `Inputs []DecisionInput` (venue, instrument id, relationship type `"self"` for target, confidence at decision time, outcome side, best ask, ask depth capped at 10 levels, quote times, round id) and `TargetType` (relationship type label for UI grouping). Stored as optional jsonb fields; no SQL migration. Old decisions decode with empty Inputs and TargetType. | 2026-10-08 |
-| D-100 | UI-26 (issue #58): match_runs table (round_id, started_at, finished_at, duration_ms, pairs_compared, relationships_stored, outcome), retention 500 rows; `equinox match` writes one row per run; 90-day daily round history via read-time query (no rollup table needed, p95 ~1ms). Migration 0005. Admin page renders Matcher health row and 90-day daily history bars. Tier 2 schema change. | 2026-10-08 |
-| D-101 | M4-04: Cloud Run `min-instances=1` for the review window Sun 2026-10-11 09:00–12:00 CT (3 h) and revert (`make review-window-on|off`); estimated cost $0.27 within $50 headroom; `scripts/review-window.sh` with status verification. Tier 2 (prod config, cost). | 2026-10-08 |
-| D-102 | M4-07: final production deploy of `main` for submission; sha, revision and smoke output filled in by the M4-07 MR. Tier 2 (prod deploy). Number reserved by the M4 tickets MR. | 2026-10-08 |
-| D-104 | UI-23: Eval contract extension (D-070) with optional confusion matrix, threshold sweep, golden-set versioning, previous-run deltas. New `/eval/cell` public route. Tier 2, eval artifact contract change. | 2026-10-09 |
-| D-108 | M4-70: Extract settlement_sources for KXPRESNOMD/R nomination markets. Tier 2 (touches equivalence rules); achieves 9/9 equivalent for 2028 nominee pairs (eval 55/90, up from 46/90), 9 TP + 0 FP among nomination labels. Scope: nomination markets only (9/27 labels). KXFEDDECISION (15 labels) and KXRATECUTCOUNT (3 labels) remain out of scope; require matcher same-metric equivalence logic. | 2026-10-09 |
-| D-115 | UI-20: Matcher evidence column (evidence jsonb in relationships table). Stores confidence calculation: prior, per-term contributions (signed), total, and for near misses, pre-veto score + required score (0.90). Migration 0003. Tier 2 schema change. No verdict/type/confidence changes (additive metadata only). | 2026-10-09 |
-| D-116 | M5-02: Pair page under 500 ms. Migration 0007 adds index quotes_instrument_fetched ON quotes (instrument_id, fetched_at DESC). Replace GetRelationshipLLMData 1000-run scan with GetLLMVerifyRun(id) direct lookup. Cap history table at 50 rows, chart shows all. Fix spread series ordering bug (sort timestamps before building points). | 2026-10-10 |
-| D-109 | M4-72: Same-metric Fed decision pairs use fed_rate_step grid rounding; zero-veto Fed pairs report equivalent_given_facts (not equivalent) to document grid check. KXFEDDECISION/KXRATECUTCOUNT default to resolution_source=federalreserve_gov when rules lack source. Kalshi's "Therefore, if the Fed hikes by 50bps, the 50bps market resolves Yes" sentence is read as an illustration, not the bucket (fixes back-test DISAGREED on KXFEDDECISION-26SEP-H25, CI #45765). Tier 2 (touches equivalence rules, classify.go + facts.go + fed.go); achieves 15/15 KXFEDDECISION equivalent_given_facts (eval 16/19 EGF, up from 1/19), 15 TP + 0 FP among KXFEDDECISION labels. Scope: KXFEDDECISION same-metric rate_change pairs (15/27 Fed labels). KXRATECUTCOUNT (3 labels) remain related; require rate-cut-count extraction. | 2026-10-09 |
-
-| D-103 | UI-21: Rule layers columns (rules_summary, clarifications, clarifications_updated_at) added to instruments table. Kalshi rules_secondary captured as clarifications; Polymarket has no separate layers. Not fed to matcher/LLM in this ticket. Migration 0004. Tier 2 schema change. | 2026-10-09 |
-| D-111 | M4-79 (#79) Phase 1: live round 735 shows 2 routable pairs because it predates the deployed M4-70 nominee fix; fresh local live round gives 79 by type (94 with !88), 12 router-eligible with !88. No universe change. Phase 2 plan: after !88 merges and deploy, ingest + match + pin a new round and verify Routable ≥ 10 on `/`. Tier 2 (pin/deploy plan; needs sign-off). | 2026-10-10 |
-| D-113 | UI-22 (#54): llm_verify_runs table (last 100 runs pruned on insert) + relationship links (llm_cache_key, llm_run_id, llm_verified_at). Rationale=LLMVerdict.Evidence (already strict-decoded, length-capped). llm_verify_last_run singleton stays (not a view). Migration 0006. Tier 2 schema change. | 2026-10-09 |
-| D-114 | M4-79 (#79) Phase 2 runbook: on `2d9c1c5`/`8b5b0c8` a fresh local live round gives 94 routable-type pairs (77 eq + 16 egf + 1 complement), 12 router-eligible; golden gate holds (equivalent precision 1.0000, zero hard negatives predicted routable). The `equinox-match` job image is stale and must be updated after deploy. Phase 2 executed 2026-10-10 04:40 UTC: deployed main 41b8202 as service `peak6-equinox`, ingested/matched/pinned round 904, verified 12 routable pairs (meets >= 10 target). Runbook: docs/m4-79-phase2-runbook.md. | 2026-10-10 |
+| D-117 | !128: a pinned round keeps its matched pairs, but prices and routing use the newest collected quote per instrument, with quote age measured against the newest round's snapshot. This deviates from FR-23's acceptance line; Paawan accepted it. Banner relabelled; hourly auto-repin Scheduler job created paused. | 2026-10-10 |
+| D-119 | M6-P3: one quote-freshness rule for the Matches market column, the pair page and the route trace. Age is measured against the routing reference, and a quote is stale over `STALE_AFTER_SECONDS`, the router's own test. | 2026-10-10 |
+| D-123 | M6-P4: a `related` near miss is listed under "fact did not close" when it has no veto or its stored facts include `fed_upper_bound`. | 2026-10-10 |
+| D-124 | M6-P4: the stored "deadlines X apart (within W)" clause is rewritten at display time only, so it says "within" only when true. The matcher's text is unchanged during freeze. | 2026-10-10 |
+| D-125 | M6-P2: the not-routed lead sentence and the "Try the other side" hint are built only from the stored decision and the quotes the router read. | 2026-10-10 |
+| D-127 | M6 process: item MRs !129–!137 merged into the integration branch on local gates. The full CI pipeline ran once, on the integration MR !138, before main. | 2026-10-10 |
+| D-131 | The collector runs every 2 minutes, not the 5 of FR-04 and D-016 (schedule changed 2026-10-10 15:37 UTC). Kept as is; the bootstrap script and `/admin` text still say 5. | 2026-10-10 |
+| D-132 | Admin password rotated after the Scheduler Basic-auth header was printed into an operator session. New secret version, header updated in the same step, old version disabled, ingest 200 and `/admin` 401 verified. | 2026-10-10 |
 
 ## Kept decisions (veto closed)
 
@@ -197,43 +172,66 @@ Paawan kept these four in the operator chat on 2026-10-07 at 8:38 PM CT, after t
 | Q-10 | UI-01 | The frontend-design plugin method asks for a distinctive typeface and palette. A web font is a new CDN asset (Tier 2, needs a new D- entry) and is polish the brief does not grade (D-031 "no design polish"); design.md keeps Pico's system font stack and a semantic (not decorative) palette. | a) keep Pico's fonts, semantic colour tokens only (as written); b) add one pinned web font with SRI as a new D- entry | **a)**; nothing is built for b) unless Paawan asks |
 | Q-11 | M6-P12 | `LLM_ENABLED=false` (set by `make deploy`) is only checked against the API key at config load; the admin LLM verifier still runs whenever `ANTHROPIC_API_KEY` is mounted. /about states only the facts. | a) gate the verifier on `LLM_ENABLED` (logic change, after freeze); b) leave it and say so in docs/ai-usage.md | **b now, a after the review window.** |
 | Q-12 | M6-P11 | The committed `config/eval_summary.json` has no confusion data, so /eval shows no confusion matrix and a typed `/eval/cell?...` URL returns 404 (no page links to it). | a) regenerate eval_summary.json from the run's database (numbers could move); b) leave as is | **b** through the review window; a after. |
+| Q-13 | submission cleanup | The home page lists only the first 1,000 stored relationships of a round, in id order (`maxMatchRows` in `internal/web/handlers_matches.go`, `ORDER BY id LIMIT` in `internal/store/relationships.go`). Round 904 is unaffected (its 12 routable pairs show), but the recorded fixture round stores 2,196 near misses first, so locally Routable shows 0 and Start here shows only the near-miss card. | a) query routable types separately from near misses (code change); b) document it (README § Run locally gives a SQL query to find a pair) | **b now** (docs-only, freeze); **a after** the review window. |
 
 ## Requirements coverage
 
-| ID | Status | | ID | Status |
-|---|---|---|---|---|
-| FR-01 | done (M1-04 !7) | | NFR-01 | done (M4-05 !66 smoke; #80 !96 TestNFR01) |
-| FR-02 | done (M1-05 !8) | | NFR-02 | partial (observed <60s /admin; accepted per sweep) |
-| FR-03 | done (M1-06 !13) | | NFR-03 | done (M1-06 !13) |
-| FR-04 | done (M1-12 !16, D-065) | | NFR-04 | done (M3-07 !46, AB-04 test) |
-| FR-05 | done (M1-03 !5) | | NFR-05 | partial (operational; accepted per sweep) |
-| FR-06 | done (M2-01 !21, M2-02 !22, M1-07 !12) | | NFR-06 | done (95 labels Q-7; eval 69/90 correct; equivalent 9/9 TP precision 1.0 meets 0.95 target per config/eval_summary.json; 3 equiv_given_facts FN out of scope for precision gate) |
-| FR-07 | done (M1-07 !12) | | NFR-07 | done (M2-06 !29, 0 mismatches; config/backtest_summary.json) |
-| FR-08 | done (M2-04 !23) | | NFR-08 | done (M1-03 !5, property tests) |
-| FR-09 | done (M2-04 !23, M3-06 !38) | | NFR-09 | done (M3-01 !34, D-077; UI-19 !93 D-110 warn windows) |
-| FR-10 | done (M2-03 !20; #72 !88 D-109 Fed decision facts) | | NFR-10 | done (M1-09 !14, M3-09 !37, AB-05 test) |
-| FR-11 | done (M2-04 !23, M2-07 !27) | | NFR-11 | done (M1-11 !9, M3-06 !38, D-075; AB-01/AB-04/AB-13 tests) |
-| FR-12 | done (M1-08 !10, M3-02 !40, M3-01 !34; #73 !92 D-109 complement bug fix) | | NFR-12 | done (M1-09 !14, AB-02/AB-07 tests) |
-| FR-13 | done (M3-03 !45) | | NFR-13 | done (M1-01 !1 CI, AB-06/AB-09 tests, D-078) |
-| FR-14 | done (M3-04 !48, #73 !92 sure-loss fix) | | NFR-14 | done (M1-03 !5, AB-08 tests) |
-| FR-15 | done (M3-01 !34, D-074/D-077; UI-19 !93 D-110 warn) | | NFR-15 | partial (cap M3-06 !38; spend PENDING-DEPLOY: GCP billing page, Anthropic console post-!97) |
-| FR-16 | done (M3-05 !33, D-073, Q-8) | | NFR-16 | done (M1-09 !14, UI-v2 !50-!57 !62-!63 !93-!100) |
-| FR-17 | done (M2-07 !27) | | NFR-17 | done (M1-01 !1 CI; coverage: see CI) |
-| FR-18 | done (M2-05 !26, Q-7; 95 labels; #70 !86 D-108 nominees, #72 !88 D-109 Fed; eval 69/90 correct per config/eval_summary.json) | | | |
-| FR-19 | done (M2-06 !29; #72 !88 D-109 Fed decision back-test 0 disagreements) | | | |
-| FR-20 | done (M3-06 !38, D-075; UI-22 !99 D-113 llm_verify_runs; UI-24 !100 D-112 rules+llm eval) | | | |
-| FR-21 | done (M1-09 !14, M2-07 !27, UI-02 !50, UI-10..26 !63-!100; M6 !129-!137: guided Start here, not-routed lead, near-miss contrast, log fold, /about, /eval context) | | | |
-| FR-22 | done (M1-09 !14, AB-05/AB-12 tests) | | | |
-| FR-23 | done (M3-07 !46, M4-03 !60, round 735; D-114: 12 routable live on pinned round 904, verified 2026-10-10) | | | |
-| FR-24 | done (M3-08 !47, !51; UI-20 !95 local tz JS; M6-P3 !130 one freshness rule, M6-P5 !132 match time in selected tz) | | | |
-| FR-25 | done (M2-07 !27; UI-20 !95 history enhancements) | | | |
-| FR-26 | done (M1-06 !13, M2-05 !26, M2-06 !29; 8 subcommands; streaming won't FR-28) | | | |
-| FR-27 | done (M1-09 !14; UI-23 !98 notional input) | | | |
-| FR-28 | won't (brief § Non-goals; README § What's next M4-01 !59) | | | |
+Regenerated 2026-10-10 from main at 5ed9ea8. **Built** means the code is merged and evidenced; **partial** means part of the requirement is missing or unproven, with the reason in the note; **not built** means absent. No requirement is not built, apart from FR-28, which is out of scope.
+
+| ID | Status | Evidence | Note |
+|---|---|---|---|
+| FR-01 | built | `internal/venues/kalshi/` (client.go, map.go), `testdata/fixtures/kalshi/` | Events and markets for the configured series, MVE parlays excluded, one order book per market. |
+| FR-02 | built | `internal/venues/polymarket/`, `testdata/fixtures/polymarket/` | Gamma events and markets for the configured tags, CLOB book per outcome token. |
+| FR-03 | built | `internal/collector/collector.go`, `migrations/0001_init.sql` (`fetch_rounds`, `raw_responses`, `quotes`) | Both venues fetched concurrently under one round ID; `fetched_at` and venue timestamp on every quote. |
+| FR-04 | built, with a deviation | Cloud Scheduler `equinox-collect`, `scripts/gcp-bootstrap.sh`, D-131 | Runs every **2** minutes, not 5 (D-131). 299 of 301 rounds returned 200 on 2026-10-10. |
+| FR-05 | partial | `internal/canonical/` (instrument.go, quote.go) | `Instrument` and `Quote` are venue-independent. There is no canonical cross-venue `Event` record: instruments keep the venue's own event ID (`VenueEventID`), and pairs are grouped by relationship type instead. |
+| FR-06 | built | `internal/normalize/` (crypto.go, fed.go, politics.go) | An unparseable term is recorded as `unknown`. |
+| FR-07 | built | `internal/match/block.go` | Same category, deadlines within ±7 days, overlapping subject; the Fed meeting-dates fact can place two deadlines on one meeting (D-124). |
+| FR-08 | built | `internal/match/veto.go`, `testdata/match/*_pairs.yaml`, `TestPairsFromFixtures` | Every veto recorded; crypto deadlines must be identical (D-060, stricter than 24 h). |
+| FR-09 | built | `internal/match/classify.go`, `internal/match/diff.go` | Types, confidence and contract diff; [equivalence.md](equivalence.md). |
+| FR-10 | built | `config/facts.yaml`, `internal/facts/` | Each fact has value, source and as-of date and is shown on the pair page. |
+| FR-11 | built | `internal/match/basis.go` | Components: cutoff gap, source difference, edge rules. |
+| FR-12 | built | `internal/route/route.go`, `internal/fees/`, [routing.md](routing.md) | All-in cost = book-walk VWAP + fee + basis penalty (D-080); live decision #96. |
+| FR-13 | built | `internal/route/sweep.go` | Greedy split when one book cannot fill. |
+| FR-14 | built | `internal/route/` (complement routes), live decision #97 | Buys the complement when it is cheaper all-in; refuses a sure-loss complement (decision #98). |
+| FR-15 | built | `internal/route/eligibility.go` | Stale, skew, depth and minimum confidence, each with a reason. |
+| FR-16 | built | `internal/venues/*/map.go` fee schedules, [domain.md § Fees](domain.md) | Both venues verified against official docs (D-073, Q-8). |
+| FR-17 | built | `internal/decisionlog/`, `/log`, `/decisions/{id}`, `/decisions/{id}/json` | Every verdict and routing decision is stored with its explanation. |
+| FR-18 | built | `testdata/golden/labels.yaml` (95 labels), `internal/eval/`, `config/eval_summary.json` | Precision and recall per type ([equivalence.md §8](equivalence.md#8-current-results)). |
+| FR-19 | partial | `internal/eval/backtest.go`, `config/backtest_summary.json` | Run on recorded fixtures only: 29 of 29 checked verdicts agreed. A live back-test against the venues has not been run. |
+| FR-20 | partial | `internal/llm/` (anthropic.go, guard.go, cache.go, budget.go), `POST /admin/llm-verify`, `tests/security/ab01_*`, `ab13_*` | Built and tested with mocks: downgrade-only, cached, capped, admin only. **Never run in production**, because no API key is mounted there. The rules+LLM eval has not been run. `LLM_ENABLED` does not gate it (Q-11). |
+| FR-21 | built | `internal/web/` handlers and templates; live URL | Matches with near misses, pair page (diff and history), route form and result, log, eval, admin, plus /about and /glossary (D-121, D-128). |
+| FR-22 | built | `internal/web/middleware_auth.go`, `internal/web/admin.go`, `tests/security/ab05_*`, `ab12_*`, `ab14_*` | Ingest, pin and unpin, and LLM verify, all behind basic auth. |
+| FR-23 | partial (accepted deviation) | `equinox pin`, `internal/web/live_quotes.go`, `tests/security/nfr04_demo_zero_outbound_test.go`, D-117 | The pinned round serves every page with zero venue calls. But prices and routing use the newest collected quotes, not the pinned round's own, so pages are not wholly "as of" the round. Paawan accepted this deviation (D-117); the banner says so. |
+| FR-24 | built | `internal/web/timezone.go`, `internal/web/handlers_timezone.go` | ET (default), CT, UTC and the browser's local time; display only. |
+| FR-25 | built | `internal/web/history.go` | Mid prices per venue and the spread, from stored rounds. |
+| FR-26 | built | `cmd/equinox/` | `ingest`, `match`, `route`, `eval`, `backtest`, `serve`, `migrate`, plus `seed`, `pin`, `golden`, `fixture-server`, `record-fixtures` and `version`. |
+| FR-27 | built | `internal/canonical/order.go`, route form on `/pairs/{id}` | Side, outcome, quantity (contracts or USD notional), market or limit, limit price, IOC or FOK; simulated only. |
+| FR-28 | won't | [brief.md § Non-goals](brief.md#non-goals) | Out of scope by design. |
+
+| ID | Status | Evidence | Note |
+|---|---|---|---|
+| NFR-01 | partial | `tests/security/nfr01_latency_test.go` (seeded test DB), live samples | The test passes locally (p95 a few ms). Live, on 2026-10-10: pair pages took 2.2–3.3 s on revision 00006. After the redesign (00009), a 50-request warm sample gave client-side p95 0.20 s for `/pairs/2406` and 0.38 s for `/`. `POST /route` p95 was 267 ms at the M4-07 deploy. The earlier slowness was not isolated, and cold starts are slower, so the target is not proven. |
+| NFR-02 | built, met | `internal/collector/`, Cloud Run request logs | Production rounds: median 51.8 s, worst 54.7 s (2026-10-10), under 60 s. |
+| NFR-03 | built | `internal/collector/collector.go`, `TestRunOneVenueFailsIsPartial` | One venue's failure leaves a `partial` round with the other venue stored; it shows on `/admin`. |
+| NFR-04 | built | `TestNFR04PinnedRoundZeroOutbound` (`tests/security/nfr04_demo_zero_outbound_test.go`) | Still holds under D-117: live quotes are read from Postgres, not from the venues. |
+| NFR-05 | built; measured over 16.7 h only | Cloud Run request logs (not `fetch_rounds`) | 299 of 301 Scheduler rounds succeeded (99.3%) between 04:18 and 21:02 UTC on 2026-10-10, the service's first day. Not yet a full 24 h window, and not measured from `fetch_rounds` as the NFR states. |
+| NFR-06 | met | `config/eval_summary.json`, `TestPairsFromFixtures` | `equivalent` precision 1.0000 (9 of 9) on 95 human-confirmed labels; 0 veto-suite false positives. |
+| NFR-07 | met on fixtures | `config/backtest_summary.json` | 0 mismatches on 29 checked verdicts (208,064 pairs). A live run has not been made (FR-19). |
+| NFR-08 | built | `internal/canonical/quote.go`, rapid property tests in `internal/canonical/quote_test.go` and `order_test.go` | Out-of-range prices are rejected with a quality flag. |
+| NFR-09 | built | `internal/route/eligibility.go`, `internal/web/live_quotes.go`, D-077, D-119 | 120 s snapshot-relative staleness, 5 s and 30 s skew, and the stale-round banner (all configurable). |
+| NFR-10 | built | `internal/web/middleware_auth.go`, `middleware_ratelimit.go`, `tests/security/ab05_*`, `ab14_*` | Constant-time compare, brute-force lockout; public routes read-only. The admin password was rotated on 2026-10-10 (D-132). |
+| NFR-11 | built | `internal/llm/guard.go`, `tests/security/ab01_*`, `ab04_*`, `ab13_*` | No public route can call the LLM; the output is schema-checked and downgrade-only. |
+| NFR-12 | built | `internal/web/middleware_csp.go`, `html/template`, `tests/security/ab02_*`, `ab07_*` | Strict CSP with no inline script or style; venue payloads are size-capped. |
+| NFR-13 | built | `.gitleaks.toml`, `.gitlab-ci.yml` (gitleaks, govulncheck), `tests/security/ab06_*` | No secret in the repo (gitleaks clean on 2026-10-10). One credential was printed into an operator transcript, not the repo or logs, and rotated (D-132). |
+| NFR-14 | built | `internal/store/`, `tests/security/ab08_*` | Parameterised SQL only. |
+| NFR-15 | partial | `internal/llm/budget.go` (`LLM_DAILY_CALL_CAP`) | The daily LLM call cap is built. **Spend is not measured**: the GCP billing page and the Anthropic console have not been read (see Spend to date). |
+| NFR-16 | built | `/` Start here cards (D-118, D-128), one question line per page | The demo moment is 1 click from `/` (Start here card 1) and 2 to a routing result. |
+| NFR-17 | built | `scripts/check-coverage.sh`, CI coverage job, `internal/route/imports_test.go` | Coverage 92.5% of statements over `./internal/...` on 2026-10-10 (gate 80%); the router imports no venue package (test-enforced). |
 
 ## PRD evaluation sweep (M4)
 
-**Swept on:** 2026-10-10 UTC at merge into integration/m4-final (ffcf7a6). Pages checked against integration code; Live URL routable >= 10 verified after deploy: 12 on pinned round 904 at https://peak6-equinox-287867547175.us-central1.run.app (D-114). UI-v2 merged: UI-10..26 (design system, matches, pair, route, near-misses, log, eval, admin, net gap, freshness, match cards, LLM runs table, eval confusion matrix, admin backtest, notional routing, rule layers); M4-01..06 merged; #70 !86 (nominees, D-108), #72 !88 (Fed decision, D-109), #73 !92 (complement sure-loss), #79 !97 (routable diagnosis D-111/D-114), #80 !96 (latency test) merged to integration.
+**Swept on:** 2026-10-10 UTC at the M4 merge (ffcf7a6). **Refreshed** 2026-10-10 for submission (D-133) against main at 5ed9ea8 and the live URL https://peak6-equinox-287867547175.us-central1.run.app (pinned round 904). The earlier service URL `equinox-o5hdimw5rq-uc.a.run.app` and round 735 no longer exist.
 
 ### Brief's five graded areas
 
@@ -242,65 +240,31 @@ Paawan kept these four in the operator chat on 2026-10-07 at 8:38 PM CT, after t
 | **Framing** | [docs/brief.md](brief.md) (problem, goals, non-goals, deliverables), [docs/equivalence.md § 1](equivalence.md#1-the-definition) (payout definition), [docs/domain.md](domain.md) (relationship types), [docs/routing.md § Objective](routing.md#objective) | met | Problem framed as cross-venue normalisation and routing; payout-based equivalence definition testable against settlements |
 | **Decomposition** | [docs/architecture.md § Components](architecture.md#components-and-responsibilities) (package boundaries, responsibilities, adapter pattern), [docs/architecture.md § Data flow](architecture.md#data-flow) (pipeline stages), internal/ package structure | met | Clean adapters → canonical → normalise → match → route pipeline; venue logic isolated in adapters; router venue-agnostic (test-enforced) |
 | **Handling of ambiguity** | [docs/equivalence.md § 3](equivalence.md#3-veto-catalogue) (hard vetoes), [docs/equivalence.md § 6](equivalence.md#6-confidence) (confidence bins), [docs/equivalence.md § 9](equivalence.md#9-known-failure-modes) (failure modes), [docs/decisions.md](decisions.md) (D-017 definition, D-060 deadline veto, D-068 derived types, D-083 edge-case equivalence), FR-06 normaliser (unknown is a value) | met | Ambiguous terms marked `unknown` never guessed; hard vetoes reject before classification; confidence scored and binned; edge cases documented |
-| **Justification of decisions** | [docs/decisions.md](decisions.md) (114 numbered D- entries through D-114, each with rationale and reverse), [docs/status.md](status.md) Open questions Q-1..Q-10 with options and recommendations, [docs/equivalence.md § 10](equivalence.md#10-the-fed-demo-pair-walkthrough) (worked example), [docs/routing.md § worked examples](routing.md) (M3-10) | met | Every non-routine choice logged in decisions.md with why and reverse; Tier 2 decisions listed in status.md awaiting veto; worked examples for matcher and router |
-| **Readability and docs** | [README.md](../README.md), [docs/architecture.md](architecture.md), [docs/equivalence.md](equivalence.md), [docs/routing.md](routing.md), [docs/ai-usage.md](ai-usage.md), [docs/domain.md](domain.md), [docs/decisions.md](decisions.md), code comments (minimal, WHY not WHAT per CLAUDE.md) | met | Core docs complete; equivalence.md (M2-08), routing.md (M3-10), decisions.md (101 D- entries); README (M4-01 #59 merged): full setup, architecture summary, 60-second walkthrough, live URL with pinned round 735, recording placeholder, what's next; ai-usage.md (M4-02 #60 merged): final spend, dev tools, LLM runs table (#54 UI-22 still open) |
+| **Justification of decisions** | [docs/decisions.md](decisions.md) (entries through D-133, each with rationale and reverse; unused numbers explained in place), [docs/status.md](status.md) Open questions Q-1..Q-13 with options and recommendations, [docs/equivalence.md § 10](equivalence.md#10-the-fed-demo-pair-walkthrough) (worked example), [docs/routing.md § worked examples](routing.md) (M3-10) | met | Every non-routine choice logged in decisions.md with why and reverse; Tier 2 decisions listed in status.md awaiting veto; worked examples for matcher and router |
+| **Readability and docs** | [README.md](../README.md), [docs/architecture.md](architecture.md), [docs/equivalence.md](equivalence.md), [docs/routing.md](routing.md), [docs/ai-usage.md](ai-usage.md), [docs/domain.md](domain.md), [docs/decisions.md](decisions.md), code comments (minimal, WHY not WHAT per CLAUDE.md) | met | Core docs aligned with the code on 2026-10-10 (D-133). README: live URL, four-card walkthrough, three example decisions, local run from fixtures, known limits; recording still a placeholder (M4-H1). ai-usage.md: LLM production status, spend not measured, the D-132 rotation |
 
-### Functional requirements (by group)
-
-| Criterion | Evidence | Status | Note |
-|---|---|---|---|
-| **FR-01..FR-05: Data ingestion** (Kalshi, Polymarket, fetch rounds, scheduler, canonical model) | [docs/architecture.md § External services](architecture.md#external-services) (adapters verified M1-04/M1-05), https://equinox-o5hdimw5rq-uc.a.run.app/admin (rounds table), internal/venues/{kalshi,polymarket}/, internal/collector/, internal/canonical/ | met | Both adapters fetch markets and books; 5-min scheduler live (D-065); canonical model in use; FR-03 timestamps present; FR-04 deployed |
-| **FR-06..FR-11: Matching and classification** (normalisation, blocking, vetoes, relationship types, facts, basis risk) | [docs/equivalence.md](equivalence.md), https://equinox-o5hdimw5rq-uc.a.run.app/ (matches grouped by type), https://equinox-o5hdimw5rq-uc.a.run.app/pairs/1208 (diff, facts, basis), internal/normalize/, internal/match/, config/facts.yaml | met | All 3 categories normalised (M2-01/02); 6 types classified; facts file in use (FR-10); basis risk scored (FR-11); FR-06 `unknown` for unparseable |
-| **FR-12..FR-16: Routing** (cost formula, sweep, complements, eligibility, fees verified) | [docs/routing.md](routing.md), internal/route/, internal/fees/, M3-01 (closes #21), M3-03 (closes #23), M3-04 (closes #24), M3-05 (closes #25), [docs/domain.md § Fees](domain.md), UI-12 #44, UI-13 #45 | met | FR-12 cost formula (M3-02, D-080); FR-13 greedy sweep (M3-03 merged); FR-14 complement routing (M3-04 merged); FR-15 eligibility (M3-01 merged, D-074/D-077); FR-16 fees verified (M3-05, D-073); route form and trace UI v2 merged (UI-12, UI-13) |
-| **FR-17: Decision log** | [docs/architecture.md § Data model](architecture.md#data-model) (decision_log table), https://equinox-o5hdimw5rq-uc.a.run.app/log (decision log page), internal/decisionlog/ | met | Relationships and routing decisions persisted and shown in UI (M2-07) |
-| **FR-18..FR-20: Evaluation** (golden set, backtest, LLM verifier) | [docs/equivalence.md § 7-8](equivalence.md#7-how-to-read-eval-and-back-test-output), testdata/golden/labels.yaml (95 labels Q-7), config/eval_summary.json, config/backtest_summary.json, internal/eval/, internal/llm/, `equinox eval --method rules+llm`, `equinox backtest`, M2-05 #17, M2-06 #18, M3-06 #26, #70 !86, #72 !88, UI-16 !71, UI-22 !99 (D-113 llm_verify_runs), UI-23 !98 (D-104 confusion matrix), UI-24 !100 (D-112 rules+llm) | met | FR-18 golden set 95 labels (Q-7 + Paawan CSV), eval 69/90 correct, equivalent precision 1.0 (config/eval_summary.json); FR-19 backtest 0 disagreements (config/backtest_summary.json, D-109 Fed decision back-test); FR-20 LLM verifier (D-075, D-112 rules+llm, D-113 runs table, admin UI !99-!100); eval page UI v2 with confusion matrix (UI-23 !98) |
-| **FR-21: Web views** (matches, pair, route, log, eval, admin, near-misses) | internal/web/, internal/web/templates/, M1-09 (closes #9), M2-07 (closes #19), UI-02 (closes #31), UI-10..18 #42-#50 | met | All 7 page handlers exist; v1 UI shipped (M1-09, M2-07, UI-02); UI-v2 merged: design system (UI-10 #42), matches (UI-11 #43), pair (UI-12 #44), route trace (UI-13 #45), near-misses (UI-14 #46), log (UI-15 #47), eval (UI-16 #48), admin (UI-17 #49), plus net gap (UI-18 #50) |
-| **FR-22..FR-23: Admin and demo** (admin auth, pin round) | internal/web/middleware_auth.go, [docs/architecture.md § Data model](architecture.md#data-model) (fetch_rounds.pinned), AB-04/AB-05/AB-14 tests, `equinox pin`, M3-07 (closes #27), M4-03 #61, UI-17 #49 | met | FR-22 admin routes behind basic auth (M1, NFR-10); FR-23 demo mode (M3-07 merged: zero outbound calls when pinned, AB-04 test, as-of banner); M4-03 pinned round 735; admin page UI v2 merged (UI-17 #49) |
-| **FR-24..FR-27: UI features and CLI** (timezone, history chart, CLI commands, order input) | https://equinox-o5hdimw5rq-uc.a.run.app/ (timezone selector in header), /pairs/1208 (price history SVG chart), `equinox --help`, [docs/architecture.md § Interfaces](architecture.md#interfaces-and-contracts) (Order follows FIX) | partial | FR-24 timezone done (M3-08); FR-25 history done (M2-07); FR-26 CLI partial (migrate/ingest/match/route/serve/pin/eval/backtest/golden done; streaming won't per FR-28); FR-27 order input done (M1). Gap accepted: streaming explicitly out of scope (FR-28, brief non-goals) |
-| **FR-28: Won't** (additional venues, streaming, real placement) | [docs/brief.md § Non-goals](brief.md#non-goals), [README.md § What's next](../README.md#whats-next) | met | Explicitly out of scope; adapter interface allows extension; README "What's next" section (M4-01 merged) |
-
-### Non-functional requirements
-
-| Criterion | Evidence | Status | Note |
-|---|---|---|---|
-| **NFR-01: Performance** (p95 <500ms pages, <300ms route) | CI test suite, scripts/smoke-live.sh (M4-05 #63), #80 TestNFR01_PageLatencyP95 (N=20, seeded test DB): GET / p95=2.33ms (p50=580µs), GET /pairs/{id} p95=2.26ms (p50=933µs), POST /route p95=3.25ms (p50=1.32ms); live smoke M4-05 pinned round 735 | met | M4-05 live smoke + #80 TestNFR01 local figures recorded; all under NFR-01 targets (<500ms pages, <300ms route / within 500ms general) |
-| **NFR-02: Fetch performance** (<60s round) | [docs/architecture.md § External services](architecture.md#external-services) (10s timeout, pacing), https://equinox-o5hdimw5rq-uc.a.run.app/admin (round times) | partial | Fetch completes <60s observed on /admin; not formally measured in M4-05 (pages only); pacing and caps in place. Gap accepted: measurement optional (visually confirmed on /admin rounds table) |
-| **NFR-03: Reliability** (one venue fails, other succeeds) | internal/collector/collector.go (concurrent fetch, per-venue error handling), tests/security/ab03_* (venue failure tests) | met | Collector continues on one venue's failure; failure logged; other venue's data stored |
-| **NFR-04: Demo reliability** (0 outbound calls when pinned) | AB-04 test `TestNFR04PinnedRoundZeroOutbound`, M3-07 (closes #27), `equinox pin` | met | Test exists (M1); demo mode (M3-07 merged): zero venue calls when pinned, verified by AB-04 test |
-| **NFR-05: Collector success** (≥95% over 24h) | [docs/architecture.md § Data model](architecture.md#data-model) (fetch_rounds.status), https://equinox-o5hdimw5rq-uc.a.run.app/admin (rounds table shows status) | partial | Machinery in place (M2-07); 95% target is measurement, not code. Gap accepted: operational metric, not code requirement; /admin rounds table shows per-round status |
-| **NFR-06: Precision ≥0.95 equivalent** | [docs/equivalence.md § 8](equivalence.md#8-current-results), testdata/golden/labels.yaml (95 labels), config/eval_summary.json, `equinox eval --method rules` | met | Golden set 95 labels (Q-7 40 + Paawan CSV 55, D-083); eval 69/90 correct (5 expired crypto fixtures not in store); equivalent 9/9 TP, 0 FP, precision 1.0000 meets 0.95 target (NFR-06 gate); equivalent_given_facts 16/19 TP (3 FN KXRATECUTCOUNT out of #72 scope); complement 1/1 TP. Measured on integration/m4-final fixtures with #70 !86 + #72 !88 merged (D-108 nominees, D-109 Fed decision, D-111/D-114 diagnosis) |
-| **NFR-07: Settlement backtest** (0 mismatches) | [docs/equivalence.md § 7-8](equivalence.md#7-how-to-read-eval-and-back-test-output), `equinox backtest`, M2-06 | met | Fixture backtest: 207544 pairs, 24/24 agreed, 0 mismatches; documented in equivalence.md §7-8 |
-| **NFR-08: Prices in [0,1]** | internal/canonical/validate.go, property tests in internal/canonical/rapid_test.go, AB-09 tests | met | Decimal prices validated; property tests cover range; out-of-range rejected |
-| **NFR-09: Staleness and skew** | internal/route/eligibility.go, [docs/routing.md § Eligibility](routing.md#eligibility), M3-01 (closes #21), D-074/D-077, config defaults (STALE_AFTER_SECONDS, SKEW_*) | met | M3-01 merged: staleness/skew/depth eligibility; snapshot-relative staleness (D-077); configurable thresholds; stale-round warning banner |
-| **NFR-10: Admin auth and read-only public** | internal/web/middleware_auth.go, internal/web/middleware_ratelimit.go, AB-04/AB-05/AB-14 tests | met | Admin routes require basic auth (constant-time compare, AB-05 brute-force limit); public routes read-only; rate limit on public (M3-09) |
-| **NFR-11: LLM downgrade-only** | internal/llm/guard.go (Apply enforces downgrade), internal/llm/anthropic.go, AB-01/AB-04/AB-13 tests, M3-06 (closes #26), D-075, [docs/ai-usage.md § Runtime](ai-usage.md#runtime-llm-use) | met | Harness (M1-11); guard enforces downgrade-only; live verifier (M3-06 merged): admin-only, content-hash cache, daily cap; stdlib HTTP client (D-075) |
-| **NFR-12: Escaping and CSP** | internal/web/middleware_csp.go, internal/web/templates/ (html/template auto-escape), AB-02/AB-07 tests | met | CSP sent; templates use auto-escape; no template.HTML on external data; AB-02/AB-07 pass |
-| **NFR-13: Secrets and vulns** | .gitleaks.toml, .gitlab-ci.yml (gitleaks, govulncheck jobs), scripts/guard-human-files.sh, AB-06/AB-09 tests | met | gitleaks in CI (commits-only on MR, full on main); govulncheck in CI; no secrets in repo; .env gitignored |
-| **NFR-14: Parameterised SQL only** | internal/store/*.go, AB-08 tests | met | All SQL parameterised; AB-08 test enforces no string concat in queries |
-| **NFR-15: Spend ≤$50, LLM cap** | [docs/status.md § Spend to date](#spend-to-date), internal/llm/budget.go (LLM_DAILY_CALL_CAP), [docs/ai-usage.md § The cap](ai-usage.md#runtime-llm-use) | partial | LLM cap machinery in place (D-075, D-112, D-113); spend PENDING-DEPLOY: GCP billing page and Anthropic console access required post-!97 merge to main; D-101 review-window cost $0.27 estimated for 3h. Gap accepted: M4-08 pending final spend measurement |
-| **NFR-16: Usability** (demo in 2 clicks, page questions) | internal/web/handlers.go, internal/web/templates/layout.html (.question), M1-09 (closes #9), UI-11..17 #43-#49 | met | Demo path exists (matches → pair → route); page questions present in templates; UI-v2 pages merged (#43–#49) for improved clarity and 2-click target |
-| **NFR-17: Coverage ≥80%, router imports** | .gitlab-ci.yml (coverage job), internal/route/imports_test.go, CI coverage reports | met | Coverage ≥80% enforced in CI; router imports test enforces venue-agnostic rule; M3-01..M3-10 maintain |
+FR and NFR rows: see **Requirements coverage** above, which replaces the per-group sweep tables of M4-06.
 
 ### Brief deliverables
 
 | Criterion | Evidence | Status | Note |
 |---|---|---|---|
-| **Deliverable 1: Live URL** | https://equinox-o5hdimw5rq-uc.a.run.app, [README.md § Live demo](../README.md#live-demo), M1-02 deploy, M4-03 #61, M4-01 #59 | met | Cloud Run live; /health returns 200; README links it with full demo walkthrough (M4-01 merged); M4-03 pinned demo round 735 (finished 2026-10-09 14:15:12 UTC) serves with demo banner |
+| **Deliverable 1: Live URL** | https://peak6-equinox-287867547175.us-central1.run.app, [README.md § Live demo](../README.md#live-demo), D-114, D-128 | met | Cloud Run revision `peak6-equinox-00009-8kx` (main 5ed9ea8); pinned round 904 with 12 routable pairs; `/health` 200; walkthrough re-run after each deploy on 2026-10-10 |
 | **Deliverable 2: Source code** | GitLab https://labs.gauntletai.com/paawandesai/peak6-equinox, CI green on main | met | Source at GitLab; PEAK6 reviewers have access; CI green (lint, test, coverage, gitleaks, govulncheck) |
-| **Deliverable 3: Setup instructions** | [README.md § Setup](../README.md#setup), [docs/environment.md](environment.md), Makefile, M4-01 #59 | met | M4-01 merged: full setup section (clone, .env, setup, db-up, migrate, seed, match, dev, open) re-run from fresh clone with elapsed time (~30s-1min); Makefile targets documented |
+| **Deliverable 3: Setup instructions** | [README.md § Run locally](../README.md#run-locally-from-recorded-fixtures), [docs/environment.md](environment.md), Makefile | met | Re-run from a fresh clone on 2026-10-10 (migrate, seed ~45 s, match ~7 s, serve); corrected the nonexistent `make match` and the seed time; the local Routable-0 limit is documented (Q-13) |
 | **Deliverable 4: Architecture overview** | [docs/architecture.md](architecture.md) (tech stack, components, data flow, data model, external services), [README.md § Architecture](../README.md#architecture), M4-01 #59 | met | Full architecture.md exists (M1-03 started, updated through M3); M4-01 merged: README architecture section with 5-stage pipeline summary (adapters → collector → normalise → match → route → web, LLM verifier admin-only) linking to architecture.md |
 | **Deliverable 5: Written logic** | [docs/equivalence.md](equivalence.md) (definition, methodology, vetoes, facts, basis, eval, backtest), [docs/routing.md](routing.md) (objective, eligibility, cost, sweep, complements) | met | Both docs merged and current; equivalence.md M2-08 (ba0a6c66), routing.md M3-10 (7e67718) |
-| **Deliverable 6: AI-usage disclosure** | [docs/ai-usage.md](ai-usage.md) (runtime LLM, development tools, tests never call live APIs), M4-02 #60 | met | M4-02 merged: final spend ($0 GCP, $0 Anthropic as of 2026-10-08), dev-tools section (Claude Code orchestrator/workers, Cursor/Grok review, Claude Design UI-09, with what each produced; D- entries by human listed), tests-never-call-live-APIs stated; LLM runs table pending #54 UI-22 |
+| **Deliverable 6: AI-usage disclosure** | [docs/ai-usage.md](ai-usage.md) | met | Runtime verifier and its production status (not run in prod; Q-11), development tools including the 2026-10-10 Claude Code operator sessions, the D-132 credential rotation, and spend (not measured) |
 | **Deliverable 7: Recording** | [README.md § Recording](../README.md), M4-01 #59, M4-H1 #67 (Paawan records after M4-07 #65) | partial | M4-01 merged: placeholder line "Backup walkthrough recording: (link added by M4-H1)"; then M4-H1 #67 is human item (Paawan records 60-second walkthrough after final deploy M4-07, a worker adds the link). Gap accepted: human task M4-H1 pending M4-07 final deploy |
 
 ## Spend to date
 
 | Date | GCP | Anthropic | Total | Cap |
 |---|---|---|---|---|
-| 2026-10-10 | PENDING-DEPLOY (GCP billing page post-!97) | PENDING-DEPLOY (Anthropic console post-!97) | PENDING-DEPLOY | $50 |
+| 2026-10-10 | not measured (billing page not read; budget-alert status could not be checked from the operator host) | not measured; the production service has no API key mounted, so it made no model calls | not measured | $50 |
 | 2026-10-06 | $0 (not yet measured) | $0 | $0 | $50 |
 
-**Note:** D-101 review-window cost estimated $0.27 for 3h `min-instances=1` (Sun 2026-10-11 09:00–12:00 CT). Included in $50 cap. Final spend measurement requires GCP billing page and Anthropic console access after !97 merges to main (D-102).
+**Note:** D-101 estimates $0.27 for the 3 h `min-instances=1` review window (Sun 2026-10-11 09:00–12:00 CT). The 2-minute collector (D-131) costs more Cloud Run CPU time and stores more rows than the 5-minute plan assumed. Measuring spend needs the GCP billing page and the Anthropic console (human access).
 
 ## Security findings
 

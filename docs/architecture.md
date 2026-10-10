@@ -5,13 +5,13 @@
 
 | Layer | Choice | Version | Why (decision) |
 |---|---|---|---|
-| Language | Go | **1.27.1** (latest stable on go.dev/dl at M1-01, 2026-10-06): `go 1.27.0` + `toolchain go1.27.1` in go.mod; CI image `golang:1.27.1` | PEAK6's internal stack (D-001, D-050) |
+| Language | Go | **1.27.2**: `go 1.27.0` + `toolchain go1.27.2` in go.mod; CI image `golang:1.27.2`; Dockerfile `golang:1.27.2-bookworm` (1.27.1 at M1-01, bumped for stdlib advisories) | PEAK6's internal stack (D-001, D-050) |
 | HTTP / UI | `net/http`, `html/template`, htmx, Pico.css (classless) | htmx 2.x, Pico 2.x, pinned with SRI in M1-08 | No JS build; UI polish is not graded but clarity matters (D-004, D-031) |
-| Database | PostgreSQL | 16 (Cloud SQL `POSTGRES_16`, `postgres:16` locally) | Persistent history across fetch rounds; relational joins; JSONB for raw payloads (D-016) |
+| Database | PostgreSQL | 16 (Cloud SQL `POSTGRES_16`, `postgres:16` locally) | Persistent history across fetch rounds; relational joins (D-016). Raw venue responses are stored gzipped in a `bytea` column (`raw_responses.body_gz`), not JSONB; parsed fields such as terms, books and diffs use `jsonb` |
 | DB driver / migrations | `jackc/pgx/v5`, `pressly/goose/v3` | latest v5 / v3 | Boring, standard |
 | Money / prices | `shopspring/decimal` | latest | No floats for prices or fees |
 | Config | env vars + YAML (`config/universe/<venue>.yaml`, `config/facts.yaml`) via `gopkg.in/yaml.v3` | latest | Facts and venue universe are reviewable data (D-021) |
-| LLM | Anthropic Messages API via `anthropics/anthropic-sdk-go`, model `claude-haiku-4-5-20251001` | latest SDK | Cheapest tier under the budget (D-003, D-022, D-046) |
+| LLM | Anthropic Messages API called with stdlib `net/http` (`internal/llm/anthropic.go`), not `anthropic-sdk-go`; model `claude-haiku-4-5-20251001` | n/a (no SDK dependency) | Cheapest tier under the budget (D-003, D-022, D-046); a short stdlib client instead of 10+ SDK dependencies (D-075) |
 | Logging | `log/slog` JSON | stdlib | Cloud Logging parses JSON natively (D-036) |
 | Testing | `go test`, `pgregory.net/rapid` (property tests), Go native fuzzing, Postgres from docker compose locally and a CI service | latest | Property tests for parsers and financial math (D-047) |
 | Lint / security | `golangci-lint` v2, `govulncheck`, `gitleaks` | latest | CI gates (D-047) |
@@ -22,7 +22,7 @@
 
 | Package | Responsibility | May import |
 |---|---|---|
-| `cmd/equinox` | CLI entry point: `migrate`, `ingest`, `match`, `route`, `eval`, `backtest`, `golden`, `serve` | everything |
+| `cmd/equinox` | CLI entry point: `migrate`, `ingest`, `seed`, `match`, `pin`, `route`, `eval`, `backtest`, `golden`, `serve`, `fixture-server`, `record-fixtures`, `version` | everything |
 | `internal/canonical` | Venue-independent types (`Instrument`, `Terms`, `Quote`, `Level`, `Relationship`, `Order`, `Decision`, `FeeSchedule`) and their validation | stdlib, decimal |
 | `internal/venues` | `Adapter` interface and registry | canonical |
 | `internal/venues/kalshi`, `internal/venues/polymarket` | Venue HTTP clients and mapping into canonical types. **The only place venue schemas exist.** | canonical, venues |
@@ -42,7 +42,8 @@
 
 ```mermaid
 flowchart LR
-  SCHED[Cloud Scheduler<br/>every 5 min] -->|POST /admin/ingest| WEB
+  SCHED[Cloud Scheduler<br/>every 2 min] -->|POST /admin/ingest| WEB
+  JOB[Cloud Run job equinox-match<br/>on demand] --> MATCH
   ADMIN[Admin] -->|/admin/*| WEB
   PUB[Public viewer] -->|GET pages, POST /route| WEB
   WEB[internal/web] --> COL[collector]
@@ -50,7 +51,7 @@ flowchart LR
   COL --> PA[venues/polymarket] --> PAPI[(Polymarket Gamma + CLOB)]
   COL --> NORM[normalize] --> STORE[(Postgres)]
   COL --> STORE
-  WEB --> MATCH[match] --> STORE
+  MATCH[match] --> STORE
   MATCH --> FACTS[facts.yaml]
   WEB -->|admin only| LLM[llm verifier] --> ANTH[(Anthropic)]
   LLM --> STORE
@@ -60,14 +61,14 @@ flowchart LR
 
 Each step of the flow:
 
-1. A **fetch round** starts on a Scheduler call, an admin call, or `equinox ingest`.
+1. A **fetch round** starts on a Scheduler call (every 2 minutes in production, D-131), an admin call, or `equinox ingest`.
 2. The collector calls both adapters concurrently. Each adapter returns raw responses plus canonical `Instrument`s and `Quote`s stamped with `fetched_at` (and `venue_ts` when present).
 3. Raw bodies are gzipped into `raw_responses`. Instruments are upserted, and quotes are inserted per round.
-4. After ingest, `match` runs over the round's instruments: normalise, block, veto, classify, diff, then score basis risk. The resulting `relationships` are stored for the round, and each verdict goes to the decision log. The rules behind each step are written up in [equivalence.md](equivalence.md).
+4. **Matching runs on demand, not after every ingest** (D-065, Q-5). `equinox match` (locally, or as the Cloud Run job `equinox-match` in production) runs over one round's instruments: normalise, block, veto, classify, diff, then score basis risk. The resulting `relationships` are stored for that round, and each verdict goes to the decision log. The operator then pins the matched round with `equinox pin` (or `equinox match --pin-min-routable N`), so `/` stays on a matched round while new fetch rounds keep arriving. The rules behind each step are written up in [equivalence.md](equivalence.md).
 5. The admin may run the LLM verifier. It can only downgrade a relationship, and it records its verdict.
-6. `POST /route` takes an `Order` for a target instrument and finds its `equivalent`, `equivalent_given_facts` and `complement` partners in the current (or pinned) round. The router is pure: inputs in, `Decision` out. The decision is logged.
+6. `POST /route` takes an `Order` for a target instrument and finds its `equivalent`, `equivalent_given_facts` and `complement` partners in the pinned (or current) round. The router is pure: inputs in, `Decision` out. The decision is logged.
 
-Pages read from the **pinned round** if one is set, and otherwise from the latest successful round.
+**Which data a page uses** (D-117, since !128). Pairs, relationship types and diffs come from the **pinned round** if one is set, and otherwise from the latest successful round. Prices, quote ages and routing use the **newest collected quote** for each instrument (`internal/web/live_quotes.go`), and quote age is measured against the newest round's snapshot time, so a pinned round still shows current prices. Both come from Postgres only; serving a page or a route makes no venue call (NFR-04). The site banner says which round the pairs come from.
 
 ## Interfaces and contracts
 
@@ -138,8 +139,8 @@ Golden labels are files in the repo (`testdata/golden/labels.yaml`), not DB rows
 | Polymarket Gamma `https://gamma-api.polymarket.com` | No auth. `GET /events?tag_slug=…&active=true&closed=false&exclude_tag_id=102127&limit=50&offset=…` (offset-paginated, at most 40 pages per tag). Settled: `GET /events?tag_slug=…&closed=true&order=endDate&ascending=false&exclude_tag_id=102127&limit=50&offset=…`, newest end date first, stopping at the first page that reaches events ending before `since`. `outcomes`, `outcomePrices` and `clobTokenIds` are JSON-encoded strings. Verified 2026-10-06 (M1-05, D-057): open events can contain closed markets; tag `102127` (`up-or-down`) is 5-minute to daily `Up`/`Down` markets (not YES/NO), most of the `crypto` tag's ~2,100 events; each market has `feesEnabled` and `feeSchedule` (`rate`, `exponent`); `endDate` is RFC 3339, `closedTime` is `2006-01-02 15:04:05+00`. Offsets past ~500 on large closed listings return HTTP 500. | Same as above, with 8 books fetched at a time |
 | Polymarket CLOB `https://clob.polymarket.com` | No auth. `GET /book?token_id=…` returns `{asset_id, timestamp (unix ms string), bids, asks}` with `price`/`size` strings; bids are sorted lowest first and asks highest first (worst first), so the adapter sorts best first. Resting orders at 0.001 / 0.999 are common and are kept. A token with no book gives HTTP 404. | Same as above. Books missing → quote flagged `no_book`, and the instrument is ineligible for routing. |
 | Anthropic Messages API | `ANTHROPIC_API_KEY` from Secret Manager. Admin-triggered only. | The verdict is recorded as `llm_error` and the rules verdict stands. The cap is reached when `llm_usage.calls ≥ LLM_DAILY_CALL_CAP`. |
-| Cloud SQL | Cloud Run built-in Cloud SQL connection (unix socket `/cloudsql/<instance>`), `DATABASE_URL` secret | `/healthz` returns 503, pages show a "data unavailable" banner |
-| Cloud Scheduler | HTTP target `POST /admin/ingest` with a basic-auth header, every 5 minutes | A missed round shows in the collector success rate (NFR-05) |
+| Cloud SQL | Cloud Run built-in Cloud SQL connection (unix socket `/cloudsql/<instance>`), `DATABASE_URL` secret | `GET /health` is a liveness check only and does not query the database (`/healthz` is reserved by Cloud Run, D-052); pages that read the database fail until it is back |
+| Cloud Scheduler | `equinox-collect`: HTTP target `POST /admin/ingest` with a basic-auth header (the admin password from Secret Manager), every 2 minutes (`*/2 * * * *`, D-131; `scripts/gcp-bootstrap.sh` still creates it at `*/5`). `equinox-rematch-hourly`: runs the `equinox-match` job at minute 17 with `--latest --pin-min-routable 10`, created **paused** (D-117) | A missed round shows in the collector success rate (NFR-05) |
 
 Venue endpoint details and series and tag names are **verified in M1-04 (Kalshi) and M1-05 (Polymarket)**. Any correction is a Tier 1 update to this table and to `config/universe/<venue>.yaml`.
 
