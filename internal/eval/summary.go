@@ -2,6 +2,8 @@ package eval
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,8 +22,9 @@ const MaxSummaryBytes = 1 << 20
 
 // Summary is the read-only JSON artifact `equinox eval --out` writes for the
 // web eval page (FR-21, US-06; contract in internal/web/handlers_eval.go,
-// M2-07). The page only reads it, so a public request never runs the
-// matcher. Field set and names are the contract: no extra fields.
+// M2-07, extended by UI-23/D-104). The page only reads it, so a public request
+// never runs the matcher. Field set and names are the contract: no extra fields
+// beyond those listed here. UI-23 fields are optional so old summaries still load.
 type Summary struct {
 	GeneratedAt time.Time     `json:"generated_at"`
 	Command     string        `json:"command"`
@@ -31,6 +34,11 @@ type Summary struct {
 	Method      string        `json:"method"`
 	Types       []TypeSummary `json:"types"`
 	Notes       []string      `json:"notes"`
+	// UI-23: optional fields, omitted when empty
+	Confusion    *ConfusionMatrix  `json:"confusion,omitempty"`     // counts and pair ids per (label, predicted)
+	Thresholds   []ThresholdMetric `json:"thresholds,omitempty"`    // P/R/TP/FP for equivalent at confidence cut-offs
+	LabelsSHA256 string            `json:"labels_sha256,omitempty"` // golden-set version (hex)
+	Previous     *PreviousRun      `json:"previous,omitempty"`      // previous summary's timestamp, hash and per-type P/R
 }
 
 // TypeSummary is one relationship type's counts. Precision and recall are
@@ -45,11 +53,46 @@ type TypeSummary struct {
 	Recall    *decimal.Decimal `json:"recall"`
 }
 
+// ConfusionMatrix is counts and pair ids per (label, predicted) cell. UI-23.
+type ConfusionMatrix struct {
+	Cells map[string]ConfusionCell `json:"cells"` // key: "label:predicted"
+}
+
+// ConfusionCell is one (label, predicted) cell's count and pair ids.
+type ConfusionCell struct {
+	Count   int      `json:"count"`
+	PairIDs []string `json:"pair_ids,omitempty"` // "a_id / b_id" in file order
+}
+
+// ThresholdMetric is P/R/TP/FP for equivalent at one confidence threshold. UI-23.
+type ThresholdMetric struct {
+	Threshold decimal.Decimal  `json:"threshold"` // confidence cut-off
+	Precision *decimal.Decimal `json:"precision"` // null when no predictions above threshold
+	Recall    *decimal.Decimal `json:"recall"`
+	TP        int              `json:"tp"`
+	FP        int              `json:"fp"`
+}
+
+// PreviousRun holds the previous summary's timestamp, labels hash and per-type P/R. UI-23.
+type PreviousRun struct {
+	GeneratedAt  time.Time                     `json:"generated_at"`
+	LabelsSHA256 string                        `json:"labels_sha256"`
+	Types        map[string]PreviousTypeMetric `json:"types"` // key: type string
+}
+
+// PreviousTypeMetric is one type's P/R from the previous run.
+type PreviousTypeMetric struct {
+	Precision *decimal.Decimal `json:"precision"`
+	Recall    *decimal.Decimal `json:"recall"`
+}
+
 // Summary shapes the report as the artifact. command is the invocation as
 // typed, roundID the labels' provenance round, labelsFile the path read and
 // labels the number of entries in it (evaluated or not). The notes carry the
 // NFR-06 line, the M3 caveat and one line per label not evaluated.
-func (r Report) Summary(now time.Time, command string, roundID int64, labelsFile string, labels int) Summary {
+// UI-23: labelsHash is the SHA256 of the labels file (hex), and prevPath is
+// where to look for the previous summary to record deltas (empty: no previous).
+func (r Report) Summary(now time.Time, command string, roundID int64, labelsFile string, labels int, labelsHash string, prevPath string) Summary {
 	s := Summary{
 		GeneratedAt: now.UTC().Truncate(time.Second),
 		Command:     command,
@@ -79,6 +122,24 @@ func (r Report) Summary(now time.Time, command string, roundID int64, labelsFile
 	s.Notes = append(s.Notes, "rules+llm: not evaluated (M3)")
 	for _, l := range r.Missing {
 		s.Notes = append(s.Notes, fmt.Sprintf("not evaluated: %s / %s (instrument not found)", l.AID, l.BID))
+	}
+	// UI-23: add optional fields
+	if len(r.Outcomes) > 0 {
+		s.Confusion = buildConfusionMatrix(r.Outcomes)
+		s.Thresholds = buildThresholds(r.Outcomes)
+	}
+	s.LabelsSHA256 = labelsHash
+	if prevPath != "" {
+		if prev, err := LoadSummary(prevPath); err == nil {
+			s.Previous = &PreviousRun{
+				GeneratedAt:  prev.GeneratedAt,
+				LabelsSHA256: prev.LabelsSHA256,
+				Types:        make(map[string]PreviousTypeMetric),
+			}
+			for _, t := range prev.Types {
+				s.Previous.Types[t.Type] = PreviousTypeMetric{Precision: t.Precision, Recall: t.Recall}
+			}
+		}
 	}
 	return s
 }
@@ -176,6 +237,112 @@ func LoadSummary(path string) (Summary, error) {
 		return Summary{}, fmt.Errorf("loading eval summary: %w", err)
 	}
 	return s, nil
+}
+
+// buildConfusionMatrix computes counts and pair ids per (label, predicted). UI-23.
+func buildConfusionMatrix(outcomes []Outcome) *ConfusionMatrix {
+	cells := make(map[string]ConfusionCell)
+	for _, o := range outcomes {
+		key := confusionKey(o.Label.Label, o.Predicted)
+		cell := cells[key]
+		cell.Count++
+		pairID := fmt.Sprintf("%s / %s", o.Label.AID, o.Label.BID)
+		cell.PairIDs = append(cell.PairIDs, pairID)
+		cells[key] = cell
+	}
+	if len(cells) == 0 {
+		return nil
+	}
+	return &ConfusionMatrix{Cells: cells}
+}
+
+// confusionKey returns the map key for a (label, predicted) cell.
+func confusionKey(label canonical.RelationshipType, predicted canonical.RelationshipType) string {
+	return fmt.Sprintf("%s:%s", label, predicted)
+}
+
+// buildThresholds computes P/R/TP/FP for equivalent at confidence cut-offs,
+// including the 0.90 floor. Outcomes must include confidence scores. UI-23.
+func buildThresholds(outcomes []Outcome) []ThresholdMetric {
+	// Define thresholds: 0.70, 0.75, 0.80, 0.85, 0.90, 0.95, 1.00
+	thresholds := []decimal.Decimal{
+		decimal.RequireFromString("0.70"),
+		decimal.RequireFromString("0.75"),
+		decimal.RequireFromString("0.80"),
+		decimal.RequireFromString("0.85"),
+		decimal.RequireFromString("0.90"),
+		decimal.RequireFromString("0.95"),
+		decimal.RequireFromString("1.00"),
+	}
+	// Count labelled equivalents
+	equivalentLabels := 0
+	for _, o := range outcomes {
+		if o.Label.Label == canonical.RelEquivalent {
+			equivalentLabels++
+		}
+	}
+	var results []ThresholdMetric
+	for _, thresh := range thresholds {
+		tp, fp := 0, 0
+		for _, o := range outcomes {
+			// Filter: only count predictions where type is equivalent AND confidence >= threshold
+			if o.Predicted == canonical.RelEquivalent && o.Confidence.GreaterThanOrEqual(thresh) {
+				if o.Label.Label == canonical.RelEquivalent {
+					tp++
+				} else {
+					fp++
+				}
+			}
+		}
+		var prec, rec *decimal.Decimal
+		if tp+fp > 0 {
+			p := decimal.NewFromInt(int64(tp)).DivRound(decimal.NewFromInt(int64(tp+fp)), 4)
+			prec = &p
+		}
+		if equivalentLabels > 0 {
+			r := decimal.NewFromInt(int64(tp)).DivRound(decimal.NewFromInt(int64(equivalentLabels)), 4)
+			rec = &r
+		}
+		results = append(results, ThresholdMetric{
+			Threshold: thresh,
+			Precision: prec,
+			Recall:    rec,
+			TP:        tp,
+			FP:        fp,
+		})
+	}
+	return results
+}
+
+// HashLabelsFile computes SHA256 of the labels file for version tracking. UI-23.
+func HashLabelsFile(path string) (string, error) {
+	f, err := os.Open(filepath.Clean(path))
+	if err != nil {
+		return "", fmt.Errorf("hashing labels file: %w", err)
+	}
+	defer f.Close()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", fmt.Errorf("hashing labels file: %w", err)
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// RotatePreviousSummary saves the current summary as .prev.json before writing
+// the new one. Returns the previous summary path or empty if rotation failed. UI-23.
+func RotatePreviousSummary(currentPath string) string {
+	if currentPath == "" {
+		return ""
+	}
+	prevPath := filepath.Join(filepath.Dir(currentPath), filepath.Base(currentPath[:len(currentPath)-len(filepath.Ext(currentPath))])+".prev.json")
+	// Try to copy current to .prev
+	if current, err := os.ReadFile(filepath.Clean(currentPath)); err == nil {
+		//nolint:gosec // prevPath derived from operator config currentPath, not user input
+		if err := os.WriteFile(filepath.Clean(prevPath), current, 0o600); err == nil {
+			return prevPath
+		}
+	}
+	return ""
 }
 
 // optional turns a (ratio, ok) pair into a nullable decimal.

@@ -518,7 +518,15 @@ func (s *Server) handleAdminIndex(w http.ResponseWriter, r *http.Request) {
 	// UI-17 + UI-26: build health rows with worst-signal rollup, match runs, and 90-day bars
 	p.Health = buildHealthRows(p.Collector, growth, hasDB, p.DBError, p.PinnedRound, p.LLMVerifierState, recentForBars, latestMatchRun, dailyHistory, s.now())
 	// UI-17: freshness windows (D-077 threshold 120s, UI-19 will add warn windows)
-	p.FreshnessWindows = "Stale thresholds: Kalshi quotes 120 s, Polymarket quotes 120 s, rounds 10 min."
+	// UI-19: show both warn and stale windows per source
+	p.FreshnessWindows = fmt.Sprintf("Freshness windows (warn→stale): Kalshi quotes %d→%d s, Polymarket quotes %d→%d s, rounds %d→%d min.",
+		int(s.cfg.KalshiWarnAfter.Seconds()),
+		int(s.cfg.StaleAfter.Seconds()),
+		int(s.cfg.PolymarketWarnAfter.Seconds()),
+		int(s.cfg.StaleAfter.Seconds()),
+		s.cfg.RoundWarnMinutes,
+		s.cfg.StaleRoundWarnMinutes,
+	)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("X-Robots-Tag", "noindex") // UI-08: noindex via header, not meta tag
