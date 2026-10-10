@@ -43,11 +43,11 @@ type pairPage struct {
 	BasisComponents []basisComponentView // UI-12: with Row field
 	NearMiss        bool                 // a stored related pair: shown with the veto that fired
 	Types           []typeView
-	History              historyChart
-	LogEntries           []logEntryView
-	Form                 routeFormView
-	EvidenceFooter       string // UI-20: "prior + Σ = total → confidence X.XX" or "not recorded"
-	HasEvidence          bool   // UI-20: whether evidence was recorded
+	History         historyChart
+	LogEntries      []logEntryView
+	Form            routeFormView
+	EvidenceFooter  string // UI-20: "prior + Σ = total → confidence X.XX" or "not recorded"
+	HasEvidence     bool   // UI-20: whether evidence was recorded
 }
 
 // confView is the confidence for the {{template "conf"}} define (UI-12).

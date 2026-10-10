@@ -153,11 +153,11 @@ type ContributionTerm struct {
 // MatcherEvidence records the matcher's confidence calculation components (UI-20, D-110).
 // It is optional and may be nil for relationships stored before this feature.
 type MatcherEvidence struct {
-	Prior         decimal.Decimal     `json:"prior"`                     // Base confidence before deductions
-	Contributions []ContributionTerm  `json:"contributions"`             // Per-term signed contributions
-	Total         decimal.Decimal     `json:"total"`                     // Sum (equals stored confidence)
-	PreVetoScore  *decimal.Decimal    `json:"pre_veto_score,omitempty"`  // For near misses: score before vetoes
-	RequiredScore *decimal.Decimal    `json:"required_score,omitempty"`  // For near misses: MIN_ROUTE_CONFIDENCE (0.90)
+	Prior         decimal.Decimal    `json:"prior"`                    // Base confidence before deductions
+	Contributions []ContributionTerm `json:"contributions"`            // Per-term signed contributions
+	Total         decimal.Decimal    `json:"total"`                    // Sum (equals stored confidence)
+	PreVetoScore  *decimal.Decimal   `json:"pre_veto_score,omitempty"` // For near misses: score before vetoes
+	RequiredScore *decimal.Decimal   `json:"required_score,omitempty"` // For near misses: MIN_ROUTE_CONFIDENCE (0.90)
 }
 
 // Validate checks that total equals the sum of prior and contributions, and that
