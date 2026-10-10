@@ -417,8 +417,8 @@ func TestClipTitle(t *testing.T) {
 	}{
 		{"short title", "short title"},
 		{strings.Repeat("a", maxSummaryTitle), strings.Repeat("a", maxSummaryTitle)},
-		{strings.Repeat("a", maxSummaryTitle+1), strings.Repeat("a", maxSummaryTitle-1) + "…"},
-		{strings.Repeat("a", maxSummaryTitle+50), strings.Repeat("a", maxSummaryTitle-1) + "…"},
+		{strings.Repeat("a", maxSummaryTitle+1), strings.Repeat("a", maxSummaryTitle-len("…")) + "…"},
+		{strings.Repeat("a", maxSummaryTitle+50), strings.Repeat("a", maxSummaryTitle-len("…")) + "…"},
 	}
 
 	for _, tt := range tests {

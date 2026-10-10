@@ -129,7 +129,8 @@ const maxSummaryTitle = 120
 
 func clipTitle(s string) string {
 	if len(s) > maxSummaryTitle {
-		return s[:maxSummaryTitle-1] + "…"
+		const ellipsis = "…"
+		return s[:maxSummaryTitle-len(ellipsis)] + ellipsis
 	}
 	return s
 }
