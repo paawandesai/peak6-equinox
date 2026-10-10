@@ -95,6 +95,7 @@ None.
 | D-049 | Operator merges CI-green, Cursor-approved MRs without asking (this replaces "never merge without my OK") | 2026-10-06 |
 | D-050 | Pin Go 1.27.1 (go.mod `go 1.27.0` + `toolchain go1.27.1`; CI image `golang:1.27.1`; architecture.md tech-stack row). Tier 2 shared-file update from M1-01. | 2026-10-06 |
 | D-110 | UI-19: Add venue-specific warn windows (`KALSHI_WARN_AFTER_SECONDS`, `POLYMARKET_WARN_AFTER_SECONDS`, `ROUND_WARN_MINUTES`) with warn<stale validation. No schema change. | 2026-10-09 |
+| D-112 | UI-24: Extend eval summary contract to support dual-method evaluation (rules+llm). Add optional `rules []TypeSummary` field, remove hardcoded M3 note. LLM runs through existing cache+cap. Projected spend ~$0.05 for golden set. No schema change. | 2026-10-10 |
 | D-051 | Planned-subcommand stubs in `cmd/equinox/planned.go` (Tier 1 from M1-01; listed for visibility). | 2026-10-06 |
 | D-052 | Health check on live `run.app` is `GET /health` (`/healthz` reserved by Cloud Run GFE). Tier 2 from M1-02. | 2026-10-06 |
 | D-056 | M1-04: Kalshi endpoint facts corrected in architecture.md (book shape, statuses, `min_close_ts` for settled, 429 pacing). Tier 2 shared-file update. | 2026-10-06 |

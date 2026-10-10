@@ -22,9 +22,10 @@ const MaxSummaryBytes = 1 << 20
 
 // Summary is the read-only JSON artifact `equinox eval --out` writes for the
 // web eval page (FR-21, US-06; contract in internal/web/handlers_eval.go,
-// M2-07, extended by UI-23/D-104). The page only reads it, so a public request
-// never runs the matcher. Field set and names are the contract: no extra fields
-// beyond those listed here. UI-23 fields are optional so old summaries still load.
+// M2-07, extended by UI-23/D-104 and UI-24/D-112). The page only reads it, so
+// a public request never runs the matcher. Field set and names are the contract:
+// no extra fields beyond those listed here. UI-23 and UI-24 fields are optional
+// so old summaries still load.
 type Summary struct {
 	GeneratedAt time.Time     `json:"generated_at"`
 	Command     string        `json:"command"`
@@ -39,6 +40,8 @@ type Summary struct {
 	Thresholds   []ThresholdMetric `json:"thresholds,omitempty"`    // P/R/TP/FP for equivalent at confidence cut-offs
 	LabelsSHA256 string            `json:"labels_sha256,omitempty"` // golden-set version (hex)
 	Previous     *PreviousRun      `json:"previous,omitempty"`      // previous summary's timestamp, hash and per-type P/R
+	// UI-24: dual-method evaluation (D-112)
+	Rules []TypeSummary `json:"rules,omitempty"` // rules-only metrics when method=rules+llm for comparison
 }
 
 // TypeSummary is one relationship type's counts. Precision and recall are
@@ -89,10 +92,12 @@ type PreviousTypeMetric struct {
 // Summary shapes the report as the artifact. command is the invocation as
 // typed, roundID the labels' provenance round, labelsFile the path read and
 // labels the number of entries in it (evaluated or not). The notes carry the
-// NFR-06 line, the M3 caveat and one line per label not evaluated.
+// NFR-06 line and one line per label not evaluated.
 // UI-23: labelsHash is the SHA256 of the labels file (hex), and prevPath is
 // where to look for the previous summary to record deltas (empty: no previous).
-func (r Report) Summary(now time.Time, command string, roundID int64, labelsFile string, labels int, labelsHash string, prevPath string) Summary {
+// UI-24: rulesReport, when non-nil, provides rules-only metrics for comparison
+// when r.Method is rules+llm. verifierNote explains why LLM wasn't run (empty: ran ok).
+func (r Report) Summary(now time.Time, command string, roundID int64, labelsFile string, labels int, labelsHash string, prevPath string, rulesReport *Report, verifierNote string) Summary {
 	s := Summary{
 		GeneratedAt: now.UTC().Truncate(time.Second),
 		Command:     command,
@@ -119,9 +124,20 @@ func (r Report) Summary(now time.Time, command string, roundID int64, labelsFile
 	default:
 		s.Notes = append(s.Notes, fmt.Sprintf("equivalent precision %s on %d predictions is BELOW the %s target (NFR-06)", fmtRatio(eq.Precision()), eq.Predicted, EquivalentPrecisionTarget))
 	}
-	s.Notes = append(s.Notes, "rules+llm: not evaluated (M3)")
+	// UI-24: add verifier note if LLM wasn't run or was limited
+	if verifierNote != "" {
+		s.Notes = append(s.Notes, verifierNote)
+	}
 	for _, l := range r.Missing {
 		s.Notes = append(s.Notes, fmt.Sprintf("not evaluated: %s / %s (instrument not found)", l.AID, l.BID))
+	}
+	// UI-24: add rules-only metrics when we have both methods
+	if rulesReport != nil && r.Method == canonical.MethodRulesLLM {
+		s.Rules = make([]TypeSummary, 0, len(rulesReport.ByType))
+		for _, m := range rulesReport.ByType {
+			s.Rules = append(s.Rules, TypeSummary{Type: string(m.Type), Support: m.Labelled, TP: m.TP, FP: m.FP, FN: m.FN,
+				Precision: optional(m.Precision()), Recall: optional(m.Recall())})
+		}
 	}
 	// UI-23: add optional fields
 	if len(r.Outcomes) > 0 {
@@ -157,6 +173,7 @@ func (s Summary) Validate() error {
 	if !canonical.Method(s.Method).Valid() {
 		errs = append(errs, fmt.Errorf("method %q is not valid", truncate(s.Method, 64)))
 	}
+	// Validate Types
 	for i, m := range s.Types {
 		if !canonical.RelationshipType(m.Type).Valid() {
 			errs = append(errs, fmt.Errorf("types[%d]: unknown relationship type %q", i, truncate(m.Type, 64)))
@@ -170,6 +187,23 @@ func (s Summary) Validate() error {
 		}{{"precision", m.Precision}, {"recall", m.Recall}} {
 			if v.d != nil && (v.d.IsNegative() || v.d.GreaterThan(decimal.NewFromInt(1))) {
 				errs = append(errs, fmt.Errorf("types[%d]: %s %s is outside [0,1]", i, v.name, v.d))
+			}
+		}
+	}
+	// UI-24: validate Rules field if present
+	for i, m := range s.Rules {
+		if !canonical.RelationshipType(m.Type).Valid() {
+			errs = append(errs, fmt.Errorf("rules[%d]: unknown relationship type %q", i, truncate(m.Type, 64)))
+		}
+		if m.Support < 0 || m.TP < 0 || m.FP < 0 || m.FN < 0 {
+			errs = append(errs, fmt.Errorf("rules[%d]: counts must not be negative", i))
+		}
+		for _, v := range []struct {
+			name string
+			d    *decimal.Decimal
+		}{{"precision", m.Precision}, {"recall", m.Recall}} {
+			if v.d != nil && (v.d.IsNegative() || v.d.GreaterThan(decimal.NewFromInt(1))) {
+				errs = append(errs, fmt.Errorf("rules[%d]: %s %s is outside [0,1]", i, v.name, v.d))
 			}
 		}
 	}

@@ -20,7 +20,7 @@ var summaryNow = time.Date(2026, 10, 7, 12, 0, 0, 999, time.UTC)
 // D-070 defined these; UI-23 (D-104) adds optional fields.
 var (
 	contractTopKeys      = []string{"command", "generated_at", "labels", "labels_file", "method", "notes", "round_id", "types"}
-	contractOptionalKeys = []string{"confusion", "labels_sha256", "previous", "thresholds"} // UI-23
+	contractOptionalKeys = []string{"confusion", "labels_sha256", "previous", "rules", "thresholds"} // UI-23, UI-24
 	contractTypeKeys     = []string{"fn", "fp", "precision", "recall", "support", "tp", "type"}
 )
 
@@ -30,7 +30,7 @@ func TestSummaryRoundTripsAgainstTheContract(t *testing.T) {
 		t.Fatal(err)
 	}
 	r := Evaluate(labels, fixturePredictor(t), canonical.MethodRules)
-	s := r.Summary(summaryNow, "equinox eval --labels x.yaml", 7, fixtureLabels, len(labels.Labels), "", "")
+	s := r.Summary(summaryNow, "equinox eval --labels x.yaml", 7, fixtureLabels, len(labels.Labels), "", "", nil, "")
 	if s.Labels != 7 || s.RoundID != 7 || s.Method != "rules" || !s.GeneratedAt.Equal(summaryNow.Truncate(time.Second)) || len(s.Types) != 6 {
 		t.Fatalf("summary = %+v", s)
 	}
@@ -42,7 +42,8 @@ func TestSummaryRoundTripsAgainstTheContract(t *testing.T) {
 		t.Errorf("undefined ratios must be null: %+v", s.Types[1])
 	}
 	joined := strings.Join(s.Notes, "\n")
-	for _, want := range []string{"BELOW the 0.95 target", "rules+llm: not evaluated (M3)", "not evaluated: kalshi:FX-A7 / polymarket:1007"} {
+	// UI-24: removed hardcoded "rules+llm: not evaluated (M3)" note
+	for _, want := range []string{"BELOW the 0.95 target", "not evaluated: kalshi:FX-A7 / polymarket:1007"} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("notes lack %q: %v", want, s.Notes)
 		}
@@ -119,7 +120,7 @@ func TestSummaryRoundTripsAgainstTheContract(t *testing.T) {
 }
 
 func TestSummaryEmptyLabelsAndTargetMet(t *testing.T) {
-	s := Evaluate(Labels{Version: 1}, nil, canonical.MethodRules).Summary(summaryNow, "equinox eval", 0, "labels.yaml", 0, "", "")
+	s := Evaluate(Labels{Version: 1}, nil, canonical.MethodRules).Summary(summaryNow, "equinox eval", 0, "labels.yaml", 0, "", "", nil, "")
 	if s.Labels != 0 || len(s.Types) != 6 || s.Types[0].Precision != nil {
 		t.Errorf("empty = %+v", s)
 	}
@@ -133,7 +134,7 @@ func TestSummaryEmptyLabelsAndTargetMet(t *testing.T) {
 	met := Evaluate(l, func(string, string) (canonical.RelationshipType, decimal.Decimal, bool) {
 		return canonical.RelEquivalent, decimal.NewFromInt(1), true
 	}, canonical.MethodRules).
-		Summary(summaryNow, "equinox eval", 3, "labels.yaml", 1, "", "")
+		Summary(summaryNow, "equinox eval", 3, "labels.yaml", 1, "", "", nil, "")
 	if !strings.Contains(met.Notes[0], "meets the 0.95 target") || met.Types[0].Recall == nil || !met.Types[0].Recall.Equal(decimal.NewFromInt(1)) {
 		t.Errorf("met = %+v", met)
 	}
