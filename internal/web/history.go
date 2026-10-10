@@ -1,6 +1,7 @@
 package web
 
 import (
+	"sort"
 	"strconv"
 	"time"
 
@@ -122,6 +123,7 @@ func buildHistoryChart(aID, bID string, relType canonical.RelationshipType, pts 
 	for i, id := range []string{aID, bID} {
 		sr := historySeries{Key: string(rune('a' + i)), ID: id, Venue: venueOf(id), Last: "n/a"}
 		var mid, bid, ask []byte
+		var lastMid *chartPt
 		for _, p := range pts {
 			if p.InstrumentID != id {
 				continue
@@ -133,10 +135,15 @@ func buildHistoryChart(aID, bID string, relType canonical.RelationshipType, pts 
 			ask = appendPoint(ask, x, p.BestAsk)
 			if p.Mid.Valid {
 				sr.Last = p.Mid.Decimal.StringFixed(4)
-				sr.Dots = append(sr.Dots, chartPt{X: fpx(x), Y: fpx(yOf(p.Mid.Decimal))})
+				// M5-02: only mark the last point per series
+				pt := chartPt{X: fpx(x), Y: fpx(yOf(p.Mid.Decimal))}
+				lastMid = &pt
 			}
 			c.Rows = append(c.Rows, historyRow{At: p.FetchedAt, RoundID: p.RoundID, Venue: sr.Venue,
 				Bid: nullPrice(p.BestBid), Ask: nullPrice(p.BestAsk), Mid: nullPrice(p.Mid)})
+		}
+		if lastMid != nil {
+			sr.Dots = []chartPt{*lastMid}
 		}
 		sr.Mid, sr.Bid, sr.Ask = string(mid), string(bid), string(ask)
 		c.Series = append(c.Series, sr)
@@ -162,6 +169,7 @@ func buildHistoryChart(aID, bID string, relType canonical.RelationshipType, pts 
 // buildSpreadSeries calculates the cross-venue spread for each point where both
 // mids are present. For complements, spread = mid A − (1 − mid B); otherwise
 // spread = mid A − mid B. Missing mid on either venue produces a gap (M4-75).
+// M5-02: timestamps are sorted before building points so Last is the latest value.
 func buildSpreadSeries(aID, bID string, relType canonical.RelationshipType, pts []store.QuotePoint, xOf func(time.Time) float64) historySpread {
 	sp := historySpread{Last: "n/a"}
 	// Group points by fetch time and instrument
@@ -170,19 +178,28 @@ func buildSpreadSeries(aID, bID string, relType canonical.RelationshipType, pts 
 		id string
 	}
 	mids := make(map[key]decimal.Decimal)
-	times := make(map[time.Time]bool)
+	timesMap := make(map[time.Time]bool)
 	for _, p := range pts {
 		if !p.Mid.Valid {
 			continue
 		}
 		k := key{t: p.FetchedAt, id: p.InstrumentID}
 		mids[k] = p.Mid.Decimal
-		times[p.FetchedAt] = true
+		timesMap[p.FetchedAt] = true
 	}
+	// Sort timestamps so Last is the latest value (M5-02: fixes F4)
+	var times []time.Time
+	for t := range timesMap {
+		times = append(times, t)
+	}
+	sort.Slice(times, func(i, j int) bool {
+		return times[i].Before(times[j])
+	})
 	// Calculate spread for each time where both mids exist
 	var line []byte
+	var lastDot *chartPt
 	isComplement := relType == canonical.RelComplement
-	for t := range times {
+	for _, t := range times {
 		midA, hasA := mids[key{t: t, id: aID}]
 		midB, hasB := mids[key{t: t, id: bID}]
 		if !hasA || !hasB {
@@ -202,8 +219,13 @@ func buildSpreadSeries(aID, bID string, relType canonical.RelationshipType, pts 
 		line = strconv.AppendFloat(line, x, 'f', 1, 64)
 		line = append(line, ',')
 		line = strconv.AppendFloat(line, yOfSpread(spread), 'f', 1, 64)
-		sp.Dots = append(sp.Dots, chartPt{X: fpx(x), Y: fpx(yOfSpread(spread))})
+		// M5-02: only mark the last point
+		pt := chartPt{X: fpx(x), Y: fpx(yOfSpread(spread))}
+		lastDot = &pt
 		sp.Last = spread.StringFixed(4)
+	}
+	if lastDot != nil {
+		sp.Dots = []chartPt{*lastDot}
 	}
 	sp.Line = string(line)
 	return sp

@@ -1,6 +1,8 @@
 package web
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -126,18 +128,155 @@ func TestSpreadCalculation_MultipleRounds(t *testing.T) {
 		t.Errorf("expected 2 spread points, got %d", sp.N)
 	}
 
-	// Last spread is one of the two valid spreads (map iteration order is non-deterministic)
-	// Round 1: 0.6 - 0.4 = 0.2
-	// Round 3: 0.55 - 0.45 = 0.1
+	// M5-02: Last spread must be the latest (round 3: 0.55 - 0.45 = 0.1), not round 1
 	actual, err := decimal.NewFromString(sp.Last)
 	if err != nil {
 		t.Fatalf("invalid spread value: %v", err)
 	}
-	spread1 := decimal.NewFromFloat(0.2)
 	spread3 := decimal.NewFromFloat(0.1)
-	if !actual.Equal(spread1) && !actual.Equal(spread3) {
-		t.Errorf("last spread should be either %s or %s, got %s", spread1.StringFixed(4), spread3.StringFixed(4), actual.StringFixed(4))
+	if !actual.Equal(spread3) {
+		t.Errorf("last spread should be %s (latest), got %s", spread3.StringFixed(4), actual.StringFixed(4))
 	}
+}
+
+// M5-02: Spread series must sort timestamps so Last is the latest value (F4).
+func TestSpreadSeries_ShuffledTimestamps(t *testing.T) {
+	// Feed shuffled timestamps; assert points are strictly ascending and Last equals the newest value
+	t1 := time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC)
+	t2 := t1.Add(5 * time.Minute)
+	t3 := t1.Add(10 * time.Minute)
+
+	// Deliberately shuffle the input order
+	pts := []store.QuotePoint{
+		// Round 3 first
+		{InstrumentID: "a", FetchedAt: t3, Mid: decimal.NullDecimal{Valid: true, Decimal: decimal.NewFromFloat(0.55)}},
+		{InstrumentID: "b", FetchedAt: t3, Mid: decimal.NullDecimal{Valid: true, Decimal: decimal.NewFromFloat(0.45)}},
+		// Round 1 second
+		{InstrumentID: "a", FetchedAt: t1, Mid: decimal.NullDecimal{Valid: true, Decimal: decimal.NewFromFloat(0.6)}},
+		{InstrumentID: "b", FetchedAt: t1, Mid: decimal.NullDecimal{Valid: true, Decimal: decimal.NewFromFloat(0.4)}},
+		// Round 2 last
+		{InstrumentID: "a", FetchedAt: t2, Mid: decimal.NullDecimal{Valid: true, Decimal: decimal.NewFromFloat(0.7)}},
+		{InstrumentID: "b", FetchedAt: t2, Mid: decimal.NullDecimal{Valid: true, Decimal: decimal.NewFromFloat(0.5)}},
+	}
+
+	xOf := func(tm time.Time) float64 {
+		// Map t1 → 0, t2 → 100, t3 → 200 (increasing x for increasing time)
+		if tm.Equal(t1) {
+			return 0
+		}
+		if tm.Equal(t2) {
+			return 100
+		}
+		return 200
+	}
+	sp := buildSpreadSeries("a", "b", canonical.RelEquivalent, pts, xOf)
+
+	if sp.N != 3 {
+		t.Fatalf("expected 3 spread points, got %d", sp.N)
+	}
+
+	// Parse the polyline to check x-coordinates are ascending
+	points := strings.Fields(sp.Line)
+	if len(points) != 3 {
+		t.Fatalf("expected 3 points in polyline, got %d", len(points))
+	}
+
+	// Extract x-coordinates
+	var xs []float64
+	for _, pt := range points {
+		parts := strings.Split(pt, ",")
+		if len(parts) != 2 {
+			t.Fatalf("invalid point format: %s", pt)
+		}
+		var x float64
+		if _, err := fmt.Sscanf(parts[0], "%f", &x); err != nil {
+			t.Fatalf("parsing x from %s: %v", pt, err)
+		}
+		xs = append(xs, x)
+	}
+
+	// Assert x-coordinates are strictly ascending (0 < 100 < 200)
+	if len(xs) != 3 || xs[0] >= xs[1] || xs[1] >= xs[2] {
+		t.Errorf("x-coordinates not strictly ascending: %v", xs)
+	}
+
+	// Last spread must be the latest (t3: 0.55 - 0.45 = 0.1)
+	expected := decimal.NewFromFloat(0.1)
+	actual, err := decimal.NewFromString(sp.Last)
+	if err != nil {
+		t.Fatalf("invalid spread value: %v", err)
+	}
+	if !actual.Equal(expected) {
+		t.Errorf("last spread should be %s (latest), got %s", expected.StringFixed(4), actual.StringFixed(4))
+	}
+}
+
+// M5-02: Property test that timestamps are always sorted regardless of input order.
+func TestSpreadSeries_TimestampOrdering(t *testing.T) {
+	rapid.Check(t, func(t *rapid.T) {
+		// Generate 2-10 timestamps
+		n := rapid.IntRange(2, 10).Draw(t, "n")
+		baseTime := time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC)
+
+		var times []time.Time
+		for i := 0; i < n; i++ {
+			offset := rapid.IntRange(0, 3600).Draw(t, "offset")
+			times = append(times, baseTime.Add(time.Duration(offset)*time.Second))
+		}
+
+		// Build shuffled points
+		var pts []store.QuotePoint
+		for _, tm := range times {
+			midA := genPrice(t)
+			midB := genPrice(t)
+			pts = append(pts,
+				store.QuotePoint{InstrumentID: "a", FetchedAt: tm, Mid: decimal.NullDecimal{Valid: true, Decimal: midA}},
+				store.QuotePoint{InstrumentID: "b", FetchedAt: tm, Mid: decimal.NullDecimal{Valid: true, Decimal: midB}},
+			)
+		}
+
+		xOf := func(tm time.Time) float64 {
+			// Map time to x in ascending order
+			return float64(tm.Unix())
+		}
+		sp := buildSpreadSeries("a", "b", canonical.RelEquivalent, pts, xOf)
+
+		if sp.N == 0 {
+			return // No spread points, nothing to check
+		}
+
+		// Parse polyline and assert x-coordinates are non-decreasing (strictly ascending if all times are unique)
+		points := strings.Fields(sp.Line)
+		if len(points) != sp.N {
+			t.Fatalf("polyline point count mismatch: expected %d, got %d", sp.N, len(points))
+		}
+
+		var xs []float64
+		for _, pt := range points {
+			parts := strings.Split(pt, ",")
+			if len(parts) != 2 {
+				t.Fatalf("invalid point format: %s", pt)
+			}
+			var x float64
+			if _, err := fmt.Sscanf(parts[0], "%f", &x); err != nil {
+				t.Fatalf("parsing x from %s: %v", pt, err)
+			}
+			xs = append(xs, x)
+		}
+
+		// Assert non-decreasing (ascending if all times are unique)
+		for i := 1; i < len(xs); i++ {
+			if xs[i] < xs[i-1] {
+				t.Fatalf("x-coordinates not ascending: %v", xs)
+			}
+		}
+
+		// Last spread value must come from the latest timestamp
+		// (we can't easily verify without re-computing, but we check it's valid)
+		if _, err := decimal.NewFromString(sp.Last); err != nil {
+			t.Fatalf("invalid Last spread value: %v", err)
+		}
+	})
 }
 
 func TestYOfSpread_Range(t *testing.T) {
