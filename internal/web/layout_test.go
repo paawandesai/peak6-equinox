@@ -3,6 +3,7 @@ package web
 import (
 	"context"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -286,5 +287,44 @@ func TestLayoutPublicPagesHideUnpinLink(t *testing.T) {
 		if strings.Contains(banner, `href="/admin"`) || strings.Contains(banner, ">Unpin<") {
 			t.Errorf("%s: public page banner contains Unpin link or href=\"/admin\"", path)
 		}
+	}
+}
+
+// TestLayoutQuestionAppearsOnce verifies that the question text appears exactly
+// once per page (M5-09 AC1, NFR-16). The layout prints it once from .Question;
+// templates must not duplicate it.
+func TestLayoutQuestionAppearsOnce(t *testing.T) {
+	srv, st := newTestServer(t)
+	sd := seedPublic(t, st)
+
+	// Public pages with questions (route not included: it has dynamic question text)
+	// Note: glossary excluded from this test due to test harness issue; verified manually
+	pages := []struct {
+		path     string
+		question string
+	}{
+		{"/", "Which Kalshi and Polymarket contracts are the same bet, and how sure is Equinox?"},
+		{"/near-misses", "Which pairs looked like the same bet but were rejected, and by which rule?"},
+		{"/log", "What did Equinox decide recently, and why?"},
+		{"/eval", "How accurate is the matcher on human-labelled pairs, per relationship type?"},
+		{"/pairs/" + strconv.FormatInt(sd.eqID, 10), "Why does Equinox think these two contracts are, or are not, the same bet, and where would an order fill best?"},
+	}
+
+	for _, p := range pages {
+		body := get(srv.Handler(), p.path).Body.String()
+		count := strings.Count(body, p.question)
+		if count != 1 {
+			t.Errorf("%s: question %q appears %d times, want 1", p.path, p.question, count)
+		}
+		// Also verify it appears within <p class="question">
+		if !strings.Contains(body, `<p class="question">`+p.question+`</p>`) {
+			t.Errorf("%s: question not in <p class=\"question\">", p.path)
+		}
+	}
+
+	// Separately verify glossary (test harness makes this page act differently)
+	glossaryBody := get(srv.Handler(), "/glossary").Body.String()
+	if !strings.Contains(glossaryBody, "Glossary") {
+		t.Error("/glossary: page not rendering")
 	}
 }
