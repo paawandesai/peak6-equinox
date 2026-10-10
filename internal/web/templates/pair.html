@@ -184,8 +184,13 @@
         <select name="outcome"><option value="yes"{{if eq .Form.Outcome "yes"}} selected{{end}}>yes</option><option value="no"{{if eq .Form.Outcome "no"}} selected{{end}}>no</option></select>
       </label>
       <label>Quantity
-        <small>1 to 100,000 contracts</small>
-        <input type="number" name="quantity" min="1" max="100000" step="1" value="{{.Form.Quantity}}" required>
+        <small>contracts or USD notional</small>
+        <fieldset>
+          <label><input type="radio" name="quantity_mode" value="contracts"{{if ne .Form.QuantityMode "usd"}} checked{{end}}> Contracts</label>
+          <label><input type="radio" name="quantity_mode" value="usd"{{if eq .Form.QuantityMode "usd"}} checked{{end}}> USD notional</label>
+        </fieldset>
+        <input type="number" name="quantity" min="0.01" max="100000" step="0.01" value="{{.Form.Quantity}}" placeholder="100" required>
+        <small>Contracts: 1 to 100,000 (whole numbers). USD: $0.01 to $100,000. Fractional contracts round down.</small>
       </label>
       <label>Order type
         <small>market or limit</small>
