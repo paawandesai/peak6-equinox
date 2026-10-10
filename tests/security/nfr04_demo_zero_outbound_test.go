@@ -98,8 +98,12 @@ func TestNFR04_DemoZeroOutbound(t *testing.T) {
 			if !strings.Contains(body, "Demo mode") {
 				t.Error("expected demo banner in response")
 			}
-			if !strings.Contains(body, "Unpin") {
-				t.Error("expected Unpin link in demo banner")
+			// M5-04: public pages must NOT have Unpin link (only admin pages show it)
+			if !strings.Contains(body, "pinned by the operator") {
+				t.Error("expected 'pinned by the operator' in demo banner")
+			}
+			if strings.Contains(body, ">Unpin<") {
+				t.Error("public page must not show Unpin link")
 			}
 		})
 	}

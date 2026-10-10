@@ -2,6 +2,7 @@ package security
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/web"
@@ -54,9 +55,19 @@ func TestAB14_RouteIsTheOnlyPublicPost(t *testing.T) {
 // nothing else is reachable anonymously.
 func TestAB14_AdminIsTheOnlyMutatingSurface(t *testing.T) {
 	h, ing, _ := newAdminHandler(t, "ci")
-	if rec := send(h, http.MethodPost, "/admin/ingest", "203.0.113.5", nil); rec.Code != http.StatusUnauthorized {
+	rec := send(h, http.MethodPost, "/admin/ingest", "203.0.113.5", nil)
+	if rec.Code != http.StatusUnauthorized {
 		t.Errorf("anonymous POST /admin/ingest: status %d, want 401", rec.Code)
 	}
+	// M5-04: 401 response must be HTML with explanation
+	if ct := rec.Header().Get("Content-Type"); !strings.Contains(ct, "text/html") {
+		t.Errorf("401 Content-Type = %q, want text/html", ct)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "Admin Access Required") || !strings.Contains(body, "operator-only") {
+		t.Error("401 body missing admin denied explanation")
+	}
+
 	if ing.calls.Load() != 0 {
 		t.Error("an anonymous request ran a round")
 	}

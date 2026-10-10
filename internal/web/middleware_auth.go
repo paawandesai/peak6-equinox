@@ -1,8 +1,10 @@
 package web
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"crypto/subtle"
+	"html/template"
 	"net"
 	"net/http"
 	"net/url"
@@ -22,6 +24,9 @@ const (
 	// real admin; Cloud Run's front end caps request rates before that.
 	maxTrackedIPs = 10000
 )
+
+// adminDeniedTemplate is the standalone HTML page shown on 401 (M5-04).
+var adminDeniedTemplate = template.Must(template.ParseFS(templateFS, "templates/admin_denied.html"))
 
 // failureLimiter counts failed admin logins per client IP in a sliding window.
 type failureLimiter struct {
@@ -116,7 +121,17 @@ func (s *Server) adminAuth(next http.Handler) http.Handler {
 			s.limiter.fail(ip)
 			s.log.Warn("admin login failed", "ip", ip, "path", r.URL.Path)
 			w.Header().Set("WWW-Authenticate", `Basic realm="equinox admin", charset="UTF-8"`)
-			http.Error(w, "authentication required", http.StatusUnauthorized)
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(http.StatusUnauthorized)
+			var buf bytes.Buffer
+			if err := adminDeniedTemplate.Execute(&buf, nil); err != nil {
+				s.log.Error("rendering admin denied page", "err", err)
+				http.Error(w, "authentication required", http.StatusUnauthorized)
+				return
+			}
+			if _, err := w.Write(buf.Bytes()); err != nil {
+				s.log.Error("writing admin denied page", "err", err)
+			}
 			return
 		}
 		s.limiter.reset(ip)
