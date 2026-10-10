@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -529,6 +530,120 @@ func TestAdminUnpin(t *testing.T) {
 				t.Error("expected round to remain pinned after failed/rejected request")
 			}
 		})
+	}
+}
+
+// TestAdminPin: POST /admin/pin pins a specified round for demo mode (M4-78, FR-22, US-09).
+func TestAdminPin(t *testing.T) {
+	st := store.New(tdb.Pool(t))
+	tdb.Reset(t)
+	ctx := context.Background()
+
+	// Seed two rounds
+	round1, err := st.CreateRound(ctx, t0)
+	if err != nil {
+		t.Fatalf("creating round 1: %v", err)
+	}
+	if err := st.FinishRound(ctx, round1.ID, store.RoundOK, nil, t0.Add(time.Second)); err != nil {
+		t.Fatalf("finishing round 1: %v", err)
+	}
+
+	round2, err := st.CreateRound(ctx, t0.Add(time.Minute))
+	if err != nil {
+		t.Fatalf("creating round 2: %v", err)
+	}
+	if err := st.FinishRound(ctx, round2.ID, store.RoundOK, nil, t0.Add(time.Minute+time.Second)); err != nil {
+		t.Fatalf("finishing round 2: %v", err)
+	}
+
+	s, _ := newAdminServer(t, Deps{Store: st}, "ci")
+	h := s.Handler()
+
+	tests := []struct {
+		name       string
+		method     string
+		roundID    string
+		auth       bool
+		wantStatus int
+		wantPinned bool
+	}{
+		{"POST with auth pins round 1", http.MethodPost, strconv.FormatInt(round1.ID, 10), true, http.StatusSeeOther, true},
+		{"POST with auth pins round 2", http.MethodPost, strconv.FormatInt(round2.ID, 10), true, http.StatusSeeOther, true},
+		{"GET rejected", http.MethodGet, strconv.FormatInt(round1.ID, 10), true, http.StatusMethodNotAllowed, false},
+		{"no auth rejected", http.MethodPost, strconv.FormatInt(round1.ID, 10), false, http.StatusUnauthorized, false},
+		{"missing round_id", http.MethodPost, "", true, http.StatusBadRequest, false},
+		{"invalid round_id", http.MethodPost, "not-a-number", true, http.StatusBadRequest, false},
+		{"zero round_id", http.MethodPost, "0", true, http.StatusBadRequest, false},
+		{"negative round_id", http.MethodPost, "-1", true, http.StatusBadRequest, false},
+		{"nonexistent round", http.MethodPost, "999999", true, http.StatusNotFound, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Unpin before each test
+			if err := st.UnpinRounds(ctx); err != nil {
+				t.Fatalf("unpinning rounds: %v", err)
+			}
+
+			var req *http.Request
+			if tt.auth {
+				req = request(tt.method, "/admin/pin", withAuth(testUser, testPass), withHeader("Accept", "text/html"))
+				if tt.method == http.MethodPost && tt.roundID != "" {
+					req.Form = map[string][]string{"round_id": {tt.roundID}}
+				}
+			} else {
+				req = request(tt.method, "/admin/pin", withHeader("Accept", "text/html"))
+			}
+			rec := do(h, req)
+
+			if rec.Code != tt.wantStatus {
+				t.Errorf("status = %d, want %d", rec.Code, tt.wantStatus)
+			}
+
+			// Check if round is pinned when expected
+			pinned, err := st.PinnedRound(ctx)
+			isPinned := err == nil && pinned.ID != 0
+
+			if tt.wantPinned && !isPinned {
+				t.Error("expected round to be pinned, but none is pinned")
+			}
+			if !tt.wantPinned && isPinned && tt.method == http.MethodPost && tt.auth && tt.roundID != "" {
+				t.Error("expected round to remain unpinned after failed request")
+			}
+
+			// If we successfully pinned, verify it's the right round
+			if tt.wantPinned && rec.Code == http.StatusSeeOther {
+				if pinned.ID != round1.ID && pinned.ID != round2.ID {
+					t.Errorf("pinned wrong round: got %d", pinned.ID)
+				}
+			}
+
+			// Verify redirect for successful HTML requests
+			if tt.wantStatus == http.StatusSeeOther && rec.Header().Get("Location") != "/admin" {
+				t.Errorf("Location = %q, want /admin", rec.Header().Get("Location"))
+			}
+		})
+	}
+}
+
+// TestAdminPinRouteOrder: /admin/pin is registered before /admin/ catch-all (M4-78 AC).
+func TestAdminPinRouteOrder(t *testing.T) {
+	st := store.New(tdb.Pool(t))
+	tdb.Reset(t)
+
+	s, _ := newAdminServer(t, Deps{Store: st}, "ci")
+	h := s.Handler()
+
+	// /admin/pin should not 404 (proves it's registered before catch-all)
+	rec := do(h, request(http.MethodPost, "/admin/pin", withAuth(testUser, testPass)))
+	if rec.Code == http.StatusNotFound {
+		t.Error("/admin/pin returned 404; route not registered before catch-all")
+	}
+
+	// /admin/unknown should 404 (catch-all works)
+	rec = do(h, request(http.MethodGet, "/admin/unknown", withAuth(testUser, testPass)))
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("/admin/unknown status = %d, want 404", rec.Code)
 	}
 }
 

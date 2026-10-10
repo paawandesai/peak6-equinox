@@ -73,6 +73,77 @@ func TestAB12_AdminMutationsArePostOnly(t *testing.T) {
 	}
 }
 
+// TestAB12_AdminPinRejectsForeignOrigin: /admin/pin is protected like /admin/ingest (M4-78).
+func TestAB12_AdminPinRejectsForeignOrigin(t *testing.T) {
+	h, _, _ := newAdminHandler(t, "ci")
+	hostile := []struct{ name, header, value string }{
+		{"foreign origin", "Origin", "https://evil.example"},
+		{"foreign referer", "Referer", "https://evil.example/attack.html"},
+		{"null origin", "Origin", "null"},
+	}
+	for _, tc := range hostile {
+		rec := send(h, http.MethodPost, "/admin/pin", "203.0.113.5", func(r *http.Request) {
+			r.SetBasicAuth(adminUser, adminPass)
+			r.Header.Set(tc.header, tc.value)
+			r.Form = map[string][]string{"round_id": {"1"}}
+		})
+		if rec.Code != http.StatusForbidden {
+			t.Errorf("%s (%s: %s): status %d, want 403", tc.name, tc.header, tc.value, rec.Code)
+		}
+	}
+
+	// Allowed origins
+	rec := send(h, http.MethodPost, "/admin/pin", "203.0.113.5", func(r *http.Request) {
+		r.SetBasicAuth(adminUser, adminPass)
+		r.Header.Set("Origin", "https://equinox.example")
+		r.Form = map[string][]string{"round_id": {"1"}}
+	})
+	// Expect 400 or 404 (no database), not 403
+	if rec.Code == http.StatusForbidden {
+		t.Errorf("own origin: status %d, want not-403 (no database or validation error)", rec.Code)
+	}
+}
+
+// TestAB12_AdminPinIsPostOnly: /admin/pin accepts only POST (M4-78).
+func TestAB12_AdminPinIsPostOnly(t *testing.T) {
+	h, _, _ := newAdminHandler(t, "ci")
+	for _, m := range []string{http.MethodGet, http.MethodHead, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions} {
+		rec := send(h, m, "/admin/pin", "203.0.113.5", basic(adminUser, adminPass))
+		if rec.Code != http.StatusMethodNotAllowed {
+			t.Errorf("%s /admin/pin: status %d, want 405", m, rec.Code)
+		}
+	}
+}
+
+// TestAB12_AdminUnpinRejectsForeignOrigin: /admin/unpin is protected like /admin/ingest (M3-07).
+func TestAB12_AdminUnpinRejectsForeignOrigin(t *testing.T) {
+	h, _, _ := newAdminHandler(t, "ci")
+	hostile := []struct{ name, header, value string }{
+		{"foreign origin", "Origin", "https://evil.example"},
+		{"foreign referer", "Referer", "https://evil.example/attack.html"},
+		{"null origin", "Origin", "null"},
+	}
+	for _, tc := range hostile {
+		rec := send(h, http.MethodPost, "/admin/unpin", "203.0.113.5", func(r *http.Request) {
+			r.SetBasicAuth(adminUser, adminPass)
+			r.Header.Set(tc.header, tc.value)
+		})
+		if rec.Code != http.StatusForbidden {
+			t.Errorf("%s (%s: %s): status %d, want 403", tc.name, tc.header, tc.value, rec.Code)
+		}
+	}
+
+	// Allowed origins
+	rec := send(h, http.MethodPost, "/admin/unpin", "203.0.113.5", func(r *http.Request) {
+		r.SetBasicAuth(adminUser, adminPass)
+		r.Header.Set("Origin", "https://equinox.example")
+	})
+	// Expect not-403 (no database or success)
+	if rec.Code == http.StatusForbidden {
+		t.Errorf("own origin: status %d, want not-403", rec.Code)
+	}
+}
+
 // TestAB12_OriginCheckNeedsAuthFirst: without credentials the origin check is
 // never reached; the answer is 401 regardless of the headers, so nothing about
 // the origin policy leaks to an unauthenticated probe.
