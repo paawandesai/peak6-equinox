@@ -199,6 +199,7 @@
 <section id="route">
   <h2>Route a hypothetical order</h2>
   <p>Simulates the order against the target's book and every routable partner in this round, then explains the choice. Nothing is sent to a venue.</p>
+  {{if .FormPreset}}<p class="note-info">Pre-filled from the guided demo. Nothing is routed until you press <strong>Route it</strong>.</p>{{end}}
   <form method="post" action="/route" hx-post="/route" hx-target="#route-result" hx-swap="outerHTML">
     <input type="hidden" name="pair" value="{{.Form.PairID}}">
     <div class="grid">

@@ -7,16 +7,26 @@
 <p>No completed fetch round yet, so there is nothing to compare. Run <code>equinox seed</code> (offline fixtures) or <code>equinox ingest</code>, then <code>equinox match</code>.</p>
 {{else}}
 {{/* M5-05: "Start here" card for the demo moment (NFR-16) */}}
-{{if .FeaturedPair}}
+{{/* M6 P1: guided demo steps resolved by instrument ID; a step that does not resolve is left out */}}
+{{if .StartSteps}}
+<div class="start-here">
+  <h2>Start here</h2>
+  <ol>
+    {{range .StartSteps}}
+    <li><a href="{{.Href}}">{{.Text}}</a>{{if .Note}}<br><small>{{.Note}}</small>{{end}}</li>
+    {{end}}
+  </ol>
+</div>
+{{else if .FeaturedPair}}
 <div class="start-here">
   <h2>Start here</h2>
   <ol>
     <li><a href="/pairs/{{.FeaturedPair.ID}}#diff">See why two contracts are the same bet</a></li>
     <li><a href="/pairs/{{.FeaturedPair.ID}}#route">Route a hypothetical order on it</a></li>
-    <li><a href="/near-misses#group-fact-did-not-close">See the near-miss that was rejected, and why</a></li>
   </ol>
 </div>
-{{else}}
+{{end}}
+{{if not .FeaturedPair}}
 <p class="note-info">No routable pairs in this round. See <a href="/near-misses">near misses</a> for pairs that were close, or <a href="/eval">eval</a> for matcher performance.</p>
 {{end}}
 {{/* UI-11: counter strip */}}
