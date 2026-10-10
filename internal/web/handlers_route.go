@@ -187,6 +187,7 @@ type decisionView struct {
 	OutcomePhrase    string
 	OutcomeChipClass string
 	OutcomeSummary   string // One-line summary for the strip
+	LeadSentence     string // M5-08: Plain summary in design.md § 4 format
 	TotalFilled      decimal.Decimal
 	TotalRequested   decimal.Decimal
 	AverageAllIn     decimal.Decimal
@@ -416,13 +417,17 @@ func newDecisionView(d canonical.Decision, partners int, snapshot time.Time, ins
 		}
 	}
 
+	// M5-08: Build lead sentence per design.md § 4 line 78
+	leadSentence := buildLeadSentence(d, totalFill, totalReq, avgAllIn, alts)
+
 	return &decisionView{
 		RoundID: d.RoundID, TargetID: d.TargetID, DecidedAt: d.DecidedAt,
 		Snapshot: snapshot, OrderLine: orderLine(d.Order),
 		Chosen: chosenViews, Alternatives: alts, Exclusions: excls, Warnings: d.Warnings,
 		Explanation: d.Explanation, Partners: partners,
 		OutcomePhrase: phrase, OutcomeChipClass: chipClass, OutcomeSummary: summary,
-		TotalFilled: totalFill, TotalRequested: totalReq, AverageAllIn: avgAllIn,
+		LeadSentence: leadSentence, // M5-08
+		TotalFilled:  totalFill, TotalRequested: totalReq, AverageAllIn: avgAllIn,
 		BasisMultiplier:  basisMult,
 		InstrumentTitles: instrumentTitles,
 		// UI-13 fields
@@ -530,6 +535,88 @@ func tallyExclusionReasons(exclusions []canonical.Exclusion) string {
 		}
 	}
 	return strings.Join(parts, ", ")
+}
+
+// buildLeadSentence creates the plain summary sentence per design.md § 4 line 78 (M5-08).
+func buildLeadSentence(d canonical.Decision, totalFill, totalReq, avgAllIn decimal.Decimal, alternatives []alternativeView) string {
+	chosen := len(d.Chosen) > 0
+	partial := chosen && d.Order.Quantity != nil && !totalReq.IsZero() && totalFill.LessThan(totalReq)
+
+	if !chosen {
+		// Not routed: "Not routed: <reason in words>"
+		tally := tallyExclusionReasons(d.Exclusions)
+		if tally == "" {
+			return "Not routed: every candidate was excluded"
+		}
+		return fmt.Sprintf("Not routed: %s", tally)
+	}
+
+	// Partial fill
+	if partial {
+		return fmt.Sprintf("Partially routed: %s of %s contracts", totalFill.String(), totalReq.String())
+	}
+
+	// Single venue
+	if len(d.Chosen) == 1 {
+		leg := d.Chosen[0]
+		isComplement := leg.Route == "complement"
+
+		// Complement route
+		if isComplement {
+			// "Routed as NO on polymarket (complement of the target)"
+			return fmt.Sprintf("Routed as %s on %s (complement of the target)", strings.ToUpper(string(leg.Outcome)), leg.Venue)
+		}
+
+		// Direct route: "Routed: buy 100 YES on kalshi at 0.5312 all-in"
+		// With gap: "Routed: buy 100 YES on kalshi at 0.5312 all-in, 1.2 ¢ cheaper than polymarket after fees"
+		qtyStr := totalFill.String()
+		outcome := strings.ToUpper(string(d.Order.Outcome))
+		base := fmt.Sprintf("Routed: %s %s %s on %s at %s all-in",
+			d.Order.Side, qtyStr, outcome, leg.Venue, avgAllIn.StringFixed(4))
+
+		// Add gap to next best alternative if there is one
+		if len(alternatives) > 1 {
+			// Find the rank 2 alternative (rank 1 is the chosen route)
+			var nextBest *alternativeView
+			for i := range alternatives {
+				if alternatives[i].Rank == 2 {
+					nextBest = &alternatives[i]
+					break
+				}
+			}
+			if nextBest != nil && len(nextBest.Legs) > 0 {
+				// Gap = alternative - chosen
+				// Positive gap: alternative is more expensive, chosen is cheaper (favorable)
+				// Negative gap: alternative is cheaper, chosen is more expensive (should not happen for rank 1)
+				gap := nextBest.GapToChosen
+				var gapPhrase string
+				if gap.IsPositive() {
+					// Favorable: chosen is cheaper than alternative
+					// Convert to cents: multiply by 100
+					cents := gap.Mul(decimal.NewFromInt(100)).StringFixed(2)
+					gapPhrase = fmt.Sprintf("%s ¢ cheaper than %s after fees",
+						cents, nextBest.Legs[0].Venue)
+				} else if gap.IsNegative() {
+					// Unfavorable (should not happen for rank 1, but be defensive)
+					cents := gap.Abs().Mul(decimal.NewFromInt(100)).StringFixed(2)
+					gapPhrase = fmt.Sprintf("(%s ¢) more expensive than %s after fees",
+						cents, nextBest.Legs[0].Venue)
+				}
+				if gapPhrase != "" {
+					base = base + ", " + gapPhrase
+				}
+			}
+		}
+		return base
+	}
+
+	// Multi-venue split: "Routed across 2 venues: 60 + 40 contracts"
+	venueCount := countVenues(d.Chosen)
+	var contractParts []string
+	for _, leg := range d.Chosen {
+		contractParts = append(contractParts, leg.Quantity.String())
+	}
+	return fmt.Sprintf("Routed across %d venues: %s contracts", venueCount, strings.Join(contractParts, " + "))
 }
 
 // hasComplement reports whether any chosen leg is a complement route.
