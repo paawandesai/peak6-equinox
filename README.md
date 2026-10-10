@@ -46,19 +46,19 @@ The LLM verifier (`internal/llm`) is admin-only, downgrade-only (it can only con
 
 Follow these numbered steps to see the full classification → routing → decision pipeline. Each step corresponds to a page on the live URL (paths shown below).
 
-1. **Matches list** (`/`) — See all cross-venue contract pairs from the current round, grouped by relationship type (Routable, Implies, Related). The "Routable" section shows pairs where routing is possible: `equivalent`, `equivalent_given_facts`, and `complement`. Pick a routable pair (e.g., the Fed demo pair) to explore.
+1. **Start here** (`/`) — The home page shows all cross-venue contract pairs from the current round, grouped by relationship type (Routable, Implies, Related). The "Start here" card at the top guides you through the demo: click the first link to see why two contracts are the same bet.
 
-2. **Pair diff** (`/pairs/{id}`) — View two contracts side-by-side with their normalised terms, vetoes (hard blocks that prevent routing), facts consulted (for `equivalent_given_facts`), and basis risk score. The diff table highlights what differs: thresholds, dates, outcomes. The confidence score and classification method (rules-based or LLM-verified) appear at the top.
+2. **Pair diff** (`/pairs/{id}#diff`) — View two contracts side-by-side with their normalised terms, vetoes (hard blocks that prevent routing), facts consulted (for `equivalent_given_facts`), and basis risk score. The diff table highlights what differs: thresholds, dates, outcomes. The confidence score and classification method (rules-based or LLM-verified) appear at the top. Jump links navigate the page: Diff, Route, History.
 
-3. **Routing form** (`/pairs/{id}#route`) — Submit a hypothetical order (direction: BUY/SELL, side: YES/NO, size: 100 contracts, order type: MARKET/LIMIT, time in force: IOC/GTC). Click "Route this order" to simulate the routing decision.
+3. **Route a hypothetical order** (`/pairs/{id}#route`) — Submit a hypothetical order (direction: BUY/SELL, side: YES/NO, size: 100 contracts, order type: MARKET/LIMIT, time in force: IOC/GTC). Click "Route this order" to simulate the routing decision. The trace shows the router's step-by-step explanation: eligibility checks (quotes must be fresh, not stale; spread must be narrow enough; book depth must support the size), cost calculation (VWAP + venue fees + basis penalty), sweep across venues (single venue, split, or complement), and the final decision (chosen venue with fill price and total cost, or "not routed" with a reason like "no fresh quotes" or "spread too wide").
 
-4. **Decision trace** (`/pairs/{id}#trace` after form submission) — See the router's step-by-step explanation: eligibility checks (quotes must be fresh, not stale; spread must be narrow enough; book depth must support the size), cost calculation (VWAP + venue fees + basis penalty), sweep across venues (single venue, split, or complement), and the final decision (chosen venue with fill price and total cost, or "not routed" with a reason like "no fresh quotes" or "spread too wide").
+4. **Decision log** (`/log`) — Browse all routing decisions and relationship verdicts ever made. The default view shows verdicts and routing decisions (filters: all, routing, relationship, LLM, ingest). Each row links to the pair or decision detail page showing the full trace.
 
-5. **Decision log** (`/log`) — Browse all routing decisions ever made, with filters by relationship type, routed/not-routed, and date range. Each row links to the decision detail page showing the full trace.
+5. **Near miss** (`/near-misses`) — See pairs that looked like the same bet but were rejected by a specific veto rule. Each group is labelled by the veto code that fired (e.g., `subject_mismatch`, `metric_unknown`). The December near-miss from the "Start here" card demonstrates a pair that depends on an earlier decision: the Fed's October meeting result determines the December bucket, so the fact `fed_next_meeting` was consulted but did not close the pair.
 
-6. **Evaluation** (`/eval`) — Review the matcher's precision and recall on the golden label set (human-confirmed pairs), the settlement back-test results (how well the matcher's predictions align with actual contract resolutions), and the confidence distribution across relationship types.
+6. **Evaluation** (`/eval`) — Review the matcher's precision and recall on the golden label set (95 human-confirmed pairs), the settlement back-test results (how well the matcher's predictions align with actual contract resolutions), and the confidence distribution across relationship types. The confusion matrix and threshold sweep show how the matcher performs at different confidence cut-offs.
 
-**Note:** The walkthrough above describes the final UI (post-UI-v2 tickets #43, #44, #45). On-screen wording may differ slightly on earlier revisions; this walkthrough will be refreshed after those tickets merge.
+7. **Glossary** (`/glossary`) — Every relationship type, veto code, and term used elsewhere in the UI is defined here. Codes link back from other pages so you can jump to the glossary for an explanation.
 
 ## Live demo
 
