@@ -129,6 +129,11 @@ func TestPresentPair_OtherTypes(t *testing.T) {
 	if p.Why[0] != "They use different strike levels." || p.Why[1] != "A term differs (edge rules)." {
 		t.Errorf("why = %q", p.Why)
 	}
+	in.Rel.FactsUsed = []canonical.FactUse{fxFactUpper}
+	in.Rel.Explanation = "related: fed_upper_bound does not apply to a later meeting"
+	if p := presentPair(in); !strings.HasPrefix(p.Why[0], "The Fed's current rate only converts a change at the next meeting") {
+		t.Errorf("fact-did-not-apply bullet = %q", p.Why)
+	}
 	in.Rel.Type = canonical.RelImplies
 	if p := presentPair(in); !strings.HasPrefix(p.Meaning, "These overlap but aren't the same bet") || p.Badge != "One-way: not a substitute" {
 		t.Errorf("implies = %q %q", p.Meaning, p.Badge)

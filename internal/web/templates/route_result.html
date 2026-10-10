@@ -61,7 +61,7 @@
     <h3>Why not the others?</h3>
     <ul class="why-not-list">
       {{range $p.WhyNot}}
-      <li><details><summary>{{.Summary}}</summary>
+      <li><details><summary>{{.Summary}} <span class="show-cue" aria-hidden="true">▸ show</span></summary>
         <ul>{{range .Items}}<li>{{.Name}}: <span class="reason">{{.Reason}}</span></li>{{end}}</ul>
       </details></li>
       {{end}}

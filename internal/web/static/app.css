@@ -1018,3 +1018,6 @@ section.fold-summary { margin-bottom: 0.75rem; }
 section.fold-summary details > summary { min-height: 2.75rem; padding: 0.5rem 0; }
 .related-summary p { margin: 0; }
 details.matches-tech { margin-top: 1.5rem; }
+.show-cue { margin-left: 0.25rem; font-size: 0.875rem; font-weight: 600; color: var(--pico-primary); white-space: nowrap; }
+details[open] > summary .show-cue { display: none; }
+.crumbs-nav span { margin: 0 0.25rem; }

@@ -856,6 +856,7 @@ func (s *Server) handleRoute(w http.ResponseWriter, r *http.Request) {
 	targetQuote := target.Quote
 	s.attachPlain(view, dec, decisionContext{Instruments: instruments, TargetQuote: &targetQuote, Suggestion: view.Suggestion}, id)
 	p.Title = decisionTitle(id, view)
+	describeDecision(&p, view)
 	data := routePage{
 		page:          p,
 		PairID:        in.PairID,

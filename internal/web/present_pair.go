@@ -96,24 +96,23 @@ func presentPair(in pairInput) *plainPair {
 }
 
 func pairSideOf(in canonical.Instrument, n contractName, q *canonical.Quote, age string) pairSide {
-	s := pairSide{Venue: venueName(in.Venue), Name: n.Long, Title: in.Title}
-	if s.Venue == "Venue" {
-		s.Venue = venueName(canonical.VenueOf(in.ID))
+	v := in.Venue
+	if v == "" {
+		v = canonical.VenueOf(in.ID)
 	}
-	switch {
-	case q == nil:
-		s.Price = "No price collected yet"
-	default:
-		if ask, ok := bestPrice(q.YesAsks); ok {
-			s.Price = "YES costs " + centsText(ask)
-		} else if bid, ok := bestPrice(q.YesBids); ok {
-			s.Price = "No YES offers; NO costs " + centsText(one.Sub(bid))
-		} else {
-			s.Price = "No offers right now"
-		}
-		if age != "" {
-			s.Age = "price " + age + " old"
-		}
+	s := pairSide{Venue: venueName(v), Name: n.Long, Title: in.Title, Price: "No price collected yet"}
+	if q == nil {
+		return s
+	}
+	if ask, ok := bestPrice(q.YesAsks); ok {
+		s.Price = "YES costs " + centsText(ask)
+	} else if bid, ok := bestPrice(q.YesBids); ok {
+		s.Price = "No YES offers; NO costs " + centsText(one.Sub(bid))
+	} else {
+		s.Price = "No offers right now"
+	}
+	if age != "" {
+		s.Age = "price " + age + " old"
 	}
 	return s
 }
@@ -397,10 +396,10 @@ func pairChips(r canonical.Relationship, floor decimal.Decimal) []pairChip {
 		safety.Caption = "The chance the two settle differently. It sets the safety charge."
 		safety.Kind = map[string]string{"low": "ok", "moderate": "warn", "high": "danger"}[w]
 	}
-	route := pairChip{Text: "Routable", Kind: "ok", Href: "/glossary#term-routable",
+	route := pairChip{Text: "Routable", Kind: "ok", Href: "/glossary#type-" + string(r.Type),
 		Caption: "Equinox compares prices across these two."}
 	if !r.Type.Routable() {
-		route = pairChip{Text: "Not routable", Kind: "muted", Href: "/glossary#term-routable",
+		route = pairChip{Text: "Not routable", Kind: "muted", Href: "/glossary#type-" + string(r.Type),
 			Caption: "Equinox never routes an order between these two."}
 	}
 	return []pairChip{conf, safety, route}
@@ -560,6 +559,11 @@ var vetoWords = map[string]string{
 func vetoBullets(r canonical.Relationship) []string {
 	var out []string
 	seen := map[string]bool{}
+	// The matcher records when the Fed rate fact was tried and does not apply
+	// (a later meeting's change depends on the next decision; M6 P1).
+	if consulted(r.FactsUsed, factFedUpper) && strings.Contains(r.Explanation, "does not apply") {
+		out = append(out, "The Fed's current rate only converts a change at the next meeting, so it can't link these two.")
+	}
 	for _, v := range r.Vetoes {
 		w, ok := vetoWords[v.Code]
 		if !ok {

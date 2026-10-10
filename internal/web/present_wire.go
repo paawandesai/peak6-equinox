@@ -57,6 +57,13 @@ func collectIDs(d canonical.Decision) []string {
 	return out
 }
 
+// describeDecision sets a decision page's link-preview text to its plain answer.
+func describeDecision(p *page, v *decisionView) {
+	if v != nil && v.Plain != nil {
+		p.Description = v.Plain.Answer
+	}
+}
+
 // decisionTitle is a decision page's <title>: "Decision #96 · Routed to Polymarket".
 func decisionTitle(id int64, v *decisionView) string {
 	t := "Decision #" + strconv.FormatInt(id, 10)

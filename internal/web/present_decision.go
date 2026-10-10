@@ -340,7 +340,7 @@ func noTradeAnswer(d canonical.Decision, dc decisionContext) string {
 	}
 	s = append(s, ask+".")
 	for _, g := range classGroups(d) {
-		s = append(s, g.sentence(d, dc))
+		s = append(s, g.sentence(d))
 	}
 	return strings.Join(s, " ")
 }
@@ -379,14 +379,13 @@ func classGroups(d canonical.Decision) []classGroup {
 	for _, ex := range d.Exclusions {
 		var key string
 		g := classGroup{substitutes: subs}
-		switch {
-		case ex.InstrumentID == d.TargetID:
+		if ex.InstrumentID == d.TargetID {
 			if targetSeen {
 				continue
 			}
 			targetSeen = true
 			g.kind, key = kindTarget, "target"
-		default:
+		} else {
 			rt := partnerType(ex, types)
 			g.relT = rt
 			if rt.Routable() {
@@ -435,7 +434,7 @@ func venuesOf(items []canonical.Exclusion) string {
 }
 
 // sentence words one group for the plain answer.
-func (g classGroup) sentence(d canonical.Decision, dc decisionContext) string {
+func (g classGroup) sentence(d canonical.Decision) string {
 	ex := g.items[0]
 	n := len(g.items)
 	switch g.kind {

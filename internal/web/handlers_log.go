@@ -794,6 +794,7 @@ func (s *Server) handleDecision(w http.ResponseWriter, r *http.Request) {
 	}
 	s.attachPlain(data.Decision, rd.Decision, dc, rd.ID)
 	data.Title = decisionTitle(rd.ID, data.Decision)
+	describeDecision(&data.page, data.Decision)
 	s.render(w, http.StatusOK, "decision", data)
 }
 
