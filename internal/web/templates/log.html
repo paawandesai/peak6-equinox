@@ -57,6 +57,7 @@
 {{if .GroupedEntries}}
   {{range .GroupedEntries}}
   <h3 class="group-label">{{.Label}}</h3>
+  <div class="scroll-x">
   <table class="data stack">
     <thead>
       <tr>
@@ -104,8 +105,10 @@
     {{end}}
     </tbody>
   </table>
+  </div>
   {{end}}
 {{else}}
+<div class="scroll-x">
 <table class="data stack">
   <thead>
     <tr>
@@ -153,12 +156,14 @@
   {{end}}
   </tbody>
 </table>
+</div>
 {{end}}
 
 <p class="sign-rule">Saving vs best ask: the per-contract difference between the best ask in the decision's stored input snapshot and its average fill. Positive is favourable, otherwise parentheses. Formula: best ask − average all-in.</p>
 
 {{else}}
 
+<div class="scroll-x">
 <table class="data stack">
   <thead><tr><th>When</th><th>Kind</th><th>About</th><th>Summary</th></tr></thead>
   <tbody>
@@ -177,6 +182,7 @@
   {{end}}
   </tbody>
 </table>
+</div>
 
 {{end}}
 {{end}}

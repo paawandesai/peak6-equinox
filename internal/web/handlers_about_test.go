@@ -155,3 +155,20 @@ func TestAboutNavLinkOnEveryPage(t *testing.T) {
 	about := get(s.Handler(), "/about").Body.String()
 	wantContains(t, about, `<a href="/about" aria-current="page">About</a>`)
 }
+
+// TestAboutHowToReadADecision: /about has the five-line "How to read a
+// decision" box with its labelled static diagram (PAGE 4).
+func TestAboutHowToReadADecision(t *testing.T) {
+	s, _ := newTestServer(t)
+	body := get(s.Handler(), "/about").Body.String()
+	wantContains(t, body,
+		`<h2 id="read-decision">How to read a decision</h2>`,
+		`<svg class="read-diagram" viewBox="0 0 640 300" role="img"`,
+		`>Verdict card<`, `>Comparison table<`, `>Technical details ▸<`,
+	)
+	box := body[strings.Index(body, `id="read-decision"`):]
+	box = box[:strings.Index(box, "</section>")]
+	if n := strings.Count(box[:strings.Index(box, "</ol>")], "<li>"); n != 5 {
+		t.Errorf("how-to-read box has %d lines, want 5", n)
+	}
+}

@@ -41,6 +41,34 @@ var appCSS []byte
 //go:embed static/timezone-local.js
 var timezoneLocalJS []byte
 
+// Page identity assets (favicon, home-screen icon, link-preview card). They
+// never change between deploys of the same file, so they are served with a
+// one-year immutable cache.
+var (
+	//go:embed static/favicon.svg
+	faviconSVG []byte
+	//go:embed static/favicon.ico
+	faviconICO []byte
+	//go:embed static/apple-touch-icon.png
+	appleTouchIcon []byte
+	//go:embed static/og-card.png
+	ogCard []byte
+)
+
+// identityAssets maps each identity URL to its bytes and content type.
+var identityAssets = map[string]struct {
+	body        []byte
+	contentType string
+}{
+	"/favicon.svg":          {faviconSVG, "image/svg+xml"},
+	"/favicon.ico":          {faviconICO, "image/x-icon"},
+	"/apple-touch-icon.png": {appleTouchIcon, "image/png"},
+	"/static/og-card.png":   {ogCard, "image/png"},
+}
+
+// identityCacheControl is the cache header for the identity assets.
+const identityCacheControl = "public, max-age=31536000, immutable"
+
 // assets is what the layout needs to reference the pinned CDN files.
 type assets struct {
 	PicoURL, PicoSRI, HtmxURL, HtmxSRI string
@@ -165,6 +193,24 @@ func (s *Server) publicRoutes(mux *http.ServeMux) {
 	mux.Handle("POST /timezone", s.rateLimitMiddleware(http.HandlerFunc(s.handleTimezone)))
 	mux.HandleFunc("GET /static/app.css", s.handleAppCSS)
 	mux.HandleFunc("GET /static/timezone-local.js", s.handleTimezoneLocalJS)
+	for path := range identityAssets {
+		mux.HandleFunc("GET "+path, s.handleIdentityAsset)
+	}
+}
+
+// handleIdentityAsset serves a favicon, the home-screen icon or the
+// link-preview card. Like /static, it is neither rate-limited nor round-wrapped.
+func (s *Server) handleIdentityAsset(w http.ResponseWriter, r *http.Request) {
+	a, ok := identityAssets[r.URL.Path]
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", a.contentType)
+	w.Header().Set("Cache-Control", identityCacheControl)
+	if _, err := w.Write(a.body); err != nil {
+		s.log.Error("writing identity asset", "path", r.URL.Path, "err", err)
+	}
 }
 
 func (s *Server) handleAppCSS(w http.ResponseWriter, _ *http.Request) {
@@ -187,6 +233,7 @@ func (s *Server) handleTimezoneLocalJS(w http.ResponseWriter, _ *http.Request) {
 // states what the page answers (NFR-16).
 type page struct {
 	Title        string
+	Description  string // one-sentence summary for link previews (og:description); a site default when empty
 	Question     string
 	Assets       assets
 	Round        *roundInfo

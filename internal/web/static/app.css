@@ -25,7 +25,7 @@
   --eq-space-1: 0.25rem; --eq-space-2: 0.5rem; --eq-space-3: 1rem;
   --eq-space-35: 1.5rem; --eq-space-4: 2rem; --eq-space-5: 3rem;
   /* type */
-  --eq-text-xs: 0.6875rem; --eq-text-s: 0.8125rem; --eq-text-m: 0.9375rem;
+  --eq-text-xs: 0.6875rem; --eq-text-s: 0.8125rem; --eq-text-m: 1rem;
   --eq-text-lede: 1.0625rem; --eq-text-l: 1.3125rem; --eq-text-xl: 1.875rem;
   --eq-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   /* shape */
@@ -427,7 +427,7 @@ svg.pipeline .pipeline-head { fill: var(--eq-muted); }
   :root:not([data-theme=light]) { --eq-muted: #9aa3b0; --pico-muted-color: #9aa3b0; }
 }
 [data-theme=dark] { --eq-muted: #9aa3b0; --pico-muted-color: #9aa3b0; }
-:root { --eq-unknown: #8e96a3; --eq-closed: var(--eq-info); }
+:root { --eq-unknown: #737b88; --eq-closed: var(--eq-info); }
 
 /* --- badge: word + glyph, never colour alone ----------------------------- */
 .badge { display: inline-flex; align-items: center; gap: .3rem; padding: .0625rem .5rem; border-radius: var(--eq-r-1);
@@ -714,3 +714,107 @@ table.terms ins, .diff-legend ins { text-decoration: underline; }
 
 /* M6 P5: the match (pin) time on the price-history chart */
 line.hist-pin { stroke: var(--eq-info); stroke-width: 1.5; stroke-dasharray: 1 3; }
+
+
+/* ===== Shell, nav, identity (ui/plain-language-shell) ===== */
+/* Site-wide shell: brand mark, one-copy nav that collapses into a <details>
+   "Menu" on phones (no JS), 44px tap targets, scroll containers for wide
+   audit tables, and prose line length. No inline styles (CSP). */
+.site-header nav.site-nav { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.25rem 1rem; min-height: 3.75rem; padding-block: 0.25rem; }
+.brand-row { display: flex; align-items: baseline; gap: 0.6rem; min-width: 0; flex: 1 1 22rem; }
+.brand { display: inline-flex; align-items: center; gap: 0.4rem; }
+/* The favicon's mark drawn in CSS (two overlapping circles, one per venue),
+   so the header carries no extra markup for the AB-07 tag allowlist. */
+.brand-mark { position: relative; display: inline-block; width: 1.5rem; height: 1.125rem; flex: none; align-self: center; }
+.brand-mark::before, .brand-mark::after { content: ""; position: absolute; top: 0; width: 1.125rem; height: 1.125rem; border-radius: 50%; box-sizing: border-box; }
+.brand-mark::before { left: 0; background: var(--pico-primary); opacity: 0.85; }
+.brand-mark::after { left: 0.375rem; border: 0.1875rem solid var(--pico-primary); }
+.nav-menu { margin: 0; flex: 0 1 auto; }
+.nav-menu > summary { list-style: none; }
+.nav-menu > summary::-webkit-details-marker { display: none; }
+.site-header nav .nav-menu ul { display: flex; flex-wrap: wrap; align-items: center; gap: 0 0.25rem; margin: 0; padding: 0; }
+.site-header nav .nav-menu li { list-style: none; margin: 0; padding: 0; }
+.site-header nav .nav-menu li a { display: inline-block; margin: 0; padding: 0.5rem 0.625rem; }
+.site-header nav .nav-menu > summary::after { content: none; display: none; background: none; }
+/* Wide screens: the menu is always open and its toggle hidden. */
+@media (min-width: 769px) {
+  .nav-menu > summary { display: none; }
+  .nav-menu::details-content { content-visibility: visible; display: contents; }
+}
+/* Phones and small tablets: one header row (brand + Menu), the links stack
+   under it when opened, the tagline gives way to the page's own answer. */
+@media (max-width: 768px) {
+  .tagline { display: none; }
+  .brand-row { flex: 1 1 auto; }
+  .nav-menu { flex: 0 0 auto; }
+  .nav-menu > summary { display: flex; align-items: center; gap: 0.4rem; min-height: 2.75rem; padding: 0 0.875rem; border: 1px solid var(--eq-control); border-radius: var(--eq-r-2); font-weight: 600; cursor: pointer; }
+  .site-header nav .nav-menu > summary::after { content: "▾"; display: inline; float: none; width: auto; height: auto; margin: 0; background: none; transform: none; font-size: 0.8em; }
+  .site-header nav .nav-menu[open] > summary::after { content: "▴"; transform: none; }
+  .nav-menu > summary { margin: 0; color: var(--eq-ink); }
+  .nav-menu[open] { flex-basis: 100%; }
+  .nav-menu[open] > summary { width: max-content; margin-left: auto; }
+  .site-header nav .nav-menu ul { flex-direction: column; align-items: stretch; gap: 0; margin-top: 0.5rem; border-top: 1px solid var(--eq-rule); }
+  .site-header nav .nav-menu li a { display: flex; align-items: center; min-height: 2.75rem; padding: 0 0.25rem; border-bottom: 1px solid var(--eq-rule); }
+  .site-header .nav-menu a[aria-current=page] { box-shadow: inset 3px 0 0 var(--pico-primary); padding-left: 0.75rem; }
+  /* The timezone selector gets its own full-width row under the header. */
+  .context-bar > .container { display: block; font-size: var(--eq-text-s); line-height: 1.6; }
+  .timezone-selector { display: flex; margin: 0.375rem 0 0; }
+  .timezone-selector label { flex: 1; }
+  .timezone-selector select { flex: 1; }
+  .timezone-selector select, .timezone-selector button { height: 2.75rem; font-size: 1rem; }
+}
+
+/* Tap targets on phones: buttons, form controls and summaries are >= 44px. */
+@media (max-width: 640px) {
+  button, [type=submit], [type=button], select, input:not([type=radio]):not([type=checkbox]), a.btn, a[role=button] { min-height: 2.75rem; }
+  [type=radio], [type=checkbox] { width: 1.5rem; height: 1.5rem; }
+}
+
+/* Body text is at least 16px; prose stays at a readable line length. */
+body { font-size: 1rem; }
+main p, main li, main dd { overflow-wrap: break-word; }
+main p { max-width: 70ch; }
+
+/* Wide audit tables scroll inside their own container, never the page. */
+.scroll-x { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: var(--pico-spacing); }
+.scroll-x > table { margin-bottom: 0; }
+.wrap-anywhere { overflow-wrap: anywhere; word-break: normal; }
+main pre { max-width: 100%; overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+main img, main svg { max-width: 100%; }
+main { overflow-wrap: break-word; }
+
+/* About: "How to read a decision" box and its diagram. */
+.read-decision { padding: 1rem 1.25rem; margin: 0 0 var(--eq-space-4); border: 1px solid var(--eq-border); border-radius: var(--eq-r-3); background: var(--eq-surface); }
+.read-decision h2 { margin-top: 0; }
+.read-decision ol { margin-bottom: 0.75rem; }
+svg.read-diagram { display: block; width: 100%; height: auto; max-width: 40rem; margin: 0.5rem 0 1rem; }
+svg.read-diagram .rd-box { fill: var(--pico-background-color); stroke: var(--eq-rule-strong); stroke-width: 1.5; }
+svg.read-diagram .rd-box-key { fill: var(--eq-ok-bg); stroke: var(--eq-ok); stroke-width: 2; }
+svg.read-diagram .rd-box-audit { fill: var(--eq-surface); stroke: var(--eq-control); stroke-dasharray: 6 4; }
+svg.read-diagram .rd-title { fill: var(--eq-ink); font-size: 18px; font-weight: 700; }
+svg.read-diagram .rd-text { fill: var(--eq-ink-2); font-size: 15px; }
+svg.read-diagram .rd-num { fill: var(--eq-on-solid); font-size: 15px; font-weight: 700; }
+svg.read-diagram .rd-dot { fill: var(--pico-primary); }
+
+/* Glossary: plain phrase first, technical name after. */
+.gloss-tech { font-weight: 400; color: var(--eq-muted); }
+
+/* Price history scales to the container width; labels grow in SVG units on
+   phones so they stay legible after the chart shrinks. */
+svg.hist { width: 100%; max-width: 100%; height: auto; }
+figure.history { max-width: 100%; overflow: hidden; }
+@media (max-width: 640px) {
+  figure.history { padding: 0.5rem; }
+  .hist-label { font-size: 18px; }
+  .hist-legend li { flex-wrap: wrap; }
+}
+
+/* Long unbroken log summaries (instrument IDs) wrap instead of widening the
+   page; flex/grid children may shrink below their content width. */
+details.log-summary > summary { display: block; min-width: 0; overflow-wrap: anywhere; }
+details.log-summary p { overflow-wrap: anywhere; }
+table.data td > *, table.data.stack td > * { min-width: 0; }
+@media (max-width: 640px) {
+  table.data.stack td { overflow-wrap: anywhere; }
+  details.log-summary > summary { display: block; min-height: 2.75rem; padding-block: 0.5rem; }
+}
