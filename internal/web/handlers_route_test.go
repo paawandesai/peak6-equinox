@@ -346,7 +346,7 @@ func TestRouteOutcomeKinds(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			view := newDecisionView(tc.decision, 2, time.Now(), map[string]string{}, dec("0.01"))
+			view := newDecisionView(tc.decision, 2, time.Now(), map[string]string{}, dec("0.01"), 120*time.Second)
 			if view.OutcomeChipClass != tc.wantChip {
 				t.Errorf("chip class = %q, want %q", view.OutcomeChipClass, tc.wantChip)
 			}

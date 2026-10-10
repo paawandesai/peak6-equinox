@@ -75,8 +75,8 @@ func TestComputeNetGap(t *testing.T) {
 		if gap.HasValue {
 			t.Errorf("expected gap.HasValue=false when A quote is nil")
 		}
-		if gap.Reason != "no quote: kalshi" {
-			t.Errorf("gap.Reason = %q, want %q", gap.Reason, "no quote: kalshi")
+		if gap.Reason != "no kalshi quote" {
+			t.Errorf("gap.Reason = %q, want %q", gap.Reason, "no kalshi quote")
 		}
 	})
 
@@ -85,8 +85,8 @@ func TestComputeNetGap(t *testing.T) {
 		if gap.HasValue {
 			t.Errorf("expected gap.HasValue=false when B quote is nil")
 		}
-		if gap.Reason != "no quote: polymarket" {
-			t.Errorf("gap.Reason = %q, want %q", gap.Reason, "no quote: polymarket")
+		if gap.Reason != "no polymarket quote" {
+			t.Errorf("gap.Reason = %q, want %q", gap.Reason, "no polymarket quote")
 		}
 	})
 
@@ -96,8 +96,17 @@ func TestComputeNetGap(t *testing.T) {
 		if gap.HasValue {
 			t.Errorf("expected gap.HasValue=false when A has no asks")
 		}
-		if gap.Reason != "no ask: kalshi" {
-			t.Errorf("gap.Reason = %q, want %q", gap.Reason, "no ask: kalshi")
+		if gap.Reason != "kalshi empty book: no YES bids or asks" {
+			t.Errorf("gap.Reason = %q, want %q", gap.Reason, "kalshi empty book: no YES bids or asks")
+		}
+	})
+
+	// M6 P3: a bid-only book is one-sided, not a missing quote.
+	t.Run("bid-only book on A", func(t *testing.T) {
+		bidOnly := &canonical.Quote{InstrumentID: "kalshi:test", YesBids: []canonical.Level{{Price: decimal.RequireFromString("0.40"), Size: decimal.NewFromInt(10)}}}
+		gap := ComputeNetGap(kalshiInst, polyInst, bidOnly, polyQuote)
+		if gap.HasValue || gap.Reason != "kalshi one-sided: no YES ask" {
+			t.Errorf("gap = %+v, want no value with reason %q", gap, "kalshi one-sided: no YES ask")
 		}
 	})
 

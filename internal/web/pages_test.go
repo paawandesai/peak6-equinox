@@ -352,7 +352,8 @@ func TestBuildHistoryChart(t *testing.T) {
 	if len(sa.Dots) != 1 || sa.Dots[0] != (chartPt{X: "44.0", Y: "120.0"}) || len(sb.Dots) != 1 {
 		t.Errorf("dots = %+v / %+v", sa.Dots, sb.Dots)
 	}
-	if len(c.Rows) != 3 || c.Rows[1].Mid != "n/a" || c.Rows[1].Ask != "0.7000" || c.Rows[2].Venue != "polymarket" {
+	// M6 P5: the table is newest first with both venues interleaved.
+	if len(c.Rows) != 3 || c.Rows[0].Mid != "n/a" || c.Rows[0].Ask != "0.7000" || c.Rows[2].Venue != "polymarket" {
 		t.Errorf("rows = %+v", c.Rows)
 	}
 	// A single round is centred and gets one x tick.
@@ -404,7 +405,7 @@ func TestEvalPage(t *testing.T) {
 	// M3-08: Produced timestamp now formatted in user's timezone, so we check without the exact time
 	// UI-16: headline panel with verdict badge, badges for types, F1 column, macro and weighted averages, meter bars
 	wantContains(t, body,
-		"by <code>equinox eval --round 3</code> on round <strong>3</strong>: <strong>40</strong> labelled pairs",
+		"by <code>equinox eval --round 3</code>: <strong>40</strong> labelled pairs, <strong>16</strong> scored", // P11: no "on round N"
 		`<div class="panel panel-info">`, "Precision at equivalent", "100.00%", "meets the 0.95 target", "✓",
 		`<span class="badge b-equivalent">`, `≡</span>equivalent`,
 		"92.31%", "75.00%", `>n/a<`, // UI-16: percentages are now in meter-cell spans, not bare td.num

@@ -30,8 +30,9 @@
   <div></div>
 {{end}}
   <div>
-    <p>Precision and recall per relationship type, computed by <code>equinox eval</code> over the human-confirmed labels in <code>testdata/golden/labels.yaml</code>. This page only reads the stored summary.</p>
-    <p>Produced <strong>{{formatTime $.Produced $.Timezone}}</strong>{{if .Command}} by <code>{{.Command}}</code>{{end}}{{if .RoundID}} on round <strong>{{.RoundID}}</strong>{{end}}: <strong>{{.Labels}}</strong> labelled pair{{if ne .Labels 1}}s{{end}}{{if .LabelsFile}} from <code>{{.LabelsFile}}</code>{{end}}{{if .Method}}, method <code>{{.Method}}</code>{{end}}.</p>
+    <p id="eval-data">Precision and recall per relationship type, computed by <code>equinox eval</code> over the human-confirmed labels in <code>{{if .LabelsFile}}{{.LabelsFile}}{{else}}testdata/golden/labels.yaml{{end}}</code>. For each labelled pair, the run classified the two contracts' stored terms with the rules matcher and compared the verdict with the human label. This page only reads the stored summary.</p>
+    <p>Produced <strong>{{formatTime $.Produced $.Timezone}}</strong>{{if .Command}} by <code>{{.Command}}</code>{{end}}: <strong>{{.Labels}}</strong> labelled pair{{if ne .Labels 1}}s{{end}}, <strong>{{$.Evaluated}}</strong> scored{{if $.Unscored}} (<a href="#unscored">{{len $.Unscored}} not scored</a>){{end}}{{if .Method}}, method <code>{{.Method}}</code>{{end}}.{{if .RoundID}} The labels file records round {{.RoundID}} as the round its first pairs were drafted from.{{end}}</p>
+    <p class="note">These scores are separate from the {{if and $.Round $.Round.Pinned}}pinned demo round {{$.Round.ID}}{{else}}round the other pages show{{end}}: the labelled set is fixed, and the round only decides which pairs Matches lists and which example pairs below have a pair page.</p>
     {{if $.LabelsSHA256}}<p><strong>Golden-set version:</strong> <code>{{$.LabelsSHA256}}</code></p>{{end}}
     {{if $.Previous}}
     <p><strong>Δ vs previous run</strong> ({{formatTime $.Previous.GeneratedAt $.Timezone}}):
@@ -82,7 +83,7 @@
   <tbody>
   {{range .Rows}}
     <tr>
-      <td>{{template "badge" .TypeBadge}}</td>
+      <td>{{template "badge" .TypeBadge}}{{if .Examples}} <a href="#examples-{{.Type}}" class="small">examples</a>{{end}}</td>
       <td class="num">{{.Support}}</td>
       <td class="num">{{.TP}}</td>
       <td class="num">{{.FP}}</td>
@@ -114,6 +115,7 @@
       <td class="num">{{if .PrecisionMethodDelta}}{{.PrecisionMethodDelta}}{{else}}—{{end}}</td>
       <td class="num">{{if .RecallMethodDelta}}{{.RecallMethodDelta}}{{else}}—{{end}}</td>
     </tr>
+    {{if and (eq .Type "unrelated") (gt .FP 0)}}<tr class="row-note"><td colspan="11">{{template "unrelated-note" .}}</td></tr>{{end}}
   {{end}}
   </tbody>
 </table>
@@ -135,7 +137,7 @@
   <tbody>
   {{range .Rows}}
     <tr>
-      <td>{{template "badge" .TypeBadge}}</td>
+      <td>{{template "badge" .TypeBadge}}{{if .Examples}} <a href="#examples-{{.Type}}" class="small">examples</a>{{end}}</td>
       <td class="num">{{.Support}}</td>
       <td class="num">{{.TP}}</td>
       <td class="num">{{.FP}}</td>
@@ -154,6 +156,7 @@
       </td>
       <td class="num">{{.F1}}</td>
     </tr>
+    {{if and (eq .Type "unrelated") (gt .FP 0)}}<tr class="row-note"><td colspan="8">{{template "unrelated-note" .}}</td></tr>{{end}}
   {{end}}
   {{if not $.DualMethod}}
   {{if .MacroAverage}}
@@ -206,6 +209,15 @@
 {{end}}
 
 <p class="note">There is no calibration plot because confidence is a rules score, not a probability.</p>
+
+<h2 id="examples">Example labelled pairs</h2>
+<p class="note">Up to two human-labelled pairs per type from the labelled set. A link opens the pair in {{if $.Round}}round {{$.Round.ID}}{{else}}the current round{{end}}; a pair without a link is not stored in that round (unrelated pairs never are).</p>
+<dl class="eval-examples">
+{{range .Rows}}{{if .Examples}}
+  <dt id="examples-{{.Type}}">{{template "badge" .TypeBadge}}</dt>
+  <dd><ul>{{range .Examples}}<li>{{if gt .PairID 0}}<a href="/pairs/{{.PairID}}">{{.Desc}}</a>{{else}}{{.Desc}} <small class="note">(not stored in this round; Kalshi <code>{{.AID}}</code>)</small>{{end}}</li>{{end}}</ul></dd>
+{{end}}{{end}}
+</dl>
 
 {{else}}
 <p>The summary has no per-type metrics.</p>
@@ -286,9 +298,21 @@
 </ul>
 {{end}}
 
+{{if $.Unscored}}
+<h2 id="unscored">Labels not scored</h2>
+<p>{{len $.Unscored}} of the {{$.Summary.Labels}} labels could not be scored, so the table covers {{$.Evaluated}}.</p>
+<ul class="unscored">
+{{range $.Unscored}}
+  <li><code title="{{.AID}}">{{.AShort}}</code> / <code title="{{.BID}}">{{.BShort}}</code>: {{.Reason}}</li>
+{{end}}
+</ul>
+{{end}}
+
 {{end}}
 
 {{/* M4-76: Settlement back-test results */}}
 {{template "backtest_results" .}}
 
 {{end}}
+
+{{define "unrelated-note"}}<small>Reading this row: {{.FP}} pair{{if ne .FP 1}}s{{end}} the matcher called <code>unrelated</code> carry a stronger human label. <code>unrelated</code> is the weakest type, so each one under-claims a relationship rather than inventing one, and none of them can be routed: the safe direction for a precision-first matcher. A typical case: two candidates for the same nomination cannot both win, so a human labels the pair <code>related</code>, but their subjects differ and blocking calls it <code>unrelated</code>.</small>{{end}}

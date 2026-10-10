@@ -64,6 +64,7 @@ var templateFuncs = template.FuncMap{
 	"httpURL": httpURL,
 	// formatTime formats a time.Time in the user's chosen timezone (M3-08).
 	"formatTime": formatTime,
+	"factDate":   factDate,
 	// formatTimeCompact formats a time.Time in the user's timezone compactly (M5-11).
 	"formatTimeCompact": formatTimeCompact,
 	// Age formats a duration as a human-readable age (UI-13).
@@ -127,6 +128,7 @@ var pages = map[string]*template.Template{
 	"eval_cell":   parsePage("eval_cell.html"),                     // UI-23
 	"error":       parsePage("error.html"),
 	"glossary":    parsePage("glossary.html"), // M5-06
+	"about":       parsePage("about.html"),    // P12
 }
 
 func parsePage(files ...string) *template.Template {
@@ -155,6 +157,7 @@ func (s *Server) publicRoutes(mux *http.ServeMux) {
 	mux.Handle("GET /eval", wrap(s.handleEval))
 	mux.Handle("GET /eval/cell", wrap(s.handleEvalCell)) // UI-23
 	mux.Handle("GET /glossary", wrap(s.handleGlossary))  // M5-06
+	mux.Handle("GET /about", wrap(s.handleAbout))        // P12
 	// POST /timezone sets the user's timezone preference cookie (M3-08, no round middleware needed)
 	mux.Handle("POST /timezone", s.rateLimitMiddleware(http.HandlerFunc(s.handleTimezone)))
 	mux.HandleFunc("GET /static/app.css", s.handleAppCSS)

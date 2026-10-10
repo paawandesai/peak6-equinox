@@ -605,8 +605,9 @@ func TestPairEvidenceContributionColumn(t *testing.T) {
 	wantContains(t, body, `<span class="muted">—</span>`) // For subject row
 
 	// Verify footer shows evidence summary
-	wantContains(t, body, "0.99 &#43; Σ(3) = 0.94") // "<prior> + Σ(<n>) = <total>", + is HTML-escaped
-	wantContains(t, body, "0.94")                   // Total
+	// M6 P6: the footer spells the evidence out in words.
+	wantContains(t, body, "base 0.99 for equivalent, −0.02 for unknown unit, −0.01 for deadline gap, −0.02 for unknown edge rules = 0.94")
+	wantContains(t, body, "0.94") // Total
 }
 
 // UI-20 D-115: Test evidence not recorded (old relationships)

@@ -23,10 +23,6 @@ import (
 // block.go: both deadlines sit nearest the same FOMC meeting).
 const factFedMeetingDates = "fed_meeting_dates"
 
-// factFedUpperBound is the fact the Fed level-vs-change rule consults to
-// place a change bucket on the level ladder (match facts.go).
-const factFedUpperBound = "fed_upper_bound"
-
 var (
 	// withinRe matches the matcher's "deadlines <gap> apart (within <window>)".
 	withinRe = regexp.MustCompile(`deadlines (\S+) apart \(within (\S+)\)`)
