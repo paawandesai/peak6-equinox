@@ -888,16 +888,16 @@ func (s *Server) handleAdminLLMVerify(w http.ResponseWriter, r *http.Request) {
 
 		// Apply the guard (downgrade-only)
 		result := llm.Guard(ctx, s.log, rel, verifyResult.Verdict)
-		verified++
-		if result.Outcome == llm.OutcomeDowngraded {
-			downgraded++
-		}
 
-		// Update the relationship in the database
+		// Update the relationship in the database; count it only once the write succeeded
 		relID, err := s.deps.Store.UpsertRelationship(ctx, result.Relationship)
 		if err != nil {
 			s.log.Error("updating relationship after llm verification", "error", err, "a_id", rel.AID, "b_id", rel.BID)
 			continue
+		}
+		verified++
+		if result.Outcome == llm.OutcomeDowngraded {
+			downgraded++
 		}
 
 		// FR-17: log the verdict to decision_log (Cursor: actually write each verdict)
