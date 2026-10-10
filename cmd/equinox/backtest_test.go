@@ -90,7 +90,10 @@ func TestBacktestCommandFixtures(t *testing.T) {
 		"Gate (NFR-07): 0 equivalent-tier pairs settled differently — PASS",
 		"| equivalent_given_facts | 1 | 1 | 1 | 0 | 0 | same outcome |",
 		"| complement | 1 | 1 | 1 | 0 | 0 | opposite outcomes |",
-		"| implies | 22 | 22 | 22 | 0 | 0 |",
+		// D-109: the settled KXFEDDECISION buckets add three exact matches
+		// (Cut 25, no change, Hike 25) and two implies (50+ bps forces >25 bps).
+		"| equivalent | 3 | 3 | 3 | 0 | 0 | same outcome |",
+		"| implies | 24 | 24 | 24 | 0 | 0 |",
 		"kalshi:KXFED-26SEP-T4.00 settled no",
 		// The ethereum settled pages are not recorded (D-057): reported, not fatal.
 		"Fetch warnings",
