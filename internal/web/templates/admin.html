@@ -109,7 +109,7 @@
 
 <section>
   <header>
-    <h3>Unpin round (demo mode)</h3>
+    <h3>Pin / Unpin round (demo mode)</h3>
     {{if .HasPinned}}
       <span class="chip chip-info">round {{.PinnedRound.ID}} pinned</span>
     {{else}}
@@ -124,6 +124,21 @@
     </form>
   {{else}}
     <p>No round is currently pinned. Pages use the latest round.</p>
+    {{if .Rounds}}
+    <form method="post" action="/admin/pin">
+      <label for="round_id">Pin a round for demo mode:</label>
+      <select name="round_id" id="round_id" required>
+        <option value="">Select a round</option>
+        {{range .Rounds}}
+          {{if or (eq .Status "ok") (eq .Status "partial")}}
+            <option value="{{.ID}}">Round {{.ID}} · {{.Started}} · {{.Status}}</option>
+          {{end}}
+        {{end}}
+      </select>
+      <button type="submit">Pin round</button>
+      <small>Pins the selected round. All pages will use its stored data with no live venue calls.</small>
+    </form>
+    {{end}}
   {{end}}
 </section>
 
