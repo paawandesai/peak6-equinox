@@ -498,7 +498,7 @@ func TestLogChipContrast(t *testing.T) {
 	// Light mode: --eq-info (#1a56a8) on --eq-on-solid (#fff) → ~6.3:1 ratio
 	// Dark mode: --eq-info (#8ab4f8) on --eq-on-solid (#13171f) → ~8.5:1 ratio
 	// Both exceed the 4.5:1 AA threshold.
-	
+
 	s, st := newTestServer(t)
 	sd := seedPublic(t, st)
 	seedMore(t, s, st, sd)
@@ -509,7 +509,7 @@ func TestLogChipContrast(t *testing.T) {
 
 	// Verify the selected chip has aria-current
 	wantContains(t, body, `aria-current="page"`)
-	
+
 	// The CSS rule uses --eq-info and --eq-on-solid which are designed for AA contrast
 	// Manual verification: the selected chip should be clearly visible in both light and dark modes
 }
