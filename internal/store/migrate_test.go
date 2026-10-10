@@ -14,7 +14,7 @@ import (
 // dataModelTables lists every table in architecture.md § Data model.
 var dataModelTables = []string{
 	"fetch_rounds", "raw_responses", "instruments", "quotes", "relationships",
-	"llm_verdicts", "llm_usage", "llm_verify_last_run", "routing_decisions", "decision_log",
+	"llm_verdicts", "llm_usage", "llm_verify_last_run", "llm_verify_runs", "routing_decisions", "decision_log",
 	"match_runs",
 }
 

@@ -227,3 +227,216 @@ func TestLLMVerifyLastRunRoundTrip(t *testing.T) {
 		t.Errorf("after update: cache_hits got %d, want %d", got2.CacheHits, run2.CacheHits)
 	}
 }
+
+// TestLLMVerifyRunsRoundTrip verifies storing, finishing and retrieving verification runs (UI-22).
+func TestLLMVerifyRunsRoundTrip(t *testing.T) {
+	ctx := context.Background()
+	pool := tdb.Pool(t)
+	st := store.New(pool)
+
+	model := "claude-haiku-4-5-20251001"
+	promptVersion := "v1"
+
+	// Insert a run
+	runID, err := st.InsertLLMVerifyRun(ctx, model, promptVersion, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if runID <= 0 {
+		t.Fatalf("InsertLLMVerifyRun returned id %d, want > 0", runID)
+	}
+
+	// Finish the run
+	if err := st.FinishLLMVerifyRun(ctx, runID, 10, 2, 5, 5, 1000, 500, "ok"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Retrieve runs
+	runs, err := st.GetLLMVerifyRuns(ctx, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(runs) != 1 {
+		t.Fatalf("got %d runs, want 1", len(runs))
+	}
+
+	got := runs[0]
+	if got.ID != runID {
+		t.Errorf("id: got %d, want %d", got.ID, runID)
+	}
+	if got.Model != model {
+		t.Errorf("model: got %s, want %s", got.Model, model)
+	}
+	if got.PromptVersion != promptVersion {
+		t.Errorf("prompt_version: got %s, want %s", got.PromptVersion, promptVersion)
+	}
+	if got.Verified != 10 {
+		t.Errorf("verified: got %d, want 10", got.Verified)
+	}
+	if got.Downgraded != 2 {
+		t.Errorf("downgraded: got %d, want 2", got.Downgraded)
+	}
+	if got.CacheHits != 5 {
+		t.Errorf("cache_hits: got %d, want 5", got.CacheHits)
+	}
+	if got.CallsMade != 5 {
+		t.Errorf("calls_made: got %d, want 5", got.CallsMade)
+	}
+	if got.InputTokens != 1000 {
+		t.Errorf("input_tokens: got %d, want 1000", got.InputTokens)
+	}
+	if got.OutputTokens != 500 {
+		t.Errorf("output_tokens: got %d, want 500", got.OutputTokens)
+	}
+	if got.Outcome != "ok" {
+		t.Errorf("outcome: got %s, want ok", got.Outcome)
+	}
+	if got.FinishedAt == nil {
+		t.Error("finished_at is nil, want non-nil")
+	}
+	if got.StartedAt.IsZero() {
+		t.Error("started_at is zero, want non-zero")
+	}
+}
+
+// TestLLMVerifyRunsPruning verifies that old runs are pruned when inserting new ones (UI-22).
+func TestLLMVerifyRunsPruning(t *testing.T) {
+	ctx := context.Background()
+	pool := tdb.Pool(t)
+	st := store.New(pool)
+
+	model := "claude-haiku-4-5-20251001"
+	promptVersion := "v1"
+
+	// Insert 5 runs with a max of 3
+	var ids []int64
+	for i := 0; i < 5; i++ {
+		id, err := st.InsertLLMVerifyRun(ctx, model, promptVersion, 3)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ids = append(ids, id)
+		// Sleep a tiny bit to ensure different timestamps
+		time.Sleep(2 * time.Millisecond)
+	}
+
+	// Should have only the latest 3 runs
+	runs, err := st.GetLLMVerifyRuns(ctx, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(runs) != 3 {
+		t.Fatalf("got %d runs after pruning, want 3", len(runs))
+	}
+
+	// The 3 latest runs should be kept (ids[2], ids[3], ids[4])
+	gotIDs := make(map[int64]bool)
+	for _, r := range runs {
+		gotIDs[r.ID] = true
+	}
+	for i := 2; i < 5; i++ {
+		if !gotIDs[ids[i]] {
+			t.Errorf("expected run %d to be kept", ids[i])
+		}
+	}
+	// The first 2 should be pruned
+	for i := 0; i < 2; i++ {
+		if gotIDs[ids[i]] {
+			t.Errorf("expected run %d to be pruned", ids[i])
+		}
+	}
+}
+
+// TestLinkRelationshipToVerdict verifies linking relationships to LLM verdicts (UI-22).
+func TestLinkRelationshipToVerdict(t *testing.T) {
+	ctx := context.Background()
+	pool := tdb.Pool(t)
+	st := store.New(pool)
+
+	// Create a round
+	round, err := st.CreateRound(ctx, time.Date(2026, 10, 9, 12, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create two instruments
+	instA := newTestInstrument("kalshi:TESTM1")
+	instB := newTestInstrument("polymarket:TESTM2")
+	if err := st.UpsertInstrument(ctx, round.ID, instA); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.UpsertInstrument(ctx, round.ID, instB); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a relationship
+	rel := canonical.Relationship{
+		RoundID:     round.ID,
+		AID:         instA.ID,
+		BID:         instB.ID,
+		Type:        canonical.RelEquivalent,
+		Confidence:  decimal.NewFromFloat(0.95),
+		Method:      canonical.MethodRules,
+		Explanation: "test relationship",
+	}
+	relID, err := st.UpsertRelationship(ctx, rel)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a verify run
+	runID, err := st.InsertLLMVerifyRun(ctx, "claude-haiku-4-5-20251001", "v1", 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Link the relationship to a verdict
+	cacheKey := strings.Repeat("cd", 32)
+	if err := st.LinkRelationshipToVerdict(ctx, relID, cacheKey, runID); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify the link was created by querying the relationship
+	var gotCacheKey *string
+	var gotRunID *int64
+	var gotVerifiedAt *time.Time
+	err = pool.QueryRow(ctx, `
+		SELECT llm_cache_key, llm_run_id, llm_verified_at
+		FROM relationships
+		WHERE id = $1
+	`, relID).Scan(&gotCacheKey, &gotRunID, &gotVerifiedAt)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if gotCacheKey == nil || *gotCacheKey != cacheKey {
+		t.Errorf("llm_cache_key: got %v, want %s", gotCacheKey, cacheKey)
+	}
+	if gotRunID == nil || *gotRunID != runID {
+		t.Errorf("llm_run_id: got %v, want %d", gotRunID, runID)
+	}
+	if gotVerifiedAt == nil {
+		t.Error("llm_verified_at is nil, want non-nil")
+	}
+}
+
+// newTestInstrument creates a minimal instrument for testing.
+func newTestInstrument(id string) canonical.Instrument {
+	v := canonical.VenueOf(id)
+	key := strings.TrimPrefix(id, string(v)+":")
+	t0 := time.Date(2026, 10, 9, 12, 0, 0, 0, time.UTC)
+	return canonical.Instrument{
+		ID:            id,
+		Venue:         v,
+		VenueMarketID: key,
+		VenueEventID:  "EVT",
+		Category:      canonical.CategoryPolitics,
+		Title:         "Test Market",
+		RulesText:     "Test rules",
+		Terms:         canonical.UnknownTerms(),
+		CloseTime:     t0.Add(time.Hour),
+		Status:        canonical.StatusOpen,
+		FeeSchedule:   canonical.FeeSchedule{},
+		Quality:       canonical.Quality{},
+	}
+}

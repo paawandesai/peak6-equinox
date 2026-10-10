@@ -42,13 +42,14 @@ type backtestOptions struct {
 	lookback   eval.Lookback
 	factsFile  string
 	allowlist  string
+	out        string
 }
 
 // runBacktest is the settlement back-test (FR-19, NFR-07):
 //
 //	equinox backtest --fixtures [-fixture-dir testdata/fixtures] | --live
 //	                 [-as-of YYYY-MM-DD] [-lookback crypto=1,fed=90,politics=90]
-//	                 [-facts FILE] [-allowlist FILE]
+//	                 [-facts FILE] [-allowlist FILE] [-out FILE]
 //
 // It fetches settled markets through every registered adapter's
 // FetchSettled, runs the matcher on the cross-venue pairs and reports every
@@ -58,6 +59,7 @@ type backtestOptions struct {
 // in-process and never touches the network; --live calls the public venue
 // APIs from the environment's URLs, which tests never do. The exit code is
 // non-zero when the NFR-07 gate fails, so CI can run it as a check.
+// When -out is given, writes a JSON summary to that path for the web eval page.
 func runBacktest(ctx context.Context, args []string, stdout io.Writer) error {
 	opts, help, err := parseBacktestArgs(args, stdout)
 	if err != nil || help {
@@ -100,6 +102,17 @@ func runBacktest(ctx context.Context, args []string, stdout io.Writer) error {
 			_, _ = fmt.Fprintf(stdout, "- %s\n", strings.ReplaceAll(w.Error(), "\n", "\n  "))
 		}
 	}
+	if opts.out != "" {
+		source := "live"
+		if opts.fixtures {
+			source = "fixtures"
+		}
+		summary := eval.BuildBacktestSummary(time.Now(), strings.Join(append([]string{"equinox backtest"}, args...), " "), opts.asOf, source, report)
+		if err := eval.WriteBacktestSummary(opts.out, summary); err != nil {
+			return err
+		}
+		_, _ = fmt.Fprintf(stdout, "\nWrote summary to %s\n", opts.out)
+	}
 	if !report.Passed() {
 		return fmt.Errorf("NFR-07 gate failed: %d equivalent-tier pair(s) settled differently; investigate each and allowlist only with a logged decision", len(report.Mismatches(true)))
 	}
@@ -119,6 +132,7 @@ func parseBacktestArgs(args []string, stdout io.Writer) (opts backtestOptions, h
 	fs.StringVar(&lookback, "lookback", "crypto=1,fed=90,politics=90", "days of settled markets to fetch, per category or one number for all")
 	fs.StringVar(&opts.factsFile, "facts", "", "facts file for the matcher; default: FACTS_FILE, or <fixture-dir>/backtest/facts.yaml with --fixtures")
 	fs.StringVar(&opts.allowlist, "allowlist", "", "YAML file of investigated exceptions (a_id, b_id, reason, decision)")
+	fs.StringVar(&opts.out, "out", "", "write JSON summary to this file (for the web eval page)")
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return opts, true, nil

@@ -132,6 +132,7 @@ func newServerWith(cfg config.Config, logger *slog.Logger, deps web.Deps) *web.S
 		PublicRateLimitPerMin: cfg.PublicRateLimitPerMin,
 		MinRouteConfidence:    cfg.MinRouteConfidence,
 		EvalSummaryFile:       cfg.EvalSummaryFile,
+		BacktestSummaryFile:   cfg.BacktestSummaryFile,
 		StaleAfter:            cfg.StaleAfter,
 		KalshiWarnAfter:       cfg.KalshiWarnAfter,
 		PolymarketWarnAfter:   cfg.PolymarketWarnAfter,
