@@ -10,6 +10,34 @@ import (
 type liveQuoteStore interface {
 	ListQuotes(ctx context.Context, roundID int64) ([]store.QuoteRecord, error)
 	LatestRound(ctx context.Context) (store.Round, error)
+	GetQuote(ctx context.Context, roundID int64, instrumentID string) (store.QuoteRecord, error)
+}
+
+// liveQuote is liveQuotes for one instrument: the newest finished round's
+// quote when it is newer than roundID's, else roundID's own. Routing, the pair
+// page and the matches list all use this rule, so the price shown and the
+// book routed are the same one. Not-found is returned only when neither round
+// has a quote.
+func liveQuote(ctx context.Context, st liveQuoteStore, roundID int64, id string) (store.QuoteRecord, error) {
+	own, ownErr := st.GetQuote(ctx, roundID, id)
+	if ownErr != nil && !isNotFound(ownErr) {
+		return store.QuoteRecord{}, ownErr
+	}
+	latest, err := st.LatestRound(ctx)
+	if err != nil || latest.ID == roundID {
+		return own, ownErr //nolint:nilerr // no newer round: the round's own quote stands
+	}
+	newer, err := st.GetQuote(ctx, latest.ID, id)
+	switch {
+	case isNotFound(err):
+		return own, ownErr
+	case err != nil:
+		return store.QuoteRecord{}, err
+	}
+	if ownErr != nil || newer.FetchedAt.After(own.FetchedAt) {
+		return newer, nil
+	}
+	return own, nil
 }
 
 // liveQuotes returns the quotes for roundID's instruments, replaced by the

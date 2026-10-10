@@ -411,27 +411,20 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 		data.LogEntries = append(data.LogEntries, s.newLogEntryView(e, tz))
 	}
 	// UI-12: load quotes with freshness. Prices come from the newest round that
-	// has them (liveQuotes), so a pinned pair still shows live, aging prices.
-	now := time.Now().UTC()
-	pairQuotes, err := liveQuotes(r.Context(), st, rel.RoundID)
-	if err != nil {
-		s.dbError(w, "loading the pair's quotes", err)
-		return
-	}
-	quoteByID := make(map[string]store.QuoteRecord, 2)
-	for _, pq := range pairQuotes {
-		if pq.InstrumentID == rel.AID || pq.InstrumentID == rel.BID {
-			quoteByID[pq.InstrumentID] = pq
-		}
-	}
+	// has them (liveQuote), so a pinned pair still shows live, aging prices.
+	now := s.now().UTC()
+
 	for _, q := range []struct {
 		id   string
 		dest *touchView
 	}{{rel.AID, &data.QuoteA}, {rel.BID, &data.QuoteB}} {
-		quote, found := quoteByID[q.id]
+		quote, err := liveQuote(ctx, st, rel.RoundID, q.id)
 		switch {
-		case !found:
+		case isNotFound(err):
 			*q.dest = touchView{}
+		case err != nil:
+			s.dbError(w, "loading the pair's quotes", err)
+			return
 		default:
 			*q.dest = newTouchView(quote)
 			// UI-12: compute age and freshness
@@ -622,15 +615,16 @@ func buildDiffRows(rel canonical.Relationship) []diffRowView {
 	return rows
 }
 
-// quoteFor builds the router's view of an instrument's book in a round. A
+// quoteFor builds the router's view of an instrument's book: the newest quote
+// from the round or the latest finished round (liveQuote). A
 // missing quote becomes an empty book flagged no_book so the router can
 // explain the exclusion instead of failing (as `equinox route` does).
 func quoteFor(ctx context.Context, st *store.Store, roundID int64, id string, now time.Time) (canonical.Quote, error) {
-	q, err := st.GetQuote(ctx, roundID, id)
+	q, err := liveQuote(ctx, st, roundID, id)
 	switch {
 	case isNotFound(err):
 		empty := canonical.Quote{InstrumentID: id, FetchedAt: now}
-		empty.Quality.Add(canonical.QualityNoBook, "", "no quote in this round")
+		empty.Quality.Add(canonical.QualityNoBook, "", "no quote in this round or the latest one")
 		return empty, nil
 	case err != nil:
 		return canonical.Quote{}, err

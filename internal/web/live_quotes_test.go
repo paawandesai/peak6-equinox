@@ -61,3 +61,31 @@ func TestLiveQuotesSameOrNoLatestRound(t *testing.T) {
 		}
 	}
 }
+
+func (f fakeLiveQuotes) GetQuote(_ context.Context, round int64, id string) (store.QuoteRecord, error) {
+	for _, q := range f.quotes[round] {
+		if q.InstrumentID == id {
+			return q, nil
+		}
+	}
+	return store.QuoteRecord{}, store.ErrNotFound
+}
+
+func TestLiveQuote(t *testing.T) {
+	old := time.Date(2026, 10, 10, 4, 21, 0, 0, time.UTC)
+	now := old.Add(6 * time.Hour)
+	f := fakeLiveQuotes{latest: 950, quotes: map[int64][]store.QuoteRecord{
+		904: {qr(904, "a", old), qr(904, "b", old)},
+		950: {qr(950, "a", now), qr(950, "c", now)},
+	}}
+	ctx := context.Background()
+	for id, want := range map[string]int64{"a": 950, "b": 904, "c": 950} {
+		got, err := liveQuote(ctx, f, 904, id)
+		if err != nil || got.RoundID != want {
+			t.Errorf("%s: got round %d, %v; want %d", id, got.RoundID, err, want)
+		}
+	}
+	if _, err := liveQuote(ctx, f, 904, "zz"); !isNotFound(err) {
+		t.Errorf("missing everywhere: err = %v, want not found", err)
+	}
+}
