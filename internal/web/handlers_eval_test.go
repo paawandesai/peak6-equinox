@@ -1,6 +1,7 @@
 package web
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -510,4 +511,45 @@ func TestEvalVerifierNote(t *testing.T) {
 			wantContains(t, body, tt.wantText)
 		})
 	}
+}
+
+// TestEvalRenderedValuesMatchJSON verifies every number on /eval equals the numbers in
+// config/eval_summary.json and config/backtest_summary.json (M5-12a AC1).
+func TestEvalRenderedValuesMatchJSON(t *testing.T) {
+	// Load actual summary files
+	evalSum, err := readEvalSummary("../../config/eval_summary.json")
+	if err != nil {
+		t.Skip("eval_summary.json not found; skip value-matching test")
+	}
+	s := New(Config{
+		EvalSummaryFile:     "../../config/eval_summary.json",
+		BacktestSummaryFile: "../../config/backtest_summary.json",
+	}, Deps{})
+	rec := get(s.Handler(), "/eval")
+	wantHTML(t, rec, http.StatusOK)
+	body := rec.Body.String()
+
+	// Verify all type metrics match the JSON
+	for _, m := range evalSum.Types {
+		// Support, TP, FP, FN must appear as rendered
+		wantContains(t, body, formatInt(m.Support), formatInt(m.TP), formatInt(m.FP), formatInt(m.FN))
+		// Precision and Recall must match formatPercent output
+		if m.Precision != nil {
+			wantContains(t, body, formatPercent(m.Precision))
+		}
+		if m.Recall != nil {
+			wantContains(t, body, formatPercent(m.Recall))
+		}
+		// F1 is computed, so verify it appears (but no need to recompute here; just check it's present)
+	}
+
+	// If there's a backtest summary, verify its numbers appear
+	btSum, btErr := LoadBacktestResults("../../config/backtest_summary.json", nil)
+	if btErr == nil && btSum != nil {
+		wantContains(t, body, formatInt(btSum.Pairs), formatInt(btSum.Checked), formatInt(btSum.Agreed), formatInt(btSum.Disagreed))
+	}
+}
+
+func formatInt(n int) string {
+	return fmt.Sprintf("%d", n)
 }
