@@ -130,6 +130,7 @@ None.
 | D-103 | UI-21: Rule layers columns (rules_summary, clarifications, clarifications_updated_at) added to instruments table. Kalshi rules_secondary captured as clarifications; Polymarket has no separate layers. Not fed to matcher/LLM in this ticket. Migration 0004. Tier 2 schema change. | 2026-10-09 |
 | D-111 | M4-79 (#79) Phase 1: live round 735 shows 2 routable pairs because it predates the deployed M4-70 nominee fix; fresh local live round gives 79 by type (94 with !88), 12 router-eligible with !88. No universe change. Phase 2 plan: after !88 merges and deploy, ingest + match + pin a new round and verify Routable ≥ 10 on `/`. Tier 2 (pin/deploy plan; needs sign-off). | 2026-10-10 |
 | D-113 | UI-22 (#54): llm_verify_runs table (last 100 runs pruned on insert) + relationship links (llm_cache_key, llm_run_id, llm_verified_at). Rationale=LLMVerdict.Evidence (already strict-decoded, length-capped). llm_verify_last_run singleton stays (not a view). Migration 0006. Tier 2 schema change. | 2026-10-09 |
+| D-114 | M4-79 (#79) Phase 2 runbook: on `2d9c1c5`/`8b5b0c8` a fresh local live round gives 94 routable-type pairs (77 eq + 16 egf + 1 complement), 12 router-eligible; golden gate holds (equivalent precision 1.0000, zero hard negatives predicted routable). The `equinox-match` job image is stale and must be updated after deploy. Deploy, match and pin NOT run: waiting on the decision between deploying integration/m4-final now and the final main deploy (D-102). Runbook: docs/m4-79-phase2-runbook.md. | 2026-10-10 |
 
 ## Kept decisions (veto closed)
 
