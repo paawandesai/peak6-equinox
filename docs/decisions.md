@@ -275,3 +275,5 @@ _Note (2026-10-10): there are no entries D-088, D-089 or D-090, and none was del
 - **Removed:** the unreferenced `.m4-76-status.md` worker note at the repo root.
 
 **Why:** reviewers read the docs before the code. **Reverse:** revert the MR.
+
+**D-134 · operator (session with Paawan) · Tier 1 · 2026-10-10** · **Decision:** record measured spend and mark NFR-15 met. GCP is $1.15 for Oct 1–10, from the Cloud Billing console; no billing export exists and none was created. Anthropic is $33.01 for Oct 1–10, from the Anthropic console; this is account-wide and mostly development, and the app's runtime spend is $0 because prod has no key (Q-11). The total of $34.16 is under the $50 cap even counting all account-wide Anthropic usage. Both figures were read by Paawan on 2026-10-10 ~22:10 UTC. **Why:** NFR-15 was "partial" only because spend had not been read. **Reverse:** set NFR-15 back to partial in status.md.

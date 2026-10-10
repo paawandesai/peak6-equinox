@@ -39,11 +39,11 @@ Every outcome appends a human-readable note to the relationship's explanation.
 
 ## Spend to date
 
-As of 2026-10-10 (also in `docs/status.md` "Spend to date"):
-- **GCP:** not measured. Nobody has read the billing page since deploy. Whether the $50 budget alert asked for in status.md Q-3 is set could not be checked from the operator host (the budgets API needs billing-account access it lacks).
-- **Anthropic (the product's key):** the production service has no key mounted, so it has made no model calls. No other use of the product key is recorded. The console total has not been read.
-- **Development tools** (Claude Code, Cursor) run on the operators' own subscriptions, not on the project budget.
-- **Total against the $50 cap (NFR-15):** not measured.
+As of 2026-10-10 (also in `docs/status.md` "Spend to date"; D-134):
+- **GCP:** $1.15 for Oct 1–10, from the Cloud Billing console. Cloud SQL Zonal Micro instance $0.94, Cloud SQL storage $0.20, other < $0.01.
+- **Anthropic:** $33.01 for Oct 1–10, from the Anthropic console. It is account-wide and mostly development use: Claude Opus 5.5 ≈ $28 on Oct 6, Claude Opus 5 ≈ $3 on Oct 1 (before this project started), Claude Haiku 5.5 ≈ $1.2 on Oct 9.
+- **App runtime:** Claude Haiku 4.5, the app's `LLM_MODEL`, shows a few cents at most. The production service has no key mounted, so the app's runtime spend is $0 (Q-11, D-053).
+- **Total against the $50 cap (NFR-15):** $34.16 worst case, counting all account-wide Anthropic usage. NFR-15 is met.
 
 ## Development AI use
 
