@@ -1,7 +1,7 @@
 <!-- OWNER: operator. -->
 # Status
 
-_Last updated: 2026-10-10 by the operator (submission cleanup, D-132): main at 5ed9ea8 plus this docs MR; production revision `peak6-equinox-00009-8kx` built from 5ed9ea8. Previous: 2026-10-10 by the M4-08 worker._
+_Last updated: 2026-10-10 by the operator (submission cleanup, D-133): main at 5ed9ea8 plus this docs MR; production revision `peak6-equinox-00009-8kx` built from 5ed9ea8. Previous: 2026-10-10 by the M4-08 worker._
 
 ## Current state (submission)
 
@@ -9,14 +9,14 @@ _Last updated: 2026-10-10 by the operator (submission cleanup, D-132): main at 5
 
 - **Live:** https://peak6-equinox-287867547175.us-central1.run.app, revision `peak6-equinox-00009-8kx` at main `5ed9ea8` (`/version`).
 - **Pinned round 904:** 12 routable pairs (11 `equivalent_given_facts` + 1 `complement`, all Fed, confidence ≥ 0.90; D-114). Pairs come from round 904; prices and routing use the newest collected quotes (D-117).
-- **Collector:** every 2 minutes (D-130; FR-04 says 5). From the Cloud Run request logs, 2026-10-10 04:18–21:02 UTC: 299 of 301 Scheduler rounds returned 200 (2 returned 409, round already running), median 51.8 s, worst 54.7 s.
+- **Collector:** every 2 minutes (D-131; FR-04 says 5). From the Cloud Run request logs, 2026-10-10 04:18–21:02 UTC: 299 of 301 Scheduler rounds returned 200 (2 returned 409, round already running), median 51.8 s, worst 54.7 s.
 - **Merged since M4:**
   - !128: live quotes on a pinned round (D-117).
   - M6 demo-path items !129–!138 (D-118 to D-127; tickets in [tickets/M6.md](tickets/M6.md)).
   - !139: plain-language UI redesign (D-128).
-  - This docs MR (D-130 to D-132).
+  - This docs MR (D-131 to D-133).
 - **Deferred from M6:** P8 (politics universe and re-pin), P9 (`/status` page), P10 (`/markets`, `/compare`). Each needs a new public surface or a live re-pin, after the review window.
-- **Admin credential rotated 2026-10-10** after it was printed into an operator transcript (D-131, [ai-usage.md](ai-usage.md)).
+- **Admin credential rotated 2026-10-10** after it was printed into an operator transcript (D-132, [ai-usage.md](ai-usage.md)).
 - **Known limits** are listed in one place: [README § Known limits](../README.md#known-limits).
 
 ## Earlier milestone checkpoints (historical, superseded by the section above)
@@ -114,7 +114,7 @@ Next operator action (Tier 2): human verification of Fed demo rendering (criteri
 - !128 (`fix/stale-age-label`): live quotes on a pinned round, snapshot-relative ages. Merged as 1828be2; deployed `peak6-equinox-00005-jw5` (D-117).
 - M6 P1–P7, P11, P12: guided Start here, one freshness rule, clarity, pinned labels, near-miss contrast, not-routed lead, log fold, /eval context, /about. !129–!137 into integration/m6-demo-path; !138 merged as 355838c; deployed `peak6-equinox-00006-r98` (D-118 to D-127).
 - ui/plain-language (!139): plain-language redesign of decisions, pairs, /, glossary, /about. Merged as 5ed9ea8; deployed `peak6-equinox-00009-8kx` (D-128).
-- Submission cleanup: admin password rotated (D-131). Merged branches deleted on GitLab. This docs-alignment MR (D-130, D-132).
+- Submission cleanup: admin password rotated (D-132). Merged branches deleted on GitLab. This docs-alignment MR (D-131, D-133).
 
 ## In progress
 
@@ -127,7 +127,7 @@ None.
 
 ## Awaiting human veto
 
-The current list: the Tier 2 operator entries from D-117 to D-132 that are still open. Tier 1 entries in that range (D-118, D-120, D-121, D-122, D-126, D-132) are logged and need no veto. D-128 (the !139 redesign) was kept by Paawan, recorded as D-129 (By: human), and is listed under Kept decisions. The Tier 2 entries listed here before (D-049 to D-116, M1–M5) stand as logged in [decisions.md](decisions.md); any reversal would be a new entry there.
+The current list: the Tier 2 operator entries from D-117 to D-133 that are still open. Tier 1 entries in that range (D-118, D-120, D-121, D-122, D-126, D-133) are logged and need no veto. D-128 (the !139 redesign) was kept by Paawan, recorded as D-129 (By: human), and is listed under Kept decisions. D-130 (By: human) retired the Cursor reviewer: merges now need CI green plus Paawan's approval. The Tier 2 entries listed here before (D-049 to D-116, M1–M5) stand as logged in [decisions.md](decisions.md); any reversal would be a new entry there.
 
 | Decision | Summary | Logged |
 |---|---|---|
@@ -137,8 +137,8 @@ The current list: the Tier 2 operator entries from D-117 to D-132 that are still
 | D-124 | M6-P4: the stored "deadlines X apart (within W)" clause is rewritten at display time only, so it says "within" only when true. The matcher's text is unchanged during freeze. | 2026-10-10 |
 | D-125 | M6-P2: the not-routed lead sentence and the "Try the other side" hint are built only from the stored decision and the quotes the router read. | 2026-10-10 |
 | D-127 | M6 process: item MRs !129–!137 merged into the integration branch on local gates. The full CI pipeline ran once, on the integration MR !138, before main. | 2026-10-10 |
-| D-130 | The collector runs every 2 minutes, not the 5 of FR-04 and D-016 (schedule changed 2026-10-10 15:37 UTC). Kept as is; the bootstrap script and `/admin` text still say 5. | 2026-10-10 |
-| D-131 | Admin password rotated after the Scheduler Basic-auth header was printed into an operator session. New secret version, header updated in the same step, old version disabled, ingest 200 and `/admin` 401 verified. | 2026-10-10 |
+| D-131 | The collector runs every 2 minutes, not the 5 of FR-04 and D-016 (schedule changed 2026-10-10 15:37 UTC). Kept as is; the bootstrap script and `/admin` text still say 5. | 2026-10-10 |
+| D-132 | Admin password rotated after the Scheduler Basic-auth header was printed into an operator session. New secret version, header updated in the same step, old version disabled, ingest 200 and `/admin` 401 verified. | 2026-10-10 |
 
 ## Kept decisions (veto closed)
 
@@ -183,7 +183,7 @@ Regenerated 2026-10-10 from main at 5ed9ea8. **Built** means the code is merged 
 | FR-01 | built | `internal/venues/kalshi/` (client.go, map.go), `testdata/fixtures/kalshi/` | Events and markets for the configured series, MVE parlays excluded, one order book per market. |
 | FR-02 | built | `internal/venues/polymarket/`, `testdata/fixtures/polymarket/` | Gamma events and markets for the configured tags, CLOB book per outcome token. |
 | FR-03 | built | `internal/collector/collector.go`, `migrations/0001_init.sql` (`fetch_rounds`, `raw_responses`, `quotes`) | Both venues fetched concurrently under one round ID; `fetched_at` and venue timestamp on every quote. |
-| FR-04 | built, with a deviation | Cloud Scheduler `equinox-collect`, `scripts/gcp-bootstrap.sh`, D-130 | Runs every **2** minutes, not 5 (D-130). 299 of 301 rounds returned 200 on 2026-10-10. |
+| FR-04 | built, with a deviation | Cloud Scheduler `equinox-collect`, `scripts/gcp-bootstrap.sh`, D-131 | Runs every **2** minutes, not 5 (D-131). 299 of 301 rounds returned 200 on 2026-10-10. |
 | FR-05 | partial | `internal/canonical/` (instrument.go, quote.go) | `Instrument` and `Quote` are venue-independent. There is no canonical cross-venue `Event` record: instruments keep the venue's own event ID (`VenueEventID`), and pairs are grouped by relationship type instead. |
 | FR-06 | built | `internal/normalize/` (crypto.go, fed.go, politics.go) | An unparseable term is recorded as `unknown`. |
 | FR-07 | built | `internal/match/block.go` | Same category, deadlines within ±7 days, overlapping subject; the Fed meeting-dates fact can place two deadlines on one meeting (D-124). |
@@ -220,10 +220,10 @@ Regenerated 2026-10-10 from main at 5ed9ea8. **Built** means the code is merged 
 | NFR-07 | met on fixtures | `config/backtest_summary.json` | 0 mismatches on 29 checked verdicts (208,064 pairs). A live run has not been made (FR-19). |
 | NFR-08 | built | `internal/canonical/quote.go`, rapid property tests in `internal/canonical/quote_test.go` and `order_test.go` | Out-of-range prices are rejected with a quality flag. |
 | NFR-09 | built | `internal/route/eligibility.go`, `internal/web/live_quotes.go`, D-077, D-119 | 120 s snapshot-relative staleness, 5 s and 30 s skew, and the stale-round banner (all configurable). |
-| NFR-10 | built | `internal/web/middleware_auth.go`, `middleware_ratelimit.go`, `tests/security/ab05_*`, `ab14_*` | Constant-time compare, brute-force lockout; public routes read-only. The admin password was rotated on 2026-10-10 (D-131). |
+| NFR-10 | built | `internal/web/middleware_auth.go`, `middleware_ratelimit.go`, `tests/security/ab05_*`, `ab14_*` | Constant-time compare, brute-force lockout; public routes read-only. The admin password was rotated on 2026-10-10 (D-132). |
 | NFR-11 | built | `internal/llm/guard.go`, `tests/security/ab01_*`, `ab04_*`, `ab13_*` | No public route can call the LLM; the output is schema-checked and downgrade-only. |
 | NFR-12 | built | `internal/web/middleware_csp.go`, `html/template`, `tests/security/ab02_*`, `ab07_*` | Strict CSP with no inline script or style; venue payloads are size-capped. |
-| NFR-13 | built | `.gitleaks.toml`, `.gitlab-ci.yml` (gitleaks, govulncheck), `tests/security/ab06_*` | No secret in the repo (gitleaks clean on 2026-10-10). One credential was printed into an operator transcript, not the repo or logs, and rotated (D-131). |
+| NFR-13 | built | `.gitleaks.toml`, `.gitlab-ci.yml` (gitleaks, govulncheck), `tests/security/ab06_*` | No secret in the repo (gitleaks clean on 2026-10-10). One credential was printed into an operator transcript, not the repo or logs, and rotated (D-132). |
 | NFR-14 | built | `internal/store/`, `tests/security/ab08_*` | Parameterised SQL only. |
 | NFR-15 | partial | `internal/llm/budget.go` (`LLM_DAILY_CALL_CAP`) | The daily LLM call cap is built. **Spend is not measured**: the GCP billing page and the Anthropic console have not been read (see Spend to date). |
 | NFR-16 | built | `/` Start here cards (D-118, D-128), one question line per page | The demo moment is 1 click from `/` (Start here card 1) and 2 to a routing result. |
@@ -231,7 +231,7 @@ Regenerated 2026-10-10 from main at 5ed9ea8. **Built** means the code is merged 
 
 ## PRD evaluation sweep (M4)
 
-**Swept on:** 2026-10-10 UTC at the M4 merge (ffcf7a6). **Refreshed** 2026-10-10 for submission (D-132) against main at 5ed9ea8 and the live URL https://peak6-equinox-287867547175.us-central1.run.app (pinned round 904). The earlier service URL `equinox-o5hdimw5rq-uc.a.run.app` and round 735 no longer exist.
+**Swept on:** 2026-10-10 UTC at the M4 merge (ffcf7a6). **Refreshed** 2026-10-10 for submission (D-133) against main at 5ed9ea8 and the live URL https://peak6-equinox-287867547175.us-central1.run.app (pinned round 904). The earlier service URL `equinox-o5hdimw5rq-uc.a.run.app` and round 735 no longer exist.
 
 ### Brief's five graded areas
 
@@ -240,8 +240,8 @@ Regenerated 2026-10-10 from main at 5ed9ea8. **Built** means the code is merged 
 | **Framing** | [docs/brief.md](brief.md) (problem, goals, non-goals, deliverables), [docs/equivalence.md § 1](equivalence.md#1-the-definition) (payout definition), [docs/domain.md](domain.md) (relationship types), [docs/routing.md § Objective](routing.md#objective) | met | Problem framed as cross-venue normalisation and routing; payout-based equivalence definition testable against settlements |
 | **Decomposition** | [docs/architecture.md § Components](architecture.md#components-and-responsibilities) (package boundaries, responsibilities, adapter pattern), [docs/architecture.md § Data flow](architecture.md#data-flow) (pipeline stages), internal/ package structure | met | Clean adapters → canonical → normalise → match → route pipeline; venue logic isolated in adapters; router venue-agnostic (test-enforced) |
 | **Handling of ambiguity** | [docs/equivalence.md § 3](equivalence.md#3-veto-catalogue) (hard vetoes), [docs/equivalence.md § 6](equivalence.md#6-confidence) (confidence bins), [docs/equivalence.md § 9](equivalence.md#9-known-failure-modes) (failure modes), [docs/decisions.md](decisions.md) (D-017 definition, D-060 deadline veto, D-068 derived types, D-083 edge-case equivalence), FR-06 normaliser (unknown is a value) | met | Ambiguous terms marked `unknown` never guessed; hard vetoes reject before classification; confidence scored and binned; edge cases documented |
-| **Justification of decisions** | [docs/decisions.md](decisions.md) (entries through D-132, each with rationale and reverse; unused numbers explained in place), [docs/status.md](status.md) Open questions Q-1..Q-13 with options and recommendations, [docs/equivalence.md § 10](equivalence.md#10-the-fed-demo-pair-walkthrough) (worked example), [docs/routing.md § worked examples](routing.md) (M3-10) | met | Every non-routine choice logged in decisions.md with why and reverse; Tier 2 decisions listed in status.md awaiting veto; worked examples for matcher and router |
-| **Readability and docs** | [README.md](../README.md), [docs/architecture.md](architecture.md), [docs/equivalence.md](equivalence.md), [docs/routing.md](routing.md), [docs/ai-usage.md](ai-usage.md), [docs/domain.md](domain.md), [docs/decisions.md](decisions.md), code comments (minimal, WHY not WHAT per CLAUDE.md) | met | Core docs aligned with the code on 2026-10-10 (D-132). README: live URL, four-card walkthrough, three example decisions, local run from fixtures, known limits; recording still a placeholder (M4-H1). ai-usage.md: LLM production status, spend not measured, the D-131 rotation |
+| **Justification of decisions** | [docs/decisions.md](decisions.md) (entries through D-133, each with rationale and reverse; unused numbers explained in place), [docs/status.md](status.md) Open questions Q-1..Q-13 with options and recommendations, [docs/equivalence.md § 10](equivalence.md#10-the-fed-demo-pair-walkthrough) (worked example), [docs/routing.md § worked examples](routing.md) (M3-10) | met | Every non-routine choice logged in decisions.md with why and reverse; Tier 2 decisions listed in status.md awaiting veto; worked examples for matcher and router |
+| **Readability and docs** | [README.md](../README.md), [docs/architecture.md](architecture.md), [docs/equivalence.md](equivalence.md), [docs/routing.md](routing.md), [docs/ai-usage.md](ai-usage.md), [docs/domain.md](domain.md), [docs/decisions.md](decisions.md), code comments (minimal, WHY not WHAT per CLAUDE.md) | met | Core docs aligned with the code on 2026-10-10 (D-133). README: live URL, four-card walkthrough, three example decisions, local run from fixtures, known limits; recording still a placeholder (M4-H1). ai-usage.md: LLM production status, spend not measured, the D-132 rotation |
 
 FR and NFR rows: see **Requirements coverage** above, which replaces the per-group sweep tables of M4-06.
 
@@ -254,7 +254,7 @@ FR and NFR rows: see **Requirements coverage** above, which replaces the per-gro
 | **Deliverable 3: Setup instructions** | [README.md § Run locally](../README.md#run-locally-from-recorded-fixtures), [docs/environment.md](environment.md), Makefile | met | Re-run from a fresh clone on 2026-10-10 (migrate, seed ~45 s, match ~7 s, serve); corrected the nonexistent `make match` and the seed time; the local Routable-0 limit is documented (Q-13) |
 | **Deliverable 4: Architecture overview** | [docs/architecture.md](architecture.md) (tech stack, components, data flow, data model, external services), [README.md § Architecture](../README.md#architecture), M4-01 #59 | met | Full architecture.md exists (M1-03 started, updated through M3); M4-01 merged: README architecture section with 5-stage pipeline summary (adapters → collector → normalise → match → route → web, LLM verifier admin-only) linking to architecture.md |
 | **Deliverable 5: Written logic** | [docs/equivalence.md](equivalence.md) (definition, methodology, vetoes, facts, basis, eval, backtest), [docs/routing.md](routing.md) (objective, eligibility, cost, sweep, complements) | met | Both docs merged and current; equivalence.md M2-08 (ba0a6c66), routing.md M3-10 (7e67718) |
-| **Deliverable 6: AI-usage disclosure** | [docs/ai-usage.md](ai-usage.md) | met | Runtime verifier and its production status (not run in prod; Q-11), development tools including the 2026-10-10 Claude Code operator sessions, the D-131 credential rotation, and spend (not measured) |
+| **Deliverable 6: AI-usage disclosure** | [docs/ai-usage.md](ai-usage.md) | met | Runtime verifier and its production status (not run in prod; Q-11), development tools including the 2026-10-10 Claude Code operator sessions, the D-132 credential rotation, and spend (not measured) |
 | **Deliverable 7: Recording** | [README.md § Recording](../README.md), M4-01 #59, M4-H1 #67 (Paawan records after M4-07 #65) | partial | M4-01 merged: placeholder line "Backup walkthrough recording: (link added by M4-H1)"; then M4-H1 #67 is human item (Paawan records 60-second walkthrough after final deploy M4-07, a worker adds the link). Gap accepted: human task M4-H1 pending M4-07 final deploy |
 
 ## Spend to date
@@ -264,7 +264,7 @@ FR and NFR rows: see **Requirements coverage** above, which replaces the per-gro
 | 2026-10-10 | not measured (billing page not read; budget-alert status could not be checked from the operator host) | not measured; the production service has no API key mounted, so it made no model calls | not measured | $50 |
 | 2026-10-06 | $0 (not yet measured) | $0 | $0 | $50 |
 
-**Note:** D-101 estimates $0.27 for the 3 h `min-instances=1` review window (Sun 2026-10-11 09:00–12:00 CT). The 2-minute collector (D-130) costs more Cloud Run CPU time and stores more rows than the 5-minute plan assumed. Measuring spend needs the GCP billing page and the Anthropic console (human access).
+**Note:** D-101 estimates $0.27 for the 3 h `min-instances=1` review window (Sun 2026-10-11 09:00–12:00 CT). The 2-minute collector (D-131) costs more Cloud Run CPU time and stores more rows than the 5-minute plan assumed. Measuring spend needs the GCP billing page and the Anthropic console (human access).
 
 ## Security findings
 
