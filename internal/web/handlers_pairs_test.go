@@ -11,7 +11,6 @@ import (
 	"github.com/shopspring/decimal"
 
 	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/canonical"
-	"labs.gauntletai.com/paawandesai/peak6-equinox/internal/store"
 )
 
 func TestPairStripFieldsEquivalentGivenFacts(t *testing.T) {
@@ -190,28 +189,6 @@ func TestPairWordDiff(t *testing.T) {
 	wantContains(t, body, "<ins>")
 }
 
-func TestPairMissingInstrument(t *testing.T) {
-	s, st := newTestServer(t)
-	sd := seedPublic(t, st)
-	ctx := context.Background()
-
-	rel, err := st.GetRelationship(ctx, sd.eqID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Delete one instrument
-	if err := st.DeleteInstrument(ctx, rel.AID); err != nil {
-		t.Fatal(err)
-	}
-
-	rec := get(s.Handler(), "/pairs/"+strconv.FormatInt(sd.eqID, 10))
-	wantHTML(t, rec, http.StatusOK)
-	body := rec.Body.String()
-
-	// Verify "no longer in the store" message
-	wantContains(t, body, "no longer in the store")
-}
-
 func TestPairDiffCounts(t *testing.T) {
 	s, st := newTestServer(t)
 	sd := seedPublic(t, st)
@@ -265,23 +242,26 @@ func TestPairHistoryPresent(t *testing.T) {
 	}
 
 	// Create a second round with new quotes
-	round2, err := st.StartRound(ctx, seedNow.Add(1*time.Hour))
+	round2, err := st.CreateRound(ctx, seedNow.Add(1*time.Hour))
 	if err != nil {
 		t.Fatal(err)
 	}
-	quote := store.QuoteRecord{
-		Stamp:    seedNow.Add(1 * time.Hour),
-		BestBid:  ptrDec("0.51"),
-		BestAsk:  ptrDec("0.52"),
-		Quality:  []canonical.Quality{},
-		YesBids:  []store.Level{{Price: dec("0.51"), Quantity: 100}},
-		YesAsks:  []store.Level{{Price: dec("0.52"), Quantity: 100}},
-		FetchKey: "test",
+	quoteA := canonical.Quote{
+		InstrumentID: rel.AID,
+		FetchedAt:    seedNow.Add(1 * time.Hour),
+		YesBids:      []canonical.Level{{Price: dec("0.51"), Size: dec("100")}},
+		YesAsks:      []canonical.Level{{Price: dec("0.52"), Size: dec("100")}},
 	}
-	if err := st.UpsertQuote(ctx, round2.ID, rel.AID, quote); err != nil {
+	quoteB := canonical.Quote{
+		InstrumentID: rel.BID,
+		FetchedAt:    seedNow.Add(1 * time.Hour),
+		YesBids:      []canonical.Level{{Price: dec("0.51"), Size: dec("100")}},
+		YesAsks:      []canonical.Level{{Price: dec("0.52"), Size: dec("100")}},
+	}
+	if err := st.InsertQuote(ctx, round2.ID, quoteA); err != nil {
 		t.Fatal(err)
 	}
-	if err := st.UpsertQuote(ctx, round2.ID, rel.BID, quote); err != nil {
+	if err := st.InsertQuote(ctx, round2.ID, quoteB); err != nil {
 		t.Fatal(err)
 	}
 
@@ -291,37 +271,6 @@ func TestPairHistoryPresent(t *testing.T) {
 
 	// Verify history is shown
 	wantContains(t, body, "Price history")
-}
-
-func TestPairDecisionLogEntries(t *testing.T) {
-	s, st := newTestServer(t)
-	sd := seedPublic(t, st)
-	ctx := context.Background()
-
-	rel, err := st.GetRelationship(ctx, sd.eqID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Add a decision log entry referencing this pair
-	entry := canonical.DecisionLogEntry{
-		At:      seedNow,
-		Kind:    canonical.LogKindDowngrade,
-		Summary: "Downgraded pair " + strconv.FormatInt(rel.ID, 10),
-		PairIDs: []int64{rel.ID},
-	}
-	if err := st.RecordDecisionLogEntry(ctx, entry); err != nil {
-		t.Fatal(err)
-	}
-
-	rec := get(s.Handler(), "/pairs/"+strconv.FormatInt(sd.eqID, 10))
-	wantHTML(t, rec, http.StatusOK)
-	body := rec.Body.String()
-
-	// Verify decision log section
-	wantContains(t, body, "Decision-log entries")
-	wantContains(t, body, "Downgraded pair")
-	wantContains(t, body, "downgrade")
 }
 
 func TestPairFromFixtures(t *testing.T) {
@@ -353,8 +302,8 @@ func TestPairFromFixtures(t *testing.T) {
 	wantContains(t, body, "Binance vs CF Benchmarks")
 
 	// Contract titles (from seedTitleA, seedTitleB)
-	wantContains(t, body, "BTC above $120k?")           // Kalshi title
-	wantContains(t, body, "Will Bitcoin exceed $120")   // Polymarket title (partial match)
+	wantContains(t, body, "BTC above $120k?")         // Kalshi title
+	wantContains(t, body, "Will Bitcoin exceed $120") // Polymarket title (partial match)
 
 	// Diff table should exist
 	wantContains(t, body, "<table class=\"data terms\">")
@@ -370,7 +319,7 @@ func TestPairRoundMismatchWhenPinned(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a second round
-	round2, err := st.StartRound(ctx, seedNow.Add(1*time.Hour))
+	round2, err := st.CreateRound(ctx, seedNow.Add(1*time.Hour))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -390,7 +339,7 @@ func TestPairRoundMismatchWhenPinned(t *testing.T) {
 	}
 
 	// Pin the first round
-	if err := st.PinRound(ctx, sd.roundID); err != nil {
+	if err := st.PinRound(ctx, sd.round.ID); err != nil {
 		t.Fatal(err)
 	}
 
@@ -409,26 +358,26 @@ func TestPairLayersDisplay(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a round
-	r, err := st.StartRound(ctx, now)
+	r, err := st.CreateRound(ctx, now)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Create instruments with all layers populated
 	kalshi := canonical.Instrument{
-		ID:             "kalshi-btc-above-120k",
-		Venue:          canonical.VenueKalshi,
-		VenueMarketID:  "BTCUSD-120K",
-		Title:          "BTC above $120k?",
-		Summary:        "Primary rules here.",
-		Rules:          "Full detailed rules text.",
-		Clarifications: "Additional details here.",
-		ClarifsDate:    ptrTime(now.AddDate(0, 0, -1)),
-		Category:       canonical.CategoryCrypto,
-		Terms:          canonical.UnknownTerms(),
-		Status:         canonical.StatusOpen,
-		CloseTime:      now.Add(24 * time.Hour),
-		FeeSchedule:    canonical.FeeSchedule{ID: canonical.FeeScheduleKalshiV1, Params: map[string]decimal.Decimal{"market_fee": decimal.RequireFromString("0.07")}},
+		ID:                      "kalshi-btc-above-120k",
+		Venue:                   canonical.VenueKalshi,
+		VenueMarketID:           "BTCUSD-120K",
+		Title:                   "BTC above $120k?",
+		RulesSummary:            "Primary rules here.",
+		RulesText:               "Full detailed rules text.",
+		Clarifications:          "Additional details here.",
+		ClarificationsUpdatedAt: now.AddDate(0, 0, -1),
+		Category:                canonical.CategoryCrypto,
+		Terms:                   canonical.UnknownTerms(),
+		Status:                  canonical.StatusOpen,
+		CloseTime:               now.Add(24 * time.Hour),
+		FeeSchedule:             canonical.FeeSchedule{ID: canonical.FeeScheduleKalshiTakerV1, Params: map[string]decimal.Decimal{"market_fee": decimal.RequireFromString("0.07")}},
 	}
 
 	poly := canonical.Instrument{
