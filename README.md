@@ -92,7 +92,7 @@ The optional LLM verifier (`internal/llm`) is admin-triggered and downgrade-only
 
 ## Recording
 
-Backup walkthrough recording: (link added by M4-H1)
+Backup walkthrough recording: [Equinox demo walkthrough](https://youtu.be/t8EC3SZ4Zu8)
 
 ## What's next
 
